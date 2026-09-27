@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { products } from '../../data/products';
 import { useCart } from '../../contexts/CartContext';
+import { useWishlist } from '../../contexts/WishlistContext';
 import {
   HiStar,
   HiOutlineShoppingBag,
@@ -9,6 +10,8 @@ import {
   HiOutlineTruck,
   HiOutlineSparkles,
   HiOutlineArrowNarrowLeft,
+  HiOutlineHeart,
+  HiHeart,
 } from 'react-icons/hi';
 
 const ProductDetail = () => {
@@ -17,6 +20,7 @@ const ProductDetail = () => {
   const [selectedMetal, setSelectedMetal] = useState(product?.metals?.[0] || '18K Yellow Gold');
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
+  const { isWishlisted, toggleWishlist } = useWishlist();
 
   if (!product) {
     return (
@@ -144,6 +148,20 @@ const ProductDetail = () => {
             >
               <HiOutlineShoppingBag className="w-5 h-5" />
               <span>Add to Shopping Bag</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => toggleWishlist(product)}
+              className="w-12 h-12 rounded-xl bg-surface-900 border border-surface-800 hover:border-gold-500/50 flex items-center justify-center text-white transition-colors cursor-pointer"
+              title="Save to Wishlist"
+              aria-label="Save to Wishlist"
+            >
+              {isWishlisted(product.id) ? (
+                <HiHeart className="w-6 h-6 text-rose-500" />
+              ) : (
+                <HiOutlineHeart className="w-6 h-6 text-stone-300 hover:text-white" />
+              )}
             </button>
           </div>
 

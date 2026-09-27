@@ -9,12 +9,26 @@ const api = axios.create({
   },
 });
 
-// Request interceptor - attach token
+// Helper to retrieve or initialize a persistent guest session ID
+function getOrCreateSessionId() {
+  let sessionId = localStorage.getItem('neirah_session_id');
+  if (!sessionId) {
+    sessionId = 'sess_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+    localStorage.setItem('neirah_session_id', sessionId);
+  }
+  return sessionId;
+}
+
+// Request interceptor - attach token & session ID
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const sessionId = getOrCreateSessionId();
+    if (sessionId) {
+      config.headers['x-session-id'] = sessionId;
     }
     return config;
   },
@@ -28,7 +42,12 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      const isAuthRequiredPath = ['/profile', '/user', '/orders', '/account'].some(
+        (p) => window.location.pathname.startsWith(p)
+      );
+      if (isAuthRequiredPath) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

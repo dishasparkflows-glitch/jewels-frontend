@@ -17,6 +17,14 @@ export const usersAPI = {
   delete: (id) => api.delete(`/users/${id}`),
   toggleStatus: (id) => api.patch(`/users/${id}/toggle-status`),
   getMe: () => api.get('/users/me'),
+  updateMe: (data) => api.put('/users/me', data),
+};
+
+// ─── Appointments ─────────────────────────────────
+export const appointmentsAPI = {
+  create: (data) => api.post('/appointments', data),
+  getAll: (params) => api.get('/appointments', { params }),
+  getById: (id) => api.get(`/appointments/${id}`),
 };
 
 // ─── Notifications ────────────────────────────────
@@ -38,3 +46,55 @@ export const uploadAPI = {
   }),
   delete: (filepath) => api.delete('/upload', { data: { filepath } }),
 };
+
+// ─── Banners ──────────────────────────────────────
+export const bannersAPI = {
+  getAll: (params) => api.get('/banners', { params }),
+  getHeroBanners: () => api.get('/banners?type=herobanner&status=active'),
+  getCollectionBanners: () => api.get('/banners?type=collectionbanner&status=active'),
+};
+
+// ─── Categories ───────────────────────────────────
+export const categoriesAPI = {
+  getAll: (params) => api.get('/categories', { params }),
+};
+
+// ─── Featured / Celebrate ─────────────────────────
+export const featuredAPI = {
+  getAll: (params) => api.get('/featured', { params }),
+  getCelebrate: () => api.get('/featured?placement=Celebrate&status=active'),
+  getGifts: () => api.get('/featured?placement=Gifts&status=active'),
+};
+
+// ─── Products ─────────────────────────────────────
+export const productsAPI = {
+  getAll: (params) => api.get('/products', { params }),
+  getById: (id) => api.get(`/products/${id}`),
+};
+
+// ─── Reviews ──────────────────────────────────────
+export const reviewsAPI = {
+  getAll: (params) => api.get('/reviews', { params }),
+  getApproved: () => api.get('/reviews?status=approved'),
+};
+
+// ─── Wishlist ─────────────────────────────────────
+export const wishlistAPI = {
+  get: () => api.get('/wishlist'),
+  toggle: (productData) => api.post('/wishlist/toggle', productData),
+  add: (productData) => api.post('/wishlist/add', productData),
+  remove: (productId) => api.delete(`/wishlist/${productId}`),
+  clear: () => api.delete('/wishlist'),
+};
+
+// ─── Cart ─────────────────────────────────────────
+export const cartAPI = {
+  get: () => api.get('/cart'),
+  add: (productData, quantity = 1, options = {}) =>
+    api.post('/cart/add', { product: productData, quantity, options }),
+  updateQuantity: (productId, quantity, options = {}) =>
+    api.put('/cart/quantity', { productId, quantity, options }),
+  remove: (productId) => api.delete(`/cart/${productId}`),
+  clear: () => api.delete('/cart'),
+};
+

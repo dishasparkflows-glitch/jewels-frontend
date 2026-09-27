@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { products, categories } from '../../data/products';
 import { useCart } from '../../contexts/CartContext';
-import { HiStar, HiOutlineShoppingBag, HiOutlineAdjustments } from 'react-icons/hi';
+import { useWishlist } from '../../contexts/WishlistContext';
+import { HiStar, HiOutlineShoppingBag, HiOutlineAdjustments, HiOutlineHeart, HiHeart } from 'react-icons/hi';
 
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -10,6 +11,7 @@ const Shop = () => {
   const searchQuery = searchParams.get('search') || '';
   const [sortBy, setSortBy] = useState('featured');
   const { addToCart } = useCart();
+  const { isWishlisted, toggleWishlist } = useWishlist();
 
   const filteredProducts = useMemo(() => {
     return products
@@ -136,16 +138,30 @@ const Shop = () => {
               className="group bg-surface-900/40 rounded-3xl border border-surface-800/80 overflow-hidden hover:border-gold-500/50 transition-all duration-500 hover:shadow-2xl hover:shadow-gold-500/10 flex flex-col"
             >
               {/* Product Image */}
-              <Link to={`/product/${product.id}`} className="relative h-72 overflow-hidden bg-surface-950">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
-                />
-                <div className="absolute top-3 left-3 bg-surface-950/80 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider uppercase text-gold-300 border border-gold-500/20">
+              <div className="relative h-72 overflow-hidden bg-surface-950">
+                <Link to={`/product/${product.id}`} className="block w-full h-full">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                  />
+                </Link>
+                <div className="absolute top-3 left-3 bg-surface-950/80 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-semibold tracking-wider uppercase text-gold-300 border border-gold-500/20 pointer-events-none">
                   {product.category}
                 </div>
-              </Link>
+                <button
+                  type="button"
+                  onClick={() => toggleWishlist(product)}
+                  className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-surface-950/80 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/80 hover:text-rose-500 transition-colors cursor-pointer"
+                  aria-label="Toggle Wishlist"
+                >
+                  {isWishlisted(product.id) ? (
+                    <HiHeart className="w-4 h-4 text-rose-500" />
+                  ) : (
+                    <HiOutlineHeart className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
 
               {/* Product Info */}
               <div className="p-6 flex-1 flex flex-col justify-between space-y-4">

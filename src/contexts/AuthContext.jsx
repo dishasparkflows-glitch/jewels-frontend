@@ -70,6 +70,11 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
+        fetchUser,
+        updateUser: (updatedUser) => {
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        },
         isAuthenticated: !!token && !!user,
         isAdmin,
         isSuperAdmin,
