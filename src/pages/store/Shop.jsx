@@ -4,6 +4,7 @@ import { products, categories } from '../../data/products';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { HiStar, HiOutlineShoppingBag, HiOutlineAdjustments, HiOutlineHeart, HiHeart } from 'react-icons/hi';
+import { getPrimaryProductImage } from '../../utils/productImages';
 
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -141,7 +142,7 @@ const Shop = () => {
               <div className="relative h-72 overflow-hidden bg-surface-950">
                 <Link to={`/product/${product.id}`} className="block w-full h-full">
                   <img
-                    src={product.image}
+                    src={getPrimaryProductImage(product)}
                     alt={product.name}
                     className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
                   />

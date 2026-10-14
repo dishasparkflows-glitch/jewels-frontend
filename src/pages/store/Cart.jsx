@@ -9,6 +9,7 @@ import {
   HiOutlineLockClosed,
   HiCheckCircle,
 } from 'react-icons/hi';
+import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 
 const Cart = () => {
   const { cart, updateQuantity, removeFromCart, clearCart, subtotal, shipping, tax, total } = useCart();
@@ -114,7 +115,7 @@ const Cart = () => {
               className="bg-surface-900/40 rounded-2xl border border-surface-800 p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-6"
             >
               <img
-                src={item.image}
+                src={item.image && !isOrnateImage(item.image) ? item.image : getPrimaryProductImage(item)}
                 alt={item.name}
                 className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl object-cover object-center bg-surface-950 flex-shrink-0"
               />

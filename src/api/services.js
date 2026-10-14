@@ -52,6 +52,9 @@ export const bannersAPI = {
   getAll: (params) => api.get('/banners', { params }),
   getHeroBanners: () => api.get('/banners?type=herobanner&status=active'),
   getCollectionBanners: () => api.get('/banners?type=collectionbanner&status=active'),
+  getMobileAppBanner: () => api.get('/banners?type=mobileappbanner&status=active'),
+  getBookAppointBanner: () => api.get('/banners?type=bookappointbanner&status=active'),
+  getCustomJewelleryBanner: () => api.get('/banners?bannerKey=custom_jewellery&status=active'),
 };
 
 // ─── Categories ───────────────────────────────────
@@ -59,7 +62,7 @@ export const categoriesAPI = {
   getAll: (params) => api.get('/categories', { params }),
 };
 
-// ─── Featured / Celebrate ─────────────────────────
+// ─── Featured / Celebrate / Gifts ─────────────────
 export const featuredAPI = {
   getAll: (params) => api.get('/featured', { params }),
   getCelebrate: () => api.get('/featured?placement=Celebrate&status=active'),
@@ -69,6 +72,7 @@ export const featuredAPI = {
 // ─── Products ─────────────────────────────────────
 export const productsAPI = {
   getAll: (params) => api.get('/products', { params }),
+  getHomeProducts: (params) => api.get('/product/home', { params }),
   getById: (id) => api.get(`/products/${id}`),
 };
 
@@ -76,6 +80,16 @@ export const productsAPI = {
 export const reviewsAPI = {
   getAll: (params) => api.get('/reviews', { params }),
   getApproved: () => api.get('/reviews?status=approved'),
+};
+
+// ─── Instagram Posts ──────────────────────────────
+export const instagramAPI = {
+  getAll: (params) => api.get('/instagram-posts', { params }),
+};
+
+// ─── Footer Settings ──────────────────────────────
+export const footerAPI = {
+  get: () => api.get('/footer-settings'),
 };
 
 // ─── Wishlist ─────────────────────────────────────

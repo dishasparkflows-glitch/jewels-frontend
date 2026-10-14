@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { useCart } from '../../contexts/CartContext';
 import { HiHeart, HiOutlineShoppingBag, HiOutlineArrowRight } from 'react-icons/hi';
+import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 
 const Wishlist = () => {
   const { wishlistItems, wishlistCount, loading, removeFromWishlist, clearWishlist } = useWishlist();
@@ -90,16 +91,18 @@ const Wishlist = () => {
                       to={item.slug ? `/product/${item.slug}` : `/shop`}
                       className="w-full h-full flex items-center justify-center overflow-hidden"
                     >
-                      {item.image ? (
+                      {item.image && !isOrnateImage(item.image) ? (
                         <img
                           src={item.image}
                           alt={item.title}
                           className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-[#f5ede5]">
-                          <span className="font-serif text-stone-400 text-xs tracking-widest uppercase">Neirah</span>
-                        </div>
+                        <img
+                          src={getPrimaryProductImage(item)}
+                          alt={item.title}
+                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                        />
                       )}
                     </Link>
 
