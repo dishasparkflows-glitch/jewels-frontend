@@ -12,6 +12,8 @@ import Cart from './pages/store/Cart';
 import Wishlist from './pages/store/Wishlist';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
 import Profile from './pages/user/Profile';
 
 function App() {
@@ -44,7 +46,9 @@ function App() {
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/wishlist" element={<Wishlist />} />
                 <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
               <Route
                 path="/profile"
                 element={

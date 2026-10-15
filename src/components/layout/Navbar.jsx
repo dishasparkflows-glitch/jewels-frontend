@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { categoriesAPI } from '../../api/services';
+import api from '../../api/axios';
+import { getImageUrl } from '../../utils/imageUrl';
 import {
   HiOutlineShoppingBag,
   HiOutlineUser,
@@ -17,34 +19,31 @@ import {
 
 import VirtualAppointmentModal from '../common/VirtualAppointmentModal';
 
-const DEFAULT_CATEGORIES = [
-  { name: 'RINGS', slug: 'rings' },
-  { name: 'EARRINGS', slug: 'earrings' },
-  { name: 'PENDANT', slug: 'pendant' },
-  { name: 'BANGLES & BRACELETS', slug: 'bangles-bracelets' },
-  { name: 'COLLECTION', slug: 'collection' },
-  { name: 'SILVER COLLECTION', slug: 'silver-collection' },
-];
-
-const PREFERRED_ORDER = [
-  'rings',
-  'earrings',
-  'pendant',
-  'bangles & bracelets',
-  'collection',
-  'silver collection',
-];
+const categoryKey = (value = '') => {
+  const key = value.toLowerCase().trim().replace(/\s+/g, '-');
+  if (['pendant', 'pendants', 'pendant-necklaces'].includes(key)) return 'necklaces';
+  if (['bangles', 'bangles-bracelets', 'bangle-bracelet'].includes(key)) return 'bracelets';
+  if (['collection', 'all-collections'].includes(key)) return 'all';
+  return key;
+};
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const { totalItems } = useCart();
   const { wishlistCount } = useWishlist();
-  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [categories, setCategories] = useState([]);
+  const [brandLogo, setBrandLogo] = useState({ desktop: '', mobile: '' });
+  const [storeSettings, setStoreSettings] = useState({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const selectedCategory = categoryKey(searchParams.get('category') || 'all');
+  const phoneNumber = String(storeSettings.mobileNumber || '').trim();
+  const phoneHref = phoneNumber.replace(/[^\d+]/g, '');
 
   // Listen for open appointment modal event from anywhere in the app
   useEffect(() => {
@@ -53,29 +52,28 @@ const Navbar = () => {
     return () => window.removeEventListener('open-virtual-appointment', handleOpen);
   }, []);
 
+  useEffect(() => {
+    api.get('/settings').then(({ data }) => {
+      const settings = data?.data || {};
+      setStoreSettings(settings);
+      setBrandLogo({ desktop: getImageUrl(settings.logoImage?.url), mobile: getImageUrl(settings.mobileLogoImage?.url) });
+    }).catch((err) => console.warn('Failed to load website logo:', err));
+  }, []);
+
   // Call Categories API
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const res = await categoriesAPI.getAll({ status: 'active' });
-        const list = res?.data?.data || res?.data || [];
-        if (Array.isArray(list) && list.length > 0) {
-          // Sort according to Neirah's header ordering
-          const sorted = [...list].sort((a, b) => {
-            const indexA = PREFERRED_ORDER.indexOf(a.name?.toLowerCase().trim());
-            const indexB = PREFERRED_ORDER.indexOf(b.name?.toLowerCase().trim());
-            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-            if (indexA !== -1) return -1;
-            if (indexB !== -1) return 1;
-            return (a.order || 0) - (b.order || 0);
-          });
-          setCategories(sorted.map(c => ({
-            name: c.name.toUpperCase(),
-            slug: c.slug || c.name.toLowerCase().replace(/\s+/g, '-'),
-          })));
-        }
+        const data = res?.data?.data;
+        const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+        const sorted = [...list].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+        setCategories(sorted.filter((category) => category?.name).map((category) => ({
+          name: category.name.toUpperCase(),
+          slug: category.slug || category.name.toLowerCase().replace(/\s+/g, '-'),
+        })));
       } catch (err) {
-        console.warn('Failed to fetch categories from API, using default navigation:', err);
+        console.error('Failed to fetch categories from API:', err);
       }
     };
     fetchCategories();
@@ -93,7 +91,7 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-40 w-full shadow-sm font-sans">
       {/* ─── Top announcement bar (Neirah Taupe #60574d) ───────────── */}
-      <div className="bg-[#60574d] text-white/95 text-[11px] sm:text-xs py-2 px-4 border-b border-black/10">
+      <div className="bg-[#60574d] text-white/95 text-[10px] sm:text-xs py-2 px-3 sm:px-4 border-b border-black/10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Left: Virtual Appointment */}
           <button
@@ -105,51 +103,46 @@ const Navbar = () => {
             <span className="hidden sm:inline font-normal">Virtual Appointment</span>
           </button>
 
-          {/* Center: BIS Hallmarked & Certified Jewellery */}
-          <div className="text-center font-medium tracking-wide flex items-center justify-center gap-1">
-            <span>BIS Hallmarked & Certified Jewellery</span>
-            <span className="text-amber-300">✨</span>
-          </div>
+          {storeSettings.companyName && (
+            <div className="text-center font-medium tracking-wide">{storeSettings.companyName}</div>
+          )}
 
-          {/* Right: Phone number */}
-          <a
-            href="tel:+918460091955"
-            className="flex items-center gap-1.5 hover:text-white transition-colors text-white/80"
-          >
-            <HiOutlinePhone className="w-3.5 h-3.5" />
-            <span className="font-normal">(+91) 8460091955</span>
-          </a>
+          {phoneNumber && (
+            <a
+              href={`tel:${phoneHref}`}
+              className="hidden sm:flex items-center gap-1.5 hover:text-white transition-colors text-white/80"
+            >
+              <HiOutlinePhone className="w-3.5 h-3.5" />
+              <span className="font-normal">{phoneNumber}</span>
+            </a>
+          )}
         </div>
       </div>
 
       {/* ─── Main Header / Brand & Search Bar (#22201e) ───────────── */}
       <div className="bg-[#22201e] text-white px-4 sm:px-6 lg:px-8 border-b border-white/5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between h-20 gap-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-4">
           {/* Mobile hamburger */}
           <div className="flex items-center lg:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-stone-300 hover:text-white transition-colors"
               aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <HiOutlineX className="w-6 h-6" /> : <HiOutlineMenu className="w-6 h-6" />}
             </button>
           </div>
 
-          {/* Brand Logo: NEIRAH — SHINE YOUR WAY */}
-          <Link to="/" className="flex flex-col items-start leading-none group shrink-0">
-            <div className="flex items-center gap-1">
-              <span className="font-cinzel text-2xl sm:text-3xl font-medium tracking-[0.25em] text-[#f2ede6] group-hover:text-white transition-colors">
-                NEIRAH
-              </span>
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="h-[0.5px] w-3 bg-[#bcaaa0]" />
-              <span className="text-[8px] sm:text-[9px] tracking-[0.3em] text-[#bcaaa0] uppercase font-light">
-                SHINE YOUR WAY
-              </span>
-              <span className="h-[0.5px] w-3 bg-[#bcaaa0]" />
-            </div>
+          <Link to="/" className="flex items-center leading-none group shrink-0 min-w-0" aria-label={storeSettings.companyName || 'Home'}>
+            {brandLogo.desktop ? (
+              <picture>
+                {brandLogo.mobile && <source media="(max-width: 639px)" srcSet={brandLogo.mobile} />}
+                <img src={brandLogo.desktop} alt={storeSettings.companyName || ''} className="h-9 sm:h-12 max-w-[120px] sm:max-w-[210px] object-contain" />
+              </picture>
+            ) : (
+              storeSettings.companyName && <span className="font-cinzel text-lg sm:text-3xl font-medium tracking-[0.16em] sm:tracking-[0.2em] text-[#f2ede6] group-hover:text-white transition-colors">{storeSettings.companyName}</span>
+            )}
           </Link>
 
           {/* Center Search Input */}
@@ -167,16 +160,16 @@ const Navbar = () => {
           </form>
 
           {/* Actions: Wishlist, Profile, Shopping Bag */}
-          <div className="flex items-center space-x-3 sm:space-x-4">
+          <div className="flex items-center space-x-1 sm:space-x-4">
             {/* Wishlist Icon */}
             <Link
               to="/wishlist"
-              className="p-2 text-stone-300 hover:text-white transition-colors relative"
+              className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors relative"
               title="My Wishlist"
             >
-              <HiOutlineHeart className="w-5 h-5" />
+              <HiOutlineHeart className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
               {wishlistCount > 0 && (
-                <span className="absolute 0 top-0.5 right-0.5 bg-black/60 text-stone-200 text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
+                  <span className="absolute top-0 right-0 bg-[#a9865c] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
                   {wishlistCount}
                 </span>
               )}
@@ -223,7 +216,7 @@ const Navbar = () => {
               ) : (
                 <Link
                   to="/login"
-                  className="p-2 text-stone-300 hover:text-white transition-colors block"
+                  className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors block"
                   title="Sign In"
                 >
                   <HiOutlineUser className="w-5 h-5" />
@@ -234,11 +227,11 @@ const Navbar = () => {
             {/* Shopping Bag with live badge */}
             <Link
               to="/cart"
-              className="p-2 text-stone-300 hover:text-white transition-colors relative"
+              className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors relative"
               title="Shopping Bag"
             >
-              <HiOutlineShoppingBag className="w-5 h-5" />
-              <span className="absolute top-0.5 right-0.5 bg-black/60 text-stone-200 text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
+              <HiOutlineShoppingBag className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
+              <span className="absolute top-0 right-0 bg-[#a9865c] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
                 {totalItems || 0}
               </span>
             </Link>
@@ -249,19 +242,17 @@ const Navbar = () => {
         <div className="hidden lg:block border-t border-white/[0.07]">
           <nav className="max-w-7xl mx-auto flex items-center justify-center space-x-8 xl:space-x-12 py-3">
             {categories.map((cat) => (
-              <NavLink
+              <Link
                 key={cat.slug}
                 to={`/shop?category=${cat.slug}`}
-                className={({ isActive }) =>
-                  `text-[11px] xl:text-xs font-medium tracking-[0.18em] transition-colors duration-200 uppercase py-1 ${
-                    isActive
-                      ? 'text-amber-200 border-b border-amber-200'
-                      : 'text-stone-300 hover:text-white'
-                  }`
-                }
+                className={`text-[11px] xl:text-xs font-medium tracking-[0.18em] transition-colors duration-200 uppercase py-1 ${
+                  location.pathname === '/shop' && selectedCategory === categoryKey(cat.slug)
+                    ? 'text-amber-200 border-b border-amber-200'
+                    : 'text-stone-300 hover:text-white'
+                }`}
               >
                 {cat.name}
-              </NavLink>
+              </Link>
             ))}
           </nav>
         </div>
@@ -269,7 +260,7 @@ const Navbar = () => {
 
       {/* ─── Mobile Drawer ───────────────────────────────────────── */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-[#22201e] border-b border-stone-800 px-6 py-6 space-y-5 animate-slide-up">
+        <div className="lg:hidden bg-[#22201e] border-b border-stone-800 px-4 sm:px-6 py-5 space-y-5 animate-slide-up">
           {/* Mobile Search */}
           <form onSubmit={handleSearch} className="relative w-full">
             <HiOutlineSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4" />
@@ -285,14 +276,14 @@ const Navbar = () => {
           {/* Categories List */}
           <nav className="flex flex-col space-y-3 pt-2">
             {categories.map((cat) => (
-              <NavLink
+              <Link
                 key={cat.slug}
                 to={`/shop?category=${cat.slug}`}
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-xs uppercase font-medium tracking-[0.16em] text-stone-300 hover:text-white py-1.5 border-b border-white/5"
+                className={`text-xs uppercase font-medium tracking-[0.16em] py-1.5 border-b border-white/5 ${location.pathname === '/shop' && selectedCategory === categoryKey(cat.slug) ? 'text-amber-200' : 'text-stone-300 hover:text-white'}`}
               >
                 {cat.name}
-              </NavLink>
+              </Link>
             ))}
             <Link
               to="/wishlist"
@@ -306,6 +297,12 @@ const Navbar = () => {
                 </span>
               )}
             </Link>
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <Link to="/cart" onClick={() => setMobileMenuOpen(false)} className="rounded-lg border border-white/15 px-3 py-3 text-center text-xs uppercase tracking-wider text-stone-200 hover:bg-white/5">Shopping Bag ({totalItems || 0})</Link>
+              {!user && <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="rounded-lg border border-white/15 px-3 py-3 text-center text-xs uppercase tracking-wider text-stone-200 hover:bg-white/5">Sign In</Link>}
+              {!user && <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="rounded-lg bg-[#8b6b47] px-3 py-3 text-center text-xs uppercase tracking-wider text-white hover:bg-[#745735]">Create Account</Link>}
+              {user && <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="rounded-lg bg-[#8b6b47] px-3 py-3 text-center text-xs uppercase tracking-wider text-white hover:bg-[#745735]">My Account</Link>}
+            </div>
           </nav>
         </div>
       )}

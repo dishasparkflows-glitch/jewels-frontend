@@ -12,38 +12,6 @@ import {
   HiOutlineX,
 } from 'react-icons/hi';
 
-// Default mock values if user address data is empty in MongoDB
-const DEFAULT_BILLING = {
-  fullName: 'Disha Radadiya',
-  addressLine: '1160/2, Near Gayatri Mandir, Sector 3D, GH Road',
-  city: 'Gandhinagar',
-  state: 'Gujarat',
-  pincode: '382006',
-  phone: '9825032534',
-};
-
-const DEFAULT_SHIPPING = {
-  fullName: 'Disha Radadiya',
-  addressLine: '1160/2, Near Gayatri Mandir, Sector 3D, GH Road',
-  city: 'Gandhinagar',
-  state: 'Gujarat',
-  pincode: '382006',
-  phone: '9825032534',
-};
-
-const DEFAULT_ADDITIONAL = [
-  {
-    id: 'addr-1',
-    title: 'ADDRESS 1',
-    fullName: 'Harsh Ramani',
-    addressLine: '1160/2, Near Gayatri Mandir, Sector 3D, GH Road',
-    city: 'Gandhinagar',
-    state: 'Gujarat',
-    pincode: '382006',
-    phone: '9904860505',
-  },
-];
-
 const Profile = () => {
   const { user, logout, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'orders' | 'returns' | 'addresses'
@@ -80,9 +48,9 @@ const Profile = () => {
       setProfileForm({
         firstName: user.firstName || '',
         lastName: user.lastName || '',
-        phone: user.phone || '917600993282',
-        location: user.location || 'Not added',
-        bio: user.bio || 'No bio available',
+        phone: user.phone || '',
+        location: user.location || '',
+        bio: user.bio || '',
       });
     }
   }, [user]);
@@ -104,10 +72,9 @@ const Profile = () => {
   }, [editProfileOpen, addressModalOpen]);
 
   // Current effective addresses
-  const billingAddress = user?.billingAddress?.fullName ? user.billingAddress : DEFAULT_BILLING;
-  const shippingAddress = user?.shippingAddress?.fullName ? user.shippingAddress : DEFAULT_SHIPPING;
-  const additionalAddresses =
-    user?.addresses && user.addresses.length > 0 ? user.addresses : DEFAULT_ADDITIONAL;
+  const billingAddress = user?.billingAddress || user?.addresses?.billing || {};
+  const shippingAddress = user?.shippingAddress || user?.addresses?.shipping || {};
+  const additionalAddresses = Array.isArray(user?.addresses?.saved) ? user.addresses.saved : [];
 
   // ─── Save Profile Updates to API ───────────────────────────────
   const handleSaveProfile = async (e) => {
@@ -326,10 +293,10 @@ const Profile = () => {
                       </div>
                       <div className="space-y-0.5">
                         <h2 className="text-xl sm:text-2xl font-normal text-stone-900">
-                          {user?.firstName || 'Disha'} {user?.lastName || 'Radadiya'}
+                          {user?.firstName || ''} {user?.lastName || ''}
                         </h2>
                         <p className="text-xs text-stone-500">
-                          {user?.email || 'disha.sparkflows@gmail.com'}
+                          {user?.email || '—'}
                         </p>
                       </div>
                     </div>
@@ -346,7 +313,7 @@ const Profile = () => {
                             PHONE
                           </span>
                           <span className="text-xs sm:text-sm text-stone-800 font-normal">
-                            {user?.phone || '917600993282'}
+                            {user?.phone || '—'}
                           </span>
                         </div>
                       </div>
@@ -361,7 +328,7 @@ const Profile = () => {
                             LOCATION
                           </span>
                           <span className="text-xs sm:text-sm text-stone-800 font-normal">
-                            {user?.location || 'Not added'}
+                            {user?.location || '—'}
                           </span>
                         </div>
                       </div>
@@ -376,7 +343,7 @@ const Profile = () => {
                             BIO
                           </span>
                           <span className="text-xs sm:text-sm text-stone-800 font-normal">
-                            {user?.bio || 'No bio available'}
+                            {user?.bio || '—'}
                           </span>
                         </div>
                       </div>
@@ -660,7 +627,7 @@ const Profile = () => {
                   type="text"
                   value={profileForm.phone}
                   onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                  placeholder="e.g. 917600993282"
+                  placeholder="Enter phone number"
                   className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-stone-800 text-stone-900"
                 />
               </div>

@@ -3,6 +3,9 @@ import api from './axios';
 // ─── Auth ─────────────────────────────────────────
 export const authAPI = {
   login: (data) => api.post('/auth/login', data),
+  googleLogin: (credential) => api.post('/auth/google', { credential }),
+  requestPasswordReset: (data) => api.post('/auth/forgot-password', data),
+  resetPassword: (data) => api.post('/auth/reset-password', data),
   register: (data) => api.post('/auth/register', data),
   getMe: () => api.get('/auth/me'),
   changePassword: (data) => api.post('/auth/change-password', data),
@@ -60,6 +63,11 @@ export const bannersAPI = {
 // ─── Categories ───────────────────────────────────
 export const categoriesAPI = {
   getAll: (params) => api.get('/categories', { params }),
+  getLookup: (params) => api.get('/categories/lookup', { params }),
+};
+
+export const sizesAPI = {
+  getLookup: (params) => api.get('/sizes/lookup', { params }),
 };
 
 // ─── Featured / Celebrate / Gifts ─────────────────

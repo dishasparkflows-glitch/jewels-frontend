@@ -44,6 +44,11 @@ const getMediaUrl = (url) => {
   return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
+const formatProductPrice = (price) => {
+  const amount = Number(price);
+  return amount > 0 ? '₹' + amount.toLocaleString('en-IN') : '';
+};
+
 const Home = () => {
   const { isWishlisted, toggleWishlist } = useWishlist();
 
@@ -538,11 +543,11 @@ const Home = () => {
                       {/* Price */}
                       <div className="flex items-baseline gap-2 mb-3">
                         <span className="text-sm font-semibold text-stone-900">
-                          ₹{Number(product.salePrice || product.price || 0).toLocaleString('en-IN')}
+                          {formatProductPrice(product.salePrice || product.price)}
                         </span>
                         {product.mrp && product.mrp > product.price && (
                           <span className="text-[10px] text-stone-400 line-through">
-                            ₹{Number(product.mrp).toLocaleString('en-IN')}
+                            {formatProductPrice(product.mrp)}
                           </span>
                         )}
                       </div>
@@ -623,7 +628,7 @@ const Home = () => {
                     <div>
                       <div className="flex items-baseline gap-2 mb-3">
                         <span className="text-sm font-semibold text-stone-900">
-                          ₹{Number(product.salePrice || product.price || 0).toLocaleString('en-IN')}
+                          {formatProductPrice(product.salePrice || product.price)}
                         </span>
                       </div>
 
@@ -995,7 +1000,7 @@ const Home = () => {
                   <div>
                     <div className="flex items-baseline gap-2 mb-3">
                       <span className="text-sm font-semibold text-stone-900">
-                        ₹{Number(product.salePrice || product.price || 0).toLocaleString('en-IN')}
+                        {formatProductPrice(product.salePrice || product.price)}
                       </span>
                     </div>
 

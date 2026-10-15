@@ -71,14 +71,14 @@ export const WishlistProvider = ({ children }) => {
     // Normalized payload for backend
     const payload = {
       productId,
-      title: product.title || product.name || 'Fine Jewellery Piece',
+      title: product.title || product.name || '',
       price: product.price || 0,
       originalPrice: product.originalPrice || null,
       image:
         product.image ||
         (product.images?.[0]?.url || product.images?.[0]) ||
         '',
-      category: product.category || 'Collection',
+      category: product.category || '',
       slug: product.slug || '',
     };
 

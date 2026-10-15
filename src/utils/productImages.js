@@ -3,13 +3,6 @@
  * Strictly filters out raw ERP / FTP ornateImages from customer-facing storefront pages.
  */
 
-// Placeholder high-definition studio fine jewelry shots
-export const DEFAULT_STUDIO_IMAGES = [
-  '/products/oval_band_front.jpg',
-  '/products/oval_band_side.jpg',
-  '/products/oval_band_circle.jpg',
-];
-
 /**
  * Checks if a given image URL or image object is an internal Ornate ERP image
  */
@@ -32,7 +25,7 @@ export const isOrnateImage = (img) => {
  * Extracts and returns an array of verified non-ornate catalog image URLs for a product
  */
 export const getValidProductImages = (product) => {
-  if (!product) return [...DEFAULT_STUDIO_IMAGES];
+  if (!product) return [];
 
   const valid = [];
 
@@ -72,8 +65,8 @@ export const getValidProductImages = (product) => {
     }
   }
 
-  // Return non-ornate images, or fine jewelry studio fallback
-  return valid.length > 0 ? valid : [...DEFAULT_STUDIO_IMAGES];
+  // Return non-ornate images, from uploaded product media
+  return valid;
 };
 
 /**
@@ -81,5 +74,5 @@ export const getValidProductImages = (product) => {
  */
 export const getPrimaryProductImage = (product) => {
   const images = getValidProductImages(product);
-  return images[0] || DEFAULT_STUDIO_IMAGES[0];
+  return images[0] || '';
 };

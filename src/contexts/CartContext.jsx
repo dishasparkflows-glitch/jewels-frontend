@@ -54,7 +54,7 @@ export const CartProvider = ({ children }) => {
           image: i.image,
           category: i.category,
           quantity: i.quantity,
-          selectedMetal: i.selectedMetal || '18K Yellow Gold',
+          selectedMetal: i.selectedMetal || '',
           selectedSize: i.selectedSize || '',
         }));
         setCart(formattedItems);
@@ -86,8 +86,8 @@ export const CartProvider = ({ children }) => {
 
     const productId = String(product.id || product._id || product.productId || '').trim();
     const parsedQty = Math.max(1, parseInt(quantity, 10) || 1);
-    const selectedMetal = options.selectedMetal || product.selectedMetal || '18K Yellow Gold';
-    const title = product.title || product.name || 'Fine Jewellery Piece';
+    const selectedMetal = options.selectedMetal || product.selectedMetal || '';
+    const title = product.title || product.name || '';
     const price = Number(product.price) || 0;
     const image = product.image || (product.images?.[0]?.url || product.images?.[0]) || '';
 
@@ -112,7 +112,7 @@ export const CartProvider = ({ children }) => {
             price,
             originalPrice: product.originalPrice || null,
             image,
-            category: product.category || 'Jewellery',
+            category: product.category || '',
             quantity: parsedQty,
             selectedMetal,
             selectedSize: options.selectedSize || '',
@@ -162,7 +162,7 @@ export const CartProvider = ({ children }) => {
           image: i.image,
           category: i.category,
           quantity: i.quantity,
-          selectedMetal: i.selectedMetal || '18K Yellow Gold',
+          selectedMetal: i.selectedMetal || '',
           selectedSize: i.selectedSize || '',
         }));
         setCart(formattedItems);

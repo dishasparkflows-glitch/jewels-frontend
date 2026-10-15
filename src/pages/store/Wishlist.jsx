@@ -25,10 +25,10 @@ const Wishlist = () => {
   };
 
   return (
-    <div className="bg-white min-h-[75vh] py-8 sm:py-12 font-sans">
+    <div className="bg-[#fbfaf8] min-h-[75vh] py-8 sm:py-12 font-sans">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* ─── Breadcrumb (Screenshot 1: HOME > WISHLIST) ───────── */}
-        <nav className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] text-stone-400 mb-4 flex items-center gap-1.5 font-medium">
+        <nav className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] text-stone-400 mb-5 flex items-center gap-1.5 font-medium">
           <Link to="/" className="hover:text-stone-700 transition-colors">
             HOME
           </Link>
@@ -37,10 +37,13 @@ const Wishlist = () => {
         </nav>
 
         {/* ─── Title & Item Count (Screenshot 1: My Wishlist (3)) ── */}
-        <div className="flex items-center justify-between pb-3 border-b border-stone-200 mb-8">
-          <h1 className="font-serif text-xl sm:text-2xl text-[#22201e] font-normal tracking-wide">
+        <div className="flex items-end justify-between pb-5 border-b border-stone-200 mb-8">
+          <div>
+          <p className="text-[10px] uppercase tracking-[0.25em] text-[#9b7951] font-semibold mb-1">Saved for later</p>
+          <h1 className="font-serif text-2xl sm:text-3xl text-[#22201e] font-normal tracking-wide">
             My Wishlist {wishlistCount > 0 && <span className="font-sans text-stone-500 text-base font-normal">({wishlistCount})</span>}
           </h1>
+          </div>
 
           {wishlistCount > 0 && (
             <button
@@ -63,7 +66,7 @@ const Wishlist = () => {
             <div className="w-16 h-16 rounded-full bg-[#faf8f5] border border-stone-200 flex items-center justify-center text-stone-400 mx-auto mb-4">
               <HiHeart className="w-8 h-8 text-stone-300" />
             </div>
-            <h2 className="font-serif text-xl text-[#22201e] mb-2 font-normal">
+            <h2 className="font-serif text-2xl text-[#22201e] mb-2 font-normal">
               Your Wishlist Is Empty
             </h2>
             <p className="text-xs text-stone-500 leading-relaxed mb-6">
@@ -71,46 +74,38 @@ const Wishlist = () => {
             </p>
             <Link
               to="/shop"
-              className="inline-flex items-center gap-2 px-7 py-2.5 rounded-full bg-[#22201e] text-white hover:bg-black transition-all text-xs tracking-widest uppercase font-medium shadow-sm"
+              className="inline-flex items-center gap-2 px-7 py-3 rounded-full bg-[#8b6b47] text-white hover:bg-[#745735] transition-all text-xs tracking-widest uppercase font-medium shadow-sm"
             >
               <span>Explore Collections</span>
               <HiOutlineArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-7">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
             {wishlistItems.map((item) => (
               <div
                 key={item._id || item.productId}
-                className="group flex flex-col justify-between"
+                className="group flex flex-col justify-between bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm hover:shadow-[0_14px_34px_rgba(65,48,29,0.10)] transition-shadow"
               >
                 <div>
                   {/* Image container with Wishlist Heart Badge */}
-                  <div className="relative aspect-square rounded-2xl overflow-hidden bg-[#faf8f5] border border-stone-100 flex items-center justify-center p-2 mb-2">
+                  <div className="relative aspect-square overflow-hidden bg-[#f4f0eb] flex items-center justify-center">
                     <Link
                       to={item.slug ? `/product/${item.slug}` : `/shop`}
                       className="w-full h-full flex items-center justify-center overflow-hidden"
                     >
-                      {item.image && !isOrnateImage(item.image) ? (
-                        <img
-                          src={item.image}
-                          alt={item.title}
-                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <img
-                          src={getPrimaryProductImage(item)}
-                          alt={item.title}
-                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                        />
-                      )}
+                      <img
+                        src={item.image && !isOrnateImage(item.image) ? (typeof item.image === 'string' ? item.image : item.image.url) : getPrimaryProductImage(item)}
+                        alt={item.title || item.name || 'Saved jewellery'}
+                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                      />
                     </Link>
 
                     {/* Active Heart button in top right to remove from wishlist */}
                     <button
                       type="button"
                       onClick={() => removeFromWishlist(item.productId)}
-                      className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/95 backdrop-blur-sm shadow-sm flex items-center justify-center text-black hover:text-rose-600 transition-colors cursor-pointer"
+                      className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/95 backdrop-blur-sm shadow-sm flex items-center justify-center text-stone-700 hover:text-rose-600 transition-colors cursor-pointer"
                       title="Remove from wishlist"
                       aria-label="Remove from wishlist"
                     >
@@ -122,7 +117,7 @@ const Wishlist = () => {
                   <button
                     type="button"
                     onClick={() => handleAddToCart(item)}
-                    className="w-full bg-[#c6913c] hover:bg-[#b07d2c] active:scale-[0.98] text-white py-2 px-3 rounded-lg text-[11px] sm:text-xs font-semibold tracking-wider uppercase flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 cursor-pointer mb-2.5"
+                    className="w-[calc(100%-1rem)] mx-2 mt-2 bg-[#8b6b47] hover:bg-[#745735] active:scale-[0.98] text-white py-2.5 px-3 rounded-lg text-[10px] sm:text-xs font-semibold tracking-wider uppercase flex items-center justify-center gap-1.5 shadow-sm transition-all duration-200 cursor-pointer"
                     aria-label={`Add ${item.title} to cart`}
                   >
                     <HiOutlineShoppingBag className="w-3.5 h-3.5" />
@@ -132,27 +127,26 @@ const Wishlist = () => {
                   {/* Title (Screenshot 1: centered, clean text) */}
                   <Link
                     to={item.slug ? `/product/${item.slug}` : `/shop`}
-                    className="block text-center text-xs sm:text-[13px] text-stone-800 font-normal line-clamp-2 hover:text-[#8a5042] transition-colors leading-snug mb-1.5"
+                    className="block text-center text-xs sm:text-[13px] text-stone-800 font-medium line-clamp-2 hover:text-[#8a5042] transition-colors leading-snug px-3 pt-3 mb-1.5"
                   >
                     {item.title}
                   </Link>
 
                   {/* Color Swatches (Screenshot 1: centered dots) */}
-                  <div className="flex items-center justify-center gap-1.5 mb-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-white border border-stone-300 inline-block shadow-2xs" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-stone-300 border border-stone-400 inline-block shadow-2xs" />
-                  </div>
+                  <p className="text-center text-[10px] uppercase tracking-wider text-stone-400 mb-2">{item.category || ''}</p>
                 </div>
 
                 {/* Price (Screenshot 1: centered with Rupee symbol) */}
-                <div className="text-center pt-0.5">
+                <div className="text-center px-2 pb-4 pt-1 border-t border-stone-100">
                   <div className="flex items-baseline justify-center gap-2">
                     <span className="text-xs sm:text-sm font-semibold text-[#22201e]">
-                      ₹{Number(item.price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      {Number(item.price) > 0
+                        ? `₹${Number(item.price).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+                        : 'Price unavailable'}
                     </span>
                     {item.originalPrice && item.originalPrice > item.price && (
                       <span className="text-[10px] sm:text-xs text-stone-400 line-through">
-                        ₹{Number(item.originalPrice).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        ₹{Number(item.originalPrice).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                       </span>
                     )}
                   </div>

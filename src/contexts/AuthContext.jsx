@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../api/services';
 
 const AuthContext = createContext(null);
@@ -33,14 +33,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
-    const { data } = await authAPI.login({ email, password });
+  const login = async (identifier, password) => {
+    const { data } = await authAPI.login({ identifier, password });
     localStorage.setItem('token', data.data.token);
     localStorage.setItem('user', JSON.stringify(data.data.user));
     setToken(data.data.token);
     setUser(data.data.user);
     return data.data;
   };
+
+  const loginWithGoogle = useCallback(async (credential) => {
+    const { data } = await authAPI.googleLogin(credential);
+    localStorage.setItem('token', data.data.token);
+    localStorage.setItem('user', JSON.stringify(data.data.user));
+    setToken(data.data.token);
+    setUser(data.data.user);
+    return data.data;
+  }, []);
 
   const register = async (formData) => {
     const { data } = await authAPI.register(formData);
@@ -68,6 +77,7 @@ export const AuthProvider = ({ children }) => {
         token,
         loading,
         login,
+        loginWithGoogle,
         register,
         logout,
         fetchUser,

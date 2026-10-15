@@ -1,29 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  HiStar,
   HiOutlineHeart,
   HiHeart,
   HiOutlineShare,
-  HiOutlineShieldCheck,
-  HiOutlineTruck,
-  HiOutlineRefresh,
-  HiOutlineSparkles,
   HiOutlineChevronDown,
-  HiOutlineChevronUp,
-  HiOutlineCheck,
   HiOutlineX,
 } from 'react-icons/hi';
-import { IoDiamondOutline, IoRibbonOutline } from 'react-icons/io5';
 import toast from 'react-hot-toast';
-import { productsAPI } from '../../api/services';
+import { productsAPI, sizesAPI } from '../../api/services';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
-import { getValidProductImages, getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
+import { getValidProductImages, getPrimaryProductImage } from '../../utils/productImages';
 
 // Helper to normalize media URL
 const getMediaUrl = (url) => {
-  if (!url) return '/featured/ring.jpg';
+  if (!url) return '';
   if (
     url.startsWith('http://') ||
     url.startsWith('https://') ||
@@ -39,32 +31,19 @@ const getMediaUrl = (url) => {
   return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
-// Diamond quality tiers
-const DIAMOND_QUALITIES = [
-  { id: 'EF-VVS', label: 'EF VVS' },
-  { id: 'FG-VS', label: 'FG VS' },
-  { id: 'GH-SI', label: 'GH SI' },
-  { id: 'DE-VS', label: 'D-E VS' },
-];
+const referenceName = (value) => (value && typeof value === 'object' ? value.name || '' : '');
 
-// Metal options
-const METAL_OPTIONS = [
-  { id: '10k-yellow', label: '10KT Yellow Gold', purity: '10K', color: 'Yellow', dot: '#e5c158' },
-  { id: '10k-rose', label: '10KT Rose Gold', purity: '10K', color: 'Rose', dot: '#e8a88e' },
-  { id: '10k-white', label: '10KT White Gold', purity: '10K', color: 'White', dot: '#e2e8f0' },
-  { id: '14k-yellow', label: '14KT Yellow Gold', purity: '14K', color: 'Yellow', dot: '#e5c158' },
-  { id: '14k-rose', label: '14KT Rose Gold', purity: '14K', color: 'Rose', dot: '#e8a88e' },
-  { id: '14k-white', label: '14KT White Gold', purity: '14K', color: 'White', dot: '#e2e8f0' },
-  { id: '18k-yellow', label: '18KT Yellow Gold', purity: '18K', color: 'Yellow', dot: '#e5c158' },
-  { id: '18k-rose', label: '18KT Rose Gold', purity: '18K', color: 'Rose', dot: '#e8a88e' },
-  { id: '18k-white', label: '18KT White Gold', purity: '18K', color: 'White', dot: '#e2e8f0' },
-  { id: 'platinum', label: 'Platinum 950', purity: 'Pt', color: 'Platinum', dot: '#cbd5e1' },
-];
+const getProductCategory = (product) => {
+  for (const field of ['category', 'categoryId', 'categoryIds']) {
+    const value = product?.[field];
+    if (Array.isArray(value) && value.length) return value[0];
+    if (value && !Array.isArray(value)) return value;
+  }
+  return null;
+};
 
-// Ring sizes (US)
-const RING_SIZES = [
-  '4', '4.5', '5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11'
-];
+const getReferenceId = (value) =>
+  value && typeof value === 'object' ? value._id || value.id : value;
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -76,17 +55,12 @@ export default function ProductDetail() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mostLikedProducts, setMostLikedProducts] = useState([]);
+  const [sizes, setSizes] = useState([]);
 
   // Selections
-  const [diamondType, setDiamondType] = useState('Lab Grown Diamond');
-  const [selectedQuality, setSelectedQuality] = useState('D-E VS');
-  const [selectedMetal, setSelectedMetal] = useState('14KT Yellow Gold');
-  const [selectedSize, setSelectedSize] = useState('7');
+  const [selectedVariantId, setSelectedVariantId] = useState('');
+  const [selectedSize, setSelectedSize] = useState('');
   const [addingToCart, setAddingToCart] = useState(false);
-
-  // Delivery check state
-  const [pincode, setPincode] = useState('');
-  const [deliveryChecked, setDeliveryChecked] = useState(false);
 
   // Lightbox & Size modal
   const [lightboxImage, setLightboxImage] = useState(null);
@@ -96,8 +70,6 @@ export default function ProductDetail() {
   const [openAccordions, setOpenAccordions] = useState({
     desc: true,
     specs: false,
-    priceBreakup: false,
-    origin: false,
   });
 
   const toggleAccordion = (key) => {
@@ -111,31 +83,74 @@ export default function ProductDetail() {
 
   // Safe category name string resolver
   const categoryName = useMemo(() => {
-    if (!product) return 'Rings';
-    const cat = product.category;
-    if (Array.isArray(cat)) {
-      if (cat.length > 0) {
-        const first = cat[0];
-        if (typeof first === 'string' && first.trim()) return first.trim();
-        if (first && typeof first.name === 'string' && first.name.trim()) return first.name.trim();
-        if (first && typeof first.title === 'string' && first.title.trim()) return first.title.trim();
-      }
-      return 'Rings';
-    }
+    if (!product) return '';
+    const cat = getProductCategory(product);
     if (cat && typeof cat === 'object') {
-      return cat.name || cat.title || 'Rings';
+      return cat.name || cat.title || '';
     }
-    if (typeof cat === 'string' && cat.trim()) {
+    if (typeof cat === 'string' && cat.trim() && !/^[a-f\d]{24}$/i.test(cat.trim())) {
       return cat.trim();
     }
-    return 'Rings';
+    return '';
   }, [product]);
+
+  const productVariants = useMemo(() => {
+    const variants = Array.isArray(product?.variants) ? product.variants : [];
+    return variants.map((variant) => ({
+      ...variant,
+      label:
+        variant.combination ||
+        [
+          referenceName(variant.metalPurity || variant.metalPurityId),
+          referenceName(variant.diamondType || variant.diamondTypeId),
+          referenceName(variant.diamondColor || variant.diamondColorId),
+          referenceName(variant.diamondClarity || variant.diamondClarityId),
+        ].filter(Boolean).join(' · ') ||
+        variant.sku || '',
+    })).filter((variant) => variant.label);
+  }, [product]);
+
+  const selectedVariant = useMemo(
+    () => productVariants.find((variant) => String(variant._id || variant.sku) === selectedVariantId),
+    [productVariants, selectedVariantId]
+  );
+  const currentPrice = [selectedVariant?.price, product?.salePrice, product?.displayPrice, product?.price]
+    .find((value) => Number(value) > 0);
+  const mrpPrice = [product?.mrp, product?.price].find((value) => Number(value) > 0) ?? currentPrice;
+  const discountPercent =
+    Number(mrpPrice) > Number(currentPrice) ? Math.round(((mrpPrice - currentPrice) / mrpPrice) * 100) : 0;
+
+  const category = getProductCategory(product);
+  const categoryId = getReferenceId(category);
+  const subtypeId = getReferenceId(product?.subTypeId || product?.subType);
+
+  useEffect(() => {
+    let active = true;
+    setSizes([]);
+    setSelectedSize('');
+    if (!categoryId) {
+      return () => { active = false; };
+    }
+
+    sizesAPI.getLookup({ categoryId, ...(subtypeId ? { subTypeId: subtypeId } : {}) })
+      .then((response) => {
+        const data = response.data?.data || response.data;
+        if (active) setSizes(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (active) setSizes([]);
+      });
+
+    return () => { active = false; };
+  }, [categoryId, subtypeId]);
 
   // Fetch product data
   useEffect(() => {
     const fetchProductDetails = async () => {
       try {
         setLoading(true);
+        setProduct(null);
+        setSelectedVariantId('');
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         const res = await productsAPI.getById(id);
@@ -145,32 +160,6 @@ export default function ProductDetail() {
         }
       } catch (err) {
         console.error('Failed to load product:', err);
-        // Fallback default ring so page renders cleanly even if offline
-        setProduct({
-          _id: id || '6acf74e4cae5d319fe6cbbab',
-          title: 'Oval Cut Lab Grown Diamond Shared Prong Semi-Eternity Wedding Band | Neirah Jewels',
-          price: 29878.99,
-          salePrice: 29878.99,
-          mrp: 34999.0,
-          description:
-            'Crafted to perfection, this shared-prong semi-eternity wedding band features brilliant oval cut lab-grown diamonds set seamlessly along a high-polish 14KT gold band. Designed for comfort, supreme sparkle, and timeless everyday elegance.',
-          images: [
-            { url: '/products/oval_band_front.jpg' },
-            { url: '/products/oval_band_side.jpg' },
-            { url: '/products/oval_band_circle.jpg' },
-            { url: '/products/oval_band_front.jpg' },
-            { url: '/products/oval_band_side.jpg' },
-            { url: '/products/oval_band_circle.jpg' },
-          ],
-          specifications: {
-            metalName: '14KT Yellow Gold',
-            metalWeight: 3.2,
-            metalPurity: 14,
-            grossWeight: 3.8,
-            netWeight: 3.2,
-            stoneWeight: 0.6,
-          },
-        });
       } finally {
         setLoading(false);
       }
@@ -188,52 +177,7 @@ export default function ProductDetail() {
         const list = homeData.trending || homeData.platinum || [];
         if (Array.isArray(list) && list.length > 0) {
           setMostLikedProducts(list.slice(0, 6));
-        } else {
-          setMostLikedProducts([
-            {
-              _id: 'prod_rel_1',
-              title: 'Modern Oval Cut Lab Grown Diamond Solitaire Ring',
-              price: 25411.16,
-              salePrice: 25411.16,
-              image: '/products/oval_band_front.jpg',
-            },
-            {
-              _id: 'prod_rel_2',
-              title: 'Radiant Cut Lab Grown Diamond Three Stone Ring',
-              price: 128380.19,
-              salePrice: 128380.19,
-              image: '/products/oval_band_side.jpg',
-            },
-            {
-              _id: 'prod_rel_3',
-              title: 'Pear Cut Lab Grown Diamond Three Stone Ring',
-              price: 31250.0,
-              salePrice: 31250.0,
-              image: '/products/oval_band_circle.jpg',
-            },
-            {
-              _id: 'prod_rel_4',
-              title: 'Round Cut Lab Grown Diamond Classic Band',
-              price: 29800.0,
-              salePrice: 29800.0,
-              image: '/products/oval_band_front.jpg',
-            },
-            {
-              _id: 'prod_rel_5',
-              title: 'Oval Diamond Ring with Hidden Halo',
-              price: 52400.0,
-              salePrice: 52400.0,
-              image: '/products/oval_band_side.jpg',
-            },
-            {
-              _id: 'prod_rel_6',
-              title: 'Heart Shaped Lab Grown Diamond Solitaire Ring',
-              price: 39500.0,
-              salePrice: 39500.0,
-              image: '/products/oval_band_circle.jpg',
-            },
-          ]);
-        }
+        } else setMostLikedProducts([]);
       } catch (err) {
         console.warn('Could not load related products:', err);
       }
@@ -244,7 +188,7 @@ export default function ProductDetail() {
 
   // Format INR Currency
   const formatPrice = (val) => {
-    if (!val && val !== 0) return '₹29,878.99';
+    if (val === undefined || val === null || val === '') return '—';
     return `₹${Number(val).toLocaleString('en-IN', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -254,24 +198,35 @@ export default function ProductDetail() {
   // Add to cart handler
   const handleAddToCart = () => {
     if (!product) return;
+    if (productVariants.length && !selectedVariant) {
+      toast.error('Please choose a product option');
+      return;
+    }
+    if (sizes.length && !selectedSize) {
+      toast.error('Please choose a size');
+      return;
+    }
+    if (!currentPrice || Number(currentPrice) <= 0) {
+      toast.error('Product price is not configured');
+      return;
+    }
     setAddingToCart(true);
 
     const cartItem = {
       _id: product._id,
       title: product.title,
-      price: product.salePrice || product.price || 29878.99,
+      price: currentPrice,
       image: galleryImages[0] || getPrimaryProductImage(product),
-      category: categoryName || 'Rings',
+      category: categoryName,
     };
 
     addToCart(cartItem, 1, {
-      metal: selectedMetal,
-      diamondType,
-      diamondQuality: selectedQuality,
+      selectedMetal: selectedVariant?.label || '',
+      selectedVariantId: selectedVariant?._id || '',
       size: selectedSize,
+      selectedSize,
     });
 
-    toast.success('Added to Shopping Bag!');
     setTimeout(() => {
       setAddingToCart(false);
     }, 400);
@@ -287,18 +242,7 @@ export default function ProductDetail() {
     }
   };
 
-  // Pincode verify handler
-  const handlePincodeCheck = (e) => {
-    e.preventDefault();
-    if (!pincode || pincode.trim().length < 6) {
-      toast.error('Please enter a valid 6-digit Pincode');
-      return;
-    }
-    setDeliveryChecked(true);
-    toast.success('Delivery available to your location!');
-  };
-
-  if (loading || !product) {
+  if (loading) {
     return (
       <div className="bg-white min-h-[70vh] flex items-center justify-center">
         <div className="text-center space-y-3">
@@ -311,16 +255,24 @@ export default function ProductDetail() {
     );
   }
 
-  const currentPrice = product?.salePrice || product?.price || 29878.99;
-  const mrpPrice = product?.mrp || 34999.0;
-  const discountPercent =
-    mrpPrice > currentPrice ? Math.round(((mrpPrice - currentPrice) / mrpPrice) * 100) : 0;
+  if (!product) {
+    return (
+      <div className="bg-white min-h-[70vh] flex flex-col items-center justify-center gap-4 px-4 text-center">
+        <p className="text-stone-600">Product details are unavailable.</p>
+        <Link to="/shop" className="text-sm font-semibold text-[#8f6d43] hover:underline">Back to shop</Link>
+      </div>
+    );
+  }
 
-  // Price Breakup Calculations
-  const goldAmount = currentPrice * 0.48;
-  const diamondAmount = currentPrice * 0.42;
-  const makingCharge = currentPrice * 0.07;
-  const gstAmount = currentPrice * 0.03;
+  const specificationRows = [
+    ['Metal', referenceName(selectedVariant?.metalPurity || selectedVariant?.metalPurityId) || product.specifications?.metalName],
+    ['Diamond type', referenceName(selectedVariant?.diamondType || selectedVariant?.diamondTypeId)],
+    ['Diamond color', referenceName(selectedVariant?.diamondColor || selectedVariant?.diamondColorId)],
+    ['Diamond clarity', referenceName(selectedVariant?.diamondClarity || selectedVariant?.diamondClarityId)],
+    ['Diamond shape', referenceName(selectedVariant?.diamondShape || selectedVariant?.diamondShapeId)],
+    ['Metal weight', product.specifications?.metalWeight != null ? `${product.specifications.metalWeight} g` : ''],
+    ['Size', selectedSize],
+  ].filter(([, value]) => value !== undefined && value !== null && value !== '');
 
   return (
     <div className="bg-white text-stone-900 min-h-screen">
@@ -330,16 +282,10 @@ export default function ProductDetail() {
           <Link to="/" className="hover:text-stone-800 transition-colors">
             Home
           </Link>
-          <span>/</span>
-          <Link
-            to={`/shop?category=${encodeURIComponent(String(categoryName || 'rings').toLowerCase())}`}
-            className="hover:text-stone-800 transition-colors"
-          >
-            {categoryName}
-          </Link>
+          {categoryName && <><span>/</span><Link to={`/shop?category=${encodeURIComponent(categoryName.toLowerCase())}`} className="hover:text-stone-800 transition-colors">{categoryName}</Link></>}
           <span>/</span>
           <span className="text-stone-700 font-semibold truncate max-w-sm sm:max-w-md">
-            {product?.title || 'Fine Jewellery'}
+            {product.title}
           </span>
         </nav>
 
@@ -373,7 +319,7 @@ export default function ProductDetail() {
             {/* Title & Brand */}
             <div className="space-y-1.5">
               <h1 className="text-lg sm:text-xl font-bold text-stone-900 leading-snug tracking-tight font-serif">
-                {product?.title || 'Fine Jewellery'}
+                {product.title}
               </h1>
             </div>
 
@@ -427,143 +373,58 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* Promo Code Banner */}
-            <div className="p-2.5 rounded-xl bg-[#fbf7f0] border border-[#ecd9c2] flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">🏷️</span>
-                <span className="font-semibold text-stone-800">
-                  Use code <span className="font-bold text-[#8f6d43]">NEIRAH10</span> for extra 10% off
-                </span>
+            {productVariants.length > 0 && (
+              <div className="space-y-1.5">
+                <label htmlFor="product-variant" className="block text-[11px] font-bold text-stone-700">
+                  Product option
+                </label>
+                <div className="relative">
+                  <select
+                    id="product-variant"
+                    value={selectedVariantId}
+                    onChange={(event) => setSelectedVariantId(event.target.value)}
+                    className="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 appearance-none focus:outline-none focus:border-[#8f6d43] cursor-pointer"
+                  >
+                    <option value="">Choose an option</option>
+                    {productVariants.map((variant) => (
+                      <option key={variant._id || variant.sku} value={variant._id || variant.sku}>
+                        {variant.label}
+                      </option>
+                    ))}
+                  </select>
+                  <HiOutlineChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard?.writeText('NEIRAH10');
-                  toast.success("Coupon 'NEIRAH10' copied!");
-                }}
-                className="text-[10px] font-bold uppercase tracking-wider text-[#8f6d43] hover:underline cursor-pointer"
-              >
-                COPY
-              </button>
-            </div>
+            )}
 
-            {/* ─── 1. Diamond Type Selector ─── */}
-            <div className="space-y-1.5">
-              <span className="block text-[11px] font-bold text-stone-700">
-                Diamond Type:{' '}
-                <span className="font-semibold text-stone-500">{diamondType}</span>
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDiamondType('Lab Grown Diamond')}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    diamondType === 'Lab Grown Diamond'
-                      ? 'bg-[#0f4c3a] text-white shadow-xs'
-                      : 'bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-400'
-                  }`}
-                >
-                  LAB GROWN DIAMOND
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDiamondType('Natural Diamond')}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                    diamondType === 'Natural Diamond'
-                      ? 'bg-[#0f4c3a] text-white shadow-xs'
-                      : 'bg-stone-50 border border-stone-200 text-stone-600 hover:border-stone-400'
-                  }`}
-                >
-                  NATURAL DIAMOND
-                </button>
+            {sizes.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="product-size" className="block text-[11px] font-bold text-stone-700">Size</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowSizeModal(true)}
+                    className="text-[10px] font-bold text-[#8f6d43] hover:underline uppercase tracking-wider cursor-pointer"
+                  >
+                    Size chart
+                  </button>
+                </div>
+                <div className="relative">
+                  <select
+                    id="product-size"
+                    value={selectedSize}
+                    onChange={(event) => setSelectedSize(event.target.value)}
+                    className="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 appearance-none focus:outline-none focus:border-[#8f6d43] cursor-pointer"
+                  >
+                    <option value="">Choose a size</option>
+                    {sizes.map((size) => (
+                      <option key={size._id} value={size.name}>{size.name}</option>
+                    ))}
+                  </select>
+                  <HiOutlineChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
+                </div>
               </div>
-            </div>
-
-            {/* ─── 2. Diamond Quality Selector ─── */}
-            <div className="space-y-1.5">
-              <span className="block text-[11px] font-bold text-stone-700">
-                Diamond Quality:{' '}
-                <span className="font-semibold text-stone-500">{selectedQuality}</span>
-              </span>
-              <div className="grid grid-cols-4 gap-2">
-                {DIAMOND_QUALITIES.map((tier) => {
-                  const isActive = selectedQuality === tier.label;
-                  return (
-                    <button
-                      key={tier.id}
-                      type="button"
-                      onClick={() => setSelectedQuality(tier.label)}
-                      className={`py-2 px-1 text-center rounded-lg text-xs font-bold transition-all cursor-pointer border ${
-                        isActive
-                          ? 'bg-[#0f4c3a] text-white border-[#0f4c3a] shadow-xs'
-                          : 'bg-stone-50 text-stone-700 border-stone-200 hover:border-stone-400'
-                      }`}
-                    >
-                      {tier.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* ─── 3. Metal Purity & Color Swatches ─── */}
-            <div className="space-y-1.5">
-              <span className="block text-[11px] font-bold text-stone-700">
-                Metal: <span className="font-semibold text-stone-500">{selectedMetal}</span>
-              </span>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {METAL_OPTIONS.map((opt) => {
-                  const isActive = selectedMetal === opt.label;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setSelectedMetal(opt.label)}
-                      title={opt.label}
-                      className={`h-8 px-2.5 rounded-lg border flex items-center gap-1.5 text-xs font-semibold transition-all cursor-pointer ${
-                        isActive
-                          ? 'border-[#8f6d43] bg-[#faf5ee] text-[#8f6d43] ring-1 ring-[#8f6d43]/30 font-bold'
-                          : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
-                      }`}
-                    >
-                      <span
-                        className="w-2.5 h-2.5 rounded-full border border-black/10 shrink-0"
-                        style={{ backgroundColor: opt.dot }}
-                      />
-                      <span>{opt.purity} {opt.color}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* ─── 4. Size (US) Selector ─── */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="block text-[11px] font-bold text-stone-700">Size (US)</span>
-                <button
-                  type="button"
-                  onClick={() => setShowSizeModal(true)}
-                  className="text-[10px] font-bold text-[#8f6d43] hover:underline uppercase tracking-wider cursor-pointer"
-                >
-                  Size Chart & Guide
-                </button>
-              </div>
-              <div className="relative">
-                <select
-                  value={selectedSize}
-                  onChange={(e) => setSelectedSize(e.target.value)}
-                  className="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 appearance-none focus:outline-none focus:border-[#8f6d43] focus:ring-1 focus:ring-[#8f6d43]/20 cursor-pointer"
-                >
-                  {RING_SIZES.map((sz) => (
-                    <option key={sz} value={sz}>
-                      US {sz} (Free Resizing Within 30 Days)
-                    </option>
-                  ))}
-                </select>
-                <HiOutlineChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
-              </div>
-            </div>
+            )}
 
             {/* ─── 5. Add to Cart Button ─── */}
             <div className="pt-2">
@@ -584,82 +445,6 @@ export default function ProductDetail() {
               </button>
             </div>
 
-            {/* ─── 6. Estimated Delivery by Pincode ─── */}
-            <div className="pt-2">
-              <form onSubmit={handlePincodeCheck} className="relative">
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={pincode}
-                  onChange={(e) => {
-                    setPincode(e.target.value.replace(/\D/g, ''));
-                    setDeliveryChecked(false);
-                  }}
-                  placeholder="Enter Pincode for estimated delivery"
-                  className="w-full h-11 pl-3.5 pr-20 rounded-lg border border-stone-200 text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:border-[#8f6d43] transition-colors"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-stone-900 text-white rounded-md text-[10px] font-bold uppercase tracking-wider hover:bg-black transition-colors cursor-pointer"
-                >
-                  CHECK
-                </button>
-              </form>
-
-              {deliveryChecked && (
-                <div className="mt-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50/80 p-2.5 rounded-lg border border-emerald-200/60 flex items-center gap-2 animate-fadeIn">
-                  <HiOutlineCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>
-                    Expected Delivery by <strong>Wed, 21 Oct</strong>. Free insured shipping.
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* ─── 7. "THE NEIRAH DIFFERENCE" 6 Micro-Trust Badges (Screenshot 1) ─── */}
-            <div className="pt-3 border-t border-stone-100">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-3 text-center">
-                THE NEIRAH DIFFERENCE
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="p-2.5 rounded-xl bg-stone-50/70 border border-stone-200/60 text-center space-y-1">
-                  <IoRibbonOutline className="w-4 h-4 text-[#8f6d43] mx-auto" />
-                  <span className="block text-[10px] font-semibold text-stone-700 leading-tight">
-                    100% Certified Jewelry
-                  </span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-stone-50/70 border border-stone-200/60 text-center space-y-1">
-                  <HiOutlineShieldCheck className="w-4 h-4 text-[#8f6d43] mx-auto" />
-                  <span className="block text-[10px] font-semibold text-stone-700 leading-tight">
-                    BIS 916 Hallmarked
-                  </span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-stone-50/70 border border-stone-200/60 text-center space-y-1">
-                  <HiStar className="w-4 h-4 text-[#8f6d43] mx-auto" />
-                  <span className="block text-[10px] font-semibold text-stone-700 leading-tight">
-                    4.7+ Rating & Reviews
-                  </span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-stone-50/70 border border-stone-200/60 text-center space-y-1">
-                  <IoDiamondOutline className="w-4 h-4 text-[#8f6d43] mx-auto" />
-                  <span className="block text-[10px] font-semibold text-stone-700 leading-tight">
-                    100% Conflict-Free
-                  </span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-stone-50/70 border border-stone-200/60 text-center space-y-1">
-                  <HiOutlineTruck className="w-4 h-4 text-[#8f6d43] mx-auto" />
-                  <span className="block text-[10px] font-semibold text-stone-700 leading-tight">
-                    Free Secure Shipping
-                  </span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-stone-50/70 border border-stone-200/60 text-center space-y-1">
-                  <HiOutlineRefresh className="w-4 h-4 text-[#8f6d43] mx-auto" />
-                  <span className="block text-[10px] font-semibold text-stone-700 leading-tight">
-                    Lifetime Exchange
-                  </span>
-                </div>
-              </div>
-            </div>
 
             {/* ─── 8. Accordion Information Panels (Screenshot 1) ─── */}
             <div className="pt-2 divide-y divide-stone-100 border-t border-stone-100 text-xs">
@@ -703,97 +488,12 @@ export default function ProductDetail() {
                 </button>
                 {openAccordions.specs && (
                   <div className="mt-2 text-stone-600 text-xs animate-fadeIn space-y-1.5 divide-y divide-stone-50">
-                    <div className="flex justify-between py-1">
-                      <span className="text-stone-400">Metal Purity & Tone</span>
-                      <span className="font-semibold text-stone-800">{selectedMetal}</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span className="text-stone-400">Diamond Type</span>
-                      <span className="font-semibold text-stone-800">{diamondType}</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span className="text-stone-400">Diamond Color & Clarity</span>
-                      <span className="font-semibold text-stone-800">{selectedQuality}</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span className="text-stone-400">Diamond Shape</span>
-                      <span className="font-semibold text-stone-800">Oval Cut</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span className="text-stone-400">Approx. Gold Weight</span>
-                      <span className="font-semibold text-stone-800">
-                        {product.specifications?.metalWeight || 3.2} g
-                      </span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span className="text-stone-400">Ring Size</span>
-                      <span className="font-semibold text-stone-800">US {selectedSize}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* PRICE BREAK UP */}
-              <div className="py-3">
-                <button
-                  type="button"
-                  onClick={() => toggleAccordion('priceBreakup')}
-                  className="w-full flex items-center justify-between font-bold text-stone-900 tracking-wide text-xs cursor-pointer text-left"
-                >
-                  <span className="uppercase text-[11px] font-bold">PRICE BREAK UP</span>
-                  <span className="text-stone-400 text-sm">
-                    {openAccordions.priceBreakup ? '−' : '+'}
-                  </span>
-                </button>
-                {openAccordions.priceBreakup && (
-                  <div className="mt-2 text-stone-600 text-xs animate-fadeIn space-y-1.5 bg-stone-50/70 p-3 rounded-xl border border-stone-200/60 divide-y divide-stone-100">
-                    <div className="flex justify-between py-1">
-                      <span>Gold Component (14KT)</span>
-                      <span className="font-semibold text-stone-800">{formatPrice(goldAmount)}</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span>Diamond Component (D-E VS)</span>
-                      <span className="font-semibold text-stone-800">{formatPrice(diamondAmount)}</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span>Making Charges / Labour</span>
-                      <span className="font-semibold text-stone-800">{formatPrice(makingCharge)}</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span>GST (3%)</span>
-                      <span className="font-semibold text-stone-800">{formatPrice(gstAmount)}</span>
-                    </div>
-                    <div className="flex justify-between pt-2 border-t border-stone-200 font-bold text-stone-900">
-                      <span>Total Retail Price</span>
-                      <span className="text-[#8f6d43] font-serif text-sm">{formatPrice(currentPrice)}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Manufacture & Origin */}
-              <div className="py-3">
-                <button
-                  type="button"
-                  onClick={() => toggleAccordion('origin')}
-                  className="w-full flex items-center justify-between font-bold text-stone-900 tracking-wide text-xs cursor-pointer text-left"
-                >
-                  <span className="uppercase text-[11px] font-bold">Manufacture & Origin</span>
-                  <span className="text-stone-400 text-sm">
-                    {openAccordions.origin ? '−' : '+'}
-                  </span>
-                </button>
-                {openAccordions.origin && (
-                  <div className="mt-2 text-stone-600 leading-relaxed text-xs animate-fadeIn space-y-1">
-                    <p>
-                      <strong>Origin:</strong> Handcrafted with precision by master artisans in Surat & Mumbai, India.
-                    </p>
-                    <p>
-                      <strong>Certification:</strong> All lab-grown diamonds are accompanied by independent gemological certification ensuring 4Cs accuracy.
-                    </p>
-                    <p>
-                      <strong>Hallmarking:</strong> Pure hallmarked precious metal stamped according to BIS standards.
-                    </p>
+                    {specificationRows.map(([label, value]) => (
+                      <div key={label} className="flex justify-between py-1">
+                        <span className="text-stone-400">{label}</span>
+                        <span className="font-semibold text-stone-800">{value}</span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -802,7 +502,7 @@ export default function ProductDetail() {
         </div>
 
         {/* ─── MOST LIKED PIECES (Screenshot 1 & Screenshot 2) ─── */}
-        <div className="pt-16 sm:pt-20 border-t border-stone-100 mt-16">
+        {mostLikedProducts.length > 0 && <div className="pt-16 sm:pt-20 border-t border-stone-100 mt-16">
           <div className="mb-8 text-center sm:text-left">
             <h2 className="text-xs font-bold uppercase tracking-[0.25em] text-stone-400">
               MOST LIKED PIECES
@@ -810,13 +510,13 @@ export default function ProductDetail() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-            {mostLikedProducts.map((item, idx) => {
+            {mostLikedProducts.filter((item) => getPrimaryProductImage(item)).map((item) => {
               const relImg = getPrimaryProductImage(item);
-              const relPrice = item.salePrice || item.price || 25411.16;
+              const relPrice = item.salePrice ?? item.displayPrice ?? item.price;
 
               return (
                 <div
-                  key={item._id || idx}
+                  key={item._id || item.slug}
                   onClick={() => navigate(`/product/${item._id || item.slug}`)}
                   className="group bg-white rounded-2xl border border-stone-100/90 overflow-hidden shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
                 >
@@ -824,7 +524,7 @@ export default function ProductDetail() {
                   <div className="relative aspect-square bg-[#faf8f5] p-3 flex items-center justify-center overflow-hidden">
                     <img
                       src={getMediaUrl(relImg)}
-                      alt={item.title}
+                      alt={item.title || ''}
                       className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                       loading="lazy"
                     />
@@ -864,7 +564,7 @@ export default function ProductDetail() {
               );
             })}
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* ─── Lightbox Modal ─── */}
@@ -906,7 +606,7 @@ export default function ProductDetail() {
           >
             <div className="flex items-center justify-between pb-3 border-b border-stone-100">
               <h3 className="text-base font-bold text-stone-900 font-serif">
-                Ring Size Chart & Measurement Guide
+                {categoryName ? `${categoryName} size guide` : 'Size guide'}
               </h3>
               <button
                 type="button"
@@ -918,45 +618,19 @@ export default function ProductDetail() {
             </div>
 
             <div className="space-y-3 text-xs text-stone-600">
-              <p>
-                We use standard <strong>US Ring Sizes</strong>. All Neirah rings include complimentary free resizing within 30 days of receipt.
-              </p>
-
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-stone-50 text-[10px] uppercase font-bold text-stone-500 border-b border-stone-200">
-                      <th className="py-2 px-3">US Size</th>
-                      <th className="py-2 px-3">Diameter (mm)</th>
-                      <th className="py-2 px-3">Circumference (mm)</th>
+                      <th className="py-2 px-3">Available sizes</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100">
-                    <tr>
-                      <td className="py-1.5 px-3 font-semibold">5</td>
-                      <td className="py-1.5 px-3">15.7 mm</td>
-                      <td className="py-1.5 px-3">49.3 mm</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1.5 px-3 font-semibold">6</td>
-                      <td className="py-1.5 px-3">16.5 mm</td>
-                      <td className="py-1.5 px-3">51.9 mm</td>
-                    </tr>
-                    <tr className="bg-[#faf5ee] text-[#8f6d43] font-bold">
-                      <td className="py-1.5 px-3">7 (Standard)</td>
-                      <td className="py-1.5 px-3">17.3 mm</td>
-                      <td className="py-1.5 px-3">54.4 mm</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1.5 px-3 font-semibold">8</td>
-                      <td className="py-1.5 px-3">18.1 mm</td>
-                      <td className="py-1.5 px-3">57.0 mm</td>
-                    </tr>
-                    <tr>
-                      <td className="py-1.5 px-3 font-semibold">9</td>
-                      <td className="py-1.5 px-3">18.9 mm</td>
-                      <td className="py-1.5 px-3">59.5 mm</td>
-                    </tr>
+                    {sizes.map((size) => (
+                      <tr key={size._id}>
+                        <td className="py-1.5 px-3 font-semibold">{size.name}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
