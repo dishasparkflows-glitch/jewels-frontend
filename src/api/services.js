@@ -62,6 +62,7 @@ export const bannersAPI = {
 
 // ─── Categories ───────────────────────────────────
 export const categoriesAPI = {
+  getNavigation: () => api.get('/categories/navigation'),
   getAll: (params) => api.get('/categories', { params }),
   getLookup: (params) => api.get('/categories/lookup', { params }),
 };

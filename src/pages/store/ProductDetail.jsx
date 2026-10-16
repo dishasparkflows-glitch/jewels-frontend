@@ -122,7 +122,6 @@ export default function ProductDetail() {
 
   const category = getProductCategory(product);
   const categoryId = getReferenceId(category);
-  const subtypeId = getReferenceId(product?.subTypeId || product?.subType);
 
   useEffect(() => {
     let active = true;
@@ -132,7 +131,7 @@ export default function ProductDetail() {
       return () => { active = false; };
     }
 
-    sizesAPI.getLookup({ categoryId, ...(subtypeId ? { subTypeId: subtypeId } : {}) })
+    sizesAPI.getLookup({ categoryId })
       .then((response) => {
         const data = response.data?.data || response.data;
         if (active) setSizes(Array.isArray(data) ? data : []);
@@ -142,7 +141,7 @@ export default function ProductDetail() {
       });
 
     return () => { active = false; };
-  }, [categoryId, subtypeId]);
+  }, [categoryId]);
 
   // Fetch product data
   useEffect(() => {

@@ -1,3 +1,4 @@
+import ProductCard from '../../components/product/ProductCard';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -6,15 +7,10 @@ import {
   productsAPI,
   reviewsAPI,
   instagramAPI,
-  categoriesAPI,
 } from '../../api/services';
-import { useCart } from '../../contexts/CartContext';
-import { useWishlist } from '../../contexts/WishlistContext';
 import {
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
-  HiOutlineHeart,
-  HiHeart,
   HiOutlineShieldCheck,
   HiStar,
   HiOutlineCalendar,
@@ -24,7 +20,6 @@ import {
 } from 'react-icons/hi';
 import { IoDiamondOutline } from 'react-icons/io5';
 import { FaInstagram, FaGooglePlay, FaApple } from 'react-icons/fa';
-import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 
 // Helper to normalize media URL from Cloudflare R2 / S3 / API or relative paths
 const getMediaUrl = (url) => {
@@ -44,13 +39,7 @@ const getMediaUrl = (url) => {
   return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
-const formatProductPrice = (price) => {
-  const amount = Number(price);
-  return amount > 0 ? '₹' + amount.toLocaleString('en-IN') : '';
-};
-
 const Home = () => {
-  const { isWishlisted, toggleWishlist } = useWishlist();
 
   // ─── 100% Dynamic API State (No Static Fallback Content) ────────────
   const [heroBanners, setHeroBanners] = useState([]);
@@ -61,7 +50,6 @@ const Home = () => {
   const [platinumProducts, setPlatinumProducts] = useState([]);
   const [silverProducts, setSilverProducts] = useState([]);
   const [trendingProducts, setTrendingProducts] = useState([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
 
   const [collectionBanners, setCollectionBanners] = useState([]);
 
@@ -140,7 +128,6 @@ const Home = () => {
   useEffect(() => {
     const fetchHomeProducts = async () => {
       try {
-        setLoadingProducts(true);
         const res = await productsAPI.getHomeProducts();
         const data = res?.data?.data || {};
 
@@ -155,8 +142,6 @@ const Home = () => {
         }
       } catch (err) {
         console.error('Failed to load home products:', err);
-      } finally {
-        setLoadingProducts(false);
       }
     };
     fetchHomeProducts();
@@ -479,89 +464,7 @@ const Home = () => {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
-              {platinumProducts.map((product) => {
-                const isWish = isWishlisted(product.id || product._id);
-                const rawImg = product.image && !isOrnateImage(product.image) ? product.image : getPrimaryProductImage(product);
-                const imageUrl = getMediaUrl(rawImg);
-
-                return (
-                  <div
-                    key={product.id || product._id}
-                    className="group bg-white rounded-2xl border border-stone-200/80 p-3.5 flex flex-col justify-between hover:shadow-lg transition-all duration-300"
-                  >
-                    <div>
-                      {/* Product Thumbnail (Dynamic only, no static mock paths) */}
-                      <div className="relative aspect-square rounded-xl overflow-hidden bg-stone-50 mb-3 flex items-center justify-center border border-stone-100">
-                        {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={product.title}
-                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-stone-300 bg-stone-50">
-                            <IoDiamondOutline className="w-10 h-10" />
-                          </div>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => toggleWishlist(product)}
-                          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-xs shadow-xs flex items-center justify-center text-stone-400 hover:text-red-500 transition-colors cursor-pointer"
-                          aria-label="Wishlist"
-                        >
-                          {isWish ? (
-                            <HiHeart className="w-4 h-4 text-red-500" />
-                          ) : (
-                            <HiOutlineHeart className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-
-                      <Link
-                        to={`/product/${product.id || product._id}`}
-                        className="text-xs text-stone-800 font-normal line-clamp-2 hover:text-[#9e5e4d] transition-colors leading-relaxed block mb-2"
-                      >
-                        {product.title}
-                      </Link>
-                    </div>
-
-                    <div>
-                      {/* Swatches from product metadata */}
-                      {product.swatches?.length > 0 && (
-                        <div className="flex items-center gap-1.5 mb-2">
-                          {product.swatches.map((c, i) => (
-                            <span
-                              key={i}
-                              className="w-2.5 h-2.5 rounded-full border border-stone-300 inline-block shadow-2xs"
-                              style={{ backgroundColor: c }}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Price */}
-                      <div className="flex items-baseline gap-2 mb-3">
-                        <span className="text-sm font-semibold text-stone-900">
-                          {formatProductPrice(product.salePrice || product.price)}
-                        </span>
-                        {product.mrp && product.mrp > product.price && (
-                          <span className="text-[10px] text-stone-400 line-through">
-                            {formatProductPrice(product.mrp)}
-                          </span>
-                        )}
-                      </div>
-
-                      <Link
-                        to={`/product/${product.id || product._id}`}
-                        className="w-full py-2 border border-stone-800 text-stone-900 hover:bg-stone-900 hover:text-white rounded-lg text-[10px] font-bold tracking-widest uppercase flex items-center justify-center transition-colors text-center"
-                      >
-                        VIEW MORE
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
+              {platinumProducts.map((product) => <ProductCard key={product.id || product._id} product={product} />)}
             </div>
           </div>
         )}
@@ -579,69 +482,7 @@ const Home = () => {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
-              {silverProducts.map((product) => {
-                const isWish = isWishlisted(product.id || product._id);
-                const rawImg = product.image && !isOrnateImage(product.image) ? product.image : getPrimaryProductImage(product);
-                const imageUrl = getMediaUrl(rawImg);
-
-                return (
-                  <div
-                    key={product.id || product._id}
-                    className="group bg-white rounded-2xl border border-stone-200/80 p-3.5 flex flex-col justify-between hover:shadow-lg transition-all duration-300"
-                  >
-                    <div>
-                      <div className="relative aspect-square rounded-xl overflow-hidden bg-stone-50 mb-3 flex items-center justify-center border border-stone-100">
-                        {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={product.title}
-                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-stone-300 bg-stone-50">
-                            <IoDiamondOutline className="w-10 h-10" />
-                          </div>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => toggleWishlist(product)}
-                          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-xs shadow-xs flex items-center justify-center text-stone-400 hover:text-red-500 transition-colors cursor-pointer"
-                          aria-label="Wishlist"
-                        >
-                          {isWish ? (
-                            <HiHeart className="w-4 h-4 text-red-500" />
-                          ) : (
-                            <HiOutlineHeart className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-
-                      <Link
-                        to={`/product/${product.id || product._id}`}
-                        className="text-xs text-stone-800 font-normal line-clamp-2 hover:text-[#9e5e4d] transition-colors leading-relaxed block mb-2"
-                      >
-                        {product.title}
-                      </Link>
-                    </div>
-
-                    <div>
-                      <div className="flex items-baseline gap-2 mb-3">
-                        <span className="text-sm font-semibold text-stone-900">
-                          {formatProductPrice(product.salePrice || product.price)}
-                        </span>
-                      </div>
-
-                      <Link
-                        to={`/product/${product.id || product._id}`}
-                        className="w-full py-2 border border-stone-800 text-stone-900 hover:bg-stone-900 hover:text-white rounded-lg text-[10px] font-bold tracking-widest uppercase flex items-center justify-center transition-colors text-center"
-                      >
-                        VIEW MORE
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
+              {silverProducts.map((product) => <ProductCard key={product.id || product._id} product={product} />)}
             </div>
           </div>
         )}
@@ -951,69 +792,7 @@ const Home = () => {
 
         {trendingProducts.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 text-left">
-            {trendingProducts.map((product) => {
-              const isWish = isWishlisted(product.id || product._id);
-              const rawImg = product.image && !isOrnateImage(product.image) ? product.image : getPrimaryProductImage(product);
-              const imageUrl = getMediaUrl(rawImg);
-
-              return (
-                <div
-                  key={product.id || product._id}
-                  className="group bg-white rounded-2xl border border-stone-200/80 p-3.5 flex flex-col justify-between hover:shadow-lg transition-all duration-300"
-                >
-                  <div>
-                    <div className="relative aspect-square rounded-xl overflow-hidden bg-stone-50 mb-3 flex items-center justify-center border border-stone-100">
-                      {imageUrl ? (
-                        <img
-                          src={imageUrl}
-                          alt={product.title}
-                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-stone-300 bg-stone-50">
-                          <IoDiamondOutline className="w-10 h-10" />
-                        </div>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={() => toggleWishlist(product)}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-xs shadow-xs flex items-center justify-center text-stone-400 hover:text-red-500 transition-colors cursor-pointer"
-                        aria-label="Wishlist"
-                      >
-                        {isWish ? (
-                          <HiHeart className="w-4 h-4 text-red-500" />
-                        ) : (
-                          <HiOutlineHeart className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-
-                    <Link
-                      to={`/product/${product.id || product._id}`}
-                      className="text-xs text-stone-800 font-normal line-clamp-2 hover:text-[#9e5e4d] transition-colors leading-relaxed block mb-2"
-                    >
-                      {product.title}
-                    </Link>
-                  </div>
-
-                  <div>
-                    <div className="flex items-baseline gap-2 mb-3">
-                      <span className="text-sm font-semibold text-stone-900">
-                        {formatProductPrice(product.salePrice || product.price)}
-                      </span>
-                    </div>
-
-                    <Link
-                      to={`/product/${product.id || product._id}`}
-                      className="w-full py-2 border border-stone-800 text-stone-900 hover:bg-stone-900 hover:text-white rounded-lg text-[10px] font-bold tracking-widest uppercase flex items-center justify-center transition-colors text-center"
-                    >
-                      VIEW MORE
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
+            {trendingProducts.map((product) => <ProductCard key={product.id || product._id} product={product} />)}
           </div>
         ) : (
           <div className="py-8 space-y-3">
@@ -1082,7 +861,7 @@ const Home = () => {
             </div>
 
             <p className="font-serif italic text-base sm:text-lg text-stone-700 leading-relaxed max-w-2xl mx-auto mb-6">
-              "{currentReview.comment}"
+              &ldquo;{currentReview.comment}&rdquo;
             </p>
 
             <div className="font-sans">

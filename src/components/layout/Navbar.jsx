@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
-import { categoriesAPI } from '../../api/services';
+import MegaMenuNav from './MegaMenuNav';
 import api from '../../api/axios';
 import { getImageUrl } from '../../utils/imageUrl';
 import {
@@ -19,19 +19,13 @@ import {
 
 import VirtualAppointmentModal from '../common/VirtualAppointmentModal';
 
-const categoryKey = (value = '') => {
-  const key = value.toLowerCase().trim().replace(/\s+/g, '-');
-  if (['pendant', 'pendants', 'pendant-necklaces'].includes(key)) return 'necklaces';
-  if (['bangles', 'bangles-bracelets', 'bangle-bracelet'].includes(key)) return 'bracelets';
-  if (['collection', 'all-collections'].includes(key)) return 'all';
-  return key;
-};
-
 const Navbar = () => {
   const { user, logout } = useAuth();
   const { totalItems } = useCart();
   const { wishlistCount } = useWishlist();
   const [categories, setCategories] = useState([]);
+  const [navigationError, setNavigationError] = useState(false);
+  const [navigationRevision, setNavigationRevision] = useState(0);
   const [brandLogo, setBrandLogo] = useState({ desktop: '', mobile: '' });
   const [storeSettings, setStoreSettings] = useState({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -39,9 +33,6 @@ const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const selectedCategory = categoryKey(searchParams.get('category') || 'all');
   const phoneNumber = String(storeSettings.mobileNumber || '').trim();
   const phoneHref = phoneNumber.replace(/[^\d+]/g, '');
 
@@ -60,24 +51,15 @@ const Navbar = () => {
     }).catch((err) => console.warn('Failed to load website logo:', err));
   }, []);
 
-  // Call Categories API
+  // A single request contains categories, sections, items and promo banners.
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await categoriesAPI.getAll({ status: 'active' });
-        const data = res?.data?.data;
-        const list = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
-        const sorted = [...list].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
-        setCategories(sorted.filter((category) => category?.name).map((category) => ({
-          name: category.name.toUpperCase(),
-          slug: category.slug || category.name.toLowerCase().replace(/\s+/g, '-'),
-        })));
-      } catch (err) {
-        console.error('Failed to fetch categories from API:', err);
-      }
-    };
-    fetchCategories();
-  }, []);
+    const controller = new AbortController();
+    setNavigationError(false);
+    api.get('/categories/navigation', { signal: controller.signal })
+      .then((response) => { if (!controller.signal.aborted) setCategories(response.data?.data || []); })
+      .catch(() => { if (!controller.signal.aborted) setNavigationError(true); });
+    return () => controller.abort();
+  }, [navigationRevision]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -238,23 +220,8 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* ─── Desktop Categories Navigation Bar (#22201e) ───────────── */}
-        <div className="hidden lg:block border-t border-white/[0.07]">
-          <nav className="max-w-7xl mx-auto flex items-center justify-center space-x-8 xl:space-x-12 py-3">
-            {categories.map((cat) => (
-              <Link
-                key={cat.slug}
-                to={`/shop?category=${cat.slug}`}
-                className={`text-[11px] xl:text-xs font-medium tracking-[0.18em] transition-colors duration-200 uppercase py-1 ${
-                  location.pathname === '/shop' && selectedCategory === categoryKey(cat.slug)
-                    ? 'text-amber-200 border-b border-amber-200'
-                    : 'text-stone-300 hover:text-white'
-                }`}
-              >
-                {cat.name}
-              </Link>
-            ))}
-          </nav>
+        <div className="hidden lg:block">
+          <MegaMenuNav categories={categories} error={navigationError} onRetry={() => setNavigationRevision((value) => value + 1)} />
         </div>
       </div>
 
@@ -275,16 +242,7 @@ const Navbar = () => {
 
           {/* Categories List */}
           <nav className="flex flex-col space-y-3 pt-2">
-            {categories.map((cat) => (
-              <Link
-                key={cat.slug}
-                to={`/shop?category=${cat.slug}`}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`text-xs uppercase font-medium tracking-[0.16em] py-1.5 border-b border-white/5 ${location.pathname === '/shop' && selectedCategory === categoryKey(cat.slug) ? 'text-amber-200' : 'text-stone-300 hover:text-white'}`}
-              >
-                {cat.name}
-              </Link>
-            ))}
+            <MegaMenuNav categories={categories} mobile onNavigate={() => setMobileMenuOpen(false)} error={navigationError} onRetry={() => setNavigationRevision((value) => value + 1)} />
             <Link
               to="/wishlist"
               onClick={() => setMobileMenuOpen(false)}

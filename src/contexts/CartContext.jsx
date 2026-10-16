@@ -51,7 +51,7 @@ export const CartProvider = ({ children }) => {
           title: i.title,
           price: i.price,
           originalPrice: i.originalPrice,
-          image: i.image,
+          image: i.image?.url || i.image || '',
           category: i.category,
           quantity: i.quantity,
           selectedMetal: i.selectedMetal || '',
@@ -89,7 +89,7 @@ export const CartProvider = ({ children }) => {
     const selectedMetal = options.selectedMetal || product.selectedMetal || '';
     const title = product.title || product.name || '';
     const price = Number(product.price) || 0;
-    const image = product.image || (product.images?.[0]?.url || product.images?.[0]) || '';
+    const image = product.image?.url || product.image || (product.images?.[0]?.url || product.images?.[0]) || '';
 
     // 1. Optimistic local update
     setCart((prev) => {
@@ -159,7 +159,7 @@ export const CartProvider = ({ children }) => {
           title: i.title,
           price: i.price,
           originalPrice: i.originalPrice,
-          image: i.image,
+          image: i.image?.url || i.image || '',
           category: i.category,
           quantity: i.quantity,
           selectedMetal: i.selectedMetal || '',
