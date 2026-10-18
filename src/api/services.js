@@ -1,4 +1,4 @@
-import api from './axios';
+import api, { getOnce } from './axios';
 
 // ─── Auth ─────────────────────────────────────────
 export const authAPI = {
@@ -7,33 +7,33 @@ export const authAPI = {
   requestPasswordReset: (data) => api.post('/auth/forgot-password', data),
   resetPassword: (data) => api.post('/auth/reset-password', data),
   register: (data) => api.post('/auth/register', data),
-  getMe: () => api.get('/auth/me'),
+  getMe: () => getOnce('/auth/me'),
   changePassword: (data) => api.post('/auth/change-password', data),
 };
 
 // ─── Users ────────────────────────────────────────
 export const usersAPI = {
-  getAll: (params) => api.get('/users', { params }),
-  getById: (id) => api.get(`/users/${id}`),
+  getAll: (params) => getOnce('/users', { params }),
+  getById: (id) => getOnce(`/users/${id}`),
   create: (data) => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
   delete: (id) => api.delete(`/users/${id}`),
   toggleStatus: (id) => api.patch(`/users/${id}/toggle-status`),
-  getMe: () => api.get('/users/me'),
+  getMe: () => getOnce('/users/me'),
   updateMe: (data) => api.put('/users/me', data),
 };
 
 // ─── Appointments ─────────────────────────────────
 export const appointmentsAPI = {
   create: (data) => api.post('/appointments', data),
-  getAll: (params) => api.get('/appointments', { params }),
-  getById: (id) => api.get(`/appointments/${id}`),
+  getAll: (params) => getOnce('/appointments', { params }),
+  getById: (id) => getOnce(`/appointments/${id}`),
 };
 
 // ─── Notifications ────────────────────────────────
 export const notificationsAPI = {
-  getAll: (params) => api.get('/notifications', { params }),
-  getUnreadCount: () => api.get('/notifications/unread-count'),
+  getAll: (params) => getOnce('/notifications', { params }),
+  getUnreadCount: () => getOnce('/notifications/unread-count'),
   markAsRead: (id) => api.patch(`/notifications/${id}/read`),
   markAllAsRead: () => api.patch('/notifications/read-all'),
   delete: (id) => api.delete(`/notifications/${id}`),
@@ -51,59 +51,85 @@ export const uploadAPI = {
 };
 
 // ─── Banners ──────────────────────────────────────
+let activeBannersRequest;
 export const bannersAPI = {
-  getAll: (params) => api.get('/banners', { params }),
-  getHeroBanners: () => api.get('/banners?type=herobanner&status=active'),
-  getCollectionBanners: () => api.get('/banners?type=collectionbanner&status=active'),
-  getMobileAppBanner: () => api.get('/banners?type=mobileappbanner&status=active'),
-  getBookAppointBanner: () => api.get('/banners?type=bookappointbanner&status=active'),
-  getCustomJewelleryBanner: () => api.get('/banners?bannerKey=custom_jewellery&status=active'),
+  getAll: (params) => getOnce('/banners', { params }),
+  getActive: () => {
+    if (!activeBannersRequest) {
+      activeBannersRequest = getOnce('/banners/lookup').catch((error) => {
+        activeBannersRequest = null;
+        throw error;
+      });
+    }
+    return activeBannersRequest;
+  },
+};
+
+// ─── Store settings ───────────────────────────────
+let storeSettingsRequest;
+export const settingsAPI = {
+  getStoreSettings: () => {
+    if (!storeSettingsRequest) {
+      storeSettingsRequest = getOnce('/settings').catch((error) => {
+        storeSettingsRequest = null;
+        throw error;
+      });
+    }
+    return storeSettingsRequest;
+  },
 };
 
 // ─── Categories ───────────────────────────────────
 export const categoriesAPI = {
-  getNavigation: () => api.get('/categories/navigation'),
-  getAll: (params) => api.get('/categories', { params }),
-  getLookup: (params) => api.get('/categories/lookup', { params }),
+  getNavigation: () => getOnce('/categories/navigation'),
+  getAll: (params) => getOnce('/categories', { params }),
+  getLookup: (params) => getOnce('/categories/lookup', { params }),
 };
 
 export const sizesAPI = {
-  getLookup: (params) => api.get('/sizes/lookup', { params }),
+  getLookup: (params) => getOnce('/sizes/lookup', { params }),
+};
+
+// ─── Checkout ──────────────────────────────────────
+export const checkoutAPI = {
+  validateCoupon: (code, cartAmount) => api.post('/coupons/validate', { code, cartAmount }),
+  calculateCodFee: (amount) => getOnce('/cod-sequences/calculate', { params: { amount } }),
+  getAddresses: () => getOnce('/addresses'),
 };
 
 // ─── Featured / Celebrate / Gifts ─────────────────
 export const featuredAPI = {
-  getAll: (params) => api.get('/featured', { params }),
-  getCelebrate: () => api.get('/featured?placement=Celebrate&status=active'),
-  getGifts: () => api.get('/featured?placement=Gifts&status=active'),
+  getAll: (params) => getOnce('/featured', { params }),
+  getCelebrate: () => getOnce('/featured?placement=Celebrate&status=active'),
+  getGifts: () => getOnce('/featured?placement=Gifts&status=active'),
 };
 
 // ─── Products ─────────────────────────────────────
 export const productsAPI = {
-  getAll: (params) => api.get('/products', { params }),
-  getHomeProducts: (params) => api.get('/product/home', { params }),
-  getById: (id) => api.get(`/products/${id}`),
+  getAll: (params) => getOnce('/products', { params }),
+  getHomeProducts: (params) => getOnce('/product/home', { params }),
+  getById: (id) => getOnce(`/products/${id}`),
 };
 
 // ─── Reviews ──────────────────────────────────────
 export const reviewsAPI = {
-  getAll: (params) => api.get('/reviews', { params }),
-  getApproved: () => api.get('/reviews?status=approved'),
+  getAll: (params) => getOnce('/reviews', { params }),
+  getApproved: () => getOnce('/reviews?status=approved'),
 };
 
 // ─── Instagram Posts ──────────────────────────────
 export const instagramAPI = {
-  getAll: (params) => api.get('/instagram-posts', { params }),
+  getAll: (params) => getOnce('/instagram-posts', { params }),
 };
 
 // ─── Footer Settings ──────────────────────────────
 export const footerAPI = {
-  get: () => api.get('/footer-settings'),
+  get: () => getOnce('/footer-settings'),
 };
 
 // ─── Wishlist ─────────────────────────────────────
 export const wishlistAPI = {
-  get: () => api.get('/wishlist'),
+  get: () => getOnce('/wishlist'),
   toggle: (productData) => api.post('/wishlist/toggle', productData),
   add: (productData) => api.post('/wishlist/add', productData),
   remove: (productId) => api.delete(`/wishlist/${productId}`),
@@ -112,7 +138,7 @@ export const wishlistAPI = {
 
 // ─── Cart ─────────────────────────────────────────
 export const cartAPI = {
-  get: () => api.get('/cart'),
+  get: () => getOnce('/cart'),
   add: (productData, quantity = 1, options = {}) =>
     api.post('/cart/add', { product: productData, quantity, options }),
   updateQuantity: (productId, quantity, options = {}) =>

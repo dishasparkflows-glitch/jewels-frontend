@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import MegaMenuNav from './MegaMenuNav';
-import api from '../../api/axios';
+import { getOnce } from '../../api/axios';
 import { getImageUrl } from '../../utils/imageUrl';
 import {
   HiOutlineShoppingBag,
@@ -18,6 +19,7 @@ import {
 } from 'react-icons/hi';
 
 import VirtualAppointmentModal from '../common/VirtualAppointmentModal';
+import CartDrawer from '../store/CartDrawer';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -26,13 +28,18 @@ const Navbar = () => {
   const [categories, setCategories] = useState([]);
   const [navigationError, setNavigationError] = useState(false);
   const [navigationRevision, setNavigationRevision] = useState(0);
-  const [brandLogo, setBrandLogo] = useState({ desktop: '', mobile: '' });
-  const [storeSettings, setStoreSettings] = useState({});
+  const { settings: storeSettings } = useStoreSettings();
+  const brandLogo = {
+    desktop: getImageUrl(storeSettings.logoImage?.url),
+    mobile: getImageUrl(storeSettings.mobileLogoImage?.url),
+  };
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const phoneNumber = String(storeSettings.mobileNumber || '').trim();
   const phoneHref = phoneNumber.replace(/[^\d+]/g, '');
 
@@ -43,22 +50,14 @@ const Navbar = () => {
     return () => window.removeEventListener('open-virtual-appointment', handleOpen);
   }, []);
 
-  useEffect(() => {
-    api.get('/settings').then(({ data }) => {
-      const settings = data?.data || {};
-      setStoreSettings(settings);
-      setBrandLogo({ desktop: getImageUrl(settings.logoImage?.url), mobile: getImageUrl(settings.mobileLogoImage?.url) });
-    }).catch((err) => console.warn('Failed to load website logo:', err));
-  }, []);
-
   // A single request contains categories, sections, items and promo banners.
   useEffect(() => {
-    const controller = new AbortController();
+    let active = true;
     setNavigationError(false);
-    api.get('/categories/navigation', { signal: controller.signal })
-      .then((response) => { if (!controller.signal.aborted) setCategories(response.data?.data || []); })
-      .catch(() => { if (!controller.signal.aborted) setNavigationError(true); });
-    return () => controller.abort();
+    getOnce('/categories/navigation')
+      .then((response) => { if (active) setCategories(response.data?.data || []); })
+      .catch(() => { if (active) setNavigationError(true); });
+    return () => { active = false; };
   }, [navigationRevision]);
 
   const handleSearch = (e) => {
@@ -105,7 +104,7 @@ const Navbar = () => {
       <div className="bg-[#22201e] text-white px-4 sm:px-6 lg:px-8 border-b border-white/5">
         <div className="max-w-7xl mx-auto flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-4">
           {/* Mobile hamburger */}
-          <div className="flex items-center lg:hidden">
+          <div className="order-last flex items-center lg:order-none lg:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-stone-300 hover:text-white transition-colors"
@@ -116,7 +115,7 @@ const Navbar = () => {
             </button>
           </div>
 
-          <Link to="/" className="flex items-center leading-none group shrink-0 min-w-0" aria-label={storeSettings.companyName || 'Home'}>
+          <Link to="/" className="order-first flex items-center leading-none group shrink-0 min-w-0" aria-label={storeSettings.companyName || 'Home'}>
             {brandLogo.desktop ? (
               <picture>
                 {brandLogo.mobile && <source media="(max-width: 639px)" srcSet={brandLogo.mobile} />}
@@ -142,7 +141,7 @@ const Navbar = () => {
           </form>
 
           {/* Actions: Wishlist, Profile, Shopping Bag */}
-          <div className="flex items-center space-x-1 sm:space-x-4">
+          <div className="order-2 flex items-center space-x-1 sm:space-x-4">
             {/* Wishlist Icon */}
             <Link
               to="/wishlist"
@@ -198,6 +197,7 @@ const Navbar = () => {
               ) : (
                 <Link
                   to="/login"
+                  state={{ from: location }}
                   className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors block"
                   title="Sign In"
                 >
@@ -207,16 +207,19 @@ const Navbar = () => {
             </div>
 
             {/* Shopping Bag with live badge */}
-            <Link
-              to="/cart"
+            <button
+              type="button"
+              onClick={() => setCartDrawerOpen(true)}
               className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors relative"
               title="Shopping Bag"
+              aria-label={`Open shopping bag, ${totalItems || 0} items`}
+              aria-expanded={cartDrawerOpen}
             >
               <HiOutlineShoppingBag className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
               <span className="absolute top-0 right-0 bg-[#a9865c] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
                 {totalItems || 0}
               </span>
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -270,6 +273,7 @@ const Navbar = () => {
         isOpen={appointmentModalOpen}
         onClose={() => setAppointmentModalOpen(false)}
       />
+      <CartDrawer open={cartDrawerOpen} onClose={() => setCartDrawerOpen(false)} />
     </header>
   );
 };

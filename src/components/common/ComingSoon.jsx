@@ -1,5 +1,6 @@
 import { HiOutlineWrench } from 'react-icons/hi2';
 
+/* eslint-disable react/prop-types */
 const ComingSoon = ({ title = 'Coming Soon', description = 'This module is under development.' }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh]">

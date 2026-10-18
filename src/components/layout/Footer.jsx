@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { footerAPI, categoriesAPI } from '../../api/services';
+import { footerAPI } from '../../api/services';
 import {
   HiOutlinePhone,
   HiOutlineMail,
@@ -29,7 +29,6 @@ const Footer = () => {
     copyright: `© ${new Date().getFullYear()} Neirah · Shine your way`,
     socialLinks: [],
   });
-  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -60,22 +59,6 @@ const Footer = () => {
       }
     };
     fetchFooter();
-  }, []);
-
-  // Fetch categories list from API (/api/categories)
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await categoriesAPI.getAll({ status: 'active' });
-        const list = res?.data?.data?.items || res?.data?.data || [];
-        if (Array.isArray(list) && list.length > 0) {
-          setCategories(list);
-        }
-      } catch (err) {
-        console.warn('Categories API fetch fallback:', err);
-      }
-    };
-    fetchCategories();
   }, []);
 
   const scrollToTop = () => {
@@ -110,7 +93,7 @@ const Footer = () => {
                   <Link to="/shop" className="hover:text-white transition-colors">Reviews</Link>
                 </li>
                 <li>
-                  <Link to="/shop" className="hover:text-white transition-colors">FAQ's</Link>
+                  <Link to="/shop" className="hover:text-white transition-colors">FAQ&apos;s</Link>
                 </li>
                 <li>
                   <Link to="/shop" className="hover:text-white transition-colors">Shipping Policy</Link>
@@ -387,9 +370,9 @@ const Footer = () => {
                   <span>|</span>
                   <Link to="/shop?category=collection" className="hover:text-black transition-colors">Stackable Jewellery</Link>
                   <span>|</span>
-                  <Link to="/shop?category=collection" className="hover:text-black transition-colors">Mother's Day</Link>
+                  <Link to="/shop?category=collection" className="hover:text-black transition-colors">Mother&apos;s Day</Link>
                   <span>|</span>
-                  <Link to="/shop?category=collection" className="hover:text-black transition-colors">Valentine's day</Link>
+                  <Link to="/shop?category=collection" className="hover:text-black transition-colors">Valentine&apos;s day</Link>
                   <span>|</span>
                   <Link to="/shop?category=collection" className="hover:text-black transition-colors">Fast Selling/Best Seller</Link>
                 </div>

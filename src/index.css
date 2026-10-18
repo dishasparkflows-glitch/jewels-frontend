@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Montserrat:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -12,7 +12,7 @@
   }
 
   body {
-    font-family: 'Montserrat', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: #ffffff;
@@ -49,6 +49,92 @@
   ::-webkit-scrollbar-thumb:hover {
     background: #64748b;
   }
+}
+
+/* One visual language for every customer facing route. */
+.store-shell {
+  --jewel-ink: #211f1c;
+  --jewel-muted: #756f68;
+  --jewel-accent: #92704e;
+  --jewel-line: #e8e2da;
+  --jewel-paper: #fbfaf8;
+  font-family: 'Montserrat', system-ui, sans-serif;
+  background: var(--jewel-paper);
+  color: var(--jewel-ink);
+}
+
+.store-shell .font-serif,
+.store-shell .font-serif-lux {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
+.store-shell input:not([type='checkbox']):not([type='radio']),
+.store-shell select,
+.store-shell textarea {
+  border-color: var(--jewel-line);
+  border-radius: 5px;
+}
+
+.store-shell input:focus,
+.store-shell select:focus,
+.store-shell textarea:focus {
+  --tw-ring-color: rgb(146 112 78 / 20%);
+  border-color: var(--jewel-accent);
+}
+
+.store-shell .rounded-3xl { border-radius: 12px; }
+.store-shell .rounded-2xl { border-radius: 9px; }
+.store-shell .rounded-xl { border-radius: 6px; }
+
+.store-shell article.group {
+  border-color: transparent;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.store-shell article.group > div:first-child {
+  border-radius: 0;
+  background: #f3f0eb;
+}
+
+.store-shell article.group > div:first-child img {
+  padding: 1rem;
+}
+
+.store-shell article.group a:hover { color: var(--jewel-accent); }
+
+.store-shell main {
+  background-color: var(--jewel-paper);
+}
+
+.store-shell footer {
+  color: #e6e1da;
+}
+
+.store-modal {
+  color: #211f1c;
+}
+
+.store-modal::backdrop {
+  background: rgb(0 0 0 / 62%);
+  backdrop-filter: blur(5px);
+}
+
+.store-modal.cart-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(460px, 100vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0 0 0 auto;
+  overflow: visible;
+  border-radius: 0;
+}
+
+.store-modal.cart-drawer > aside {
+  width: 100%;
 }
 
 @layer components {

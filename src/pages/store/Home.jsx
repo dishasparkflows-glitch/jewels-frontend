@@ -66,31 +66,69 @@ const Home = () => {
 
   const [instagramPosts, setInstagramPosts] = useState([]);
 
-  // ─── 1. FETCH HERO BANNERS (/api/banners?type=herobanner) ───────────
+  // Load all active banner placements in one request, then select each placement locally.
   useEffect(() => {
-    const fetchHero = async () => {
-      try {
-        const res = await bannersAPI.getHeroBanners();
-        const list = res?.data?.data?.items || res?.data?.data || [];
-        if (Array.isArray(list)) {
-          const formatted = list.map((b) => ({
-            _id: b._id,
-            title: b.content?.title || b.title || '',
-            subtitle: b.content?.subtitle || b.subtitle || '',
-            description: b.content?.description || b.description || '',
-            image: b.image?.url || '',
-            video: b.video?.url || '',
-            mediaType: b.mediaType || 'image',
-            link: b.link || '/shop',
-            buttonText: 'SHOP NOW',
-          }));
-          setHeroBanners(formatted);
-        }
-      } catch (err) {
-        console.error('Failed to load hero banners:', err);
-      }
-    };
-    fetchHero();
+    let mounted = true;
+    bannersAPI.getActive()
+      .then((res) => {
+        if (!mounted) return;
+        const list = Array.isArray(res?.data?.data) ? res.data.data : [];
+        const typeOf = (banner) => banner.display?.type || banner.type || '';
+        const contentOf = (banner) => banner.content || {};
+        const mediaOf = (banner) => ({
+          image: banner.image?.url || '',
+          video: banner.video?.url || '',
+          mediaType: banner.mediaType || 'image',
+        });
+        const selectType = (type) => list.filter((banner) => typeOf(banner) === type);
+        const firstType = (type) => selectType(type)[0];
+
+        setHeroBanners(selectType('herobanner').map((banner) => ({
+          _id: banner._id,
+          title: contentOf(banner).title || banner.title || '',
+          subtitle: contentOf(banner).subtitle || banner.subtitle || '',
+          description: contentOf(banner).description || banner.description || '',
+          ...mediaOf(banner),
+          link: banner.link || '/shop',
+          buttonText: contentOf(banner).buttonText || 'SHOP NOW',
+        })));
+        setCollectionBanners(selectType('collectionbanner').map((banner) => ({
+          id: banner._id,
+          title: contentOf(banner).title || banner.title || '',
+          subtitle: contentOf(banner).subtitle || banner.subtitle || '',
+          ...mediaOf(banner),
+          link: banner.link || '/shop',
+          position: banner.display?.position || banner.position || 'none',
+        })));
+
+        const mobileBanner = firstType('mobileappbanner');
+        if (mobileBanner) setMobileAppBanner({
+          title: contentOf(mobileBanner).title || mobileBanner.title || '',
+          subtitle: contentOf(mobileBanner).subtitle || mobileBanner.subtitle || '',
+          image: mobileBanner.image?.url || '',
+          link: mobileBanner.link || '',
+          appStoreUrl: mobileBanner.appStoreUrl || 'https://www.apple.com/app-store/',
+          googlePlayUrl: mobileBanner.googlePlayUrl || 'https://play.google.com/store',
+        });
+
+        const appointmentBanner = firstType('bookappointbanner');
+        if (appointmentBanner) setBookAppointBanner({
+          title: contentOf(appointmentBanner).title || appointmentBanner.title || '',
+          subtitle: contentOf(appointmentBanner).subtitle || appointmentBanner.subtitle || '',
+          image: appointmentBanner.image?.url || '',
+          buttonText: contentOf(appointmentBanner).buttonText || 'SCHEDULE APPOINTMENT',
+        });
+
+        const customBannerData = list.find((banner) => banner.display?.bannerKey === 'custom_jewellery');
+        if (customBannerData) setCustomBanner({
+          title: contentOf(customBannerData).title || customBannerData.title || '',
+          subtitle: contentOf(customBannerData).subtitle || customBannerData.subtitle || '',
+          image: customBannerData.image?.url || '',
+          buttonText: contentOf(customBannerData).buttonText || 'START CUSTOMISING',
+        });
+      })
+      .catch((err) => console.error('Failed to load banners:', err));
+    return () => { mounted = false; };
   }, []);
 
   // Carousel auto-slide when multiple banners exist
@@ -147,32 +185,6 @@ const Home = () => {
     fetchHomeProducts();
   }, []);
 
-  // ─── 4. FETCH COLLECTION BANNERS (/api/banners?type=collectionbanner)
-  useEffect(() => {
-    const fetchCollection = async () => {
-      try {
-        const res = await bannersAPI.getCollectionBanners();
-        const list = res?.data?.data?.items || res?.data?.data || [];
-        if (Array.isArray(list)) {
-          const formatted = list.map((b) => ({
-            id: b._id,
-            title: b.content?.title || b.title || '',
-            subtitle: b.content?.subtitle || b.subtitle || '',
-            image: b.image?.url || '',
-            video: b.video?.url || '',
-            mediaType: b.mediaType || 'image',
-            link: b.link || '/shop',
-            position: b.display?.position || b.position || 'none',
-          }));
-          setCollectionBanners(formatted);
-        }
-      } catch (err) {
-        console.error('Failed to load collection banners:', err);
-      }
-    };
-    fetchCollection();
-  }, []);
-
   // ─── 5. FETCH GIFTS (/api/featured?placement=Gifts) ─────────────────
   useEffect(() => {
     const fetchGifts = async () => {
@@ -193,74 +205,6 @@ const Home = () => {
       }
     };
     fetchGifts();
-  }, []);
-
-  // ─── 6. FETCH MOBILE APP BANNER (/api/banners?type=mobileappbanner) ──
-  useEffect(() => {
-    const fetchMobileApp = async () => {
-      try {
-        const res = await bannersAPI.getMobileAppBanner();
-        const list = res?.data?.data?.items || res?.data?.data || [];
-        if (Array.isArray(list) && list.length > 0) {
-          const b = list[0];
-          setMobileAppBanner({
-            title: b.content?.title || b.title || '',
-            subtitle: b.content?.subtitle || b.subtitle || '',
-            image: b.image?.url || '',
-            link: b.link || '',
-            appStoreUrl: b.appStoreUrl || 'https://www.apple.com/app-store/',
-            googlePlayUrl: b.googlePlayUrl || 'https://play.google.com/store',
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load mobile app banner:', err);
-      }
-    };
-    fetchMobileApp();
-  }, []);
-
-  // ─── 7. FETCH BOOK APPOINTMENT BANNER (/api/banners?type=bookappointbanner)
-  useEffect(() => {
-    const fetchAppointment = async () => {
-      try {
-        const res = await bannersAPI.getBookAppointBanner();
-        const list = res?.data?.data?.items || res?.data?.data || [];
-        if (Array.isArray(list) && list.length > 0) {
-          const b = list[0];
-          setBookAppointBanner({
-            title: b.content?.title || b.title || '',
-            subtitle: b.content?.subtitle || b.subtitle || '',
-            image: b.image?.url || '',
-            buttonText: 'SCHEDULE APPOINTMENT',
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load book appointment banner:', err);
-      }
-    };
-    fetchAppointment();
-  }, []);
-
-  // ─── 8. FETCH CUSTOM JEWELLERY BANNER (/api/banners?bannerKey=custom_jewellery)
-  useEffect(() => {
-    const fetchCustom = async () => {
-      try {
-        const res = await bannersAPI.getCustomJewelleryBanner();
-        const list = res?.data?.data?.items || res?.data?.data || [];
-        if (Array.isArray(list) && list.length > 0) {
-          const b = list[0];
-          setCustomBanner({
-            title: b.content?.title || b.title || '',
-            subtitle: b.content?.subtitle || b.subtitle || '',
-            image: b.image?.url || '',
-            buttonText: 'START CUSTOMISING',
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load custom banner:', err);
-      }
-    };
-    fetchCustom();
   }, []);
 
   // ─── 9. FETCH REVIEWS (/api/reviews?status=approved) ─────────────────
@@ -325,66 +269,21 @@ const Home = () => {
   return (
     <div className="bg-white text-stone-900 font-sans antialiased overflow-x-hidden">
       {/* ─────────────────────────────────────────────────────────────────
-          1. HERO BANNER (Dynamic from /api/banners?type=herobanner)
+          1. HERO BANNER (Selected from the shared active-banners response)
       ─────────────────────────────────────────────────────────────────── */}
       {heroBanners.length > 0 && currentHero && (
-        <section className="relative overflow-hidden bg-gradient-to-r from-[#061e17] via-[#092820] to-[#051a14] text-white min-h-[500px] sm:min-h-[580px] lg:min-h-[640px] flex items-center border-b border-emerald-950">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_40%,rgba(20,83,64,0.35),transparent_60%)] pointer-events-none" />
-          <div className="absolute inset-0 bg-black/25 pointer-events-none" />
-
-          <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 py-16 w-full relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
-            {/* Left Media: Only rendered if image or video exists from API */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center lg:justify-start">
-              {currentHero.image ? (
-                <div className="relative max-w-md w-full">
-                  <div className="w-64 h-64 sm:w-80 sm:h-80 mx-auto rounded-full bg-gradient-to-b from-[#0f3d30] to-[#041610] p-1 shadow-2xl relative flex items-center justify-center border border-emerald-600/30 overflow-hidden">
-                    <img
-                      src={getMediaUrl(currentHero.image)}
-                      alt={currentHero.title || 'Hero Banner'}
-                      className="w-full h-full object-cover rounded-full shadow-inner transform hover:scale-105 transition-transform duration-700"
-                    />
-                  </div>
-                </div>
-              ) : currentHero.video ? (
-                <div className="w-64 h-64 sm:w-80 sm:h-80 mx-auto rounded-full overflow-hidden shadow-2xl border border-emerald-600/30">
-                  <video
-                    src={getMediaUrl(currentHero.video)}
-                    className="w-full h-full object-cover"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                  />
-                </div>
-              ) : null}
-            </div>
-
-            {/* Right: Typography & Action Button from API */}
-            <div className="w-full lg:w-1/2 text-center lg:text-left space-y-5 lg:pl-6">
-              {currentHero.title && (
-                <h1 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-light tracking-wide text-[#f5f1eb] leading-tight">
-                  {currentHero.title}
-                </h1>
-              )}
-              {currentHero.subtitle && (
-                <p className="font-serif italic text-base sm:text-lg lg:text-xl text-[#d4e4dd]/90 font-light">
-                  {currentHero.subtitle}
-                </p>
-              )}
-              {currentHero.description && (
-                <p className="text-xs sm:text-sm text-stone-300 font-light leading-relaxed max-w-lg">
-                  {currentHero.description}
-                </p>
-              )}
-
-              <div className="pt-4 flex items-center justify-center lg:justify-start">
-                <Link
-                  to={currentHero.link || '/shop'}
-                  className="inline-flex items-center justify-center px-9 py-3 border border-emerald-400/70 hover:border-amber-400 text-xs font-semibold tracking-[0.25em] text-white hover:text-amber-200 bg-emerald-950/40 hover:bg-emerald-900/60 uppercase rounded-sm transition-all duration-300 shadow-lg hover:shadow-emerald-900/50 backdrop-blur-sm"
-                >
-                  {currentHero.buttonText || 'SHOP NOW'}
-                </Link>
-              </div>
+        <section className="relative isolate min-h-[280px] sm:min-h-[420px] lg:min-h-[560px] overflow-hidden bg-[#d6bea1] text-[#29231d]">
+          {currentHero.image && <img src={getMediaUrl(currentHero.image)} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+          {currentHero.video && !currentHero.image && <video src={getMediaUrl(currentHero.video)} className="absolute inset-0 h-full w-full object-cover" autoPlay loop muted playsInline />}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#241c16]/50 via-[#241c16]/10 to-transparent" />
+          <div className="relative z-10 mx-auto flex min-h-[280px] max-w-7xl items-center px-7 py-10 sm:min-h-[420px] sm:px-12 lg:min-h-[560px] lg:px-16">
+            <div className="max-w-xl space-y-3 text-white drop-shadow-sm sm:space-y-5">
+              {currentHero.title && <h1 className="font-serif text-3xl font-normal leading-tight sm:text-5xl lg:text-6xl">{currentHero.title}</h1>}
+              {currentHero.subtitle && <p className="font-serif text-base sm:text-xl">{currentHero.subtitle}</p>}
+              {currentHero.description && <p className="max-w-md text-xs leading-6 text-white/90 sm:text-sm">{currentHero.description}</p>}
+              <Link to={currentHero.link || '/shop'} className="inline-flex items-center justify-center border border-white/80 bg-[#86684d]/90 px-6 py-3 text-[10px] font-medium uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#6e513b] sm:px-8">
+                {currentHero.buttonText || 'Discover more'}
+              </Link>
             </div>
           </div>
 
@@ -500,7 +399,7 @@ const Home = () => {
                 {bento1 && (
                   <Link
                     to={bento1.link || '/shop'}
-                    className="group relative rounded-2xl overflow-hidden aspect-[4/3] bg-emerald-950 border border-stone-200/80 shadow-xs flex flex-col justify-end p-5"
+                    className="group relative rounded-2xl overflow-hidden aspect-[4/3] bg-stone-200 border border-stone-200/80 shadow-xs flex flex-col justify-end p-5"
                   >
                     {bento1.image && (
                       <img
@@ -519,7 +418,7 @@ const Home = () => {
                 {bento2 && (
                   <Link
                     to={bento2.link || '/shop'}
-                    className="group relative rounded-2xl overflow-hidden aspect-[4/3] bg-emerald-950 border border-stone-200/80 shadow-xs flex flex-col justify-end p-5"
+                    className="group relative rounded-2xl overflow-hidden aspect-[4/3] bg-stone-200 border border-stone-200/80 shadow-xs flex flex-col justify-end p-5"
                   >
                     {bento2.image && (
                       <img
@@ -539,7 +438,7 @@ const Home = () => {
               {bento3 && (
                 <Link
                   to={bento3.link || '/shop'}
-                  className="group relative rounded-2xl overflow-hidden aspect-[16/7] bg-emerald-950 border border-stone-200/80 shadow-xs flex flex-col justify-end p-6"
+                  className="group relative rounded-2xl overflow-hidden aspect-[16/7] bg-stone-200 border border-stone-200/80 shadow-xs flex flex-col justify-end p-6"
                 >
                   {bento3.image && (
                     <img
@@ -564,7 +463,7 @@ const Home = () => {
               <div className="lg:col-span-5">
                 <Link
                   to={bento4.link || '/shop'}
-                  className="group relative rounded-2xl overflow-hidden h-full min-h-[380px] lg:min-h-full bg-emerald-950 border border-stone-200/80 shadow-xs flex flex-col justify-start p-8"
+                  className="group relative rounded-2xl overflow-hidden h-full min-h-[380px] lg:min-h-full bg-stone-200 border border-stone-200/80 shadow-xs flex flex-col justify-start p-8"
                 >
                   {bento4.image && (
                     <img
@@ -595,37 +494,37 @@ const Home = () => {
       <section className="border-y border-stone-200/70 bg-[#faf9f7] py-6 px-4">
         <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 text-center">
           <div className="flex flex-col items-center gap-1.5 text-stone-600">
-            <HiOutlineShieldCheck className="w-6 h-6 text-emerald-800" />
+            <HiOutlineShieldCheck className="w-6 h-6 text-[#92704e]" />
             <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">
               100% Certified
             </span>
           </div>
           <div className="flex flex-col items-center gap-1.5 text-stone-600">
-            <IoDiamondOutline className="w-6 h-6 text-emerald-800" />
+            <IoDiamondOutline className="w-6 h-6 text-[#92704e]" />
             <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">
               BIS Hallmarked
             </span>
           </div>
           <div className="flex flex-col items-center gap-1.5 text-stone-600">
-            <HiOutlineRefresh className="w-6 h-6 text-emerald-800" />
+            <HiOutlineRefresh className="w-6 h-6 text-[#92704e]" />
             <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">
               Lifetime Exchange
             </span>
           </div>
           <div className="flex flex-col items-center gap-1.5 text-stone-600">
-            <HiOutlineCalendar className="w-6 h-6 text-emerald-800" />
+            <HiOutlineCalendar className="w-6 h-6 text-[#92704e]" />
             <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">
               15-Day Return Policy
             </span>
           </div>
           <div className="flex flex-col items-center gap-1.5 text-stone-600">
-            <HiOutlineTruck className="w-6 h-6 text-emerald-800" />
+            <HiOutlineTruck className="w-6 h-6 text-[#92704e]" />
             <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">
               Insured Shipping
             </span>
           </div>
           <div className="flex flex-col items-center gap-1.5 text-stone-600">
-            <HiOutlineCheckCircle className="w-6 h-6 text-emerald-800" />
+            <HiOutlineCheckCircle className="w-6 h-6 text-[#92704e]" />
             <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">
               Free Resizing
             </span>
@@ -634,10 +533,10 @@ const Home = () => {
       </section>
 
       {/* ─────────────────────────────────────────────────────────────────
-          6. CUSTOM JEWELLERY BANNER (Dynamic from /api/banners?bannerKey=custom_jewellery)
+          6. CUSTOM JEWELLERY BANNER (Selected from the shared active-banners response)
       ─────────────────────────────────────────────────────────────────── */}
       {customBanner && (
-        <section className="bg-gradient-to-r from-[#062018] via-[#092b21] to-[#051711] text-white py-14 px-4 sm:px-6 lg:px-8 border-y border-emerald-950 relative overflow-hidden">
+        <section className="bg-gradient-to-r from-[#292622] via-[#39332d] to-[#292622] text-white py-14 px-4 sm:px-6 lg:px-8 border-y border-stone-700 relative overflow-hidden">
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-10 relative z-10">
             <div className="w-full lg:w-5/12 bg-[#f4ede4] text-stone-900 rounded-3xl p-8 sm:p-10 shadow-2xl space-y-5 border border-amber-100">
               <h3 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight leading-snug">
@@ -725,11 +624,11 @@ const Home = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
-          8. MOBILE APP BANNER (Dynamic from /api/banners?type=mobileappbanner)
+          8. MOBILE APP BANNER (Selected from the shared active-banners response)
       ─────────────────────────────────────────────────────────────────── */}
       {mobileAppBanner && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="rounded-3xl bg-gradient-to-r from-[#061e17] via-[#092a20] to-[#041610] text-white p-8 sm:p-12 relative overflow-hidden shadow-xl border border-emerald-950 flex flex-col md:flex-row items-center justify-between gap-10">
+          <div className="rounded-3xl bg-gradient-to-r from-[#292622] via-[#39332d] to-[#292622] text-white p-8 sm:p-12 relative overflow-hidden shadow-xl border border-stone-700 flex flex-col md:flex-row items-center justify-between gap-10">
             {mobileAppBanner.image && (
               <div className="w-full md:w-5/12 flex items-center justify-center">
                 <div className="w-52 aspect-video rounded-2xl overflow-hidden shadow-2xl border border-stone-700">
@@ -803,10 +702,10 @@ const Home = () => {
       </section>
 
       {/* ─────────────────────────────────────────────────────────────────
-          10. BOOK A VIRTUAL APPOINTMENT BANNER (Dynamic from /api/banners)
+          10. BOOK A VIRTUAL APPOINTMENT BANNER (Selected from the shared active-banners response)
       ─────────────────────────────────────────────────────────────────── */}
       {bookAppointBanner && (
-        <section className="bg-gradient-to-r from-[#062018] via-[#092b21] to-[#051711] text-white py-14 px-4 sm:px-6 lg:px-8 border-y border-emerald-950 relative overflow-hidden">
+        <section className="bg-gradient-to-r from-[#292622] via-[#39332d] to-[#292622] text-white py-14 px-4 sm:px-6 lg:px-8 border-y border-stone-700 relative overflow-hidden">
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-10 relative z-10">
             <div className="w-full lg:w-5/12 bg-[#f4ede4] text-stone-900 rounded-3xl p-8 sm:p-10 shadow-2xl space-y-5 border border-amber-100">
               <h3 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight leading-snug">

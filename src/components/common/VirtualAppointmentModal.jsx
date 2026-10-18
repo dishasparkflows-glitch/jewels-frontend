@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { appointmentsAPI } from '../../api/services';
 import { toast } from 'react-hot-toast';
 import {
@@ -8,7 +8,9 @@ import {
   HiOutlineCalendar,
   HiOutlineClock,
 } from 'react-icons/hi';
+import Modal from './Modal';
 
+/* eslint-disable react/prop-types */
 const TIME_SLOTS = [
   '10:00 AM - 11:00 AM',
   '11:30 AM - 12:30 PM',
@@ -19,7 +21,6 @@ const TIME_SLOTS = [
 ];
 
 const VirtualAppointmentModal = ({ isOpen, onClose }) => {
-  const modalRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -28,36 +29,6 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
     appointmentDate: new Date().toISOString().split('T')[0],
     preferredTime: '',
   });
-
-  // Close when clicking outside modal box
-  useEffect(() => {
-    const handleOutsideClick = (e) => {
-      if (modalRef.current && !modalRef.current.contains(e.target)) {
-        onClose();
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleOutsideClick);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-    };
-  }, [isOpen, onClose]);
-
-  // Close on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -108,13 +79,10 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div
-        ref={modalRef}
-        className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in"
-      >
+    <Modal open={isOpen} onClose={onClose} label="Schedule a virtual appointment" className="w-[min(640px,calc(100vw-2rem))]">
+      <div className="max-h-[calc(100dvh-2rem)] w-full overflow-y-auto rounded-xl bg-white shadow-2xl">
         {/* Modal Header (Dark Forest Green #1e463a from Screenshot 1) */}
-        <div className="bg-[#1e463a] text-white px-6 py-6 text-center relative">
+          <div className="relative bg-[#22201e] px-6 py-6 text-center text-white">
           <button
             onClick={onClose}
             className="absolute top-5 right-5 text-white/70 hover:text-white transition-colors p-1"
@@ -252,7 +220,7 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 };
 

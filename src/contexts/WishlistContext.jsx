@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { wishlistAPI } from '../api/services';
 import { useAuth } from './AuthContext';
 
+/* eslint-disable react/prop-types, react-refresh/only-export-components */
 const WishlistContext = createContext(null);
 
 export const WishlistProvider = ({ children }) => {

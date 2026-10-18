@@ -9,6 +9,24 @@ const api = axios.create({
   },
 });
 
+const pendingGetRequests = new Map();
+
+/** Coalesce simultaneous identical GETs, including Strict Mode effect replays. */
+export function getOnce(url, config = {}) {
+  if (config.signal) return api.get(url, config);
+
+  const token = typeof localStorage === 'undefined' ? '' : localStorage.getItem('token') || '';
+  const key = JSON.stringify({ url, params: config.params || {}, token });
+  const pending = pendingGetRequests.get(key);
+  if (pending) return pending;
+
+  const request = api.get(url, config).finally(() => {
+    if (pendingGetRequests.get(key) === request) pendingGetRequests.delete(key);
+  });
+  pendingGetRequests.set(key, request);
+  return request;
+}
+
 // Helper to retrieve or initialize a persistent guest session ID
 function getOrCreateSessionId() {
   let sessionId = localStorage.getItem('neirah_session_id');

@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   HiOutlineHeart,
   HiHeart,
   HiOutlineShare,
   HiOutlineChevronDown,
+  HiOutlineChevronLeft,
+  HiOutlineChevronRight,
   HiOutlineX,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
@@ -60,6 +62,7 @@ export default function ProductDetail() {
   // Selections
   const [selectedVariantId, setSelectedVariantId] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [addingToCart, setAddingToCart] = useState(false);
 
   // Lightbox & Size modal
@@ -150,6 +153,7 @@ export default function ProductDetail() {
         setLoading(true);
         setProduct(null);
         setSelectedVariantId('');
+        setActiveImageIndex(0);
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         const res = await productsAPI.getById(id);
@@ -290,34 +294,34 @@ export default function ProductDetail() {
 
         {/* ─── Main Product Section: 2-Column Gallery Grid & Purchase Sidebar ─── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-start">
-          {/* ─── Left Side: 2-Column Image Gallery Grid (Screenshot 1) ─── */}
-          <div className="lg:col-span-7 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {galleryImages.slice(0, 6).map((imgUrl, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => setLightboxImage(getMediaUrl(imgUrl))}
-                  className="group relative aspect-square rounded-2xl bg-[#faf8f5] border border-stone-200/60 overflow-hidden flex items-center justify-center p-4 cursor-zoom-in shadow-2xs hover:border-[#8f6d43]/40 transition-all"
-                >
-                  <img
-                    src={getMediaUrl(imgUrl)}
-                    alt={`${product?.title || 'Jewelry'} view ${idx + 1}`}
-                    className="w-full h-full object-contain object-center group-hover:scale-105 transition-transform duration-500"
-                    loading={idx < 2 ? 'eager' : 'lazy'}
-                  />
-                  <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-xs text-[10px] font-bold text-stone-600 px-2 py-0.5 rounded-md shadow-xs">
-                    CLICK TO ZOOM
-                  </div>
-                </div>
-              ))}
+          {/* Product gallery */}
+          <div className="lg:col-span-7 space-y-4 lg:sticky lg:top-24">
+            <div className="group relative aspect-square overflow-hidden bg-[#f8f7f5] sm:rounded-sm">
+              {galleryImages.length > 0 ? (
+                <>
+                  <button type="button" onClick={() => setLightboxImage(getMediaUrl(galleryImages[activeImageIndex]))} className="h-full w-full cursor-zoom-in p-5 sm:p-8" aria-label="Zoom product image">
+                    <img src={getMediaUrl(galleryImages[activeImageIndex])} alt={`${product.title} view ${activeImageIndex + 1}`} className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]" />
+                  </button>
+                  {galleryImages.length > 1 && <>
+                    <button type="button" onClick={() => setActiveImageIndex((index) => (index - 1 + galleryImages.length) % galleryImages.length)} aria-label="Previous product image" className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm transition hover:bg-white"><HiOutlineChevronLeft className="h-5 w-5" /></button>
+                    <button type="button" onClick={() => setActiveImageIndex((index) => (index + 1) % galleryImages.length)} aria-label="Next product image" className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm transition hover:bg-white"><HiOutlineChevronRight className="h-5 w-5" /></button>
+                    <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2" aria-label="Product image position">
+                      {galleryImages.map((image, index) => <button key={`${image}-${index}`} type="button" onClick={() => setActiveImageIndex(index)} aria-label={`Show image ${index + 1}`} aria-current={index === activeImageIndex} className={`h-1.5 rounded-full transition-all ${index === activeImageIndex ? 'w-6 bg-stone-900' : 'w-1.5 bg-stone-400/60'}`} />)}
+                    </div>
+                  </>}
+                </>
+              ) : <div className="flex h-full items-center justify-center text-sm text-stone-400">Image coming soon</div>}
             </div>
+            {galleryImages.length > 1 && <div className="flex gap-3 overflow-x-auto pb-1">
+              {galleryImages.slice(0, 8).map((image, index) => <button key={`${image}-thumb-${index}`} type="button" onClick={() => setActiveImageIndex(index)} aria-label={`View product image ${index + 1}`} aria-pressed={index === activeImageIndex} className={`h-20 w-20 shrink-0 overflow-hidden border bg-white p-1 transition sm:h-24 sm:w-24 ${index === activeImageIndex ? 'border-[#8f6d43]' : 'border-stone-200 hover:border-stone-400'}`}><img src={getMediaUrl(image)} alt="" className="h-full w-full object-contain" loading="lazy" /></button>)}
+            </div>}
           </div>
 
           {/* ─── Right Side: Configuration & Purchase Sidebar (Sticky) ─── */}
-          <div className="lg:col-span-5 space-y-5 lg:sticky lg:top-24">
+          <div className="lg:col-span-5 space-y-5">
             {/* Title & Brand */}
             <div className="space-y-1.5">
-              <h1 className="text-lg sm:text-xl font-bold text-stone-900 leading-snug tracking-tight font-serif">
+              <h1 className="text-xl sm:text-2xl font-normal text-stone-900 leading-snug tracking-tight font-serif">
                 {product.title}
               </h1>
             </div>
@@ -325,7 +329,7 @@ export default function ProductDetail() {
             {/* Price Row with Wishlist & Share */}
             <div className="flex items-center justify-between pb-1 border-b border-stone-100">
               <div className="flex items-baseline gap-3">
-                <span className="text-2xl sm:text-3xl font-bold text-stone-900 font-serif">
+                <span className="text-2xl sm:text-3xl font-medium text-stone-900 font-serif">
                   {formatPrice(currentPrice)}
                 </span>
                 {discountPercent > 0 && (
@@ -377,21 +381,12 @@ export default function ProductDetail() {
                 <label htmlFor="product-variant" className="block text-[11px] font-bold text-stone-700">
                   Product option
                 </label>
-                <div className="relative">
-                  <select
-                    id="product-variant"
-                    value={selectedVariantId}
-                    onChange={(event) => setSelectedVariantId(event.target.value)}
-                    className="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 appearance-none focus:outline-none focus:border-[#8f6d43] cursor-pointer"
-                  >
-                    <option value="">Choose an option</option>
-                    {productVariants.map((variant) => (
-                      <option key={variant._id || variant.sku} value={variant._id || variant.sku}>
-                        {variant.label}
-                      </option>
-                    ))}
-                  </select>
-                  <HiOutlineChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
+                <div className="flex flex-wrap gap-2">
+                  {productVariants.map((variant) => {
+                    const variantId = String(variant._id || variant.sku);
+                    const isSelected = selectedVariantId === variantId;
+                    return <button key={variantId} type="button" onClick={() => setSelectedVariantId(variantId)} aria-pressed={isSelected} className={`min-h-10 border px-3 py-2 text-left text-xs transition ${isSelected ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-700 hover:border-stone-500'}`}>{variant.label}</button>;
+                  })}
                 </div>
               </div>
             )}

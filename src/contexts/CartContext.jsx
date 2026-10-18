@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import toast from 'react-hot-toast';
 import { cartAPI } from '../api/services';
 
+/* eslint-disable react/prop-types, react-refresh/only-export-components */
 const CartContext = createContext(null);
 
 export const CartProvider = ({ children }) => {

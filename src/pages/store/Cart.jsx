@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
 import toast from 'react-hot-toast';
 import {
@@ -7,18 +7,16 @@ import {
   HiOutlineArrowNarrowLeft,
   HiOutlineShieldCheck,
   HiOutlineLockClosed,
-  HiCheckCircle,
 } from 'react-icons/hi';
 import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 
 const formatPrice = (price) => `₹${Number(price || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
 const Cart = () => {
-  const { cart, updateQuantity, removeFromCart, clearCart, subtotal, shipping, tax, total } = useCart();
+  const { cart, updateQuantity, removeFromCart, subtotal, shipping, tax, total } = useCart();
+  const navigate = useNavigate();
   const [promoCode, setPromoCode] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [orderComplete, setOrderComplete] = useState(false);
 
   const applyPromo = (e) => {
     e.preventDefault();
@@ -32,39 +30,6 @@ const Cart = () => {
 
   const discountAmount = Math.round((subtotal * discountPercent) / 100);
   const finalTotal = Math.max(0, total - discountAmount);
-
-  const handleCheckout = () => {
-    setIsCheckingOut(true);
-    setTimeout(() => {
-      setIsCheckingOut(false);
-      setOrderComplete(true);
-      clearCart();
-    }, 1500);
-  };
-
-  if (orderComplete) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-24 text-center space-y-6 text-[#2b2926]">
-        <div className="w-20 h-20 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 mx-auto">
-          <HiCheckCircle className="w-12 h-12" />
-        </div>
-        <span className="text-xs uppercase tracking-[0.3em] text-[#9b7951] font-semibold">
-          Order Confirmed
-        </span>
-        <h1 className="font-serif text-3xl sm:text-4xl font-normal text-[#26221e]">
-          Thank You For Choosing Jewels
-        </h1>
-        <p className="text-sm text-stone-500 max-w-md mx-auto leading-relaxed">
-          Your acquisition is being prepared in our private atelier. A personal concierge will contact you shortly with your insured courier dispatch details.
-        </p>
-        <div className="pt-4">
-          <Link to="/shop" className="btn-gold text-xs uppercase tracking-wider">
-            Explore More Masterpieces
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   if (cart.length === 0) {
     return (
@@ -229,18 +194,11 @@ const Cart = () => {
 
           {/* Checkout CTA */}
           <button
-            onClick={handleCheckout}
-            disabled={isCheckingOut}
+            onClick={() => navigate('/checkout')}
             className="w-full rounded-xl bg-[#8b6b47] hover:bg-[#745735] text-white flex items-center justify-center gap-2 text-xs sm:text-sm uppercase tracking-wider py-3.5 transition-colors"
           >
-            {isCheckingOut ? (
-            <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                <HiOutlineLockClosed className="w-5 h-5" />
-                <span>Proceed to Secure Checkout</span>
-              </>
-            )}
+            <HiOutlineLockClosed className="w-5 h-5" />
+            <span>Proceed to Secure Checkout</span>
           </button>
 
           <div className="flex items-center justify-center gap-2 text-[11px] text-stone-500 text-center">

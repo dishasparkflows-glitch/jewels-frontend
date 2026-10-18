@@ -1,22 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { authAPI } from '../../api/services';
 import { HiOutlineMail } from 'react-icons/hi';
-import api from '../../api/axios';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { getImageUrl } from '../../utils/imageUrl';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [brandLogo, setBrandLogo] = useState({ desktop: '', mobile: '' });
-
-  useEffect(() => {
-    api.get('/settings').then(({ data }) => {
-      const settings = data?.data || {};
-      setBrandLogo({ desktop: getImageUrl(settings.logoImage?.url), mobile: getImageUrl(settings.mobileLogoImage?.url) });
-    }).catch(() => {});
-  }, []);
+  const { settings } = useStoreSettings();
+  const brandLogo = {
+    desktop: getImageUrl(settings.logoImage?.url),
+    mobile: getImageUrl(settings.mobileLogoImage?.url),
+  };
   const [sent, setSent] = useState(false);
 
   const handleSubmit = async (event) => {

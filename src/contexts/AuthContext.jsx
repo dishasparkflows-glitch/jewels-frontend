@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../api/services';
 
+/* eslint-disable react/prop-types, react-refresh/only-export-components */
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
@@ -14,15 +15,14 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (token) {
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
-  }, [token]);
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setToken(null);
+    setUser(null);
+  }, []);
 
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     try {
       const { data } = await authAPI.getMe();
       setUser(data.data);
@@ -31,7 +31,12 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [logout]);
+
+  useEffect(() => {
+    if (token) fetchUser();
+    else setLoading(false);
+  }, [token, fetchUser]);
 
   const login = async (identifier, password) => {
     const { data } = await authAPI.login({ identifier, password });
@@ -58,13 +63,6 @@ export const AuthProvider = ({ children }) => {
     setToken(data.data.token);
     setUser(data.data.user);
     return data.data;
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
   };
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';

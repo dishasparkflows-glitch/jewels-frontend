@@ -1,27 +1,36 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import api from '../../api/axios';
+import { HiOutlineDeviceMobile, HiOutlineEye, HiOutlineEyeOff, HiOutlineLockClosed } from 'react-icons/hi';
+import { useAuth } from '../../contexts/AuthContext';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { getImageUrl } from '../../utils/imageUrl';
-import { HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff, HiOutlineDeviceMobile } from 'react-icons/hi';
+import Modal from '../../components/common/Modal';
 
 const Login = () => {
   const { login, loginWithGoogle } = useAuth();
+  const { settings } = useStoreSettings();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ identifier: '', password: '' });
+  const location = useLocation();
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [brandLogo, setBrandLogo] = useState({ desktop: '', mobile: '' });
   const [googleLoading, setGoogleLoading] = useState(false);
   const googleButtonRef = useRef(null);
+  const logoUrl = getImageUrl(settings.logoImage?.url || settings.mobileLogoImage?.url);
+  const returnTo = location.state?.from;
 
-  useEffect(() => {
-    api.get('/settings').then(({ data }) => {
-      const settings = data?.data || {};
-      setBrandLogo({ desktop: getImageUrl(settings.logoImage?.url), mobile: getImageUrl(settings.mobileLogoImage?.url) });
-    }).catch(() => {});
-  }, []);
+  const closeModal = useCallback(() => {
+    const destination = returnTo ? `${returnTo.pathname}${returnTo.search || ''}` : '/';
+    navigate(destination, { replace: true });
+  }, [navigate, returnTo]);
+
+  const finishLogin = useCallback((user) => {
+    toast.success(`Welcome back${user?.firstName ? `, ${user.firstName}` : ''}!`);
+    const destination = returnTo ? `${returnTo.pathname}${returnTo.search || ''}` : '/';
+    navigate(destination, { replace: true });
+  }, [navigate, returnTo]);
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -35,10 +44,9 @@ const Login = () => {
           setGoogleLoading(true);
           try {
             const data = await loginWithGoogle(credential);
-            toast.success(`Welcome back, ${data.user.firstName}!`, { icon: '✨' });
-            navigate('/');
-          } catch (err) {
-            toast.error(err.response?.data?.message || 'Google sign-in failed');
+            finishLogin(data.user);
+          } catch (error) {
+            toast.error(error.response?.data?.message || 'Google sign-in failed');
           } finally {
             setGoogleLoading(false);
           }
@@ -64,131 +72,108 @@ const Login = () => {
     script.addEventListener('load', renderGoogleButton);
     renderGoogleButton();
     return () => script.removeEventListener('load', renderGoogleButton);
-  }, [loginWithGoogle, navigate]);
+  }, [finishLogin, loginWithGoogle]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setLoading(true);
     try {
-      const data = await login(form.identifier.trim(), form.password);
-      toast.success(`Welcome back, ${data.user.firstName}!`, { icon: '✨' });
-      navigate('/');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Authentication failed');
+      const data = await login(identifier.trim(), password);
+      finishLogin(data.user);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-16">
-      <div className="w-full max-w-md bg-white border border-stone-200 rounded-3xl p-8 sm:p-10 shadow-[0_8px_35px_rgba(82,65,43,0.10)] relative">
-        <div className="text-center space-y-2 mb-8">
-          <div className="w-40 sm:w-48 h-14 rounded-xl bg-[#faf5ee] border border-[#e8d9c2] flex items-center justify-center mx-auto mb-3 shadow-sm overflow-hidden">
-            {brandLogo.desktop ? (
-              <picture className="w-full h-full flex items-center justify-center">
-                {brandLogo.mobile && <source media="(max-width: 639px)" srcSet={brandLogo.mobile} />}
-                <img src={brandLogo.desktop} alt="Neirah Jewellers" className="w-full h-full object-contain p-2" />
-              </picture>
-            ) : <span className="font-serif text-2xl font-bold text-[#8b6f4e]">N</span>}
+    <Modal open onClose={closeModal} label="Sign in to your Neirah account" className="login-dialog">
+      <div className="relative grid max-h-[calc(100dvh-2rem)] w-[min(920px,calc(100vw-2rem))] overflow-y-auto rounded-xl bg-white shadow-2xl md:min-h-[620px] md:grid-cols-[0.9fr_1.1fr]">
+        <button type="button" onClick={closeModal} aria-label="Close sign in" className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black text-white transition hover:bg-[#92704e]">
+          <span aria-hidden="true" className="text-xl leading-none">×</span>
+        </button>
+
+        <div className="relative hidden min-h-[620px] overflow-hidden bg-[#171613] md:block">
+          <img src="/featured/ring.jpg" alt="Gold jewellery from the Neirah collection" className="absolute inset-0 h-full w-full object-cover opacity-80" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/30" />
+          <div className="absolute inset-x-8 bottom-10 text-white">
+            {logoUrl ? <img src={logoUrl} alt="Neirah" className="mb-5 h-12 max-w-44 object-contain object-left brightness-0 invert" /> : <p className="mb-4 font-serif text-3xl tracking-[0.2em]">NEIRAH</p>}
+            <p className="text-xs uppercase tracking-[0.28em] text-white/80">Shine your way</p>
           </div>
-          <span className="text-xs uppercase tracking-[0.25em] text-[#8b6f4e] font-semibold">
-            Neirah Jewellers
-          </span>
-          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-stone-900">
-            Welcome back
-          </h2>
-          <p className="text-xs text-stone-500">
-            Sign in to access your bespoke orders, wishlist, and VIP privileges
-          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs uppercase tracking-wider font-semibold text-stone-700 mb-1.5">
-              Email or Mobile Number
-            </label>
-            <div className="relative">
-              {form.identifier.includes('@') ? <HiOutlineMail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" /> : <HiOutlineDeviceMobile className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />}
-              <input
-                type="text"
-                autoComplete="username"
-                inputMode={form.identifier.includes('@') ? 'email' : 'tel'}
-                value={form.identifier}
-                onChange={(e) => setForm({ ...form, identifier: e.target.value })}
-                placeholder="Email address or mobile number"
-                className="w-full bg-white border border-stone-300 rounded-xl pl-11 pr-4 py-3 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:border-[#8f6d43] focus:ring-2 focus:ring-[#8f6d43]/15"
-                required
-              />
-            </div>
-          </div>
+        <section className="flex min-h-[560px] flex-col justify-center px-7 py-14 sm:px-12 md:px-14">
+          <div className="mx-auto w-full max-w-md">
+            {logoUrl && <img src={logoUrl} alt="Neirah" className="mx-auto mb-8 h-12 max-w-48 object-contain md:hidden" />}
+            <p className="text-center text-[11px] font-semibold uppercase tracking-[0.3em] text-[#24211e]">Welcome back</p>
+            <h1 className="sr-only">Sign in to your account</h1>
 
-          <div>
-            <label className="block text-xs uppercase tracking-wider font-semibold text-stone-700 mb-1.5">
-              Password
-            </label>
-            <div className="relative">
-              <HiOutlineLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="••••••••"
-                className="w-full bg-white border border-stone-300 rounded-xl pl-11 pr-11 py-3 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:border-[#8f6d43] focus:ring-2 focus:ring-[#8f6d43]/15"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
-              >
-                {showPassword ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
+            <div ref={googleButtonRef} className="mt-8 flex min-h-12 justify-center" aria-label="Sign in with Google" />
+            {!import.meta.env.VITE_GOOGLE_CLIENT_ID && (
+              <button type="button" disabled className="mt-8 flex h-12 w-full items-center justify-center border border-stone-200 text-sm text-stone-500">
+                Continue with Google
               </button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-xs pt-1">
-            <label className="flex items-center gap-2 text-stone-500">
-              <input type="checkbox" className="rounded bg-white border-stone-300 text-[#8f6d43] focus:ring-0" />
-              <span>Remember me</span>
-            </label>
-            <Link to="/forgot-password" className="text-[#8f6d43] hover:text-[#735530]">
-              Forgot password?
-            </Link>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-xl bg-[#8f6d43] hover:bg-[#7b5b33] text-white font-semibold transition-colors flex items-center justify-center gap-2 text-xs uppercase tracking-wider py-3.5 mt-2"
-          >
-            {loading ? (
-              <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-            ) : (
-              'Sign In to Account'
             )}
-          </button>
-        </form>
+            {googleLoading && <p className="mt-2 text-center text-xs text-stone-500">Signing in with Google…</p>}
 
-        <div className="my-5 flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] text-stone-400">
-          <span className="h-px flex-1 bg-stone-200" />
-          <span>Or continue with</span>
-          <span className="h-px flex-1 bg-stone-200" />
-        </div>
-        <div ref={googleButtonRef} className="flex justify-center min-h-10" aria-label="Sign in with Google" />
-        {googleLoading && <p className="mt-2 text-center text-xs text-stone-500">Signing in with Google…</p>}
-        {!import.meta.env.VITE_GOOGLE_CLIENT_ID && (
-          <p className="mt-2 text-center text-xs text-stone-400">Google sign-in is not configured.</p>
-        )}
+            <div className="my-6 flex items-center gap-4 text-[10px] uppercase tracking-[0.2em] text-stone-400">
+              <span className="h-px flex-1 bg-stone-200" />
+              <span>Or</span>
+              <span className="h-px flex-1 bg-stone-200" />
+            </div>
 
-        <p className="text-center mt-6 text-xs text-stone-500">
-          Not yet registered with Neirah Jewellers?{' '}
-          <Link to="/register" className="text-[#8f6d43] hover:text-[#735530] font-semibold">
-            Create an Account
-          </Link>
-        </p>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <label className="sr-only" htmlFor="login-identifier">Mobile number or email</label>
+              <div className="relative">
+                <HiOutlineDeviceMobile className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-500" />
+                <input
+                  id="login-identifier"
+                  type="text"
+                  autoComplete="username"
+                  inputMode={identifier.includes('@') ? 'email' : 'tel'}
+                  value={identifier}
+                  onChange={(event) => setIdentifier(event.target.value)}
+                  placeholder="Mobile number or email"
+                  className="h-14 w-full border border-[#e9dfd3] bg-[#f4f7ff] pl-12 pr-4 text-sm outline-none transition focus:border-[#92704e] focus:ring-2 focus:ring-[#92704e]/15"
+                  required
+                />
+              </div>
+
+              <label className="sr-only" htmlFor="login-password">Password</label>
+              <div className="relative">
+                <HiOutlineLockClosed className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-500" />
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Password"
+                  className="h-14 w-full border border-[#e9dfd3] bg-[#f4f7ff] pl-12 pr-12 text-sm outline-none transition focus:border-[#92704e] focus:ring-2 focus:ring-[#92704e]/15"
+                  required
+                />
+                <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-900">
+                  {showPassword ? <HiOutlineEyeOff className="h-5 w-5" /> : <HiOutlineEye className="h-5 w-5" />}
+                </button>
+              </div>
+
+              <div className="flex justify-end">
+                <Link to="/forgot-password" className="text-xs text-[#80664e] hover:underline">Forgot password?</Link>
+              </div>
+
+              <button type="submit" disabled={loading} className="flex h-14 w-full items-center justify-center bg-black text-xs font-semibold uppercase tracking-[0.25em] text-white shadow-lg transition hover:bg-[#302a24] disabled:cursor-wait disabled:opacity-60">
+                {loading ? 'Signing in…' : 'Sign in'}
+              </button>
+            </form>
+
+            <p className="mt-7 text-center text-xs text-stone-600">
+              Don’t have an account? <Link to="/register" className="ml-1 font-semibold uppercase text-stone-900 hover:text-[#92704e]">Create one</Link>
+            </p>
+          </div>
+        </section>
       </div>
-    </div>
+    </Modal>
   );
 };
 

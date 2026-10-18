@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { authAPI } from '../../api/services';
 import { HiOutlineLockClosed } from 'react-icons/hi';
-import api from '../../api/axios';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { getImageUrl } from '../../utils/imageUrl';
 
 const ResetPassword = () => {
@@ -13,14 +13,11 @@ const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [brandLogo, setBrandLogo] = useState({ desktop: '', mobile: '' });
-
-  useEffect(() => {
-    api.get('/settings').then(({ data }) => {
-      const settings = data?.data || {};
-      setBrandLogo({ desktop: getImageUrl(settings.logoImage?.url), mobile: getImageUrl(settings.mobileLogoImage?.url) });
-    }).catch(() => {});
-  }, []);
+  const { settings } = useStoreSettings();
+  const brandLogo = {
+    desktop: getImageUrl(settings.logoImage?.url),
+    mobile: getImageUrl(settings.mobileLogoImage?.url),
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
