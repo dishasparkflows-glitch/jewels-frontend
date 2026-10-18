@@ -293,7 +293,7 @@ export default function Checkout() {
             <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:px-10 sm:py-5">
               <p className="flex items-center gap-2 text-[11px] text-stone-500"><HiOutlineLockClosed className="h-4 w-4 shrink-0 text-[#bd9462]" />Your information is secure and encrypted</p>
               <span className="hidden h-px flex-1 bg-stone-200 sm:block" />
-              <button type="submit" className="flex h-13 min-h-13 items-center justify-center gap-3 rounded-md bg-[#171613] px-8 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#80603d] sm:min-w-[300px]">
+              <button type="submit" className="flex h-[52px] items-center justify-center gap-3 rounded-md bg-[#171613] px-8 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#80603d] sm:min-w-[336px]">
                 {paymentMethod === 'cod' && codFee ? `Pay ${formatPrice(codDueNow)}` : `Pay ${formatPrice(finalTotal)}`} <HiOutlineArrowRight className="h-4 w-4" />
               </button>
             </div>

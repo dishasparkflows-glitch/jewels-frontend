@@ -40,6 +40,7 @@ const Navbar = () => {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const isCheckout = location.pathname === '/checkout';
   const phoneNumber = String(storeSettings.mobileNumber || '').trim();
   const phoneHref = phoneNumber.replace(/[^\d+]/g, '');
 
@@ -72,7 +73,7 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-40 w-full shadow-sm font-sans">
       {/* ─── Top announcement bar (Neirah Taupe #60574d) ───────────── */}
-      <div className="bg-[#60574d] text-white/95 text-[10px] sm:text-xs py-2 px-3 sm:px-4 border-b border-black/10">
+      {!isCheckout && <div className="bg-[#60574d] text-white/95 text-[10px] sm:text-xs py-2 px-3 sm:px-4 border-b border-black/10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Left: Virtual Appointment */}
           <button
@@ -98,11 +99,11 @@ const Navbar = () => {
             </a>
           )}
         </div>
-      </div>
+      </div>}
 
       {/* ─── Main Header / Brand & Search Bar (#22201e) ───────────── */}
       <div className="bg-[#22201e] text-white px-4 sm:px-6 lg:px-8 border-b border-white/5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-4">
+        <div className={`max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 ${isCheckout ? 'h-14 sm:h-16' : 'h-16 sm:h-20'}`}>
           {/* Mobile hamburger */}
           <div className="order-last flex items-center lg:order-none lg:hidden">
             <button
@@ -142,6 +143,7 @@ const Navbar = () => {
 
           {/* Actions: Wishlist, Profile, Shopping Bag */}
           <div className="order-2 flex items-center space-x-1 sm:space-x-4">
+            {isCheckout && <span className="hidden items-center gap-1.5 rounded-full border border-white/15 px-2.5 py-1.5 text-[11px] text-white sm:inline-flex"><span aria-hidden="true">🇮🇳</span> INR <span aria-hidden="true">⌄</span></span>}
             {/* Wishlist Icon */}
             <Link
               to="/wishlist"
