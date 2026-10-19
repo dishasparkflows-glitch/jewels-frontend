@@ -8,6 +8,7 @@ import {
   reviewsAPI,
   instagramAPI,
 } from '../../api/services';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import {
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
@@ -40,6 +41,7 @@ const getMediaUrl = (url) => {
 };
 
 const Home = () => {
+  const { settings: storeSettings } = useStoreSettings();
 
   // ─── 100% Dynamic API State (No Static Fallback Content) ────────────
   const [heroBanners, setHeroBanners] = useState([]);
@@ -96,9 +98,13 @@ const Home = () => {
           id: banner._id,
           title: contentOf(banner).title || banner.title || '',
           subtitle: contentOf(banner).subtitle || banner.subtitle || '',
+          images: (Array.isArray(banner.collectionImages) && banner.collectionImages.length
+            ? banner.collectionImages
+            : (banner.image?.url ? [banner.image] : [])).map((image) => image.url || '').filter(Boolean),
           ...mediaOf(banner),
           link: banner.link || '/shop',
           position: banner.display?.position || banner.position || 'none',
+          collectionGroup: banner.display?.collectionGroup || '',
         })));
 
         const mobileBanner = firstType('mobileappbanner');
@@ -260,12 +266,6 @@ const Home = () => {
   const currentHero = heroBanners[activeHeroIdx] || heroBanners[0];
   const currentReview = reviews[activeReviewIdx] || reviews[0];
 
-  // Bento tiles dynamically resolved from API positions
-  const bento1 = collectionBanners.find((b) => b.position === 'top-left') || collectionBanners[0];
-  const bento2 = collectionBanners.find((b) => b.position === 'top-center') || collectionBanners[1];
-  const bento3 = collectionBanners.find((b) => b.position === 'bottom-left') || collectionBanners[2];
-  const bento4 = collectionBanners.find((b) => b.position === 'right-tall') || collectionBanners[3];
-
   return (
     <div className="bg-white text-stone-900 font-sans antialiased overflow-x-hidden">
       {/* ─────────────────────────────────────────────────────────────────
@@ -391,100 +391,31 @@ const Home = () => {
           4. CURATED COLLECTION BANNERS (Dynamic Bento Grid from /api/banners)
       ─────────────────────────────────────────────────────────────────── */}
       {collectionBanners.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            {/* Left Column (7 cols): Top 2 tiles + Bottom wide tile */}
-            <div className="lg:col-span-7 flex flex-col gap-5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {bento1 && (
-                  <Link
-                    to={bento1.link || '/shop'}
-                    className="group relative rounded-2xl overflow-hidden aspect-[4/3] bg-stone-200 border border-stone-200/80 shadow-xs flex flex-col justify-end p-5"
-                  >
-                    {bento1.image && (
-                      <img
-                        src={getMediaUrl(bento1.image)}
-                        alt={bento1.title}
-                        className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    <div className="relative z-10 text-white">
-                      <h4 className="font-serif text-lg font-medium leading-snug">{bento1.title}</h4>
-                    </div>
+        <section className="mx-auto max-w-[1440px] space-y-8 px-4 py-12 sm:px-6 lg:px-8">
+          {collectionBanners.map((collection) => {
+            const [image1, image2, image3, image4] = collection.images || [];
+            if (!image1 || !image2 || !image3 || !image4) return null;
+            const tileClass = 'group relative block overflow-hidden bg-stone-100';
+            const tileImageClass = 'h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]';
+            return (
+              <div key={collection.id} className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Link to={collection.link} className={`${tileClass} aspect-[4/3]`} aria-label={`${collection.title} image 1`}>
+                    <img src={getMediaUrl(image1)} alt={`${collection.title} 1`} loading="lazy" className={tileImageClass} />
                   </Link>
-                )}
-
-                {bento2 && (
-                  <Link
-                    to={bento2.link || '/shop'}
-                    className="group relative rounded-2xl overflow-hidden aspect-[4/3] bg-stone-200 border border-stone-200/80 shadow-xs flex flex-col justify-end p-5"
-                  >
-                    {bento2.image && (
-                      <img
-                        src={getMediaUrl(bento2.image)}
-                        alt={bento2.title}
-                        className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    <div className="relative z-10 text-white">
-                      <h4 className="font-serif text-lg font-medium leading-snug">{bento2.title}</h4>
-                    </div>
+                  <Link to={collection.link} className={`${tileClass} aspect-[4/3]`} aria-label={`${collection.title} image 2`}>
+                    <img src={getMediaUrl(image2)} alt={`${collection.title} 2`} loading="lazy" className={tileImageClass} />
                   </Link>
-                )}
-              </div>
-
-              {bento3 && (
-                <Link
-                  to={bento3.link || '/shop'}
-                  className="group relative rounded-2xl overflow-hidden aspect-[16/7] bg-stone-200 border border-stone-200/80 shadow-xs flex flex-col justify-end p-6"
-                >
-                  {bento3.image && (
-                    <img
-                      src={getMediaUrl(bento3.image)}
-                      alt={bento3.title}
-                      className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
-                    />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-                  <div className="relative z-10 text-white space-y-1">
-                    <h4 className="font-serif text-xl sm:text-2xl font-medium">{bento3.title}</h4>
-                    {bento3.subtitle && (
-                      <p className="text-xs sm:text-sm text-stone-300 font-light max-w-md">{bento3.subtitle}</p>
-                    )}
-                  </div>
-                </Link>
-              )}
-            </div>
-
-            {/* Right Column (5 cols): Right-Tall Model Banner */}
-            {bento4 && (
-              <div className="lg:col-span-5">
-                <Link
-                  to={bento4.link || '/shop'}
-                  className="group relative rounded-2xl overflow-hidden h-full min-h-[380px] lg:min-h-full bg-stone-200 border border-stone-200/80 shadow-xs flex flex-col justify-start p-8"
-                >
-                  {bento4.image && (
-                    <img
-                      src={getMediaUrl(bento4.image)}
-                      alt={bento4.title}
-                      className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
-                    />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-transparent to-black/60" />
-                  <div className="relative z-10 text-white max-w-xs space-y-2">
-                    <h4 className="font-serif text-2xl sm:text-3xl font-light leading-snug">{bento4.title}</h4>
-                    {bento4.subtitle && (
-                      <p className="text-xs sm:text-sm text-stone-200 font-light leading-relaxed">
-                        {bento4.subtitle}
-                      </p>
-                    )}
-                  </div>
+                  <Link to={collection.link} className={`${tileClass} aspect-[16/7] sm:col-span-2`} aria-label={`${collection.title} image 3`}>
+                    <img src={getMediaUrl(image3)} alt={`${collection.title} 3`} loading="lazy" className={tileImageClass} />
+                  </Link>
+                </div>
+                <Link to={collection.link} className={`${tileClass} min-h-[300px] lg:min-h-full`} aria-label={`${collection.title} image 4`}>
+                  <img src={getMediaUrl(image4)} alt={`${collection.title} 4`} loading="lazy" className={tileImageClass} />
                 </Link>
               </div>
-            )}
-          </div>
+            );
+          })}
         </section>
       )}
 
@@ -493,42 +424,26 @@ const Home = () => {
       ─────────────────────────────────────────────────────────────────── */}
       <section className="border-y border-stone-200/70 bg-[#faf9f7] py-6 px-4">
         <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 text-center">
-          <div className="flex flex-col items-center gap-1.5 text-stone-600">
-            <HiOutlineShieldCheck className="w-6 h-6 text-[#92704e]" />
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">
-              100% Certified
-            </span>
-          </div>
-          <div className="flex flex-col items-center gap-1.5 text-stone-600">
-            <IoDiamondOutline className="w-6 h-6 text-[#92704e]" />
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">
-              BIS Hallmarked
-            </span>
-          </div>
-          <div className="flex flex-col items-center gap-1.5 text-stone-600">
-            <HiOutlineRefresh className="w-6 h-6 text-[#92704e]" />
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">
-              Lifetime Exchange
-            </span>
-          </div>
-          <div className="flex flex-col items-center gap-1.5 text-stone-600">
-            <HiOutlineCalendar className="w-6 h-6 text-[#92704e]" />
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">
-              15-Day Return Policy
-            </span>
-          </div>
-          <div className="flex flex-col items-center gap-1.5 text-stone-600">
-            <HiOutlineTruck className="w-6 h-6 text-[#92704e]" />
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">
-              Insured Shipping
-            </span>
-          </div>
-          <div className="flex flex-col items-center gap-1.5 text-stone-600">
-            <HiOutlineCheckCircle className="w-6 h-6 text-[#92704e]" />
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">
-              Free Resizing
-            </span>
-          </div>
+          {(storeSettings.trustBadges?.length ? storeSettings.trustBadges : [
+            { title: '100% Certified', Icon: HiOutlineShieldCheck },
+            { title: 'BIS Hallmarked', Icon: IoDiamondOutline },
+            { title: 'Lifetime Exchange', Icon: HiOutlineRefresh },
+            { title: '15-Day Return Policy', Icon: HiOutlineCalendar },
+            { title: 'Insured Shipping', Icon: HiOutlineTruck },
+            { title: 'Free Resizing', Icon: HiOutlineCheckCircle },
+          ]).map((item, index) => {
+            const Icon = item.Icon || HiOutlineShieldCheck;
+            return (
+              <div key={item._id || index} className="flex flex-col items-center gap-1.5 text-stone-600">
+                {item.image?.url ? (
+                  <img src={getMediaUrl(item.image.url)} alt="" className="h-6 w-6 object-contain" />
+                ) : (
+                  <Icon className="h-6 w-6 text-[#92704e]" />
+                )}
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">{item.title}</span>
+              </div>
+            );
+          })}
         </div>
       </section>
 

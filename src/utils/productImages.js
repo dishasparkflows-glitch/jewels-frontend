@@ -29,20 +29,8 @@ export const getValidProductImages = (product) => {
 
   const valid = [];
 
-  // 1. Process product.images (skipping ornateImages)
-  if (Array.isArray(product.images)) {
-    product.images.forEach((img) => {
-      if (!isOrnateImage(img)) {
-        const url = typeof img === 'string' ? img : img?.url;
-        if (url && typeof url === 'string' && url.trim()) {
-          valid.push(url.trim());
-        }
-      }
-    });
-  }
-
-  // 2. Check product.colorImages if images empty
-  if (valid.length === 0 && Array.isArray(product.colorImages)) {
+  // Product media is stored per color in colorImages.
+  if (Array.isArray(product.colorImages)) {
     product.colorImages.forEach((c) => {
       if (Array.isArray(c?.images)) {
         c.images.forEach((img) => {
@@ -57,7 +45,7 @@ export const getValidProductImages = (product) => {
     });
   }
 
-  // 3. Check product.image
+  // Fall back to a precomputed single thumbnail when one is provided by a listing API.
   if (valid.length === 0 && product.image && !isOrnateImage(product.image)) {
     const url = typeof product.image === 'string' ? product.image : product.image?.url;
     if (url && typeof url === 'string' && url.trim()) {

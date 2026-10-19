@@ -40,6 +40,7 @@ const Profile = () => {
   });
 
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
   const modalRef = useRef(null);
 
   // Sync profile form when user loads
@@ -126,6 +127,57 @@ const Profile = () => {
     setAddressModalOpen(true);
   };
 
+  const handleUseLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Location is not available in this browser');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
+      try {
+        // This lookup is only made after the user taps the location button and
+        // grants browser permission. Nominatim's reverse endpoint returns
+        // address components (unlike city-only geocoders).
+        const params = new URLSearchParams({
+          format: 'jsonv2',
+          lat: String(coords.latitude),
+          lon: String(coords.longitude),
+          addressdetails: '1',
+          'accept-language': 'en',
+          zoom: '18',
+        });
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`);
+        if (!response.ok) throw new Error('Could not look up this location');
+        const result = await response.json();
+        const place = result.address || {};
+        const street = [place.house_number, place.road || place.pedestrian || place.footway]
+          .filter(Boolean)
+          .join(' ');
+        const area = place.neighbourhood || place.suburb || place.residential || place.quarter;
+        const city = place.city || place.town || place.village || place.municipality || place.county;
+        setAddressForm((current) => ({
+          ...current,
+          addressLine: [street, area && area !== city ? area : ''].filter(Boolean).join(', '),
+          city: city || '',
+          state: place.state || '',
+          pincode: place.postcode || '',
+        }));
+        if (!street && !area) {
+          toast('Location found, but this map point has no street details. Please enter the house and street manually.');
+        } else {
+          toast.success('Street, area and address details filled from your location');
+        }
+      } catch (error) {
+        toast.error(error.message || 'Could not find your address');
+      } finally {
+        setLocating(false);
+      }
+    }, (error) => {
+      setLocating(false);
+      toast.error(error.code === error.PERMISSION_DENIED ? 'Location permission was denied' : 'Could not get your location');
+    }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 });
+  };
+
   // ─── Save Address Updates to API ───────────────────────────────
   const handleSaveAddress = async (e) => {
     e.preventDefault();
@@ -190,30 +242,30 @@ const Profile = () => {
   const pageTitle = activeTab === 'addresses' ? 'Address Book' : 'My Dashboard';
 
   return (
-    <div className="bg-[#fcfbfa] min-h-screen text-[#22201e] font-sans antialiased py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="bg-[#fcfbfa] min-h-screen text-[#22201e] font-sans antialiased py-6 sm:py-8 px-3 sm:px-5 lg:px-6">
+      <div className="max-w-6xl mx-auto space-y-5">
         {/* Top Header: Title and Logout Button */}
         <div className="flex items-center justify-between">
-          <h1 className="font-sans text-2xl sm:text-3xl font-medium text-[#22201e] tracking-tight">
+          <h1 className="font-sans text-xl sm:text-2xl font-medium text-[#22201e] tracking-tight">
             {pageTitle}
           </h1>
           <button
             onClick={logout}
-            className="bg-black hover:bg-stone-800 text-white text-xs font-medium px-5 py-2 rounded shadow-sm transition-colors"
+            className="bg-black hover:bg-stone-800 text-white text-xs font-medium px-4 py-2 rounded shadow-sm transition-colors"
           >
             Logout
           </button>
         </div>
 
         {/* Dashboard Layout: Sidebar + Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-start">
           {/* Left Navigation Sidebar (4 cols on lg) */}
           <div className="lg:col-span-3 bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
             <nav className="flex flex-col text-xs sm:text-sm font-normal">
               {/* Profile Tab */}
               <button
                 onClick={() => setActiveTab('profile')}
-                className={`flex items-center gap-3 px-5 py-3.5 text-left transition-colors ${
+                className={`flex items-center gap-3 px-4 py-3 text-left transition-colors ${
                   activeTab === 'profile'
                     ? 'border-l-4 border-black bg-stone-50 font-semibold text-black'
                     : 'text-stone-600 hover:bg-stone-50 hover:text-black border-l-4 border-transparent'
@@ -226,7 +278,7 @@ const Profile = () => {
               {/* Orders Tab */}
               <button
                 onClick={() => setActiveTab('orders')}
-                className={`flex items-center gap-3 px-5 py-3.5 text-left transition-colors ${
+                className={`flex items-center gap-3 px-4 py-3 text-left transition-colors ${
                   activeTab === 'orders'
                     ? 'border-l-4 border-black bg-stone-50 font-semibold text-black'
                     : 'text-stone-600 hover:bg-stone-50 hover:text-black border-l-4 border-transparent'
@@ -265,14 +317,14 @@ const Profile = () => {
           </div>
 
           {/* Main Content Area (9 cols on lg) */}
-          <div className="lg:col-span-9 space-y-6">
+          <div className="lg:col-span-9 space-y-4">
             {/* ─── TAB 1: PROFILE ───────────────────────────────────── */}
             {activeTab === 'profile' && (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* 1. PROFILE INFORMATION CARD */}
                 <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
                   {/* Card Header */}
-                  <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+                  <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
                     <span className="text-[11px] font-bold tracking-wider uppercase text-stone-800">
                       PROFILE INFORMATION
                     </span>
@@ -285,14 +337,14 @@ const Profile = () => {
                   </div>
 
                   {/* Card Body */}
-                  <div className="p-6 sm:p-8 space-y-6">
+                  <div className="p-4 sm:p-5 space-y-4">
                     {/* User summary row */}
-                    <div className="flex items-center gap-5">
-                      <div className="w-20 h-20 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 border border-stone-200">
-                        <HiOutlineUser className="w-9 h-9" />
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 border border-stone-200">
+                        <HiOutlineUser className="w-7 h-7" />
                       </div>
                       <div className="space-y-0.5">
-                        <h2 className="text-xl sm:text-2xl font-normal text-stone-900">
+                        <h2 className="text-lg sm:text-xl font-normal text-stone-900">
                           {user?.firstName || ''} {user?.lastName || ''}
                         </h2>
                         <p className="text-xs text-stone-500">
@@ -354,7 +406,7 @@ const Profile = () => {
                 {/* 2. ADDRESS BOOK CARD (Profile Overview) */}
                 <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
                   {/* Card Header */}
-                  <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between">
+                  <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
                     <span className="text-[11px] font-bold tracking-wider uppercase text-stone-800">
                       ADDRESS BOOK
                     </span>
@@ -367,7 +419,7 @@ const Profile = () => {
                   </div>
 
                   {/* Two Address Columns */}
-                  <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
                     {/* Default Billing Address */}
                     <div className="space-y-2 text-xs sm:text-sm text-stone-700">
                       <div className="flex items-center justify-between">
@@ -416,15 +468,15 @@ const Profile = () => {
 
             {/* ─── TAB 2: ADDRESS BOOK (Screenshot 3) ────────────────── */}
             {activeTab === 'addresses' && (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Section 1: Default Addresses */}
                 <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 border-b border-stone-100">
+                  <div className="px-4 py-3 border-b border-stone-100">
                     <span className="text-[11px] font-bold tracking-wider uppercase text-stone-800">
                       DEFAULT ADDRESSES
                     </span>
                   </div>
-                  <div className="p-6 sm:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
                     {/* Default Billing Address */}
                     <div className="space-y-2 text-xs sm:text-sm text-stone-700">
                       <div className="flex items-center justify-between">
@@ -471,20 +523,20 @@ const Profile = () => {
 
                 {/* Section 2: Additional Address Entries */}
                 <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 border-b border-stone-100">
+                  <div className="px-4 py-3 border-b border-stone-100">
                     <span className="text-[11px] font-bold tracking-wider uppercase text-stone-800">
                       ADDITIONAL ADDRESS ENTRIES
                     </span>
                   </div>
-                  <div className="p-6 sm:p-8">
+                  <div className="p-4 sm:p-5">
                     {additionalAddresses.length === 0 ? (
                       <p className="text-xs text-stone-500 py-4">No additional addresses saved yet.</p>
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {additionalAddresses.map((addr, idx) => (
                           <div
                             key={addr.id || idx}
-                            className="border border-stone-200 rounded-xl p-5 space-y-2 text-xs sm:text-sm text-stone-700 bg-white"
+                            className="border border-stone-200 rounded-xl p-4 space-y-2 text-xs sm:text-sm text-stone-700 bg-white"
                           >
                             <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
                               {addr.title || `ADDRESS ${idx + 1}`}
@@ -537,7 +589,7 @@ const Profile = () => {
 
             {/* ─── TAB 3: ORDERS ────────────────────────────────────── */}
             {activeTab === 'orders' && (
-              <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-8 text-center space-y-4">
+              <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5 text-center space-y-3">
                 <div className="w-16 h-16 rounded-full bg-stone-100 mx-auto flex items-center justify-center text-stone-400">
                   <HiOutlineCube className="w-8 h-8" />
                 </div>
@@ -558,7 +610,7 @@ const Profile = () => {
 
             {/* ─── TAB 4: RETURNS ───────────────────────────────────── */}
             {activeTab === 'returns' && (
-              <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-8 text-center space-y-4">
+              <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5 text-center space-y-3">
                 <div className="w-16 h-16 rounded-full bg-stone-100 mx-auto flex items-center justify-center text-stone-400">
                   <HiOutlineRefresh className="w-8 h-8" />
                 </div>
@@ -701,7 +753,22 @@ const Profile = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveAddress} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleSaveAddress} className="p-5 space-y-3.5 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-stone-50 px-3 py-2.5">
+                <p className="text-[11px] text-stone-600">Fill the mapped street, area, city, state and pincode. House or flat details may need manual entry.</p>
+                <button
+                  type="button"
+                  onClick={handleUseLocation}
+                  disabled={locating}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-stone-300 bg-white px-3 py-2 text-[11px] font-semibold text-stone-800 transition hover:bg-stone-100 disabled:cursor-wait disabled:opacity-60"
+                >
+                  <HiOutlineLocationMarker className="h-4 w-4" />
+                  {locating ? 'Finding location…' : 'Use my location'}
+                </button>
+                <p className="w-full text-[10px] text-stone-400">
+                  Uses your GPS after permission. Address data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline">OpenStreetMap contributors</a>.
+                </p>
+              </div>
               <div className="space-y-1">
                 <label className="font-bold text-stone-700 uppercase tracking-wider text-[10px]">
                   Full Name <span className="text-red-500">*</span>

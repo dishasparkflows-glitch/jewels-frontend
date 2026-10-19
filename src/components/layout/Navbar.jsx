@@ -29,6 +29,8 @@ const Navbar = () => {
   const [navigationError, setNavigationError] = useState(false);
   const [navigationRevision, setNavigationRevision] = useState(0);
   const { settings: storeSettings } = useStoreSettings();
+  const [topAnnouncement, setTopAnnouncement] = useState({ isEnabled: false, displayDirection: 'horizontal', autoplayInterval: 4000, items: [] });
+  const [announcementIndex, setAnnouncementIndex] = useState(0);
   const brandLogo = {
     desktop: getImageUrl(storeSettings.logoImage?.url),
     mobile: getImageUrl(storeSettings.mobileLogoImage?.url),
@@ -61,6 +63,23 @@ const Navbar = () => {
     return () => { active = false; };
   }, [navigationRevision]);
 
+  useEffect(() => {
+    let active = true;
+    getOnce('/top-announcements/public')
+      .then((response) => { if (active) setTopAnnouncement(response.data?.data || { isEnabled: false, items: [] }); })
+      .catch(() => { if (active) setTopAnnouncement({ isEnabled: false, items: [] }); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const items = topAnnouncement.items || [];
+    if (items.length <= 1) return undefined;
+    const interval = window.setInterval(() => {
+      setAnnouncementIndex((index) => (index + 1) % items.length);
+    }, topAnnouncement.autoplayInterval || 4000);
+    return () => window.clearInterval(interval);
+  }, [topAnnouncement.items, topAnnouncement.autoplayInterval]);
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -85,9 +104,16 @@ const Navbar = () => {
             <span className="hidden sm:inline font-normal">Virtual Appointment</span>
           </button>
 
-          {storeSettings.companyName && (
-            <div className="text-center font-medium tracking-wide">{storeSettings.companyName}</div>
-          )}
+          <div className="min-w-0 flex-1 px-3 text-center font-medium tracking-wide sm:flex-none sm:px-0">
+            {topAnnouncement.isEnabled && topAnnouncement.items?.length ? (() => {
+              const items = topAnnouncement.items;
+              const current = items[announcementIndex % items.length];
+              if (topAnnouncement.displayDirection === 'vertical') {
+                return <div key={current?._id || announcementIndex} className="animate-announcement-vertical truncate">{current?.link ? <a href={current.link}>{current.message}</a> : current?.message}</div>;
+              }
+              return <div className="overflow-hidden whitespace-nowrap"><span key={current?._id || announcementIndex} className="inline-block max-w-full truncate animate-announcement-horizontal">{current?.link ? <a href={current.link}>{current.message}</a> : current?.message}</span></div>;
+            })() : storeSettings.companyName}
+          </div>
 
           {phoneNumber && (
             <a

@@ -19,8 +19,8 @@ import Profile from './pages/user/Profile';
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
+    <AuthProvider>
+      <BrowserRouter>
         <CartProvider>
           <WishlistProvider>
             <Toaster
@@ -74,8 +74,8 @@ function App() {
           </Routes>
         </WishlistProvider>
       </CartProvider>
+      </BrowserRouter>
     </AuthProvider>
-  </BrowserRouter>
   );
 }
 

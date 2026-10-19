@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { cartAPI } from '../api/services';
+import { getPrimaryProductImage } from '../utils/productImages';
 
 /* eslint-disable react/prop-types, react-refresh/only-export-components */
 const CartContext = createContext(null);
@@ -90,7 +91,7 @@ export const CartProvider = ({ children }) => {
     const selectedMetal = options.selectedMetal || product.selectedMetal || '';
     const title = product.title || product.name || '';
     const price = Number(product.price) || 0;
-    const image = product.image?.url || product.image || (product.images?.[0]?.url || product.images?.[0]) || '';
+    const image = product.image?.url || product.image || getPrimaryProductImage(product);
 
     // 1. Optimistic local update
     setCart((prev) => {

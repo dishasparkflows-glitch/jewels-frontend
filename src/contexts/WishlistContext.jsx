@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import toast from 'react-hot-toast';
 import { wishlistAPI } from '../api/services';
 import { useAuth } from './AuthContext';
+import { getPrimaryProductImage } from '../utils/productImages';
 
 /* eslint-disable react/prop-types, react-refresh/only-export-components */
 const WishlistContext = createContext(null);
@@ -75,10 +76,7 @@ export const WishlistProvider = ({ children }) => {
       title: product.title || product.name || '',
       price: product.price || 0,
       originalPrice: product.originalPrice || null,
-      image:
-        product.image ||
-        (product.images?.[0]?.url || product.images?.[0]) ||
-        '',
+      image: product.image || getPrimaryProductImage(product),
       category: product.category || '',
       slug: product.slug || '',
     };

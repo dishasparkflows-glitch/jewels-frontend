@@ -117,9 +117,9 @@ export default function ProductDetail() {
     () => productVariants.find((variant) => String(variant._id || variant.sku) === selectedVariantId),
     [productVariants, selectedVariantId]
   );
-  const currentPrice = [selectedVariant?.price, product?.salePrice, product?.displayPrice, product?.price]
+  const currentPrice = [selectedVariant?.price, product?.pricing?.salePrice]
     .find((value) => Number(value) > 0);
-  const mrpPrice = [product?.mrp, product?.price].find((value) => Number(value) > 0) ?? currentPrice;
+  const mrpPrice = [product?.pricing?.mrp].find((value) => Number(value) > 0) ?? currentPrice;
   const discountPercent =
     Number(mrpPrice) > Number(currentPrice) ? Math.round(((mrpPrice - currentPrice) / mrpPrice) * 100) : 0;
 
@@ -217,7 +217,7 @@ export default function ProductDetail() {
 
     const cartItem = {
       _id: product._id,
-      title: product.title,
+      title: product.basicInfo?.title,
       price: currentPrice,
       image: galleryImages[0] || getPrimaryProductImage(product),
       category: categoryName,
@@ -288,7 +288,7 @@ export default function ProductDetail() {
           {categoryName && <><span>/</span><Link to={`/shop?category=${encodeURIComponent(categoryName.toLowerCase())}`} className="hover:text-stone-800 transition-colors">{categoryName}</Link></>}
           <span>/</span>
           <span className="text-stone-700 font-semibold truncate max-w-sm sm:max-w-md">
-            {product.title}
+            {product.basicInfo?.title}
           </span>
         </nav>
 
@@ -300,7 +300,7 @@ export default function ProductDetail() {
               {galleryImages.length > 0 ? (
                 <>
                   <button type="button" onClick={() => setLightboxImage(getMediaUrl(galleryImages[activeImageIndex]))} className="h-full w-full cursor-zoom-in p-5 sm:p-8" aria-label="Zoom product image">
-                    <img src={getMediaUrl(galleryImages[activeImageIndex])} alt={`${product.title} view ${activeImageIndex + 1}`} className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]" />
+                    <img src={getMediaUrl(galleryImages[activeImageIndex])} alt={`${product.basicInfo?.title || ''} view ${activeImageIndex + 1}`} className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]" />
                   </button>
                   {galleryImages.length > 1 && <>
                     <button type="button" onClick={() => setActiveImageIndex((index) => (index - 1 + galleryImages.length) % galleryImages.length)} aria-label="Previous product image" className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm transition hover:bg-white"><HiOutlineChevronLeft className="h-5 w-5" /></button>
@@ -322,7 +322,7 @@ export default function ProductDetail() {
             {/* Title & Brand */}
             <div className="space-y-1.5">
               <h1 className="text-xl sm:text-2xl font-normal text-stone-900 leading-snug tracking-tight font-serif">
-                {product.title}
+                {product.basicInfo?.title}
               </h1>
             </div>
 
@@ -456,7 +456,7 @@ export default function ProductDetail() {
                 </button>
                 {openAccordions.desc && (
                   <div className="mt-2 text-stone-600 leading-relaxed text-xs animate-fadeIn space-y-2">
-                    <p>{product.description}</p>
+                    <p>{product.basicInfo?.description}</p>
                     {Array.isArray(product.descriptionSections) &&
                       product.descriptionSections.map((sec, i) => (
                         <div key={i} className="pt-1">
@@ -506,19 +506,19 @@ export default function ProductDetail() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
             {mostLikedProducts.filter((item) => getPrimaryProductImage(item)).map((item) => {
               const relImg = getPrimaryProductImage(item);
-              const relPrice = item.salePrice ?? item.displayPrice ?? item.price;
+              const relPrice = item.pricing?.salePrice ?? item.pricing?.mrp;
 
               return (
                 <div
-                  key={item._id || item.slug}
-                  onClick={() => navigate(`/product/${item._id || item.slug}`)}
+                  key={item._id || item.basicInfo?.slug}
+                  onClick={() => navigate(`/product/${item._id || item.basicInfo?.slug}`)}
                   className="group bg-white rounded-2xl border border-stone-100/90 overflow-hidden shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
                 >
                   {/* Image container */}
                   <div className="relative aspect-square bg-[#faf8f5] p-3 flex items-center justify-center overflow-hidden">
                     <img
                       src={getMediaUrl(relImg)}
-                      alt={item.title || ''}
+                      alt={item.basicInfo?.title || ''}
                       className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                       loading="lazy"
                     />
@@ -548,7 +548,7 @@ export default function ProductDetail() {
                   {/* Title & Price */}
                   <div className="p-3 text-center space-y-1">
                     <h3 className="text-[11px] font-bold text-stone-800 line-clamp-2 uppercase tracking-tight leading-snug group-hover:text-[#8f6d43] transition-colors">
-                      {item.title}
+                      {item.basicInfo?.title}
                     </h3>
                     <p className="text-xs font-bold text-stone-900 font-serif">
                       {formatPrice(relPrice)}

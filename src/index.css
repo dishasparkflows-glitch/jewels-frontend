@@ -233,3 +233,27 @@
     @apply border-b border-surface-50 hover:bg-surface-50/50 transition-colors duration-150;
   }
 }
+@keyframes announcement-left-to-right {
+  from { transform: translateX(-105%); }
+  to { transform: translateX(105%); }
+}
+
+@keyframes announcement-top-to-bottom {
+  from { opacity: 0; transform: translateY(-0.75rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-announcement-horizontal {
+  animation: announcement-left-to-right 9s linear infinite;
+}
+
+.animate-announcement-vertical {
+  animation: announcement-top-to-bottom 350ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-announcement-horizontal,
+  .animate-announcement-vertical {
+    animation: none;
+  }
+}
