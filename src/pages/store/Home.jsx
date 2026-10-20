@@ -100,7 +100,11 @@ const Home = () => {
           subtitle: contentOf(banner).subtitle || banner.subtitle || '',
           images: (Array.isArray(banner.collectionImages) && banner.collectionImages.length
             ? banner.collectionImages
-            : (banner.image?.url ? [banner.image] : [])).map((image) => image.url || '').filter(Boolean),
+            : (banner.image?.url ? [banner.image] : [])).map((image) => {
+              const category = image.categoryId || banner.display?.categoryId;
+              const categoryKey = category?.slug || category?._id || (typeof category === 'string' ? category : '');
+              return { url: image.url || '', categoryName: category?.name || '', link: categoryKey ? `/shop?category=${encodeURIComponent(categoryKey)}` : banner.link || '/shop' };
+            }).filter((image) => image.url),
           ...mediaOf(banner),
           link: banner.link || '/shop',
           position: banner.display?.position || banner.position || 'none',
@@ -400,18 +404,18 @@ const Home = () => {
             return (
               <div key={collection.id} className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-3">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Link to={collection.link} className={`${tileClass} aspect-[4/3]`} aria-label={`${collection.title} image 1`}>
-                    <img src={getMediaUrl(image1)} alt={`${collection.title} 1`} loading="lazy" className={tileImageClass} />
+                  <Link to={image1.link} className={`${tileClass} aspect-square`} aria-label={`${collection.title} image 1`}>
+                    <img src={getMediaUrl(image1.url)} alt={image1.categoryName || `${collection.title} 1`} loading="lazy" className={tileImageClass} />
                   </Link>
-                  <Link to={collection.link} className={`${tileClass} aspect-[4/3]`} aria-label={`${collection.title} image 2`}>
-                    <img src={getMediaUrl(image2)} alt={`${collection.title} 2`} loading="lazy" className={tileImageClass} />
+                  <Link to={image2.link} className={`${tileClass} aspect-square`} aria-label={`${collection.title} image 2`}>
+                    <img src={getMediaUrl(image2.url)} alt={image2.categoryName || `${collection.title} 2`} loading="lazy" className={tileImageClass} />
                   </Link>
-                  <Link to={collection.link} className={`${tileClass} aspect-[16/7] sm:col-span-2`} aria-label={`${collection.title} image 3`}>
-                    <img src={getMediaUrl(image3)} alt={`${collection.title} 3`} loading="lazy" className={tileImageClass} />
+                  <Link to={image3.link} className={`${tileClass} aspect-[2/1] sm:col-span-2`} aria-label={`${collection.title} image 3`}>
+                    <img src={getMediaUrl(image3.url)} alt={image3.categoryName || `${collection.title} 3`} loading="lazy" className={tileImageClass} />
                   </Link>
                 </div>
-                <Link to={collection.link} className={`${tileClass} min-h-[300px] lg:min-h-full`} aria-label={`${collection.title} image 4`}>
-                  <img src={getMediaUrl(image4)} alt={`${collection.title} 4`} loading="lazy" className={tileImageClass} />
+                <Link to={image4.link} className={`${tileClass} aspect-square lg:aspect-auto lg:min-h-full`} aria-label={`${collection.title} image 4`}>
+                  <img src={getMediaUrl(image4.url)} alt={image4.categoryName || `${collection.title} 4`} loading="lazy" className={tileImageClass} />
                 </Link>
               </div>
             );

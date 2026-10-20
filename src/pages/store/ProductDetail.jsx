@@ -8,12 +8,14 @@ import {
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
   HiOutlineX,
+  HiOutlineInformationCircle,
 } from 'react-icons/hi';
+import { IoDiamondOutline } from 'react-icons/io5';
 import toast from 'react-hot-toast';
 import { productsAPI, sizesAPI } from '../../api/services';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
-import { getValidProductImages, getPrimaryProductImage } from '../../utils/productImages';
+import { getValidProductImages, getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 
 // Helper to normalize media URL
 const getMediaUrl = (url) => {
@@ -31,6 +33,28 @@ const getMediaUrl = (url) => {
     ''
   );
   return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
+// 3D Sphere Swatch generator for metal colors
+const getSphereStyle = (colorName = '', fallbackCode = '') => {
+  const map = {
+    'White Gold': {
+      gradient: 'radial-gradient(circle at 35% 35%, #ffffff, #f1f5f9 40%, #cbd5e1 75%, #94a3b8 100%)',
+      shadow: 'inset -2px -2px 4px rgba(100,116,139,0.3), inset 1px 1px 3px rgba(255,255,255,0.9), 0 2px 4px rgba(0,0,0,0.12)',
+    },
+    'Rose Gold': {
+      gradient: 'radial-gradient(circle at 35% 35%, #fde2d6, #e7a192 45%, #cb7768 75%, #9a3412 100%)',
+      shadow: 'inset -2px -2px 4px rgba(154,52,18,0.35), inset 1px 1px 2px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.12)',
+    },
+    'Yellow Gold': {
+      gradient: 'radial-gradient(circle at 35% 35%, #fffbeb, #fed7aa 25%, #eab308 60%, #a16207 100%)',
+      shadow: 'inset -2px -2px 4px rgba(161,98,7,0.4), inset 1px 1px 2px rgba(255,255,255,0.7), 0 2px 4px rgba(0,0,0,0.12)',
+    },
+  };
+  return map[colorName] || {
+    gradient: fallbackCode ? `radial-gradient(circle at 35% 35%, #ffffff 0%, ${fallbackCode} 60%)` : '#d4af37',
+    shadow: '0 2px 4px rgba(0,0,0,0.15)',
+  };
 };
 
 const referenceName = (value) => (value && typeof value === 'object' ? value.name || '' : '');
@@ -60,10 +84,14 @@ export default function ProductDetail() {
   const [sizes, setSizes] = useState([]);
 
   // Selections
-  const [selectedVariantId, setSelectedVariantId] = useState('');
+  const [selectedPurity, setSelectedPurity] = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
+  const [selectedCarat, setSelectedCarat] = useState('');
+  const [selectedQuality, setSelectedQuality] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [showPriceBreakdown, setShowPriceBreakdown] = useState(false);
 
   // Lightbox & Size modal
   const [lightboxImage, setLightboxImage] = useState(null);
@@ -79,10 +107,24 @@ export default function ProductDetail() {
     setOpenAccordions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Extract clean studio gallery images (strictly non-ornate)
+  // Extract clean studio gallery images (prioritizing current selected metal color)
   const galleryImages = useMemo(() => {
+    if (!product) return [];
+    if (selectedColor && Array.isArray(product.colorImages)) {
+      const match = product.colorImages.find((ci) => {
+        const cName = ci.metalColorId?.name || ci.metalColor?.name || ci.colorName || '';
+        return cName.toLowerCase() === selectedColor.toLowerCase();
+      });
+      if (match && Array.isArray(match.images) && match.images.length > 0) {
+        const colorImgs = match.images
+          .filter((img) => !isOrnateImage(img))
+          .map((img) => (typeof img === 'string' ? img : img.url))
+          .filter(Boolean);
+        if (colorImgs.length > 0) return colorImgs;
+      }
+    }
     return getValidProductImages(product);
-  }, [product]);
+  }, [product, selectedColor]);
 
   // Safe category name string resolver
   const categoryName = useMemo(() => {
@@ -97,31 +139,168 @@ export default function ProductDetail() {
     return '';
   }, [product]);
 
-  const productVariants = useMemo(() => {
-    const variants = Array.isArray(product?.variants) ? product.variants : [];
-    return variants.map((variant) => ({
-      ...variant,
-      label:
-        variant.combination ||
-        [
-          referenceName(variant.metalPurity || variant.metalPurityId),
-          referenceName(variant.diamondType || variant.diamondTypeId),
-          referenceName(variant.diamondColor || variant.diamondColorId),
-          referenceName(variant.diamondClarity || variant.diamondClarityId),
-        ].filter(Boolean).join(' · ') ||
-        variant.sku || '',
-    })).filter((variant) => variant.label);
+  // Determine whether this product is Case 1 (Center Diamond Driven) or Case 2 (Side Diamond Driven)
+  const isCenterDriven = useMemo(() => {
+    if (!product) return false;
+    const hasCenterRows = Array.isArray(product.centerDiamondRows) && product.centerDiamondRows.length > 0;
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const hasCenterWeights = variants.some((v) => Number(v.centerDiamondWeight) > 0);
+    return Boolean(hasCenterRows || hasCenterWeights);
   }, [product]);
 
-  const selectedVariant = useMemo(
-    () => productVariants.find((variant) => String(variant._id || variant.sku) === selectedVariantId),
-    [productVariants, selectedVariantId]
-  );
+  const isSideDriven = useMemo(() => {
+    if (!product || isCenterDriven) return false;
+    const hasSideRows = Array.isArray(product.sideDiamondRows) && product.sideDiamondRows.length > 0;
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const hasSideWeights = variants.some((v) => Number(v.sideDiamondWeight) > 0);
+    return Boolean(hasSideRows || hasSideWeights);
+  }, [product, isCenterDriven]);
+
+  // Extract dimensions available across variants
+  const { purities, colors, carats, qualities } = useMemo(() => {
+    const raw = Array.isArray(product?.variants) ? product.variants : [];
+    const pSet = new Set();
+    const cMap = new Map();
+    const ctSet = new Set();
+    const qSet = new Set();
+
+    raw.forEach((v) => {
+      const p = referenceName(v.metalPurity || v.metalPurityId) || v.purity || '';
+      if (p) pSet.add(p);
+
+      const cObj = v.metalColor || v.metalColorId;
+      const cName = referenceName(cObj) || v.color || '';
+      if (cName && !cMap.has(cName)) {
+        cMap.set(cName, {
+          name: cName,
+          code: cObj?.code || cObj?.hex || '',
+        });
+      }
+
+      const ct = Number(v.centerDiamondWeight || v.caratWeight || 0);
+      if (ct > 0) ctSet.add(ct);
+
+      const col = referenceName(v.diamondColor || v.diamondColorId) || v.diamondColor || '';
+      const cla = referenceName(v.diamondClarity || v.diamondClarityId) || v.diamondClarity || '';
+      if (col || cla) {
+        qSet.add([col, cla].filter(Boolean).join(' · '));
+      }
+    });
+
+    if (Array.isArray(product?.metalColorIds)) {
+      product.metalColorIds.forEach((c) => {
+        if (c?.name && !cMap.has(c.name)) {
+          cMap.set(c.name, { name: c.name, code: c.code || c.hex || '' });
+        }
+      });
+    }
+
+    return {
+      purities: Array.from(pSet),
+      colors: Array.from(cMap.values()),
+      carats: Array.from(ctSet).sort((a, b) => a - b),
+      qualities: Array.from(qSet),
+    };
+  }, [product]);
+
+  // Auto-initialize options on product load
+  useEffect(() => {
+    if (!product) return;
+    if (purities.length && !selectedPurity) {
+      const defaultP = purities.find((p) => p.includes('14')) || purities[0];
+      setSelectedPurity(defaultP);
+    }
+    if (colors.length && !selectedColor) {
+      setSelectedColor(colors[0].name);
+    }
+    if (carats.length && !selectedCarat) {
+      setSelectedCarat(carats[0]);
+    }
+    if (qualities.length && !selectedQuality) {
+      setSelectedQuality(qualities[0]);
+    }
+  }, [product, purities, colors, carats, qualities, selectedPurity, selectedColor, selectedCarat, selectedQuality]);
+
+  // Multi-dimensional variant resolution
+  const selectedVariant = useMemo(() => {
+    const raw = Array.isArray(product?.variants) ? product.variants : [];
+    if (!raw.length) return null;
+
+    // 1. Exact match across all active dimensions
+    let match = raw.find((v) => {
+      const p = referenceName(v.metalPurity || v.metalPurityId) || v.purity || '';
+      const c = referenceName(v.metalColor || v.metalColorId) || v.color || '';
+      const ct = Number(v.centerDiamondWeight || v.caratWeight || 0);
+      const col = referenceName(v.diamondColor || v.diamondColorId) || v.diamondColor || '';
+      const cla = referenceName(v.diamondClarity || v.diamondClarityId) || v.diamondClarity || '';
+      const q = [col, cla].filter(Boolean).join(' · ');
+
+      const matchP = !selectedPurity || p === selectedPurity;
+      const matchC = !selectedColor || c === selectedColor;
+      const matchCt = !selectedCarat || ct === Number(selectedCarat);
+      const matchQ = !selectedQuality || q === selectedQuality;
+
+      return matchP && matchC && (isCenterDriven ? matchCt : true) && matchQ;
+    });
+
+    if (match) return match;
+
+    // 2. Partial match: purity + color + (carat if center driven)
+    match = raw.find((v) => {
+      const p = referenceName(v.metalPurity || v.metalPurityId) || v.purity || '';
+      const c = referenceName(v.metalColor || v.metalColorId) || v.color || '';
+      const ct = Number(v.centerDiamondWeight || v.caratWeight || 0);
+      const matchP = !selectedPurity || p === selectedPurity;
+      const matchC = !selectedColor || c === selectedColor;
+      const matchCt = !selectedCarat || ct === Number(selectedCarat);
+      return matchP && matchC && (isCenterDriven ? matchCt : true);
+    });
+
+    if (match) return match;
+
+    // 3. Fallback: purity + color
+    match = raw.find((v) => {
+      const p = referenceName(v.metalPurity || v.metalPurityId) || v.purity || '';
+      const c = referenceName(v.metalColor || v.metalColorId) || v.color || '';
+      return (!selectedPurity || p === selectedPurity) && (!selectedColor || c === selectedColor);
+    });
+
+    return match || raw[0] || null;
+  }, [product, selectedPurity, selectedColor, selectedCarat, selectedQuality, isCenterDriven]);
+
   const currentPrice = [selectedVariant?.price, product?.pricing?.salePrice]
     .find((value) => Number(value) > 0);
   const mrpPrice = [product?.pricing?.mrp].find((value) => Number(value) > 0) ?? currentPrice;
   const discountPercent =
     Number(mrpPrice) > Number(currentPrice) ? Math.round(((mrpPrice - currentPrice) / mrpPrice) * 100) : 0;
+
+  // 5-Pillar Price Breakdown
+  const breakdown = useMemo(() => {
+    if (!selectedVariant) return null;
+    const v = selectedVariant;
+    const metalWeight = Number(v.metalWeight || v.weight || product?.specifications?.metalWeight || 0);
+    const metalRate = Number(v.metalRate || 0);
+    const metalCost = Number(v.metalCost || (metalWeight * metalRate) || 0);
+    const diamondCost = Number(v.diamondCost || (Number(v.centerDiamondCost || 0) + Number(v.sideDiamondCost || 0)) || 0);
+    const labourCharge = Number(v.labourCharge || v.computedMakingCharge || 0);
+    const gstAmount = Number(v.computedGst || 0);
+    const finalPrice = Number(v.price || currentPrice || 0);
+
+    return {
+      metalWeight,
+      metalRate,
+      metalCost,
+      centerCarat: Number(v.centerDiamondWeight || v.caratWeight || 0),
+      centerRate: Number(v.centerDiamondRate || 0),
+      centerCost: Number(v.centerDiamondCost || 0),
+      sideCarat: Number(v.sideDiamondWeight || 0),
+      sideCost: Number(v.sideDiamondCost || 0),
+      diamondCost,
+      labourCharge,
+      gstAmount,
+      finalPrice,
+    };
+  }, [selectedVariant, currentPrice, product]);
 
   const category = getProductCategory(product);
   const categoryId = getReferenceId(category);
@@ -376,16 +555,154 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {productVariants.length > 0 && (
-              <div className="space-y-1.5">
-                <label htmlFor="product-variant" className="block text-[11px] font-bold text-stone-700">
-                  Product option
+            {/* Dynamic Gold Weight & Transparent Pricing Trigger */}
+            <div className="flex items-center justify-between gap-3 pt-1">
+              {breakdown?.metalWeight > 0 ? (
+                <div className="flex items-center gap-1.5 text-xs text-stone-600">
+                  <span className="text-stone-400 font-medium">Approx. Gold Weight:</span>
+                  <strong className="font-mono text-stone-900 font-semibold">{breakdown.metalWeight} g</strong>
+                  {selectedPurity && <span className="text-stone-400">({selectedPurity})</span>}
+                </div>
+              ) : <div />}
+
+              {breakdown && breakdown.metalCost > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowPriceBreakdown(true)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold text-[#8f6d43] bg-[#faf6f0] border border-[#e8d8c0] hover:bg-[#f4ebe0] active:scale-95 transition-all cursor-pointer shadow-2xs"
+                  title="View transparent 5-pillar price calculation"
+                >
+                  <HiOutlineInformationCircle className="w-3.5 h-3.5" />
+                  <span>Price Breakdown</span>
+                </button>
+              )}
+            </div>
+
+            {/* ─── 1. Metal Purity Selector ─── */}
+            {purities.length > 0 && (
+              <div className="space-y-1.5 pt-1">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-700">
+                  Metal Purity
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {productVariants.map((variant) => {
-                    const variantId = String(variant._id || variant.sku);
-                    const isSelected = selectedVariantId === variantId;
-                    return <button key={variantId} type="button" onClick={() => setSelectedVariantId(variantId)} aria-pressed={isSelected} className={`min-h-10 border px-3 py-2 text-left text-xs transition ${isSelected ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-700 hover:border-stone-500'}`}>{variant.label}</button>;
+                <div className="flex items-center gap-2 flex-wrap">
+                  {purities.map((p) => {
+                    const isSel = selectedPurity === p;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setSelectedPurity(p)}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono transition-all cursor-pointer ${
+                          isSel
+                            ? 'bg-stone-900 text-white shadow-xs'
+                            : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-400'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ─── 2. Metal Color Selector with 3D Spheres ─── */}
+            {colors.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-700">
+                    Metal Color: <span className="font-semibold text-stone-900 normal-case">{selectedColor}</span>
+                  </label>
+                </div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  {colors.map((c) => {
+                    const isSel = selectedColor === c.name;
+                    const sphere = getSphereStyle(c.name, c.code);
+                    return (
+                      <button
+                        key={c.name}
+                        type="button"
+                        onClick={() => {
+                          setSelectedColor(c.name);
+                          setActiveImageIndex(0);
+                        }}
+                        className={`group flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
+                          isSel
+                            ? 'border-stone-900 bg-stone-50 ring-1 ring-stone-900 shadow-xs'
+                            : 'border-stone-200 bg-white hover:border-stone-300'
+                        }`}
+                      >
+                        <span
+                          className="w-4 h-4 rounded-full shadow-2xs border border-black/10 shrink-0"
+                          style={{ background: sphere.gradient, boxShadow: sphere.shadow }}
+                        />
+                        <span className="text-stone-800 text-[11px] font-medium">{c.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ─── 3. Case 1: Solitaire Center Diamond Carat Weight ─── */}
+            {isCenterDriven && carats.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-700">
+                  Center Diamond Carat Weight
+                </label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {carats.map((ct) => {
+                    const isSel = Number(selectedCarat) === Number(ct);
+                    return (
+                      <button
+                        key={ct}
+                        type="button"
+                        onClick={() => setSelectedCarat(ct)}
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold font-mono transition-all cursor-pointer ${
+                          isSel
+                            ? 'bg-stone-900 text-white shadow-xs'
+                            : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-400'
+                        }`}
+                      >
+                        {ct} ct
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ─── 4. Diamond Quality Selection ─── */}
+            {qualities.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-700">
+                    {isCenterDriven ? 'Diamond Quality (Color · Clarity)' : 'Diamond Quality Tier'}
+                  </label>
+                  {isSideDriven && product?.sideDiamondRows?.[0] && (
+                    <span className="text-[10px] text-stone-400">
+                      {product.sideDiamondRows[0].pieces ? `${product.sideDiamondRows[0].pieces} Stones` : ''}
+                      {product.sideDiamondRows[0].caratWeight ? ` · ${product.sideDiamondRows[0].caratWeight} ct` : ''}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {qualities.map((q) => {
+                    const isSel = selectedQuality === q;
+                    return (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => setSelectedQuality(q)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          isSel
+                            ? 'bg-stone-900 text-white shadow-xs'
+                            : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-400'
+                        }`}
+                      >
+                        {q}
+                      </button>
+                    );
                   })}
                 </div>
               </div>
@@ -637,6 +954,106 @@ export default function ProductDetail() {
             >
               GOT IT
             </button>
+          </div>
+        </div>
+      )}
+      {/* ─── 5-Pillar Transparent Price Breakdown Modal ─── */}
+      {showPriceBreakdown && breakdown && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn"
+          onClick={() => setShowPriceBreakdown(false)}
+        >
+          <div
+            className="relative max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-stone-200 p-6 space-y-4 animate-scaleUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-[#faf6f0] border border-[#e8d8c0] flex items-center justify-center text-[#8f6d43]">
+                  <IoDiamondOutline className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-stone-900">Transparent Price Breakdown</h3>
+                  <p className="text-[10px] text-stone-400">5-Pillar Commodity Valuation Model</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPriceBreakdown(false)}
+                className="p-1.5 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-100 transition-colors cursor-pointer"
+              >
+                <HiOutlineX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* 5-Pillar Item List */}
+            <div className="space-y-3 text-xs divide-y divide-stone-100">
+              {/* 1. Metal */}
+              <div className="pt-2 flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-bold text-stone-800">1. Metal Cost ({selectedPurity || 'Gold'})</p>
+                  <p className="text-[10px] text-stone-400 font-mono mt-0.5">
+                    {breakdown.metalWeight} g @ {breakdown.metalRate ? `₹${Number(breakdown.metalRate).toLocaleString('en-IN')}` : 'Market rate'} / g
+                  </p>
+                </div>
+                <span className="font-mono font-bold text-stone-900 shrink-0 text-sm">
+                  {formatPrice(breakdown.metalCost)}
+                </span>
+              </div>
+
+              {/* 2. Diamond */}
+              <div className="pt-2 flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-bold text-stone-800">2. Diamond Value</p>
+                  <p className="text-[10px] text-stone-400 font-mono mt-0.5">
+                    {selectedQuality || 'Fine Certified Diamonds'}
+                    {breakdown.centerCarat > 0 ? ` (${breakdown.centerCarat} ct Center Stone)` : ''}
+                    {breakdown.sideCarat > 0 ? ` (${breakdown.sideCarat} ct Pavé Setting)` : ''}
+                  </p>
+                </div>
+                <span className="font-mono font-bold text-stone-900 shrink-0 text-sm">
+                  {formatPrice(breakdown.diamondCost)}
+                </span>
+              </div>
+
+              {/* 3. Labour */}
+              <div className="pt-2 flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-bold text-stone-800">3. Making Charges</p>
+                  <p className="text-[10px] text-stone-400 mt-0.5">Artisan casting, micro-pavé setting & mirror polish</p>
+                </div>
+                <span className="font-mono font-bold text-stone-900 shrink-0 text-sm">
+                  {formatPrice(breakdown.labourCharge)}
+                </span>
+              </div>
+
+              {/* 4. GST */}
+              <div className="pt-2 flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-bold text-stone-800">4. Applicable GST (3%)</p>
+                  <p className="text-[10px] text-stone-400 mt-0.5">Statutory government tax on fine jewelry</p>
+                </div>
+                <span className="font-mono font-bold text-stone-900 shrink-0 text-sm">
+                  {formatPrice(breakdown.gstAmount)}
+                </span>
+              </div>
+            </div>
+
+            {/* Total Price Bar */}
+            <div className="p-3.5 rounded-2xl bg-[#faf6f0] border border-[#e8d8c0] flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-stone-500">Final Selling Price</p>
+                <p className="text-[10px] text-stone-400">All inclusive of taxes & certification</p>
+              </div>
+              <span className="font-mono font-extrabold text-base text-[#8f6d43]">
+                {formatPrice(breakdown.finalPrice)}
+              </span>
+            </div>
+
+            <p className="text-[9.5px] text-stone-400 text-center italic">
+              Prices update dynamically with live bullion commodity market rates.
+            </p>
           </div>
         </div>
       )}

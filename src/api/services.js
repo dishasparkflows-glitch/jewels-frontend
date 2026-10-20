@@ -147,3 +147,16 @@ export const cartAPI = {
   clear: () => api.delete('/cart'),
 };
 
+// ─── Blogs & Categories ───────────────────────────
+export const blogCategoriesAPI = {
+  getAll: (params) => getOnce('/blog-categories', { params }),
+  getLookup: () => getOnce('/blog-categories/lookup'),
+  getBySlug: (slug) => getOnce(`/blog-categories/slug/${slug}`),
+};
+
+export const blogsAPI = {
+  getAll: (params) => getOnce('/blogs', { params }),
+  getBySlug: (slug) => getOnce(`/blogs/slug/${slug}`),
+  getRecent: (limit = 4) => getOnce(`/blogs/recent?limit=${limit}`),
+};
+

@@ -11,6 +11,8 @@ import ProductDetail from './pages/store/ProductDetail';
 import Cart from './pages/store/Cart';
 import Checkout from './pages/store/Checkout';
 import Wishlist from './pages/store/Wishlist';
+import BlogList from './pages/store/BlogList';
+import BlogDetail from './pages/store/BlogDetail';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
@@ -47,6 +49,9 @@ function App() {
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/blog" element={<BlogList />} />
+                <Route path="/blogs" element={<BlogList />} />
+                <Route path="/blog/:slug" element={<BlogDetail />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />

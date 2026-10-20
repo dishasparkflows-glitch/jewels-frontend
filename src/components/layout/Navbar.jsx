@@ -286,6 +286,13 @@ const Navbar = () => {
                 </span>
               )}
             </Link>
+            <Link
+              to="/blog"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-xs uppercase font-medium tracking-[0.16em] text-stone-200 hover:text-white py-1.5 border-b border-white/5 flex items-center justify-between"
+            >
+              <span>The Journal / Blog</span>
+            </Link>
             <div className="grid grid-cols-2 gap-3 pt-1">
               <Link to="/cart" onClick={() => setMobileMenuOpen(false)} className="rounded-lg border border-white/15 px-3 py-3 text-center text-xs uppercase tracking-wider text-stone-200 hover:bg-white/5">Shopping Bag ({totalItems || 0})</Link>
               {!user && <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="rounded-lg border border-white/15 px-3 py-3 text-center text-xs uppercase tracking-wider text-stone-200 hover:bg-white/5">Sign In</Link>}
