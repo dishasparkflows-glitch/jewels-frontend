@@ -51,24 +51,28 @@ export const uploadAPI = {
 };
 
 // ─── Banners ──────────────────────────────────────
-let activeBannersRequest;
+const activeBannersRequests = new Map();
 export const bannersAPI = {
   getAll: (params) => getOnce('/banners', { params }),
-  getActive: () => {
-    if (!activeBannersRequest) {
-      activeBannersRequest = getOnce('/banners/lookup').catch((error) => {
-        activeBannersRequest = null;
+  getActive: (params = {}) => {
+    const platform = ['web', 'mobile'].includes(params.platform) ? params.platform : 'web';
+    if (!activeBannersRequests.has(platform)) {
+      activeBannersRequests.set(platform, getOnce('/banners/lookup', { params: { platform } }).catch((error) => {
+        activeBannersRequests.delete(platform);
         throw error;
-      });
+      }));
     }
-    return activeBannersRequest;
+    return activeBannersRequests.get(platform);
   },
 };
 
 // ─── Store settings ───────────────────────────────
 let storeSettingsRequest;
 export const settingsAPI = {
-  getStoreSettings: () => {
+  getStoreSettings: (options = {}) => {
+    if (options?.fresh) {
+      return api.get('/settings');
+    }
     if (!storeSettingsRequest) {
       storeSettingsRequest = getOnce('/settings').catch((error) => {
         storeSettingsRequest = null;
@@ -77,6 +81,11 @@ export const settingsAPI = {
     }
     return storeSettingsRequest;
   },
+};
+
+// Public, revisioned storefront presentation configuration.
+export const websiteAPI = {
+  getConfig: () => api.get('/website/config'),
 };
 
 // ─── Categories ───────────────────────────────────

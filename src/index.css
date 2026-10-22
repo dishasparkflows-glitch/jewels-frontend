@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Montserrat:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -55,17 +55,27 @@
 .store-shell {
   --jewel-ink: #211f1c;
   --jewel-muted: #756f68;
+  --jewel-primary: #8b6c3a;
+  --jewel-secondary: #eadcc8;
+  --jewel-surface: #ffffff;
   --jewel-accent: #92704e;
   --jewel-line: #e8e2da;
-  --jewel-paper: #fbfaf8;
-  font-family: 'Montserrat', system-ui, sans-serif;
+  --jewel-paper: #fbf9f5;
+  --jewel-heading-font: 'Cormorant Garamond', Georgia, serif;
+  --jewel-body-font: 'Montserrat', system-ui, sans-serif;
+  --jewel-radius: 8px;
+  font-family: var(--jewel-body-font);
   background: var(--jewel-paper);
   color: var(--jewel-ink);
 }
 
 .store-shell .font-serif,
 .store-shell .font-serif-lux {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: var(--jewel-heading-font);
+}
+
+.store-shell .font-sans {
+  font-family: var(--jewel-body-font);
 }
 
 .store-shell input:not([type='checkbox']):not([type='radio']),
@@ -103,6 +113,10 @@
 }
 
 .store-shell article.group a:hover { color: var(--jewel-accent); }
+.store-shell .btn-primary { background-color: var(--jewel-primary); }
+.store-shell .rounded-3xl { border-radius: var(--jewel-radius); }
+.store-shell .rounded-2xl { border-radius: calc(var(--jewel-radius) * .8); }
+.store-shell .rounded-xl { border-radius: calc(var(--jewel-radius) * .65); }
 
 .store-shell main {
   background-color: var(--jewel-paper);

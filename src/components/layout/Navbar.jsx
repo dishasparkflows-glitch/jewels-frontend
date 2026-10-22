@@ -28,7 +28,7 @@ const Navbar = () => {
   const [categories, setCategories] = useState([]);
   const [navigationError, setNavigationError] = useState(false);
   const [navigationRevision, setNavigationRevision] = useState(0);
-  const { settings: storeSettings } = useStoreSettings();
+  const { settings: storeSettings, theme: themeConfig } = useStoreSettings();
   const [topAnnouncement, setTopAnnouncement] = useState({ isEnabled: false, displayDirection: 'horizontal', autoplayInterval: 4000, items: [] });
   const [announcementIndex, setAnnouncementIndex] = useState(0);
   const brandLogo = {
@@ -58,10 +58,24 @@ const Navbar = () => {
     let active = true;
     setNavigationError(false);
     getOnce('/categories/navigation')
-      .then((response) => { if (active) setCategories(response.data?.data || []); })
+      .then((response) => {
+        if (!active) return;
+        const currentCategories = response.data?.data || [];
+        if (!themeConfig?.navigation?.length) { setCategories(currentCategories); return; }
+        const byId = new Map(currentCategories.map((category) => [String(category._id), category]));
+        const themedCategories = themeConfig.navigation
+          .filter((entry) => entry.visible !== false)
+          .sort((a, b) => (a.order || 0) - (b.order || 0))
+          .map((entry) => {
+            const category = byId.get(String(entry.categoryId?._id || entry.categoryId));
+            return category ? { ...category, name: entry.displayName || category.name } : null;
+          })
+          .filter(Boolean);
+        setCategories(themedCategories);
+      })
       .catch(() => { if (active) setNavigationError(true); });
     return () => { active = false; };
-  }, [navigationRevision]);
+  }, [navigationRevision, themeConfig?.navigation]);
 
   useEffect(() => {
     let active = true;

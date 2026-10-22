@@ -1,5 +1,5 @@
 import ProductCard from '../../components/product/ProductCard';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   bannersAPI,
@@ -7,17 +7,14 @@ import {
   productsAPI,
   reviewsAPI,
   instagramAPI,
+  categoriesAPI,
 } from '../../api/services';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import {
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
-  HiOutlineShieldCheck,
   HiStar,
-  HiOutlineCalendar,
   HiOutlineCheckCircle,
-  HiOutlineTruck,
-  HiOutlineRefresh,
 } from 'react-icons/hi';
 import { IoDiamondOutline } from 'react-icons/io5';
 import { FaInstagram, FaGooglePlay, FaApple } from 'react-icons/fa';
@@ -41,7 +38,14 @@ const getMediaUrl = (url) => {
 };
 
 const Home = () => {
-  const { settings: storeSettings } = useStoreSettings();
+  const { settings: storeSettings, theme: themeConfig } = useStoreSettings();
+
+  const activeTrustBadges = useMemo(() => {
+    if (!Array.isArray(storeSettings?.trustBadges)) return [];
+    return [...storeSettings.trustBadges]
+      .filter((badge) => badge?.title && badge.title.trim())
+      .sort((a, b) => (Number(a?.order) || 0) - (Number(b?.order) || 0));
+  }, [storeSettings?.trustBadges]);
 
   // ─── 100% Dynamic API State (No Static Fallback Content) ────────────
   const [heroBanners, setHeroBanners] = useState([]);
@@ -67,32 +71,104 @@ const Home = () => {
   const [activeReviewIdx, setActiveReviewIdx] = useState(0);
 
   const [instagramPosts, setInstagramPosts] = useState([]);
+  const [storeCategories, setStoreCategories] = useState([]);
 
-  // Load all active banner placements in one request, then select each placement locally.
+  const hasThemeBannerSelections = (themeConfig?.bannerSelections || []).length > 0;
+  const themeBanners = hasThemeBannerSelections ? [] : (themeConfig?.banners || []).filter((banner) => banner.visible !== false).sort((a, b) => (a.order || 0) - (b.order || 0));
+  const themeHeroBanners = themeBanners.filter((banner) => banner.placement === 'hero').map((banner) => ({
+    image: banner.desktopImage?.url || '',
+    mobileImage: banner.mobileImage?.url || '',
+  }));
+  const effectiveHeroBanners = themeHeroBanners.length ? themeHeroBanners : heroBanners;
+  const themeCollectionBanners = themeBanners.filter((banner) => banner.placement === 'collection').map((banner) => ({
+    id: banner._id || banner.code,
+    title: banner.title || 'Collection',
+    images: (banner.collectionImages || []).map((item) => {
+      const categoryId = String(item.categoryId?._id || item.categoryId || '');
+      const category = storeCategories.find((entry) => entry._id === categoryId);
+      const categoryKey = category?.slug || categoryId;
+      return {
+        url: item.image?.url || '',
+        categoryName: category?.name || item.image?.alt || '',
+        link: item.link || (categoryKey ? `/shop?category=${encodeURIComponent(categoryKey)}` : banner.link || '/shop'),
+      };
+    }).filter((image) => image.url),
+  }));
+  const effectiveCollectionBanners = themeCollectionBanners.length ? themeCollectionBanners : collectionBanners;
+  const themePromo = themeBanners.find((banner) => banner.placement === 'promo');
+  const effectiveCustomBanner = themePromo ? {
+    title: themePromo.title, subtitle: themePromo.subtitle, image: themePromo.desktopImage?.url || '',
+    buttonText: themePromo.buttonText, link: themePromo.link,
+  } : customBanner;
+  const themeCategoryItems = (themeConfig?.categoryAppearances || [])
+    .filter((entry) => entry.visible !== false)
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
+    .map((entry) => {
+      const categoryId = String(entry.categoryId?._id || entry.categoryId || '');
+      const category = storeCategories.find((item) => item._id === categoryId);
+      return {
+        _id: categoryId,
+        name: entry.displayName || category?.name || '',
+        image: entry.icon?.url || category?.icon?.url || '',
+        link: category ? `/shop?category=${encodeURIComponent(category.slug || category._id)}` : `/shop?category=${encodeURIComponent(categoryId)}`,
+      };
+    })
+    .filter((item) => item.name && item.image);
+  const effectiveCategoryItems = themeCategoryItems.length ? themeCategoryItems : celebrateItems;
+  const sectionConfig = themeConfig?.sections || [];
+  const sectionStyle = (key, offset = 0) => {
+    const section = sectionConfig.find((item) => item.key === key);
+    const defaultOrder = ['hero', 'categories', 'products', 'collections', 'trustBadges', 'customBanner', 'reviews', 'instagram'].indexOf(key) + 1;
+    return {
+      display: section?.visible === false ? 'none' : undefined,
+      order: (section?.order || defaultOrder) * 10 + offset,
+    };
+  };
+
+  // Load both banner platforms; the public theme config chooses the records shown on this storefront.
   useEffect(() => {
     let mounted = true;
-    bannersAPI.getActive()
-      .then((res) => {
+    Promise.all([bannersAPI.getActive({ platform: 'web' }), bannersAPI.getActive({ platform: 'mobile' })])
+      .then((responses) => {
         if (!mounted) return;
-        const list = Array.isArray(res?.data?.data) ? res.data.data : [];
+        const rawList = [...new Map(responses.flatMap((res) => (Array.isArray(res?.data?.data) ? res.data.data : []))
+          .map((banner) => [String(banner._id), banner])).values()];
+        const selectionGroups = new Map();
+        const themeSelectionOrder = new Map();
+        for (const selection of themeConfig?.bannerSelections || []) {
+          const platform = selection.platform || 'web';
+          const scope = `${selection.type}:${platform}`;
+          if (!selectionGroups.has(scope)) selectionGroups.set(scope, new Set());
+          const bannerId = String(selection.bannerId?._id || selection.bannerId || '');
+          if (selection.visible !== false && bannerId) {
+            selectionGroups.get(scope).add(bannerId);
+            themeSelectionOrder.set(bannerId, Number(selection.order) || 0);
+          }
+        }
+        const list = rawList.filter((banner) => {
+          const type = banner.display?.type || banner.type || '';
+          const platform = banner.display?.platform || 'web';
+          const selectedIds = selectionGroups.get(`${type}:${platform}`);
+          return !selectedIds || selectedIds.has(String(banner._id));
+        }).sort((left, right) => {
+          const leftOrder = themeSelectionOrder.get(String(left._id));
+          const rightOrder = themeSelectionOrder.get(String(right._id));
+          return leftOrder === undefined || rightOrder === undefined ? 0 : leftOrder - rightOrder;
+        });
         const typeOf = (banner) => banner.display?.type || banner.type || '';
         const contentOf = (banner) => banner.content || {};
+        const platformOf = (banner) => banner.display?.platform || 'web';
         const mediaOf = (banner) => ({
           image: banner.image?.url || '',
           video: banner.video?.url || '',
           mediaType: banner.mediaType || 'image',
         });
-        const selectType = (type) => list.filter((banner) => typeOf(banner) === type);
+        const selectType = (type) => list.filter((banner) => typeOf(banner) === type && platformOf(banner) === (type === 'mobileappbanner' ? 'mobile' : 'web'));
         const firstType = (type) => selectType(type)[0];
 
         setHeroBanners(selectType('herobanner').map((banner) => ({
           _id: banner._id,
-          title: contentOf(banner).title || banner.title || '',
-          subtitle: contentOf(banner).subtitle || banner.subtitle || '',
-          description: contentOf(banner).description || banner.description || '',
           ...mediaOf(banner),
-          link: banner.link || '/shop',
-          buttonText: contentOf(banner).buttonText || 'SHOP NOW',
         })));
         setCollectionBanners(selectType('collectionbanner').map((banner) => ({
           id: banner._id,
@@ -120,6 +196,7 @@ const Home = () => {
           appStoreUrl: mobileBanner.appStoreUrl || 'https://www.apple.com/app-store/',
           googlePlayUrl: mobileBanner.googlePlayUrl || 'https://play.google.com/store',
         });
+        else setMobileAppBanner(null);
 
         const appointmentBanner = firstType('bookappointbanner');
         if (appointmentBanner) setBookAppointBanner({
@@ -128,27 +205,40 @@ const Home = () => {
           image: appointmentBanner.image?.url || '',
           buttonText: contentOf(appointmentBanner).buttonText || 'SCHEDULE APPOINTMENT',
         });
+        else setBookAppointBanner(null);
 
-        const customBannerData = list.find((banner) => banner.display?.bannerKey === 'custom_jewellery');
+        const customBannerData = list.find((banner) => banner.display?.bannerKey === 'custom_jewellery' && platformOf(banner) === 'web');
         if (customBannerData) setCustomBanner({
           title: contentOf(customBannerData).title || customBannerData.title || '',
           subtitle: contentOf(customBannerData).subtitle || customBannerData.subtitle || '',
           image: customBannerData.image?.url || '',
           buttonText: contentOf(customBannerData).buttonText || 'START CUSTOMISING',
         });
+        else setCustomBanner(null);
       })
       .catch((err) => console.error('Failed to load banners:', err));
+    return () => { mounted = false; };
+  }, [themeConfig?.bannerSelections]);
+
+  useEffect(() => {
+    let mounted = true;
+    categoriesAPI.getLookup({ status: 'active' })
+      .then((res) => {
+        const list = Array.isArray(res?.data?.data) ? res.data.data : [];
+        if (mounted) setStoreCategories(list);
+      })
+      .catch(() => {});
     return () => { mounted = false; };
   }, []);
 
   // Carousel auto-slide when multiple banners exist
   useEffect(() => {
-    if (heroBanners.length <= 1) return;
+    if (effectiveHeroBanners.length <= 1) return;
     const timer = setInterval(() => {
-      setActiveHeroIdx((prev) => (prev + 1) % heroBanners.length);
+      setActiveHeroIdx((prev) => (prev + 1) % effectiveHeroBanners.length);
     }, 6500);
     return () => clearInterval(timer);
-  }, [heroBanners.length]);
+  }, [effectiveHeroBanners.length]);
 
   // ─── 2. FETCH CELEBRATE ITEMS (/api/featured?placement=Celebrate) ───
   useEffect(() => {
@@ -267,42 +357,31 @@ const Home = () => {
     window.dispatchEvent(new CustomEvent('open-virtual-appointment'));
   };
 
-  const currentHero = heroBanners[activeHeroIdx] || heroBanners[0];
+  const currentHero = effectiveHeroBanners[activeHeroIdx] || effectiveHeroBanners[0];
   const currentReview = reviews[activeReviewIdx] || reviews[0];
 
   return (
-    <div className="bg-white text-stone-900 font-sans antialiased overflow-x-hidden">
+    <div className="flex flex-col bg-white text-stone-900 font-sans antialiased overflow-x-hidden" style={{ minHeight: '100%', backgroundColor: themeConfig?.colors?.background || undefined, color: themeConfig?.colors?.text || undefined, fontFamily: themeConfig?.typography?.bodyFont || undefined }}>
       {/* ─────────────────────────────────────────────────────────────────
           1. HERO BANNER (Selected from the shared active-banners response)
       ─────────────────────────────────────────────────────────────────── */}
-      {heroBanners.length > 0 && currentHero && (
-        <section className="relative isolate min-h-[280px] sm:min-h-[420px] lg:min-h-[560px] overflow-hidden bg-[#d6bea1] text-[#29231d]">
-          {currentHero.image && <img src={getMediaUrl(currentHero.image)} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+      {effectiveHeroBanners.length > 0 && currentHero && (
+        <section style={sectionStyle('hero')} className="relative isolate min-h-[280px] sm:min-h-[420px] lg:min-h-[560px] overflow-hidden bg-[#d6bea1] text-[#29231d]">
+          {currentHero.image && <picture><source media="(max-width: 767px)" srcSet={getMediaUrl(currentHero.mobileImage || currentHero.image)} /><img src={getMediaUrl(currentHero.image)} alt="" className="absolute inset-0 h-full w-full object-cover" /></picture>}
           {currentHero.video && !currentHero.image && <video src={getMediaUrl(currentHero.video)} className="absolute inset-0 h-full w-full object-cover" autoPlay loop muted playsInline />}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#241c16]/50 via-[#241c16]/10 to-transparent" />
-          <div className="relative z-10 mx-auto flex min-h-[280px] max-w-7xl items-center px-7 py-10 sm:min-h-[420px] sm:px-12 lg:min-h-[560px] lg:px-16">
-            <div className="max-w-xl space-y-3 text-white drop-shadow-sm sm:space-y-5">
-              {currentHero.title && <h1 className="font-serif text-3xl font-normal leading-tight sm:text-5xl lg:text-6xl">{currentHero.title}</h1>}
-              {currentHero.subtitle && <p className="font-serif text-base sm:text-xl">{currentHero.subtitle}</p>}
-              {currentHero.description && <p className="max-w-md text-xs leading-6 text-white/90 sm:text-sm">{currentHero.description}</p>}
-              <Link to={currentHero.link || '/shop'} className="inline-flex items-center justify-center border border-white/80 bg-[#86684d]/90 px-6 py-3 text-[10px] font-medium uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#6e513b] sm:px-8">
-                {currentHero.buttonText || 'Discover more'}
-              </Link>
-            </div>
-          </div>
 
           {/* Carousel Chevrons (only shown when multiple API banners exist) */}
-          {heroBanners.length > 1 && (
+          {effectiveHeroBanners.length > 1 && (
             <>
               <button
-                onClick={() => setActiveHeroIdx((prev) => (prev - 1 + heroBanners.length) % heroBanners.length)}
+                onClick={() => setActiveHeroIdx((prev) => (prev - 1 + effectiveHeroBanners.length) % effectiveHeroBanners.length)}
                 className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center transition-all z-20 cursor-pointer"
                 aria-label="Previous hero banner"
               >
                 <HiOutlineChevronLeft className="w-5 h-5" />
               </button>
               <button
-                onClick={() => setActiveHeroIdx((prev) => (prev + 1) % heroBanners.length)}
+                onClick={() => setActiveHeroIdx((prev) => (prev + 1) % effectiveHeroBanners.length)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center transition-all z-20 cursor-pointer"
                 aria-label="Next hero banner"
               >
@@ -316,8 +395,8 @@ const Home = () => {
       {/* ─────────────────────────────────────────────────────────────────
           2. CELEBRATE WITH NEIRAH (Dynamic from /api/featured?placement=Celebrate)
       ─────────────────────────────────────────────────────────────────── */}
-      {celebrateItems.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+      {effectiveCategoryItems.length > 0 && (
+        <section style={sectionStyle('categories')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
           <div className="text-center mb-10">
             <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
               Celebrate With Neirah
@@ -325,7 +404,7 @@ const Home = () => {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-            {celebrateItems.map((item) => (
+            {effectiveCategoryItems.map((item) => (
               <Link
                 key={item._id}
                 to={item.link}
@@ -353,7 +432,7 @@ const Home = () => {
       {/* ─────────────────────────────────────────────────────────────────
           3. PRODUCTS SECTION (Dynamic from /api/product/home)
       ─────────────────────────────────────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-16">
+      <section style={sectionStyle('products')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-16">
         {/* Platinum Sub-Section */}
         {platinumProducts.length > 0 && (
           <div>
@@ -394,9 +473,9 @@ const Home = () => {
       {/* ─────────────────────────────────────────────────────────────────
           4. CURATED COLLECTION BANNERS (Dynamic Bento Grid from /api/banners)
       ─────────────────────────────────────────────────────────────────── */}
-      {collectionBanners.length > 0 && (
-        <section className="mx-auto max-w-[1440px] space-y-8 px-4 py-12 sm:px-6 lg:px-8">
-          {collectionBanners.map((collection) => {
+      {effectiveCollectionBanners.length > 0 && (
+        <section style={sectionStyle('collections')} className="mx-auto max-w-[1440px] space-y-8 px-4 py-12 sm:px-6 lg:px-8">
+          {effectiveCollectionBanners.map((collection) => {
             const [image1, image2, image3, image4] = collection.images || [];
             if (!image1 || !image2 || !image3 || !image4) return null;
             const tileClass = 'group relative block overflow-hidden bg-stone-100';
@@ -424,45 +503,47 @@ const Home = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
-          5. TRUST BADGES ROW (Clean SVG Line Icons)
+          5. TRUST BADGES ROW (Dynamic from Settings)
       ─────────────────────────────────────────────────────────────────── */}
-      <section className="border-y border-stone-200/70 bg-[#faf9f7] py-6 px-4">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 text-center">
-          {(storeSettings.trustBadges?.length ? storeSettings.trustBadges : [
-            { title: '100% Certified', Icon: HiOutlineShieldCheck },
-            { title: 'BIS Hallmarked', Icon: IoDiamondOutline },
-            { title: 'Lifetime Exchange', Icon: HiOutlineRefresh },
-            { title: '15-Day Return Policy', Icon: HiOutlineCalendar },
-            { title: 'Insured Shipping', Icon: HiOutlineTruck },
-            { title: 'Free Resizing', Icon: HiOutlineCheckCircle },
-          ]).map((item, index) => {
-            const Icon = item.Icon || HiOutlineShieldCheck;
-            return (
-              <div key={item._id || index} className="flex flex-col items-center gap-1.5 text-stone-600">
-                {item.image?.url ? (
-                  <img src={getMediaUrl(item.image.url)} alt="" className="h-6 w-6 object-contain" />
-                ) : (
-                  <Icon className="h-6 w-6 text-[#92704e]" />
-                )}
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800">{item.title}</span>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      {activeTrustBadges.length > 0 && (
+        <section style={sectionStyle('trustBadges')} className="border-y border-stone-200/70 bg-[#faf9f7] py-6 px-4">
+          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center sm:justify-around gap-6 text-center">
+            {activeTrustBadges.map((item, index) => {
+              const imageUrl = item.image?.url ? getMediaUrl(item.image.url) : null;
+              return (
+                <div key={item._id || index} className="flex flex-col items-center justify-center gap-1.5 text-stone-600 px-3 py-1">
+                  {imageUrl && (
+                    <img
+                      src={imageUrl}
+                      alt={item.title}
+                      className="h-6 w-6 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  )}
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800 text-center">
+                    {item.title}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ─────────────────────────────────────────────────────────────────
           6. CUSTOM JEWELLERY BANNER (Selected from the shared active-banners response)
       ─────────────────────────────────────────────────────────────────── */}
-      {customBanner && (
-        <section className="bg-gradient-to-r from-[#292622] via-[#39332d] to-[#292622] text-white py-14 px-4 sm:px-6 lg:px-8 border-y border-stone-700 relative overflow-hidden">
+      {effectiveCustomBanner && (
+        <section style={sectionStyle('customBanner')} className="bg-gradient-to-r from-[#292622] via-[#39332d] to-[#292622] text-white py-14 px-4 sm:px-6 lg:px-8 border-y border-stone-700 relative overflow-hidden">
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-10 relative z-10">
             <div className="w-full lg:w-5/12 bg-[#f4ede4] text-stone-900 rounded-3xl p-8 sm:p-10 shadow-2xl space-y-5 border border-amber-100">
               <h3 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight leading-snug">
-                {customBanner.title}
+                {effectiveCustomBanner.title}
               </h3>
               <p className="text-xs sm:text-sm text-stone-600 font-light leading-relaxed">
-                {customBanner.subtitle}
+                {effectiveCustomBanner.subtitle}
               </p>
               <div>
                 <button
@@ -470,7 +551,7 @@ const Home = () => {
                   onClick={openAppointmentModal}
                   className="px-7 py-3 rounded-full bg-[#d4af37] hover:bg-[#c39e2d] text-stone-900 text-xs font-bold uppercase tracking-widest transition-all shadow-md active:scale-95 cursor-pointer"
                 >
-                  {customBanner.buttonText || 'START CUSTOMISING'}
+                  {effectiveCustomBanner.buttonText || 'START CUSTOMISING'}
                 </button>
               </div>
             </div>
@@ -491,11 +572,11 @@ const Home = () => {
             </div>
 
             <div className="w-full lg:w-4/12 flex justify-center lg:justify-end">
-              {customBanner.image && (
+              {effectiveCustomBanner.image && (
                 <div className="rounded-2xl overflow-hidden shadow-2xl border-2 border-emerald-500/30 aspect-[4/3] w-full max-w-sm">
                   <img
-                    src={getMediaUrl(customBanner.image)}
-                    alt={customBanner.title}
+                    src={getMediaUrl(effectiveCustomBanner.image)}
+                    alt={effectiveCustomBanner.title}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -509,7 +590,7 @@ const Home = () => {
           7. GIFTS SECTION (Dynamic from /api/featured?placement=Gifts)
       ─────────────────────────────────────────────────────────────────── */}
       {giftItems.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+        <section style={sectionStyle('categories', 1)} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
           <div className="text-center mb-10">
             <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
               Gifts That Say A Lot
@@ -546,7 +627,7 @@ const Home = () => {
           8. MOBILE APP BANNER (Selected from the shared active-banners response)
       ─────────────────────────────────────────────────────────────────── */}
       {mobileAppBanner && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <section style={sectionStyle('customBanner', 1)} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="rounded-3xl bg-gradient-to-r from-[#292622] via-[#39332d] to-[#292622] text-white p-8 sm:p-12 relative overflow-hidden shadow-xl border border-stone-700 flex flex-col md:flex-row items-center justify-between gap-10">
             {mobileAppBanner.image && (
               <div className="w-full md:w-5/12 flex items-center justify-center">
@@ -603,7 +684,7 @@ const Home = () => {
       {/* ─────────────────────────────────────────────────────────────────
           9. TRENDING JEWELLERY SECTION (Dynamic from /api/product/home)
       ─────────────────────────────────────────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+      <section style={sectionStyle('products', 1)} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h3 className="font-serif text-lg sm:text-xl text-stone-800 font-light mb-8">
           Trending jewellery, fitting your demands.
         </h3>
@@ -624,7 +705,7 @@ const Home = () => {
           10. BOOK A VIRTUAL APPOINTMENT BANNER (Selected from the shared active-banners response)
       ─────────────────────────────────────────────────────────────────── */}
       {bookAppointBanner && (
-        <section className="bg-gradient-to-r from-[#292622] via-[#39332d] to-[#292622] text-white py-14 px-4 sm:px-6 lg:px-8 border-y border-stone-700 relative overflow-hidden">
+        <section style={sectionStyle('customBanner', 2)} className="bg-gradient-to-r from-[#292622] via-[#39332d] to-[#292622] text-white py-14 px-4 sm:px-6 lg:px-8 border-y border-stone-700 relative overflow-hidden">
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-10 relative z-10">
             <div className="w-full lg:w-5/12 bg-[#f4ede4] text-stone-900 rounded-3xl p-8 sm:p-10 shadow-2xl space-y-5 border border-amber-100">
               <h3 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight leading-snug">
@@ -663,7 +744,7 @@ const Home = () => {
           11. WHAT OUR CLIENTS ARE SAYING (Dynamic from /api/reviews)
       ─────────────────────────────────────────────────────────────────── */}
       {reviews.length > 0 && currentReview && (
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 text-center">
+        <section style={sectionStyle('reviews')} className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 text-center">
           <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-stone-400 block mb-2">
             TESTIMONIALS
           </span>
@@ -714,7 +795,7 @@ const Home = () => {
           12. FOLLOW US ON INSTAGRAM (Dynamic from /api/instagram-posts)
       ─────────────────────────────────────────────────────────────────── */}
       {instagramPosts.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-20">
+        <section style={sectionStyle('instagram')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-20">
           <div className="text-center mb-10">
             <h2 className="font-serif text-2xl sm:text-3xl text-stone-900 font-normal tracking-wide">
               Follow Us On Instagram
