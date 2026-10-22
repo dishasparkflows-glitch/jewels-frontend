@@ -48,7 +48,7 @@ export default function Shop() {
     let current = true;
     setLoading(true);
     setError('');
-    const query = { status: 'active', page, limit: 24, sort, includeFacets: true };
+    const query = { status: 'active', page, limit: 24, sort, includeFacets: true, includeGroups: true };
     if (shopFor) query.shopFor = shopFor;
     if (categoryId) query.category = categoryId;
     if (menuItem) query.menuItem = menuItem;

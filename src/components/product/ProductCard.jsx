@@ -127,7 +127,11 @@ export default function ProductCard({ product }) {
   const color =
     data.colors.find((entry) => entry.name === colorName) || data.colors[0];
   const image = color?.image || data.images[0] || "";
-  const href = `/product/${encodeURIComponent(data.id)}`;
+  const isGroup = Boolean(product.isGroup);
+  const href = isGroup
+    ? `/product/${encodeURIComponent(product.representative?._id || product.slug || data.id)}`
+    : `/product/${encodeURIComponent(data.id)}`;
+  const title = isGroup ? (product.groupName || data.name) : data.name;
   const wished = isWishlisted(data.id);
   const previewImages = [...new Set([image, ...data.images].filter(Boolean))];
   async function handleWishlist() {
@@ -137,7 +141,7 @@ export default function ProductCard({ product }) {
       await toggleWishlist({
         ...product,
         id: data.id,
-        title: data.name,
+        title,
         price: data.price,
         image,
       });
@@ -148,21 +152,26 @@ export default function ProductCard({ product }) {
   return (
     <article className="group flex min-w-0 flex-col rounded-2xl border border-[#e8ddd2] bg-white p-2.5 text-left transition-colors hover:border-[#c7b49e] sm:p-3.5">
       <div className="relative aspect-square overflow-hidden rounded-xl bg-[#f8f8f8]">
+        {isGroup && (
+          <span className="absolute top-2 left-2 z-10 bg-[#8b6f4e] text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs">
+            {product.variantCount} {product.variantCount === 1 ? 'Variant' : 'Variants'}
+          </span>
+        )}
         <Link
           to={href}
-          aria-label={`View ${data.name}`}
+          aria-label={`View ${title}`}
           className="block h-full w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b6f4e]"
         >
           <ProductImage
             src={image}
-            name={data.name}
+            name={title}
             className="h-full w-full object-contain p-3 transition-transform duration-300 motion-safe:group-hover:scale-[1.03] sm:p-5"
           />
         </Link>
         <button
           type="button"
           disabled={wishlistBusy}
-          aria-label={`${wished ? "Remove" : "Save"} ${data.name} ${wished ? "from" : "to"} wishlist`}
+          aria-label={`${wished ? "Remove" : "Save"} ${title} ${wished ? "from" : "to"} wishlist`}
           aria-pressed={wished}
           onClick={handleWishlist}
           className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full border border-[#e8ddd2] bg-white/95 text-[#8c7968] transition-colors hover:text-rose-600 disabled:opacity-50"
@@ -176,7 +185,7 @@ export default function ProductCard({ product }) {
         {!!image && (
           <button
             type="button"
-            aria-label={`Enlarge ${data.name} image`}
+            aria-label={`Enlarge ${title} image`}
             onClick={() => setPreviewOpen(true)}
             className="absolute bottom-3 left-3 flex h-8 w-8 items-center justify-center rounded border border-[#e8ddd2] bg-white text-[#8c7968] shadow-sm hover:bg-stone-50"
           >
@@ -189,12 +198,12 @@ export default function ProductCard({ product }) {
           to={href}
           className="line-clamp-2 min-h-[2.5rem] text-xs font-normal leading-5 text-stone-900 hover:text-[#8b6f4e] sm:text-[13px]"
         >
-          {data.name}
+          {title}
         </Link>
         {!!data.colors.length && (
           <div
             role="group"
-            aria-label={`${data.name} colours`}
+            aria-label={`${title} colours`}
             className="mt-1 flex flex-wrap items-center gap-0.5"
           >
             {data.colors.slice(0, 5).map((entry) => (
@@ -237,13 +246,26 @@ export default function ProductCard({ product }) {
           </div>
         )}
         <div className="mt-auto flex flex-wrap items-baseline gap-2 pt-1 text-[13px]">
-          <span className="font-semibold text-stone-950">
-            {formatProductPrice(data.price) || "Price on request"}
-          </span>
-          {data.originalPrice && (
-            <span className="text-xs text-stone-400 line-through">
-              {formatProductPrice(data.originalPrice)}
-            </span>
+          {isGroup && product.pricing?.minPrice && product.pricing?.maxPrice && product.pricing.minPrice !== product.pricing.maxPrice ? (
+            <div className="flex flex-col">
+              <span className="font-semibold text-stone-950">
+                {formatProductPrice(product.pricing.minPrice)} – {formatProductPrice(product.pricing.maxPrice)}
+              </span>
+              <span className="text-[10px] text-stone-400">
+                Rep: {formatProductPrice(product.pricing.salePrice || data.price)}
+              </span>
+            </div>
+          ) : (
+            <>
+              <span className="font-semibold text-stone-950">
+                {formatProductPrice(data.price) || "Price on request"}
+              </span>
+              {data.originalPrice && (
+                <span className="text-xs text-stone-400 line-through">
+                  {formatProductPrice(data.originalPrice)}
+                </span>
+              )}
+            </>
           )}
         </div>
       </div>
