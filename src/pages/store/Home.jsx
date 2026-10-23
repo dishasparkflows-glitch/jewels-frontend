@@ -53,6 +53,7 @@ const Home = () => {
 
   const [celebrateItems, setCelebrateItems] = useState([]);
 
+  const [goldProducts, setGoldProducts] = useState([]);
   const [platinumProducts, setPlatinumProducts] = useState([]);
   const [silverProducts, setSilverProducts] = useState([]);
   const [trendingProducts, setTrendingProducts] = useState([]);
@@ -270,10 +271,13 @@ const Home = () => {
         const data = res?.data?.data || {};
 
         if (data.sections) {
+          setGoldProducts(data.sections.gold || data.sections.mostLoved || []);
           setPlatinumProducts(data.sections.platinum || []);
           setSilverProducts(data.sections.silver || []);
           setTrendingProducts(data.sections.trending || []);
         } else if (Array.isArray(data.items)) {
+          const gold = data.items.filter((p) => p.productType === 'gold');
+          setGoldProducts(gold.length > 0 ? gold.slice(0, 5) : data.items.slice(0, 5));
           setPlatinumProducts(data.items.slice(0, 5));
           setSilverProducts(data.items.slice(5, 10));
           setTrendingProducts(data.items.slice(10, 15));
@@ -433,20 +437,19 @@ const Home = () => {
           3. PRODUCTS SECTION (Dynamic from /api/product/home)
       ─────────────────────────────────────────────────────────────────── */}
       <section style={sectionStyle('products')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-16">
-        {/* Platinum Sub-Section */}
-        {platinumProducts.length > 0 && (
+        {/* Most Loved on Neirah - Gold Products Sub-Section */}
+        {(goldProducts.length > 0 || platinumProducts.length > 0) && (
           <div>
-            <div className="text-center mb-8">
-              <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-stone-400 block mb-1">
-                EXCLUSIVE ATELIER
-              </span>
+            <div className="text-center mb-6 sm:mb-8">
               <h3 className="font-serif text-2xl sm:text-3xl text-stone-900 font-normal tracking-wide">
-                100% SOLID PLATINUM
+                Most Loved on Neirah
               </h3>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
-              {platinumProducts.map((product) => <ProductCard key={product.id || product._id} product={product} />)}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-5">
+              {(goldProducts.length > 0 ? goldProducts : platinumProducts).map((product) => (
+                <ProductCard key={product.id || product._id} product={product} />
+              ))}
             </div>
           </div>
         )}

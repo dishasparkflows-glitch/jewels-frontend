@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import { productsAPI, sizesAPI, couponsAPI } from '../../api/services';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { getValidProductImages, getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 import { trackProductView } from '../../config/firebase';
 import { useLiveViewers } from '../../hooks/useLiveViewers';
@@ -161,6 +162,7 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
+  const { user } = useAuth();
   // Product state
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -678,19 +680,52 @@ export default function ProductDetail() {
     }
     setAddingToCart(true);
 
+    const price = Number(currentPrice) || 0;
+    const quantity = 1;
+    const totalItemPrice = price * quantity;
+    const addedAt = new Date().toISOString();
+    const isGold = (product.productType === 'gold');
+
+    let selectedAttributes = undefined;
+    if (isGold) {
+      selectedAttributes = {
+        metalPurity: selectedVariant?.metalPurityId?._id || selectedVariant?.metalPurityId || product.metalPurityIds?.[0] || '6a6add8dac243de1a327163a',
+        metalColor: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || '69f477a1952290faef1ebe12',
+        diamondType: selectedVariant?.diamondTypeId?._id || selectedVariant?.diamondTypeId || '69b94dfb18de26f09b61e19b',
+        diamondShape: selectedVariant?.diamondShapeId?._id || selectedVariant?.diamondShapeId || '6a571bb6701e99117e65bbf4',
+        diamondClarity: selectedVariant?.diamondClarityId?._id || selectedVariant?.diamondClarityId || '6a571bb6701e99117e65bbf7',
+        diamondColor: selectedVariant?.diamondColorId?._id || selectedVariant?.diamondColorId || '6a571bb6701e99117e65bbfa',
+        caratWeight: Number(selectedVariant?.caratWeight || selectedCarat || 1.5),
+        size: selectedSize || null,
+        sizeRange: null,
+      };
+    }
+
     const cartItem = {
       _id: product._id,
+      productId: product._id,
+      userId: user?._id || user?.id || null,
       title: product.basicInfo?.title,
-      price: currentPrice,
+      price,
+      totalItemPrice,
+      addedAt,
+      quantity,
       image: galleryImages.find((img) => !isVideoMedia(img)) || galleryImages[0] || getPrimaryProductImage(product),
       category: categoryName,
+      productType: product.productType,
+      selectedAttributes,
     };
 
     addToCart(cartItem, 1, {
+      userId: user?._id || user?.id || null,
+      price,
+      totalItemPrice,
+      addedAt,
       selectedMetal: `${selectedPurity} ${selectedColor}`.trim(),
       selectedVariantId: selectedVariant?._id || '',
       size: selectedSize,
       selectedSize,
+      selectedAttributes,
     });
 
     setTimeout(() => {

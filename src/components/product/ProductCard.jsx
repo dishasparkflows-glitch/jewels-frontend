@@ -9,9 +9,12 @@ import {
   HiOutlineX,
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
+  HiOutlineShoppingBag,
 } from "react-icons/hi";
 import { IoDiamondOutline } from "react-icons/io5";
 import { useWishlist } from "../../contexts/WishlistContext";
+import { useCart } from "../../contexts/CartContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { getImageUrl } from "../../utils/imageUrl";
 import {
   formatProductPrice,
@@ -121,11 +124,19 @@ function ImagePreview({ images, name, onClose }) {
 export default function ProductCard({ product }) {
   const data = getProductCardData(product);
   const { isWishlisted, toggleWishlist } = useWishlist();
-  const [colorName, setColorName] = useState(null);
+  const { addToCart } = useCart();
+  const { user } = useAuth();
+  const [selectedColorName, setSelectedColorName] = useState(null);
+  const [hoveredColorName, setHoveredColorName] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [wishlistBusy, setWishlistBusy] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
+
+  const isGold = (product.productType === 'gold') || /gold/i.test(product.basicInfo?.title || product.title || '');
+  const defaultGoldColor = data.colors.find((entry) => /yellow/i.test(entry.name)) || data.colors[0];
+  const activeColorName = hoveredColorName || selectedColorName || (isGold ? defaultGoldColor?.name : undefined);
   const color =
-    data.colors.find((entry) => entry.name === colorName) || data.colors[0];
+    data.colors.find((entry) => entry.name === activeColorName) || defaultGoldColor || data.colors[0];
   const image = color?.image || data.images[0] || "";
   const isGroup = Boolean(product.isGroup);
   const href = isGroup
@@ -134,6 +145,7 @@ export default function ProductCard({ product }) {
   const title = isGroup ? (product.groupName || data.name) : data.name;
   const wished = isWishlisted(data.id);
   const previewImages = [...new Set([image, ...data.images].filter(Boolean))];
+
   async function handleWishlist() {
     if (wishlistBusy) return;
     setWishlistBusy(true);
@@ -149,9 +161,75 @@ export default function ProductCard({ product }) {
       setWishlistBusy(false);
     }
   }
+
+  const handleAddToCart = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (addingToCart) return;
+    setAddingToCart(true);
+
+    try {
+      const colorEntry = color;
+      const metalColorId = colorEntry?.id || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null;
+
+      let selectedAttributes = undefined;
+      if (isGold) {
+        selectedAttributes = {
+          metalPurity: product.selectedAttributes?.metalPurity || product.metalPurityIds?.[0] || '6a6add8dac243de1a327163a',
+          metalColor: metalColorId || product.selectedAttributes?.metalColor || '69f477a1952290faef1ebe12',
+          diamondType: product.selectedAttributes?.diamondType || '69b94dfb18de26f09b61e19b',
+          diamondShape: product.selectedAttributes?.diamondShape || '6a571bb6701e99117e65bbf4',
+          diamondClarity: product.selectedAttributes?.diamondClarity || '6a571bb6701e99117e65bbf7',
+          diamondColor: product.selectedAttributes?.diamondColor || '6a571bb6701e99117e65bbfa',
+          caratWeight: Number(product.selectedAttributes?.caratWeight || 1.5),
+          size: null,
+          sizeRange: null,
+        };
+      }
+
+      const price = Number(data.price) || 0;
+      const quantity = 1;
+      const totalItemPrice = price * quantity;
+      const addedAt = new Date().toISOString();
+
+      await addToCart(
+        {
+          id: data.id,
+          productId: data.id,
+          userId: user?._id || user?.id || null,
+          title,
+          price,
+          totalItemPrice,
+          addedAt,
+          quantity,
+          originalPrice: data.originalPrice,
+          image,
+          category: product.category || product.categoryIds?.[0]?.name || '',
+          productType: product.productType || (isGold ? 'gold' : ''),
+          selectedAttributes,
+          selectedMetal: activeColorName || color?.name || '',
+        },
+        1,
+        {
+          userId: user?._id || user?.id || null,
+          price,
+          totalItemPrice,
+          addedAt,
+          selectedMetal: activeColorName || color?.name || '',
+          selectedAttributes,
+        }
+      );
+    } catch (err) {
+      console.error('Failed to add to cart from product card:', err);
+    } finally {
+      setAddingToCart(false);
+    }
+  };
   return (
-    <article className="group flex min-w-0 flex-col rounded-2xl border border-[#e8ddd2] bg-white p-2.5 text-left transition-colors hover:border-[#c7b49e] sm:p-3.5">
-      <div className="relative aspect-square overflow-hidden rounded-xl bg-[#f8f8f8]">
+    <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl sm:rounded-2xl border border-stone-200/80 bg-white text-center shadow-[0_2px_10px_rgba(73,54,35,0.035)] transition-all duration-300 hover:-translate-y-1 hover:border-[#ddcbb4] hover:shadow-[0_12px_28px_rgba(73,54,35,0.10)] cursor-pointer">
+      <div className={`relative aspect-square overflow-hidden mb-1.5 sm:mb-2 flex items-center justify-center transition-colors duration-300 ${isGold ? "bg-[#F0E8D8]" : "bg-[#f5ebd5]"}`}>
         {isGroup && (
           <span className="absolute top-2 left-2 z-10 bg-[#8b6f4e] text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs">
             {product.variantCount} {product.variantCount === 1 ? 'Variant' : 'Variants'}
@@ -165,7 +243,7 @@ export default function ProductCard({ product }) {
           <ProductImage
             src={image}
             name={title}
-            className="h-full w-full object-contain p-3 transition-transform duration-300 motion-safe:group-hover:scale-[1.03] sm:p-5"
+            className="h-full w-full object-contain p-3 transition-transform duration-700 motion-safe:group-hover:scale-105 sm:p-4"
           />
         </Link>
         <button
@@ -174,7 +252,7 @@ export default function ProductCard({ product }) {
           aria-label={`${wished ? "Remove" : "Save"} ${title} ${wished ? "from" : "to"} wishlist`}
           aria-pressed={wished}
           onClick={handleWishlist}
-          className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full border border-[#e8ddd2] bg-white/95 text-[#8c7968] transition-colors hover:text-rose-600 disabled:opacity-50"
+          className="absolute right-2.5 top-2.5 sm:right-3 sm:top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-stone-400 backdrop-blur-xs shadow-xs transition hover:text-red-500 hover:scale-105 disabled:opacity-50"
         >
           {wished ? (
             <HiHeart className="h-4 w-4 text-rose-500" />
@@ -187,16 +265,29 @@ export default function ProductCard({ product }) {
             type="button"
             aria-label={`Enlarge ${title} image`}
             onClick={() => setPreviewOpen(true)}
-            className="absolute bottom-3 left-3 flex h-8 w-8 items-center justify-center rounded border border-[#e8ddd2] bg-white text-[#8c7968] shadow-sm hover:bg-stone-50"
+            className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 flex h-8 w-8 items-center justify-center rounded-full border border-white/80 bg-white/90 text-[#8c7968] opacity-0 shadow-xs backdrop-blur-xs transition-opacity hover:bg-white group-hover:opacity-100 focus-visible:opacity-100 z-10"
           >
             <HiOutlineArrowsExpand className="h-3.5 w-3.5" />
           </button>
         )}
+
+        {/* ADD TO CART Button - Matches Screenshot */}
+        <div className="absolute inset-x-2 bottom-2 sm:inset-x-3 sm:bottom-3 z-20 transition-all duration-300 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto">
+          <button
+            type="button"
+            disabled={addingToCart}
+            onClick={handleAddToCart}
+            className="flex w-full items-center justify-center gap-1.5 sm:gap-2 rounded-lg bg-[#201e1b] py-2 sm:py-2.5 px-3 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-white shadow-md transition-all duration-200 hover:bg-[#8b6f4e] active:scale-[0.98] disabled:opacity-75 cursor-pointer"
+          >
+            <HiOutlineShoppingBag className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+            <span>{addingToCart ? "ADDING..." : "ADD TO CART"}</span>
+          </button>
+        </div>
       </div>
-      <div className="flex flex-1 flex-col pt-3">
+      <div className="flex flex-1 flex-col items-center px-2 pb-3 pt-1.5 sm:px-3 sm:pb-3.5 text-center">
         <Link
           to={href}
-          className="line-clamp-2 min-h-[2.5rem] text-xs font-normal leading-5 text-stone-900 hover:text-[#8b6f4e] sm:text-[13px]"
+          className="line-clamp-2 min-h-[28px] sm:min-h-[34px] w-full text-[11px] sm:text-[13px] font-medium leading-[1.3] text-stone-800 hover:text-[#8b6f4e]"
         >
           {title}
         </Link>
@@ -204,51 +295,70 @@ export default function ProductCard({ product }) {
           <div
             role="group"
             aria-label={`${title} colours`}
-            className="mt-1 flex flex-wrap items-center gap-0.5"
+            onMouseLeave={() => setHoveredColorName(null)}
+            className="mt-1.5 sm:mt-2 flex min-h-6 flex-wrap items-center justify-center gap-1 sm:gap-1.5"
           >
-            {data.colors.slice(0, 5).map((entry) => (
-              <button
-                key={entry.name}
-                type="button"
-                title={entry.name}
-                aria-label={`Preview ${entry.name}`}
-                aria-pressed={color?.name === entry.name}
-                onClick={() => setColorName(entry.name)}
-                className="flex h-7 min-w-7 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b6f4e]"
-              >
-                {entry.hex ? (
-                  <span
-                    style={{
-                      backgroundColor: entry.hex,
-                      backgroundImage:
-                        "linear-gradient(135deg, rgba(255,255,255,.65), transparent)",
-                    }}
-                    className={`block h-3.5 w-3.5 rounded-full border border-stone-200 ${color?.name === entry.name ? "ring-1 ring-stone-700 ring-offset-2" : ""}`}
-                  />
-                ) : (
-                  <span
-                    className={`rounded border px-1 text-[9px] ${color?.name === entry.name ? "border-stone-700" : "border-stone-200"}`}
-                  >
-                    {entry.name}
-                  </span>
-                )}
-              </button>
-            ))}
+            {data.colors.slice(0, 5).map((entry) => {
+              const isSelected = color?.name === entry.name;
+              const bgGradient = entry.colorCodeEnd
+                ? `linear-gradient(135deg, ${entry.hex}, ${entry.colorCodeEnd})`
+                : entry.hex
+                  ? `linear-gradient(135deg, ${entry.hex}, ${entry.hex})`
+                  : undefined;
+
+              return (
+                <button
+                  key={entry.name}
+                  type="button"
+                  title={entry.name}
+                  aria-label={`Preview ${entry.name}`}
+                  aria-pressed={isSelected}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSelectedColorName(entry.name);
+                  }}
+                  onMouseEnter={() => {
+                    setHoveredColorName(entry.name);
+                  }}
+                  className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b6f4e]"
+                >
+                  {entry.hex ? (
+                    <span
+                      style={{
+                        background: bgGradient || entry.hex,
+                      }}
+                      className={`block h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 rounded-full border transition-all ${
+                        isSelected ? "ring-1 ring-stone-900 ring-offset-1 scale-110" : "border-stone-300 hover:border-stone-400"
+                      }`}
+                    />
+                  ) : (
+                    <span
+                      className={`rounded border px-1 text-[9px] ${
+                        isSelected ? "border-stone-700 bg-stone-100 font-medium" : "border-stone-200"
+                      }`}
+                    >
+                      {entry.name}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
             {data.colors.length > 5 && (
               <Link
                 to={href}
                 aria-label={`View all ${data.colors.length} colours`}
-                className="px-1 text-[10px] text-stone-500"
+                className="px-1 text-[10px] text-stone-500 hover:text-[#8b6f4e]"
               >
                 +{data.colors.length - 5}
               </Link>
             )}
           </div>
         )}
-        <div className="mt-auto flex flex-wrap items-baseline gap-2 pt-1 text-[13px]">
+        <div className="mt-auto flex flex-wrap items-baseline justify-center gap-1.5 sm:gap-2 pt-2">
           {isGroup && product.pricing?.minPrice && product.pricing?.maxPrice && product.pricing.minPrice !== product.pricing.maxPrice ? (
             <div className="flex flex-col">
-              <span className="font-semibold text-stone-950">
+              <span className="text-xs sm:text-[14px] font-semibold text-stone-950">
                 {formatProductPrice(product.pricing.minPrice)} – {formatProductPrice(product.pricing.maxPrice)}
               </span>
               <span className="text-[10px] text-stone-400">
@@ -257,11 +367,11 @@ export default function ProductCard({ product }) {
             </div>
           ) : (
             <>
-              <span className="font-semibold text-stone-950">
+              <span className="text-xs sm:text-[14px] font-semibold text-stone-950">
                 {formatProductPrice(data.price) || "Price on request"}
               </span>
               {data.originalPrice && (
-                <span className="text-xs text-stone-400 line-through">
+                <span className="text-[10px] sm:text-xs text-stone-400 line-through">
                   {formatProductPrice(data.originalPrice)}
                 </span>
               )}

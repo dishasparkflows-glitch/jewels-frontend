@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { HiOutlineShoppingBag, HiOutlineX } from "react-icons/hi";
 import { useCart } from "../../contexts/CartContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { getImageUrl } from "../../utils/imageUrl";
 import {
   getPrimaryProductImage,
@@ -13,6 +14,7 @@ const formatPrice = (price) =>
 
 export default function WishlistProductCard({ item, onRemove }) {
   const { addToCart } = useCart();
+  const { user } = useAuth();
   const name = item.basicInfo?.title || item.title || item.name || "Saved jewellery";
   const id = item.productId || item._id;
   const rawImage =
@@ -27,11 +29,13 @@ export default function WishlistProductCard({ item, onRemove }) {
     : id
       ? `/product/${id}`
       : "/shop";
-  const colors = Array.isArray(item.colors)
-    ? item.colors
-    : Array.isArray(item.colorOptions)
-      ? item.colorOptions
-      : [];
+  const colors = Array.isArray(item.metalColors)
+    ? item.metalColors
+    : Array.isArray(item.colors)
+      ? item.colors
+      : Array.isArray(item.colorOptions)
+        ? item.colorOptions
+        : [];
 
   return (
     <article className="group min-w-0 text-center">
@@ -77,12 +81,16 @@ export default function WishlistProductCard({ item, onRemove }) {
                 : color.name || `Color ${index + 1}`;
             const colorValue =
               typeof color === "string" ? color : color.hex || color.colorCode;
+            const colorEnd = typeof color === "object" ? color.colorCodeEnd : undefined;
+            const background = colorEnd && colorValue
+              ? `linear-gradient(135deg, ${colorValue}, ${colorEnd})`
+              : colorValue;
             return (
               <span
                 key={`${colorName}-${index}`}
                 title={colorName}
-                className="h-4 w-4 rounded-full border border-stone-300"
-                style={colorValue ? { backgroundColor: colorValue } : undefined}
+                className="h-4 w-4 rounded-full border border-stone-300 shadow-2xs"
+                style={background ? { background } : undefined}
               />
             );
           })}
@@ -104,21 +112,55 @@ export default function WishlistProductCard({ item, onRemove }) {
 
       <button
         type="button"
-        onClick={() =>
+        onClick={() => {
+          const price = Number(item.pricing?.salePrice || item.price || 0);
+          const quantity = 1;
+          const totalItemPrice = price * quantity;
+          const addedAt = new Date().toISOString();
+          const isGold = (item.productType === 'gold');
+
+          let selectedAttributes = undefined;
+          if (isGold) {
+            selectedAttributes = {
+              metalPurity: item.selectedAttributes?.metalPurity || item.metalPurityIds?.[0] || '6a6add8dac243de1a327163a',
+              metalColor: item.selectedAttributes?.metalColor || item.metalColorIds?.[0]?._id || item.metalColorIds?.[0] || '69f477a1952290faef1ebe12',
+              diamondType: item.selectedAttributes?.diamondType || '69b94dfb18de26f09b61e19b',
+              diamondShape: item.selectedAttributes?.diamondShape || '6a571bb6701e99117e65bbf4',
+              diamondClarity: item.selectedAttributes?.diamondClarity || '6a571bb6701e99117e65bbf7',
+              diamondColor: item.selectedAttributes?.diamondColor || '6a571bb6701e99117e65bbfa',
+              caratWeight: Number(item.selectedAttributes?.caratWeight || 1.5),
+              size: null,
+              sizeRange: null,
+            };
+          }
+
           addToCart(
             {
               id,
               productId: id,
+              userId: user?._id || user?.id || null,
               name,
               title: name,
-              price: item.pricing?.salePrice || item.price,
+              price,
+              totalItemPrice,
+              addedAt,
+              quantity,
               originalPrice: item.pricing?.mrp || item.originalPrice,
               image,
               category: item.category,
+              productType: item.productType,
+              selectedAttributes,
             },
             1,
-          )
-        }
+            {
+              userId: user?._id || user?.id || null,
+              price,
+              totalItemPrice,
+              addedAt,
+              selectedAttributes,
+            }
+          );
+        }}
         disabled={!id}
         className="mt-3 inline-flex items-center gap-2 border border-stone-300 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-stone-700 transition hover:border-[#92704e] hover:text-[#92704e] sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
       >

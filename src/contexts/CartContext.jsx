@@ -1,13 +1,18 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { cartAPI } from '../api/services';
 import { getPrimaryProductImage } from '../utils/productImages';
 import { trackAddToCart, trackRemoveFromCart } from '../config/firebase';
+import { useAuth } from './AuthContext';
 
 /* eslint-disable react/prop-types, react-refresh/only-export-components */
 const CartContext = createContext(null);
 
 export const CartProvider = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { token } = useAuth();
   const [cart, setCart] = useState(() => {
     try {
       const saved = localStorage.getItem('jewels_cart');
@@ -87,12 +92,25 @@ export const CartProvider = ({ children }) => {
   const addToCart = async (product, quantity = 1, options = {}) => {
     if (!product) return;
 
+    // Cart writes require an authenticated customer. Keep the attempted page so
+    // the user can return after signing in; the axios client attaches this token.
+    const accessToken = token || localStorage.getItem('token');
+    if (!accessToken) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
+
     const productId = String(product.id || product._id || product.productId || '').trim();
     const parsedQty = Math.max(1, parseInt(quantity, 10) || 1);
     const selectedMetal = options.selectedMetal || product.selectedMetal || '';
     const title = product.title || product.name || '';
     const price = Number(product.price) || 0;
     const image = product.image?.url || product.image || getPrimaryProductImage(product);
+
+    const totalItemPrice = options.totalItemPrice || product.totalItemPrice || (price * parsedQty);
+    const addedAt = options.addedAt || product.addedAt || new Date().toISOString();
+    const userId = options.userId || product.userId || null;
+    const selectedAttributes = options.selectedAttributes || product.selectedAttributes || undefined;
 
     // 1. Optimistic local update
     setCart((prev) => {
@@ -104,6 +122,8 @@ export const CartProvider = ({ children }) => {
       if (existingIndex > -1) {
         updated = [...prev];
         updated[existingIndex].quantity += parsedQty;
+        updated[existingIndex].totalItemPrice = (Number(updated[existingIndex].price) || price) * updated[existingIndex].quantity;
+        if (selectedAttributes) updated[existingIndex].selectedAttributes = selectedAttributes;
       } else {
         updated = [
           ...prev,
@@ -113,12 +133,15 @@ export const CartProvider = ({ children }) => {
             name: title,
             title,
             price,
+            totalItemPrice,
             originalPrice: product.originalPrice || null,
             image,
             category: product.category || '',
             quantity: parsedQty,
             selectedMetal,
             selectedSize: options.selectedSize || '',
+            selectedAttributes,
+            addedAt,
           },
         ];
       }
@@ -141,18 +164,22 @@ export const CartProvider = ({ children }) => {
     // 2. Call backend Cart API
     try {
       const payload = {
+        userId,
         productId,
-        title,
+        addedAt,
+        quantity: parsedQty,
         price,
+        totalItemPrice,
+        title,
         originalPrice: product.originalPrice || null,
         image,
         category: product.category || '',
-        quantity: parsedQty,
         selectedMetal,
         selectedSize: options.selectedSize || '',
+        selectedAttributes,
       };
 
-      const res = await cartAPI.add(payload, parsedQty, options);
+      const res = await cartAPI.add(payload, parsedQty, { ...options, selectedAttributes, userId, addedAt, totalItemPrice });
       const data = res?.data?.data || res?.data || {};
 
       if (Array.isArray(data.items)) {
@@ -182,6 +209,9 @@ export const CartProvider = ({ children }) => {
       }
     } catch (err) {
       console.warn('Backend cart sync error:', err);
+      if (err.response?.status === 401) {
+        navigate('/login', { state: { from: location }, replace: true });
+      }
     }
   };
 

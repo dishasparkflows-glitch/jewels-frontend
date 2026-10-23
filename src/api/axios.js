@@ -40,7 +40,8 @@ function getOrCreateSessionId() {
 // Request interceptor - attach token & session ID
 api.interceptors.request.use(
   (config) => {
-    if ((!config.method || config.method === 'get') && /^\/(banners|categories|featured)(\/|\?|$)/.test(config.url || '')) {
+    const isMobileBannerLookup = /^\/banners\/lookup(?:\?|$)/.test(config.url || '') && config.params?.platform === 'mobile';
+    if ((!config.method || config.method === 'get') && !isMobileBannerLookup && /^\/(banners|categories|featured)(\/|\?|$)/.test(config.url || '')) {
       config.params = { ...config.params, themeMedia: true };
     }
     const token = localStorage.getItem('token');

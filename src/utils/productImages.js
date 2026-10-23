@@ -14,7 +14,8 @@ export const isOrnateImage = (img) => {
   const lower = url.toLowerCase();
   return (
     lower.includes('ftp://') ||
-    lower.includes('/ftp/')
+    lower.includes('/ftp/') ||
+    lower.includes('://ftp.')
   );
 };
 

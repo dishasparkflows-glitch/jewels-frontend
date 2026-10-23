@@ -152,7 +152,17 @@ export const wishlistAPI = {
 export const cartAPI = {
   get: () => getOnce('/cart'),
   add: (productData, quantity = 1, options = {}) =>
-    api.post('/cart/add', { product: productData, quantity, options }),
+    api.post('/cart/add', {
+      product: productData,
+      quantity,
+      options,
+      userId: productData.userId || options.userId || null,
+      productId: productData.productId || productData.id || productData._id,
+      addedAt: productData.addedAt || options.addedAt || new Date().toISOString(),
+      price: productData.price,
+      totalItemPrice: productData.totalItemPrice || ((Number(productData.price) || 0) * quantity),
+      selectedAttributes: productData.selectedAttributes || options.selectedAttributes || undefined,
+    }),
   updateQuantity: (productId, quantity, options = {}) =>
     api.put('/cart/quantity', { productId, quantity, options }),
   remove: (productId) => api.delete(`/cart/${productId}`),
