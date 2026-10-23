@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../api/services';
+import { setAnalyticsUser } from '../config/firebase';
 
 /* eslint-disable react/prop-types, react-refresh/only-export-components */
 const AuthContext = createContext(null);
@@ -37,6 +38,14 @@ export const AuthProvider = ({ children }) => {
     if (token) fetchUser();
     else setLoading(false);
   }, [token, fetchUser]);
+
+  useEffect(() => {
+    if (user?._id || user?.id) {
+      setAnalyticsUser(user._id || user.id, {
+        role: user.role || 'customer',
+      });
+    }
+  }, [user]);
 
   const login = async (identifier, password) => {
     const { data } = await authAPI.login({ identifier, password });

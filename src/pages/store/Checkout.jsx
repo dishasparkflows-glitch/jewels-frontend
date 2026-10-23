@@ -20,6 +20,7 @@ import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { checkoutAPI } from '../../api/services';
 import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
+import { trackBeginCheckout } from '../../config/firebase';
 
 const inputClassName = 'h-12 w-full rounded-md border border-[#e6e0d8] bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#a77e4e] focus:ring-2 focus:ring-[#a77e4e]/10';
 const fieldClassName = 'relative block';
@@ -65,6 +66,12 @@ export default function Checkout() {
   const [codFee, setCodFee] = useState(null);
   const [codLoading, setCodLoading] = useState(false);
   const [activeStep, setActiveStep] = useState('shipping');
+
+  useEffect(() => {
+    if (cart && cart.length > 0) {
+      trackBeginCheckout(cart, total);
+    }
+  }, []);
 
   useEffect(() => {
     if (user) {

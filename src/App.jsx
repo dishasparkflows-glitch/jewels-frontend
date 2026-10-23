@@ -4,6 +4,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import ScrollToTop from './components/common/ScrollToTop';
+import AnalyticsTracker from './components/common/AnalyticsTracker';
 import StoreLayout from './components/layout/StoreLayout';
 import Home from './pages/store/Home';
 import Shop from './pages/store/Shop';
@@ -23,6 +25,8 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ScrollToTop />
+        <AnalyticsTracker />
         <CartProvider>
           <WishlistProvider>
             <Toaster

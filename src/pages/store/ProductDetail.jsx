@@ -16,74 +16,11 @@ import { productsAPI, sizesAPI } from '../../api/services';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { getValidProductImages, getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
+import { trackProductView } from '../../config/firebase';
 
-// Helper to normalize media URL
-const getMediaUrl = (url) => {
-  if (!url) return '';
-  if (
-    url.startsWith('http://') ||
-    url.startsWith('https://') ||
-    url.startsWith('blob:') ||
-    url.startsWith('data:')
-  ) {
-    return url;
-  }
-  // Local public paths
-  if (url.startsWith('/products/') || url.startsWith('/images/') || url.startsWith('/banners/')) {
-    return url;
-  }
-  const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(
-    /\/api\/?$/,
-    ''
-  );
-  return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
-};
 
-// Style generator for unified Metal swatches (Purity + Color) matching Neirah's circular chips
-const getMetalSwatchStyle = (colorName = '') => {
-  const norm = (colorName || '').toLowerCase();
-  if (norm.includes('white')) {
-    return {
-      background: 'linear-gradient(135deg, #ffffff 0%, #f1f3f5 45%, #e2e6ea 100%)',
-      border: '1px solid #d0d5dd',
-      color: '#334155',
-    };
-  }
-  if (norm.includes('rose')) {
-    return {
-      background: 'linear-gradient(135deg, #faeae4 0%, #f4c2b5 45%, #e8a697 100%)',
-      border: '1px solid #e09f90',
-      color: '#652a1e',
-    };
-  }
-  if (norm.includes('yellow')) {
-    return {
-      background: 'linear-gradient(135deg, #fff7d6 0%, #f3db77 45%, #e5be3a 100%)',
-      border: '1px solid #dcb230',
-      color: '#574104',
-    };
-  }
-  // Silver / SS
-  return {
-    background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 45%, #cbd5e1 100%)',
-    border: '1px solid #cbd5e1',
-    color: '#334155',
-  };
-};
 
 const referenceName = (value) => (value && typeof value === 'object' ? value.name || '' : (typeof value === 'string' ? value : ''));
-
-const getProductCategory = (product) => {
-  for (const field of ['category', 'categoryId', 'categoryIds']) {
-    const value = product?.[field];
-    if (Array.isArray(value) && value.length) return value[0];
-    if (value && !Array.isArray(value)) return value;
-  }
-  return null;
-};
-
-const getReferenceId = (value) =>
-  value && typeof value === 'object' ? value._id || value.id : value;
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -145,10 +82,13 @@ export default function ProductDetail() {
 
       const cObj = v.metalColor || v.metalColorId;
       const cName = referenceName(cObj) || v.color || '';
-      if (cName && !cMap.has(cName)) {
+      if (cName) {
+        const existing = cMap.get(cName) || {};
         cMap.set(cName, {
           name: cName,
-          code: cObj?.code || cObj?.hex || '',
+          code: cObj?.code || existing.code || '',
+          colorCode: cObj?.colorCode || existing.colorCode || '',
+          colorCodeEnd: cObj?.colorCodeEnd || existing.colorCodeEnd || '',
         });
       }
 
@@ -174,9 +114,16 @@ export default function ProductDetail() {
 
     if (Array.isArray(product?.metalColorIds)) {
       product.metalColorIds.forEach((c) => {
+        if (!c) return;
         const name = typeof c === 'object' ? c.name : c;
-        if (name && !cMap.has(name)) {
-          cMap.set(name, { name, code: c.code || c.hex || '' });
+        if (name) {
+          const existing = cMap.get(name) || {};
+          cMap.set(name, {
+            name,
+            code: c.code || existing.code || '',
+            colorCode: c.colorCode || existing.colorCode || '',
+            colorCodeEnd: c.colorCodeEnd || existing.colorCodeEnd || '',
+          });
         }
       });
     }
@@ -185,8 +132,14 @@ export default function ProductDetail() {
       product.colorImages.forEach((ci) => {
         const cObj = ci.metalColorId || ci.metalColor;
         const cName = referenceName(cObj) || ci.colorName || ci.name || '';
-        if (cName && !cMap.has(cName)) {
-          cMap.set(cName, { name: cName, code: cObj?.code || cObj?.hex || '' });
+        if (cName) {
+          const existing = cMap.get(cName) || {};
+          cMap.set(cName, {
+            name: cName,
+            code: cObj?.code || existing.code || '',
+            colorCode: cObj?.colorCode || existing.colorCode || '',
+            colorCodeEnd: cObj?.colorCodeEnd || existing.colorCodeEnd || '',
+          });
         }
       });
     }
@@ -285,11 +238,14 @@ export default function ProductDetail() {
       ) || pDef.full;
 
       activeColors.forEach((colorName) => {
+        const cObj = colors.find((c) => c.name?.toLowerCase() === colorName.toLowerCase());
         swatches.push({
           id: `${pDef.key}-${colorName}`,
           label: pDef.key,
           purity: matchedPurity,
           color: colorName,
+          colorCode: cObj?.colorCode || '',
+          colorCodeEnd: cObj?.colorCodeEnd || '',
           type: 'gold',
         });
       });
@@ -366,18 +322,10 @@ export default function ProductDetail() {
     return fallback.length > 0 ? fallback : [];
   }, [product, selectedColor, colors]);
 
-  // Safe category name string resolver
-  const categoryName = useMemo(() => {
-    if (!product) return '';
-    const cat = getProductCategory(product);
-    if (cat && typeof cat === 'object') {
-      return cat.name || cat.title || '';
-    }
-    if (typeof cat === 'string' && cat.trim() && !/^[a-f\d]{24}$/i.test(cat.trim())) {
-      return cat.trim();
-    }
-    return '';
-  }, [product]);
+  // Category from final schema (categoryIds[0])
+  const category = product?.categoryIds?.[0] || null;
+  const categoryId = category?._id || '';
+  const categoryName = category?.name || '';
 
   // Multi-dimensional variant resolution
   const selectedVariant = useMemo(() => {
@@ -476,8 +424,7 @@ export default function ProductDetail() {
     };
   }, [selectedVariant, selectedCarat, currentPrice, product]);
 
-  const category = getProductCategory(product);
-  const categoryId = getReferenceId(category);
+
 
   useEffect(() => {
     let active = true;
@@ -511,6 +458,7 @@ export default function ProductDetail() {
         const prodData = res.data?.data || res.data;
         if (prodData) {
           setProduct(prodData);
+          trackProductView(prodData);
         }
       } catch (err) {
         console.error('Failed to load product:', err);
@@ -649,7 +597,7 @@ export default function ProductDetail() {
             <>
               <span>/</span>
               <Link
-                to={`/shop?category=${encodeURIComponent(categoryName.toLowerCase())}`}
+                to={`/shop?category=${encodeURIComponent(categoryId || categoryName.toLowerCase())}`}
                 className="hover:text-stone-800 transition-colors"
               >
                 {categoryName}
@@ -673,11 +621,11 @@ export default function ProductDetail() {
                 {galleryImages.map((image, index) => (
                   <div
                     key={`${image}-${index}`}
-                    onClick={() => setLightboxImage(getMediaUrl(image))}
+                    onClick={() => setLightboxImage(image)}
                     className="group relative aspect-square bg-[#fbf9f6] rounded-sm overflow-hidden border border-stone-100 flex items-center justify-center p-4 sm:p-6 cursor-zoom-in hover:shadow-xs transition-all"
                   >
                     <img
-                      src={getMediaUrl(image)}
+                      src={image}
                       alt={`${product.basicInfo?.title || 'Fine Jewelry'} ${selectedColor} view ${index + 1}`}
                       className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                       loading={index < 2 ? 'eager' : 'lazy'}
@@ -842,7 +790,9 @@ export default function ProductDetail() {
                 <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
                   {metalSwatches.map((swatch) => {
                     const isSel = isSwatchSelected(swatch);
-                    const swatchStyle = getMetalSwatchStyle(swatch.color);
+                    const bg = swatch.colorCode && swatch.colorCodeEnd
+                      ? `linear-gradient(135deg, ${swatch.colorCode} 0%, ${swatch.colorCodeEnd} 100%)`
+                      : (swatch.colorCode || swatch.colorCodeEnd || '#f1f5f9');
 
                     return (
                       <button
@@ -854,7 +804,11 @@ export default function ProductDetail() {
                             ? 'ring-2 ring-stone-900 ring-offset-2 scale-105 z-10'
                             : 'hover:scale-105 active:scale-95 opacity-90 hover:opacity-100'
                         }`}
-                        style={swatchStyle}
+                        style={{
+                          background: bg,
+                          border: '1px solid rgba(0, 0, 0, 0.12)',
+                          color: '#334155',
+                        }}
                         title={`${swatch.label} ${swatch.color}`}
                         aria-label={`${swatch.label} ${swatch.color}`}
                       >
@@ -1197,7 +1151,7 @@ export default function ProductDetail() {
                       {/* Image container */}
                       <div className="relative aspect-square bg-[#faf8f5] p-3 flex items-center justify-center overflow-hidden">
                         <img
-                          src={getMediaUrl(relImg)}
+                          src={relImg}
                           alt={item.basicInfo?.title || ''}
                           className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                           loading="lazy"

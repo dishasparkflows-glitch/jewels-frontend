@@ -40,6 +40,9 @@ function getOrCreateSessionId() {
 // Request interceptor - attach token & session ID
 api.interceptors.request.use(
   (config) => {
+    if ((!config.method || config.method === 'get') && /^\/(banners|categories|featured)(\/|\?|$)/.test(config.url || '')) {
+      config.params = { ...config.params, themeMedia: true };
+    }
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

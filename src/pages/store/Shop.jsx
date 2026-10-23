@@ -1,3 +1,5 @@
+import api from '../../api/axios';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { HiOutlineAdjustments, HiOutlineX } from 'react-icons/hi';
@@ -10,6 +12,8 @@ const aliases = { necklaces: 'pendant', bracelets: 'bangles-bracelets' };
 const getItems = (response) => Array.isArray(response.data.data) ? response.data.data : response.data.data?.items || [];
 
 export default function Shop() {
+  const { websiteConfig } = useStoreSettings();
+  const [categoryBanner, setCategoryBanner] = useState(null);
   const [params, setParams] = useSearchParams();
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
@@ -24,6 +28,14 @@ export default function Shop() {
   const categoryParam = params.get('category') || '';
   const category = categories.find((entry) => entry._id === categoryParam || slugify(entry.slug || entry.name) === (aliases[categoryParam] || categoryParam));
   const categoryId = category?._id || (/^[a-f0-9]{24}$/i.test(categoryParam) ? categoryParam : '');
+  useEffect(() => {
+    let current = true;
+    setCategoryBanner(null);
+    if (categoryId) api.get(`/categories/${categoryId}`).then(({ data }) => {
+      if (current) setCategoryBanner(data.data?.banner || null);
+    }).catch(() => {});
+    return () => { current = false; };
+  }, [categoryId, websiteConfig?.revision]);
   const menuItem = params.get('menuItem') || '';
   const selectedItem = categories.flatMap((entry) => entry.menuSections || []).flatMap((section) => section.menuItems || []).find((item) => item._id === menuItem);
   const shopFor = params.get('shopFor') || '';
@@ -96,6 +108,7 @@ export default function Shop() {
           {category && <><span>/</span><span>{category.name}</span></>}
           {selectedItem && <><span>/</span><span>{selectedItem.name}</span></>}
         </div>
+        {categoryBanner?.url && <img src={categoryBanner.url} alt={`${category?.name || 'Collection'} banner`} className="mb-8 w-full max-h-[360px] rounded-xl object-cover" />}
         <div className="grid items-start gap-8 lg:grid-cols-[260px_minmax(0,1fr)] xl:gap-14">
           <aside aria-label="Product filters" className="min-w-0">
             <div className="flex items-center justify-between">

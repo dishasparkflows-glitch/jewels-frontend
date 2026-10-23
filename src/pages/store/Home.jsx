@@ -218,7 +218,7 @@ const Home = () => {
       })
       .catch((err) => console.error('Failed to load banners:', err));
     return () => { mounted = false; };
-  }, [themeConfig?.bannerSelections]);
+  }, [themeConfig?.bannerSelections, themeConfig?.mediaOverrides]);
 
   useEffect(() => {
     let mounted = true;
@@ -229,7 +229,7 @@ const Home = () => {
       })
       .catch(() => {});
     return () => { mounted = false; };
-  }, []);
+  }, [themeConfig?.mediaOverrides]);
 
   // Carousel auto-slide when multiple banners exist
   useEffect(() => {
@@ -260,7 +260,7 @@ const Home = () => {
       }
     };
     fetchCelebrate();
-  }, []);
+  }, [themeConfig?.mediaOverrides]);
 
   // ─── 3. FETCH PRODUCTS FOR HOME (/api/product/home) ─────────────────
   useEffect(() => {
@@ -305,7 +305,7 @@ const Home = () => {
       }
     };
     fetchGifts();
-  }, []);
+  }, [themeConfig?.mediaOverrides]);
 
   // ─── 9. FETCH REVIEWS (/api/reviews?status=approved) ─────────────────
   useEffect(() => {
@@ -330,12 +330,12 @@ const Home = () => {
     fetchReviews();
   }, []);
 
-  // ─── 10. FETCH INSTAGRAM POSTS (/api/instagram-posts) ────────────────
+  // ─── 10. FETCH INSTAGRAM POSTS (/api/instagram-posts/lookup) ─────────
   useEffect(() => {
     const fetchInstagram = async () => {
       try {
-        const res = await instagramAPI.getAll({ isActive: true });
-        const list = res?.data?.data?.items || res?.data?.data || [];
+        const res = await instagramAPI.getLookup();
+        const list = res?.data?.data || res?.data?.items || res?.data || [];
         if (Array.isArray(list)) {
           const formatted = list.map((p, idx) => ({
             id: p._id || `insta-${idx}`,

@@ -51,18 +51,11 @@ export const uploadAPI = {
 };
 
 // ─── Banners ──────────────────────────────────────
-const activeBannersRequests = new Map();
 export const bannersAPI = {
   getAll: (params) => getOnce('/banners', { params }),
   getActive: (params = {}) => {
     const platform = ['web', 'mobile'].includes(params.platform) ? params.platform : 'web';
-    if (!activeBannersRequests.has(platform)) {
-      activeBannersRequests.set(platform, getOnce('/banners/lookup', { params: { platform } }).catch((error) => {
-        activeBannersRequests.delete(platform);
-        throw error;
-      }));
-    }
-    return activeBannersRequests.get(platform);
+    return getOnce('/banners/lookup', { params: { platform } });
   },
 };
 
@@ -115,8 +108,10 @@ export const featuredAPI = {
 
 // ─── Products ─────────────────────────────────────
 export const productsAPI = {
-  getAll: (params) => getOnce('/products', { params }),
+  getAll: (params) => getOnce('/products/storefront', { params }),
+  getStorefront: (params) => getOnce('/products/storefront', { params }),
   getHomeProducts: (params) => getOnce('/product/home', { params }),
+  getHomeStorefront: (params) => getOnce('/product/home', { params }),
   getById: (id) => getOnce(`/products/${id}`),
 };
 
@@ -129,6 +124,7 @@ export const reviewsAPI = {
 // ─── Instagram Posts ──────────────────────────────
 export const instagramAPI = {
   getAll: (params) => getOnce('/instagram-posts', { params }),
+  getLookup: (params) => getOnce('/instagram-posts/lookup', { params }),
 };
 
 // ─── Footer Settings ──────────────────────────────

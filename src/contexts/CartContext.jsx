@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import toast from 'react-hot-toast';
 import { cartAPI } from '../api/services';
 import { getPrimaryProductImage } from '../utils/productImages';
+import { trackAddToCart, trackRemoveFromCart } from '../config/firebase';
 
 /* eslint-disable react/prop-types, react-refresh/only-export-components */
 const CartContext = createContext(null);
@@ -126,6 +127,8 @@ export const CartProvider = ({ children }) => {
       return updated;
     });
 
+    trackAddToCart(product, parsedQty);
+
     toast.success(`Added "${title}" to your bag!`, {
       icon: '🛍️',
       style: {
@@ -222,6 +225,13 @@ export const CartProvider = ({ children }) => {
 
   // Remove item from cart
   const removeFromCart = async (id) => {
+    const targetItem = cart.find(
+      (item) => String(item.id) === String(id) || String(item.productId) === String(id)
+    );
+    if (targetItem) {
+      trackRemoveFromCart(targetItem, targetItem.quantity || 1);
+    }
+
     // Optimistic
     setCart((prev) => {
       const updated = prev.filter(

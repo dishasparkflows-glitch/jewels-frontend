@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { footerAPI } from '../../api/services';
+import { footerAPI, categoriesAPI } from '../../api/services';
 import {
   HiOutlinePhone,
   HiOutlineMail,
@@ -29,6 +29,7 @@ const Footer = () => {
     copyright: `© ${new Date().getFullYear()} Neirah · Shine your way`,
     socialLinks: [],
   });
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -59,6 +60,28 @@ const Footer = () => {
       }
     };
     fetchFooter();
+  }, []);
+
+  // Fetch categories & navigation items from API (/api/categories/navigation)
+  useEffect(() => {
+    let active = true;
+    categoriesAPI
+      .getNavigation()
+      .then((res) => {
+        if (!active) return;
+        const list = Array.isArray(res?.data?.data)
+          ? res.data.data
+          : (res?.data?.data?.items || []);
+        if (Array.isArray(list)) {
+          setCategories(list);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load navigation categories in footer:', err);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const scrollToTop = () => {
@@ -122,24 +145,29 @@ const Footer = () => {
                 CATEGORY
               </h4>
               <ul className="space-y-2.5 text-xs text-stone-400 font-light">
-                <li>
-                  <Link to="/shop?category=rings" className="hover:text-white transition-colors">Rings</Link>
-                </li>
-                <li>
-                  <Link to="/shop?category=earrings" className="hover:text-white transition-colors">Earrings</Link>
-                </li>
-                <li>
-                  <Link to="/shop?category=pendant" className="hover:text-white transition-colors">Pendant</Link>
-                </li>
-                <li>
-                  <Link to="/shop?category=bangles-bracelets" className="hover:text-white transition-colors">Bangles & Bracelets</Link>
-                </li>
-                <li>
-                  <Link to="/shop?category=collection" className="hover:text-white transition-colors">Collection</Link>
-                </li>
-                <li>
-                  <Link to="/shop?category=silver-collection" className="hover:text-white transition-colors">Silver Collection</Link>
-                </li>
+                {categories.length > 0 ? (
+                  categories.map((cat) => (
+                    <li key={cat._id}>
+                      <Link
+                        to={`/shop?category=${encodeURIComponent(cat._id)}`}
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="hover:text-white transition-colors"
+                      >
+                        {cat.name}
+                      </Link>
+                    </li>
+                  ))
+                ) : (
+                  <li>
+                    <Link
+                      to="/shop"
+                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                      className="hover:text-white transition-colors"
+                    >
+                      All Jewellery
+                    </Link>
+                  </li>
+                )}
               </ul>
             </div>
 
@@ -304,156 +332,90 @@ const Footer = () => {
         </div>
       </div>
 
-      {/* ─── 2. POPULAR JEWELRY DIRECTORY SECTION (Screenshot 2 Match #f3ede5) ─ */}
-      <div className="bg-[#f3ede5] border-t border-stone-300 text-stone-700 py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="text-center pb-5 mb-8 border-b border-stone-300/80">
-            <h5 className="font-serif text-base sm:text-lg text-stone-900 font-medium tracking-wide">
-              Popular Jewelry
-            </h5>
-          </div>
-
-          {/* 2-Column Grid Directory matching Screenshot 2 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-14 text-[11px] leading-relaxed">
-            {/* Left Column (Rings, Pendant, Collection) */}
-            <div className="space-y-6">
-              {/* Rings */}
-              <div>
-                <h6 className="font-bold text-stone-900 text-xs mb-1.5 uppercase tracking-wider">
-                  Rings
-                </h6>
-                <div className="text-stone-600 space-x-2 font-light leading-loose">
-                  <Link to="/shop?category=rings" className="hover:text-black transition-colors">Cocktail Rings</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=rings" className="hover:text-black transition-colors">Three Stone Ring</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=rings" className="hover:text-black transition-colors">Wedding Band</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=rings" className="hover:text-black transition-colors">Toi Et Moi Rings</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=rings" className="hover:text-black transition-colors">Stackable Rings</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=rings" className="hover:text-black transition-colors">Solitaire Rings</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=rings" className="hover:text-black transition-colors">Engagement & Anniversary Rings</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=rings" className="hover:text-black transition-colors">Promise Rings</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=rings" className="hover:text-black transition-colors">Lab Diamond Rings</Link>
-                </div>
-              </div>
-
-              {/* Pendant */}
-              <div>
-                <h6 className="font-bold text-stone-900 text-xs mb-1.5 uppercase tracking-wider">
-                  Pendant
-                </h6>
-                <div className="text-stone-600 space-x-2 font-light leading-loose">
-                  <Link to="/shop?category=pendant" className="hover:text-black transition-colors">Delicate Necklaces</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=pendant" className="hover:text-black transition-colors">Y-Necklaces & Lariats</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=pendant" className="hover:text-black transition-colors">Delicate Pendants</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=pendant" className="hover:text-black transition-colors">Lab Diamond Necklaces</Link>
-                </div>
-              </div>
-
-              {/* Collection */}
-              <div>
-                <h6 className="font-bold text-stone-900 text-xs mb-1.5 uppercase tracking-wider">
-                  Collection
-                </h6>
-                <div className="text-stone-600 space-x-2 font-light leading-loose">
-                  <Link to="/shop?category=collection" className="hover:text-black transition-colors">Convertible Jewellery</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=collection" className="hover:text-black transition-colors">Stackable Jewellery</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=collection" className="hover:text-black transition-colors">Mother&apos;s Day</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=collection" className="hover:text-black transition-colors">Valentine&apos;s day</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=collection" className="hover:text-black transition-colors">Fast Selling/Best Seller</Link>
-                </div>
-              </div>
+      {/* ─── 2. POPULAR JEWELRY DIRECTORY SECTION (Dynamic from /api/categories/navigation) ─ */}
+      {categories.length > 0 && (
+        <div className="bg-[#f3ede5] border-t border-stone-300 text-stone-700 py-8 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="text-center pb-5 mb-8 border-b border-stone-300/80">
+              <h5 className="font-serif text-base sm:text-lg text-stone-900 font-medium tracking-wide">
+                Popular Jewelry
+              </h5>
             </div>
 
-            {/* Right Column (Earrings, Bangles & Bracelets, Silver Collection) */}
-            <div className="space-y-6">
-              {/* Earrings */}
-              <div>
-                <h6 className="font-bold text-stone-900 text-xs mb-1.5 uppercase tracking-wider">
-                  Earrings
-                </h6>
-                <div className="text-stone-600 space-x-2 font-light leading-loose">
-                  <Link to="/shop?category=earrings" className="hover:text-black transition-colors">Halo Earrings</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=earrings" className="hover:text-black transition-colors">Toi et Moi Earrings</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=earrings" className="hover:text-black transition-colors">Nature Inspired Earrings</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=earrings" className="hover:text-black transition-colors">Dangle Earrings</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=earrings" className="hover:text-black transition-colors">Bridal Earrings</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=earrings" className="hover:text-black transition-colors">Classical Earrings</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=earrings" className="hover:text-black transition-colors">Hoop Earrings</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=earrings" className="hover:text-black transition-colors">Solitaire Studs</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=earrings" className="hover:text-black transition-colors">Lab Diamond Earring</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=earrings" className="hover:text-black transition-colors">Lab Gemstone Earrings</Link>
-                </div>
-              </div>
+            {/* 2-Column Grid Directory */}
+            {(() => {
+              const half = Math.ceil(categories.length / 2);
+              const leftCategories = categories.slice(0, half);
+              const rightCategories = categories.slice(half);
 
-              {/* Bangles & Bracelets */}
-              <div>
-                <h6 className="font-bold text-stone-900 text-xs mb-1.5 uppercase tracking-wider">
-                  Bangles & Bracelets
-                </h6>
-                <div className="text-stone-600 space-x-2 font-light leading-loose">
-                  <Link to="/shop?category=bangles-bracelets" className="hover:text-black transition-colors">Delicate Bracelets</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=bangles-bracelets" className="hover:text-black transition-colors">Chain Bracelets</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=bangles-bracelets" className="hover:text-black transition-colors">Bangles</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=bangles-bracelets" className="hover:text-black transition-colors">Tennis Bracelets</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=bangles-bracelets" className="hover:text-black transition-colors">Lab Diamond Bangles</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=bangles-bracelets" className="hover:text-black transition-colors">Lab Diamond Bracelets</Link>
-                </div>
-              </div>
+              const renderCategoryBlock = (category) => {
+                const seen = new Set();
+                const items = [];
+                (category.menuSections || []).forEach((section) => {
+                  (section.menuItems || []).forEach((item) => {
+                    if (item?._id && !seen.has(String(item._id))) {
+                      seen.add(String(item._id));
+                      items.push(item);
+                    }
+                  });
+                });
 
-              {/* Silver Collection */}
-              <div>
-                <h6 className="font-bold text-stone-900 text-xs mb-1.5 uppercase tracking-wider">
-                  Silver Collection
-                </h6>
-                <div className="text-stone-600 space-x-2 font-light leading-loose">
-                  <Link to="/shop?category=silver-collection" className="hover:text-black transition-colors">Rudraksha Mala</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=silver-collection" className="hover:text-black transition-colors">Rudraksha Bracelet</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=silver-collection" className="hover:text-black transition-colors">Karungali Mala</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=silver-collection" className="hover:text-black transition-colors">Karungali Bracelet</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=silver-collection" className="hover:text-black transition-colors">Gift Coins</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=silver-collection" className="hover:text-black transition-colors">Precious Art</Link>
-                  <span>|</span>
-                  <Link to="/shop?category=silver-collection" className="hover:text-black transition-colors">More Gift Articles</Link>
+                return (
+                  <div key={category._id}>
+                    <h6 className="font-bold text-stone-900 text-xs mb-1.5 uppercase tracking-wider">
+                      <Link
+                        to={`/shop?category=${encodeURIComponent(category._id)}`}
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="hover:text-black transition-colors"
+                      >
+                        {category.name}
+                      </Link>
+                    </h6>
+                    <div className="text-stone-600 space-x-2 font-light leading-loose">
+                      {items.length > 0 ? (
+                        items.map((item, idx) => (
+                          <span key={item._id || idx}>
+                            <Link
+                              to={`/shop?category=${encodeURIComponent(category._id)}&menuItem=${encodeURIComponent(item._id)}`}
+                              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                              className="hover:text-black transition-colors"
+                            >
+                              {item.name}
+                            </Link>
+                            {idx < items.length - 1 && (
+                              <span className="text-stone-400 ml-2 select-none">|</span>
+                            )}
+                          </span>
+                        ))
+                      ) : (
+                        <Link
+                          to={`/shop?category=${encodeURIComponent(category._id)}`}
+                          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                          className="hover:text-black transition-colors"
+                        >
+                          Explore {category.name}
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                );
+              };
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-14 text-[11px] leading-relaxed">
+                  <div className="space-y-6">
+                    {leftCategories.map(renderCategoryBlock)}
+                  </div>
+                  <div className="space-y-6">
+                    {rightCategories.map(renderCategoryBlock)}
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Floating Scroll to Top button */}
       {showScrollTop && (

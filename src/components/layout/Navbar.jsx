@@ -75,7 +75,7 @@ const Navbar = () => {
       })
       .catch(() => { if (active) setNavigationError(true); });
     return () => { active = false; };
-  }, [navigationRevision, themeConfig?.navigation]);
+  }, [navigationRevision, themeConfig?.navigation, themeConfig?.mediaOverrides]);
 
   useEffect(() => {
     let active = true;
@@ -156,7 +156,14 @@ const Navbar = () => {
             </button>
           </div>
 
-          <Link to="/" className="order-first flex items-center leading-none group shrink-0 min-w-0" aria-label={storeSettings.companyName || 'Home'}>
+          <Link
+            to="/"
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="order-first flex items-center leading-none group shrink-0 min-w-0"
+            aria-label={storeSettings.companyName || 'Home'}
+          >
             {brandLogo.desktop ? (
               <picture>
                 {brandLogo.mobile && <source media="(max-width: 639px)" srcSet={brandLogo.mobile} />}
@@ -187,6 +194,9 @@ const Navbar = () => {
             {/* Wishlist Icon */}
             <Link
               to="/wishlist"
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors relative"
               title="My Wishlist"
             >
@@ -290,7 +300,10 @@ const Navbar = () => {
             <MegaMenuNav categories={categories} mobile onNavigate={() => setMobileMenuOpen(false)} error={navigationError} onRetry={() => setNavigationRevision((value) => value + 1)} />
             <Link
               to="/wishlist"
-              onClick={() => setMobileMenuOpen(false)}
+              onClick={() => {
+                setMobileMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               className="text-xs uppercase font-medium tracking-[0.16em] text-amber-200 hover:text-white py-1.5 border-b border-white/5 flex items-center justify-between"
             >
               <span>My Wishlist</span>

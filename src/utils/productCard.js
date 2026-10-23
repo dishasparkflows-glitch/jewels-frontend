@@ -8,7 +8,15 @@ const imageOnly = (image) => image?.mediaType !== 'video' && !/\.(mp4|webm|mov)(
 const validHex = (value) => /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value || '');
 
 export function getProductCardData(product) {
-  const images = [...new Set(getValidProductImages({ ...product, colorImages: product.colorImages?.map((row) => ({ ...row, images: row.images?.filter(imageOnly) })) }).filter(imageOnly))];
+  // If product already provides images (from lightweight storefront API)
+  const apiImages = (Array.isArray(product.images) && product.images.length > 0)
+    ? product.images.map((img) => (typeof img === 'string' ? img : img?.url)).filter(Boolean)
+    : [];
+
+  const images = apiImages.length > 0
+    ? [...new Set(apiImages)]
+    : [...new Set(getValidProductImages({ ...product, colorImages: product.colorImages?.map((row) => ({ ...row, images: row.images?.filter(imageOnly) })) }).filter(imageOnly))];
+
   const colors = new Map();
   for (const row of product.colorImages || []) {
     const color = row.metalColor || row.metalColorId || row.color;
@@ -22,7 +30,17 @@ export function getProductCardData(product) {
     const hex = color?.hex || color?.code || (validHex(name) ? name : colorHex[name.toLowerCase()]);
     if ((name || validHex(hex)) && !colors.has(name || hex)) colors.set(name || hex, { name: name || hex, hex: validHex(hex) ? hex : null, image: '' });
   }
+
   const price = firstPrice(product.pricing?.salePrice, product.pricing?.mrp, product.cataloguePrice);
   const originalPrice = firstPrice(product.pricing?.mrp, product.originalPrice);
-  return { id: String(product._id || product.id || ''), name: product.basicInfo?.title || product.name || product.itemName || 'Untitled product', images, colors: [...colors.values()], price, originalPrice: originalPrice > price && price ? originalPrice : null };
+  const name = product.basicInfo?.title || product.title || product.name || product.itemName || 'Untitled product';
+
+  return {
+    id: String(product._id || product.id || ''),
+    name,
+    images,
+    colors: [...colors.values()],
+    price,
+    originalPrice: originalPrice > price && price ? originalPrice : null,
+  };
 }
