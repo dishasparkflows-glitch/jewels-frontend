@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   HiOutlineHeart,
@@ -12,27 +12,164 @@ import {
   HiOutlineDocumentText,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
-import { productsAPI, sizesAPI } from '../../api/services';
+import { productsAPI, sizesAPI, couponsAPI } from '../../api/services';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { getValidProductImages, getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 import { trackProductView } from '../../config/firebase';
-
-
+import { useLiveViewers } from '../../hooks/useLiveViewers';
 
 const referenceName = (value) => (value && typeof value === 'object' ? value.name || '' : (typeof value === 'string' ? value : ''));
+
+/**
+ * Checks if a given media item or URL is a video
+ */
+const isVideoMedia = (media) => {
+  if (!media) return false;
+  if (typeof media === 'object') {
+    if (media.mediaType === 'video') return true;
+    const url = media.url || '';
+    return /\.(mp4|webm|mov|m4v|ogg)(?:[?#]|$)/i.test(url);
+  }
+  return /\.(mp4|webm|mov|m4v|ogg)(?:[?#]|$)/i.test(String(media));
+};
+
+/**
+ * High-definition interactive loupe zoom image / video card for product detail gallery
+ */
+function ZoomableProductImage({ image, alt, index, onOpenLightbox }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [coords, setCoords] = useState({ x: 0, y: 0, width: 0, height: 0 });
+  const containerRef = useRef(null);
+  const videoRef = useRef(null);
+
+  const isVideo = isVideoMedia(image);
+  const LENS_SIZE = 160;
+  const ZOOM_FACTOR = 2.6;
+
+  const handleMouseMove = (e) => {
+    if (isVideo || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+
+    setCoords({
+      x,
+      y,
+      width: rect.width,
+      height: rect.height,
+    });
+  };
+
+  const handleMouseEnter = (e) => {
+    if (!isVideo) {
+      handleMouseMove(e);
+      setIsHovered(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+  };
+
+  const lensLeft = coords.width > 0
+    ? Math.max(0, Math.min(coords.x - LENS_SIZE / 2, coords.width - LENS_SIZE))
+    : 0;
+  const lensTop = coords.height > 0
+    ? Math.max(0, Math.min(coords.y - LENS_SIZE / 2, coords.height - LENS_SIZE))
+    : 0;
+
+  return (
+    <div
+      ref={containerRef}
+      onClick={onOpenLightbox}
+      onMouseEnter={handleMouseEnter}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      onTouchStart={handleMouseLeave}
+      className={`group relative aspect-square bg-[#fbf9f6] rounded-sm overflow-hidden border border-stone-100 flex items-center justify-center p-4 sm:p-6 select-none ${isVideo ? 'cursor-pointer' : 'cursor-crosshair'}`}
+    >
+      {isVideo ? (
+        <div className="relative w-full h-full flex items-center justify-center">
+          <video
+            ref={videoRef}
+            src={image}
+            autoPlay
+            loop
+            muted
+            playsInline
+            controls
+            preload="metadata"
+            className="w-full h-full object-contain rounded-sm"
+          />
+        </div>
+      ) : (
+        <img
+          src={image}
+          alt={alt}
+          className="w-full h-full object-contain pointer-events-none"
+          loading={index < 2 ? 'eager' : 'lazy'}
+        />
+      )}
+
+      {/* Floating Magnifier Loupe Lens (Images only) */}
+      {!isVideo && isHovered && coords.width > 0 && (
+        <div
+          className="absolute pointer-events-none z-30 border border-white/90 rounded-sm overflow-hidden bg-[#fbf9f6]"
+          style={{
+            width: `${LENS_SIZE}px`,
+            height: `${LENS_SIZE}px`,
+            left: `${lensLeft}px`,
+            top: `${lensTop}px`,
+            boxShadow:
+              '0 16px 36px -4px rgba(0, 0, 0, 0.35), 0 6px 14px -2px rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.7)',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              width: `${coords.width}px`,
+              height: `${coords.height}px`,
+              left: `${-lensLeft}px`,
+              top: `${-lensTop}px`,
+              transformOrigin: `${coords.x}px ${coords.y}px`,
+              transform: `scale(${ZOOM_FACTOR})`,
+            }}
+            className="flex items-center justify-center p-4 sm:p-6 bg-[#fbf9f6]"
+          >
+            <img
+              src={image}
+              alt=""
+              className="w-full h-full object-contain"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Expansion Hint (Images only) */}
+      {!isVideo && (
+        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full pointer-events-none z-10">
+          Click to expand
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
-
   // Product state
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mostLikedProducts, setMostLikedProducts] = useState([]);
   const [sizes, setSizes] = useState([]);
+  const [coupons, setCoupons] = useState([]);
+  const [offersOpen, setOffersOpen] = useState(true);
+
+  const { count: liveViewersCount, hasUpdated: liveViewersUpdated } = useLiveViewers(product?._id || id);
 
   // Selections
   const [selectedPurity, setSelectedPurity] = useState('');
@@ -488,6 +625,26 @@ export default function ProductDetail() {
     fetchRelated();
   }, []);
 
+  // Fetch active coupons for Available Offers
+  useEffect(() => {
+    let active = true;
+    couponsAPI
+      .getLookup({ status: 'active' })
+      .then((res) => {
+        const list = res.data?.data || res.data;
+        if (active && Array.isArray(list)) {
+          setCoupons(list);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load coupons lookup:', err);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Format INR Currency
   const formatPrice = (val) => {
     if (val === undefined || val === null || val === '') return '—';
@@ -525,7 +682,7 @@ export default function ProductDetail() {
       _id: product._id,
       title: product.basicInfo?.title,
       price: currentPrice,
-      image: galleryImages[0] || getPrimaryProductImage(product),
+      image: galleryImages.find((img) => !isVideoMedia(img)) || galleryImages[0] || getPrimaryProductImage(product),
       category: categoryName,
     };
 
@@ -619,21 +776,13 @@ export default function ProductDetail() {
             {galleryImages.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 sticky top-24">
                 {galleryImages.map((image, index) => (
-                  <div
+                  <ZoomableProductImage
                     key={`${image}-${index}`}
-                    onClick={() => setLightboxImage(image)}
-                    className="group relative aspect-square bg-[#fbf9f6] rounded-sm overflow-hidden border border-stone-100 flex items-center justify-center p-4 sm:p-6 cursor-zoom-in hover:shadow-xs transition-all"
-                  >
-                    <img
-                      src={image}
-                      alt={`${product.basicInfo?.title || 'Fine Jewelry'} ${selectedColor} view ${index + 1}`}
-                      className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
-                      loading={index < 2 ? 'eager' : 'lazy'}
-                    />
-                    <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-[10px] px-2 py-0.5 rounded-full pointer-events-none">
-                      Click to zoom
-                    </div>
-                  </div>
+                    image={image}
+                    index={index}
+                    alt={`${product.basicInfo?.title || 'Fine Jewelry'} ${selectedColor} view ${index + 1}`}
+                    onOpenLightbox={() => setLightboxImage(image)}
+                  />
                 ))}
               </div>
             ) : (
@@ -683,11 +832,6 @@ export default function ProductDetail() {
                   type="button"
                   onClick={() => {
                     toggleWishlist(product);
-                    toast.success(
-                      isWishlisted(product._id)
-                        ? 'Removed from wishlist'
-                        : 'Added to your wishlist!'
-                    );
                   }}
                   className="w-9 h-9 rounded-full border border-stone-200 hover:border-stone-400 flex items-center justify-center text-stone-600 hover:text-red-500 transition-colors cursor-pointer bg-white"
                   title="Wishlist"
@@ -709,28 +853,100 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* People Viewing Banner (Matches Screenshot 2) */}
-            <div className="flex items-center gap-2 text-xs text-stone-600">
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-              <span className="text-[11.5px] font-medium text-stone-600">
-                <strong className="text-stone-900 font-semibold">40 people</strong> are viewing this right now
+            {/* People Viewing Banner (Live Socket / Organic Real Viewer Count) */}
+            <div className="flex items-center gap-2 text-xs text-stone-600 select-none">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+              </span>
+              <span className="text-[11.5px] font-medium text-stone-600 flex items-center gap-1">
+                <strong
+                  className={`font-semibold text-stone-900 transition-all duration-300 inline-block ${
+                    liveViewersUpdated ? 'text-[#8b6f4e] scale-110' : ''
+                  }`}
+                >
+                  {liveViewersCount} people
+                </strong>{' '}
+                are viewing this right now
               </span>
             </div>
 
-            {/* Available Offers Box (Matches Screenshot 2) */}
+            {/* Available Offers Box */}
             <div className="p-3 rounded-xl bg-[#faf8f5] border border-[#eee4d6] space-y-1">
-              <div className="flex items-center justify-between">
+              <div
+                className="flex items-center justify-between cursor-pointer select-none"
+                onClick={() => setOffersOpen((prev) => !prev)}
+              >
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#8b6f4e]">
                   AVAILABLE OFFERS
                 </span>
-                <span className="text-[11px] font-bold text-stone-800">✦</span>
-              </div>
-              <div className="flex items-center gap-2 pt-0.5">
-                <span className="px-2 py-0.5 rounded bg-white border border-[#d6cfc2] text-[11px] font-bold tracking-wider font-mono text-stone-900">
-                  FIRSTORDER
+                <span className="text-[14px] font-bold text-stone-700 leading-none">
+                  {offersOpen ? '−' : '+'}
                 </span>
-                <span className="text-xs text-stone-600 font-medium">10% Off</span>
               </div>
+
+              {offersOpen && (
+                <div className="space-y-1.5 pt-0.5">
+                  {coupons.length > 0 ? (
+                    coupons.map((c) => {
+                      const code = c.coupon?.code || 'OFFER';
+                      const discountText =
+                        c.discount?.type === 'Percentage'
+                          ? `${c.discount?.value}% Off`
+                          : `₹${Number(c.discount?.value || 0).toLocaleString('en-IN')} Off`;
+                      return (
+                        <div
+                          key={c._id || code}
+                          className="flex items-center justify-between gap-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (navigator.clipboard) {
+                                  navigator.clipboard.writeText(code);
+                                  toast.success(`Coupon "${code}" copied!`);
+                                }
+                              }}
+                              className="px-2 py-0.5 rounded bg-white border border-[#d6cfc2] text-[11px] font-bold tracking-wider font-mono text-stone-900 cursor-pointer hover:border-[#8b6f4e] hover:bg-[#faf4ed] transition"
+                              title="Click to copy coupon code"
+                            >
+                              {code}
+                            </button>
+                            <span className="text-xs text-stone-600 font-medium">
+                              {discountText}
+                            </span>
+                          </div>
+                          {c.discount?.minimumOrderAmount > 0 && (
+                            <span className="text-[10px] text-stone-400">
+                              Min. order ₹{Number(c.discount.minimumOrderAmount).toLocaleString('en-IN')}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (navigator.clipboard) {
+                            navigator.clipboard.writeText('FIRSTORDER');
+                            toast.success('Coupon "FIRSTORDER" copied!');
+                          }
+                        }}
+                        className="px-2 py-0.5 rounded bg-white border border-[#d6cfc2] text-[11px] font-bold tracking-wider font-mono text-stone-900 cursor-pointer hover:border-[#8b6f4e] hover:bg-[#faf4ed] transition"
+                        title="Click to copy coupon code"
+                      >
+                        FIRSTORDER
+                      </button>
+                      <span className="text-xs text-stone-600 font-medium">10% Off</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* ══════════════════════════════════════════════════════════
@@ -1163,11 +1379,6 @@ export default function ProductDetail() {
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleWishlist(item);
-                            toast.success(
-                              isWishlisted(item._id)
-                                ? 'Removed from wishlist'
-                                : 'Added to wishlist!'
-                            );
                           }}
                           className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/80 backdrop-blur-xs flex items-center justify-center text-stone-400 hover:text-red-500 transition-colors shadow-2xs cursor-pointer"
                         >
@@ -1214,11 +1425,22 @@ export default function ProductDetail() {
               <HiOutlineX className="w-6 h-6" />
               <span>Close</span>
             </button>
-            <img
-              src={lightboxImage}
-              alt="High Resolution Zoom"
-              className="max-h-[85vh] max-w-full object-contain rounded-2xl shadow-2xl bg-white"
-            />
+            {isVideoMedia(lightboxImage) ? (
+              <video
+                src={lightboxImage}
+                controls
+                autoPlay
+                loop
+                playsInline
+                className="max-h-[85vh] max-w-full object-contain rounded-2xl shadow-2xl bg-black"
+              />
+            ) : (
+              <img
+                src={lightboxImage}
+                alt="High Resolution Zoom"
+                className="max-h-[85vh] max-w-full object-contain rounded-2xl shadow-2xl bg-white"
+              />
+            )}
           </div>
         </div>
       )}

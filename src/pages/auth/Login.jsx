@@ -21,16 +21,20 @@ const Login = () => {
   const logoUrl = getImageUrl(settings.logoImage?.url || settings.mobileLogoImage?.url);
   const returnTo = location.state?.from;
 
+  const getDestination = useCallback((target) => {
+    if (!target) return '/';
+    if (typeof target === 'string') return target;
+    return `${target.pathname || '/'}${target.search || ''}${target.hash || ''}`;
+  }, []);
+
   const closeModal = useCallback(() => {
-    const destination = returnTo ? `${returnTo.pathname}${returnTo.search || ''}` : '/';
-    navigate(destination, { replace: true });
-  }, [navigate, returnTo]);
+    navigate(getDestination(returnTo), { replace: true });
+  }, [navigate, returnTo, getDestination]);
 
   const finishLogin = useCallback((user) => {
     toast.success(`Welcome back${user?.firstName ? `, ${user.firstName}` : ''}!`);
-    const destination = returnTo ? `${returnTo.pathname}${returnTo.search || ''}` : '/';
-    navigate(destination, { replace: true });
-  }, [navigate, returnTo]);
+    navigate(getDestination(returnTo), { replace: true });
+  }, [navigate, returnTo, getDestination]);
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;

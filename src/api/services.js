@@ -92,6 +92,12 @@ export const sizesAPI = {
   getLookup: (params) => getOnce('/sizes/lookup', { params }),
 };
 
+// ─── Coupons ───────────────────────────────────────
+export const couponsAPI = {
+  getLookup: (params) => getOnce('/coupons/lookup', { params }),
+  validate: (code, cartAmount) => api.post('/coupons/validate', { code, cartAmount }),
+};
+
 // ─── Checkout ──────────────────────────────────────
 export const checkoutAPI = {
   validateCoupon: (code, cartAmount) => api.post('/coupons/validate', { code, cartAmount }),
@@ -110,6 +116,7 @@ export const featuredAPI = {
 export const productsAPI = {
   getAll: (params) => getOnce('/products/storefront', { params }),
   getStorefront: (params) => getOnce('/products/storefront', { params }),
+  getSearchStorefront: (params) => api.get('/products/search/storefront', { params }),
   getHomeProducts: (params) => getOnce('/product/home', { params }),
   getHomeStorefront: (params) => getOnce('/product/home', { params }),
   getById: (id) => getOnce(`/products/${id}`),

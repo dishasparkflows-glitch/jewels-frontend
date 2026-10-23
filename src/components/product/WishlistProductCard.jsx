@@ -13,7 +13,7 @@ const formatPrice = (price) =>
 
 export default function WishlistProductCard({ item, onRemove }) {
   const { addToCart } = useCart();
-  const name = item.title || item.name || "Saved jewellery";
+  const name = item.basicInfo?.title || item.title || item.name || "Saved jewellery";
   const id = item.productId || item._id;
   const rawImage =
     typeof item.image === "object" ? item.image?.url : item.image;
@@ -21,8 +21,9 @@ export default function WishlistProductCard({ item, onRemove }) {
     (rawImage && !isOrnateImage(rawImage)
       ? getImageUrl(rawImage)
       : getPrimaryProductImage(item)) || "/featured/ring.jpg";
-  const productPath = item.slug
-    ? `/product/${item.slug}`
+  const slug = item.basicInfo?.slug || item.slug;
+  const productPath = slug
+    ? `/product/${slug}`
     : id
       ? `/product/${id}`
       : "/shop";
@@ -90,13 +91,13 @@ export default function WishlistProductCard({ item, onRemove }) {
 
       <div className="mt-3 flex flex-wrap items-baseline justify-center gap-2">
         <span className="text-sm font-semibold text-[#211f1c]">
-          {Number(item.price) > 0
-            ? formatPrice(item.price)
+          {Number(item.pricing?.salePrice || item.price) > 0
+            ? formatPrice(item.pricing?.salePrice || item.price)
             : "Price unavailable"}
         </span>
-        {Number(item.originalPrice) > Number(item.price) && (
+        {Number(item.pricing?.mrp || item.originalPrice) > Number(item.pricing?.salePrice || item.price) && (
           <span className="text-xs text-stone-400 line-through">
-            {formatPrice(item.originalPrice)}
+            {formatPrice(item.pricing?.mrp || item.originalPrice)}
           </span>
         )}
       </div>
@@ -110,8 +111,8 @@ export default function WishlistProductCard({ item, onRemove }) {
               productId: id,
               name,
               title: name,
-              price: item.price,
-              originalPrice: item.originalPrice,
+              price: item.pricing?.salePrice || item.price,
+              originalPrice: item.pricing?.mrp || item.originalPrice,
               image,
               category: item.category,
             },

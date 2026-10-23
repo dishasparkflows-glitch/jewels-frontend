@@ -52,7 +52,14 @@ function App() {
                 <Route path="/product/:id" element={<ProductDetail />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
-                <Route path="/wishlist" element={<Wishlist />} />
+                <Route
+                  path="/wishlist"
+                  element={
+                    <ProtectedRoute>
+                      <Wishlist />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/blog" element={<BlogList />} />
                 <Route path="/blogs" element={<BlogList />} />
                 <Route path="/blog/:slug" element={<BlogDetail />} />

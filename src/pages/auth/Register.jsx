@@ -28,7 +28,9 @@ const Register = () => {
   const logoUrl = getImageUrl(settings.logoImage?.url || settings.mobileLogoImage?.url);
   const returnTo = location.state?.from;
 
-  const destination = returnTo ? `${returnTo.pathname}${returnTo.search || ''}` : '/';
+  const destination = returnTo
+    ? (typeof returnTo === 'string' ? returnTo : `${returnTo.pathname || '/'}${returnTo.search || ''}${returnTo.hash || ''}`)
+    : '/';
   const closeModal = useCallback(() => {
     navigate(destination, { replace: true });
   }, [destination, navigate]);

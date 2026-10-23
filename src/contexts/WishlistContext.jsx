@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { wishlistAPI } from '../api/services';
 import { useAuth } from './AuthContext';
@@ -9,20 +10,36 @@ const WishlistContext = createContext(null);
 
 export const WishlistProvider = ({ children }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [wishlistItems, setWishlistItems] = useState([]);
   const [wishlistMap, setWishlistMap] = useState({});
   const [loading, setLoading] = useState(true);
 
   // Fetch wishlist from backend
   const fetchWishlist = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token && !user) {
+      setWishlistItems([]);
+      setWishlistMap({});
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const res = await wishlistAPI.get();
       const data = res?.data?.data || res?.data || {};
-      const items = Array.isArray(data.items) ? data.items : [];
+      const rawProductList = Array.isArray(data.productIds) ? data.productIds : (Array.isArray(data.items) ? data.items : []);
+      const items = rawProductList.filter((item) => item && typeof item === 'object');
 
       setWishlistItems(items);
       const map = {};
+      if (Array.isArray(data.productIds)) {
+        data.productIds.forEach((id) => {
+          if (id) map[String(id._id || id)] = true;
+        });
+      }
       items.forEach((item) => {
         if (item.productId) map[String(item.productId)] = true;
         if (item._id) map[String(item._id)] = true;
@@ -33,7 +50,7 @@ export const WishlistProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   // Fetch on mount or when user changes
   useEffect(() => {
@@ -51,7 +68,24 @@ export const WishlistProvider = ({ children }) => {
 
   // Toggle item in wishlist with optimistic UI update & API sync
   const toggleWishlist = async (product) => {
-    if (!product) return;
+    if (!product) return false;
+
+    // Check if user is logged in
+    const token = localStorage.getItem('token');
+    if (!token && !user) {
+      toast('Please sign in to save items to your wishlist', {
+        icon: '🔒',
+        style: {
+          background: '#22201e',
+          color: '#f5f0eb',
+          border: '1px solid rgba(212, 175, 55, 0.4)',
+        },
+      });
+      navigate('/login', {
+        state: { from: location },
+      });
+      return false;
+    }
 
     const productId = String(product.id || product._id || product.productId || '').trim();
     if (!productId) return;
@@ -73,12 +107,6 @@ export const WishlistProvider = ({ children }) => {
     // Normalized payload for backend
     const payload = {
       productId,
-      title: product.title || product.name || '',
-      price: product.price || 0,
-      originalPrice: product.originalPrice || null,
-      image: product.image || getPrimaryProductImage(product),
-      category: product.category || '',
-      slug: product.slug || '',
     };
 
     try {
@@ -92,8 +120,17 @@ export const WishlistProvider = ({ children }) => {
         fetchWishlist();
       }
 
+      if (Array.isArray(result.productIds)) {
+        const nextMap = {};
+        result.productIds.forEach((id) => {
+          if (id) nextMap[String(id._id || id)] = true;
+        });
+        setWishlistMap(nextMap);
+      }
+
+      const productTitle = product.title || product.basicInfo?.title || product.name || 'item';
       if (willBeWishlisted) {
-        toast.success(`Saved "${payload.title}" to your wishlist ❤️`, {
+        toast.success(`Saved "${productTitle}" to your wishlist ❤️`, {
           icon: '💎',
           style: {
             background: '#22201e',
@@ -120,6 +157,25 @@ export const WishlistProvider = ({ children }) => {
         ...prev,
         [productId]: wasWishlisted,
       }));
+      if (
+        err.response?.status === 401 ||
+        err.response?.data?.message?.includes('token') ||
+        err.response?.data?.message?.includes('Access denied')
+      ) {
+        toast('Please sign in to manage your wishlist', {
+          icon: '🔒',
+          style: {
+            background: '#22201e',
+            color: '#f5f0eb',
+            border: '1px solid rgba(212, 175, 55, 0.4)',
+          },
+        });
+        navigate('/login', {
+          state: { from: location },
+        });
+        return wasWishlisted;
+      }
+
       toast.error('Could not update wishlist. Please try again.');
       return wasWishlisted;
     }
@@ -128,6 +184,11 @@ export const WishlistProvider = ({ children }) => {
   // Remove item by productId
   const removeFromWishlist = async (productId) => {
     if (!productId) return;
+    const token = localStorage.getItem('token');
+    if (!token && !user) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
     const strId = String(productId);
 
     try {
@@ -155,6 +216,11 @@ export const WishlistProvider = ({ children }) => {
 
   // Clear entire wishlist
   const clearWishlist = async () => {
+    const token = localStorage.getItem('token');
+    if (!token && !user) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
     try {
       await wishlistAPI.clear();
       setWishlistItems([]);

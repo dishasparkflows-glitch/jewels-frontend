@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
@@ -6,6 +6,8 @@ import { useWishlist } from '../../contexts/WishlistContext';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import MegaMenuNav from './MegaMenuNav';
 import { getOnce } from '../../api/axios';
+import { productsAPI } from '../../api/services';
+import { formatProductPrice } from '../../utils/productCard';
 import { getImageUrl } from '../../utils/imageUrl';
 import {
   HiOutlineShoppingBag,
@@ -38,6 +40,10 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchContainerRef = useRef(null);
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const navigate = useNavigate();
@@ -45,6 +51,52 @@ const Navbar = () => {
   const isCheckout = location.pathname === '/checkout';
   const phoneNumber = String(storeSettings.mobileNumber || '').trim();
   const phoneHref = phoneNumber.replace(/[^\d+]/g, '');
+
+  // Instant search debounce effect
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      productsAPI
+        .getSearchStorefront({ search: trimmed, limit: 6 })
+        .then((response) => {
+          const items = Array.isArray(response.data?.data)
+            ? response.data.data
+            : response.data?.data?.items || [];
+          setSearchResults(items);
+          setShowSearchDropdown(true);
+        })
+        .catch(() => {
+          setSearchResults([]);
+        })
+        .finally(() => {
+          setIsSearching(false);
+        });
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Close dropdown on outside click or route navigation
+  useEffect(() => {
+    setShowSearchDropdown(false);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setShowSearchDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Listen for open appointment modal event from anywhere in the app
   useEffect(() => {
@@ -95,10 +147,11 @@ const Navbar = () => {
   }, [topAnnouncement.items, topAnnouncement.autoplayInterval]);
 
   const handleSearch = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery('');
+      setShowSearchDropdown(false);
       setMobileMenuOpen(false);
     }
   };
@@ -175,25 +228,95 @@ const Navbar = () => {
           </Link>
 
           {/* Center Search Input */}
-          <form onSubmit={handleSearch} className="flex-1 max-w-lg mx-4 hidden md:block">
-            <div className="relative">
+          <div ref={searchContainerRef} className="flex-1 max-w-lg mx-4 hidden md:block relative">
+            <form onSubmit={handleSearch} className="relative">
               <HiOutlineSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Search jewellery, diamonds and more..."
                 value={searchQuery}
+                onFocus={() => { if (searchResults.length > 0) setShowSearchDropdown(true); }}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-white/[0.08] border border-white/10 rounded-full pl-11 pr-4 py-2.5 text-xs text-white placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-amber-200/40 focus:bg-white/[0.12] transition-all"
               />
-            </div>
-          </form>
+            </form>
+
+            {/* Desktop Instant Search Dropdown */}
+            {showSearchDropdown && searchQuery.trim().length >= 2 && (
+              <div className="absolute left-0 right-0 top-full mt-2 bg-[#1c1a18] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 divide-y divide-white/5 text-left">
+                {isSearching ? (
+                  <div className="py-4 text-center text-xs text-stone-400">Searching jewellery...</div>
+                ) : searchResults.length > 0 ? (
+                  <>
+                    <div className="max-h-72 overflow-y-auto divide-y divide-white/5">
+                      {searchResults.map((item) => {
+                        const targetId = item.slug || item._id;
+                        const productHref = `/product/${encodeURIComponent(targetId)}`;
+                        const price = item.pricing?.salePrice || item.pricing?.minPrice || 0;
+                        return (
+                          <Link
+                            key={item._id}
+                            to={productHref}
+                            onClick={() => {
+                              setShowSearchDropdown(false);
+                              setSearchQuery('');
+                            }}
+                            className="flex items-center gap-3 p-2.5 hover:bg-white/[0.06] transition-colors group"
+                          >
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt={item.title}
+                                className="w-10 h-10 object-cover rounded bg-stone-800 shrink-0 border border-white/10"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded bg-stone-800 border border-white/10 shrink-0 flex items-center justify-center text-stone-500 text-[10px]">
+                                Jewellery
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                {item.isOrnate && (
+                                  <span className="text-[9px] uppercase px-1 py-0.5 rounded bg-amber-400/10 text-amber-300 font-medium shrink-0">
+                                    Silver
+                                  </span>
+                                )}
+                                <p className="text-xs text-stone-200 group-hover:text-amber-200 transition-colors truncate font-medium">
+                                  {item.title}
+                                </p>
+                              </div>
+                              <p className="text-[11px] text-stone-400">
+                                {price > 0 ? formatProductPrice(price) : ''}
+                              </p>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSearch}
+                      className="w-full py-2.5 px-3 text-center text-xs text-amber-200/90 hover:text-amber-200 hover:bg-white/[0.04] transition-colors font-medium cursor-pointer"
+                    >
+                      View all results for &ldquo;{searchQuery}&rdquo; →
+                    </button>
+                  </>
+                ) : (
+                  <div className="py-4 text-center text-xs text-stone-400">
+                    No jewellery found matching &ldquo;{searchQuery}&rdquo;
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Actions: Wishlist, Profile, Shopping Bag */}
           <div className="order-2 flex items-center space-x-1 sm:space-x-4">
             {isCheckout && <span className="hidden items-center gap-1.5 rounded-full border border-white/15 px-2.5 py-1.5 text-[11px] text-white sm:inline-flex"><span aria-hidden="true">🇮🇳</span> INR <span aria-hidden="true">⌄</span></span>}
             {/* Wishlist Icon */}
             <Link
-              to="/wishlist"
+              to={user ? "/wishlist" : "/login"}
+              state={!user ? { from: '/wishlist' } : undefined}
               onClick={() => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
@@ -284,22 +407,76 @@ const Navbar = () => {
       {mobileMenuOpen && (
         <div className="lg:hidden bg-[#22201e] border-b border-stone-800 px-4 sm:px-6 py-5 space-y-5 animate-slide-up">
           {/* Mobile Search */}
-          <form onSubmit={handleSearch} className="relative w-full">
-            <HiOutlineSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search jewellery, diamonds..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white/[0.08] border border-white/10 rounded-full pl-10 pr-4 py-2 text-xs text-white placeholder-stone-400 focus:outline-none"
-            />
-          </form>
+          <div className="relative w-full">
+            <form onSubmit={handleSearch} className="relative w-full">
+              <HiOutlineSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search jewellery, diamonds..."
+                value={searchQuery}
+                onFocus={() => { if (searchResults.length > 0) setShowSearchDropdown(true); }}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white/[0.08] border border-white/10 rounded-full pl-10 pr-4 py-2 text-xs text-white placeholder-stone-400 focus:outline-none"
+              />
+            </form>
+            {showSearchDropdown && searchQuery.trim().length >= 2 && (
+              <div className="mt-2 bg-[#1c1a18] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 divide-y divide-white/5 text-left">
+                {isSearching ? (
+                  <div className="py-3 text-center text-xs text-stone-400">Searching jewellery...</div>
+                ) : searchResults.length > 0 ? (
+                  <>
+                    <div className="max-h-60 overflow-y-auto divide-y divide-white/5">
+                      {searchResults.map((item) => {
+                        const targetId = item.slug || item._id;
+                        const productHref = `/product/${encodeURIComponent(targetId)}`;
+                        const price = item.pricing?.salePrice || item.pricing?.minPrice || 0;
+                        return (
+                          <Link
+                            key={item._id}
+                            to={productHref}
+                            onClick={() => {
+                              setShowSearchDropdown(false);
+                              setSearchQuery('');
+                              setMobileMenuOpen(false);
+                            }}
+                            className="flex items-center gap-3 p-2 hover:bg-white/[0.06] transition-colors group"
+                          >
+                            {item.image && (
+                              <img
+                                src={item.image}
+                                alt={item.title}
+                                className="w-8 h-8 object-cover rounded bg-stone-800 shrink-0 border border-white/10"
+                              />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-stone-200 truncate font-medium">{item.title}</p>
+                              <p className="text-[10px] text-stone-400">{price > 0 ? formatProductPrice(price) : ''}</p>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSearch}
+                      className="w-full py-2 px-3 text-center text-xs text-amber-200/90 font-medium cursor-pointer"
+                    >
+                      View all results →
+                    </button>
+                  </>
+                ) : (
+                  <div className="py-3 text-center text-xs text-stone-400">No jewellery found</div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Categories List */}
           <nav className="flex flex-col space-y-3 pt-2">
             <MegaMenuNav categories={categories} mobile onNavigate={() => setMobileMenuOpen(false)} error={navigationError} onRetry={() => setNavigationRevision((value) => value + 1)} />
             <Link
-              to="/wishlist"
+              to={user ? "/wishlist" : "/login"}
+              state={!user ? { from: '/wishlist' } : undefined}
               onClick={() => {
                 setMobileMenuOpen(false);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
