@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { HiOutlineDeviceMobile, HiOutlineEye, HiOutlineEyeOff, HiOutlineLockClosed } from 'react-icons/hi';
+import { FcGoogle } from 'react-icons/fc';
 import { useAuth } from '../../contexts/AuthContext';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { getImageUrl } from '../../utils/imageUrl';
@@ -17,6 +18,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
   const googleButtonRef = useRef(null);
   const logoUrl = getImageUrl(settings.logoImage?.url || settings.mobileLogoImage?.url);
   const returnTo = location.state?.from;
@@ -56,13 +58,22 @@ const Login = () => {
           }
         },
       });
-      window.google.accounts.id.renderButton(googleButtonRef.current, {
-        theme: 'outline',
-        size: 'large',
-        shape: 'rectangular',
-        text: 'continue_with',
-        width: Math.max(220, Math.floor(googleButtonRef.current.clientWidth)),
-      });
+      try {
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: 'outline',
+          size: 'large',
+          shape: 'rectangular',
+          text: 'continue_with',
+          width: Math.max(220, Math.floor(googleButtonRef.current.clientWidth || 320)),
+        });
+        setTimeout(() => {
+          if (googleButtonRef.current && (googleButtonRef.current.querySelector('iframe') || googleButtonRef.current.children.length > 0)) {
+            setGoogleReady(true);
+          }
+        }, 200);
+      } catch (err) {
+        console.warn('Google Sign-in failed to render button:', err);
+      }
     };
 
     let script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
@@ -113,10 +124,23 @@ const Login = () => {
             <p className="text-center text-[11px] font-semibold uppercase tracking-[0.3em] text-[#24211e]">Welcome back</p>
             <h1 className="sr-only">Sign in to your account</h1>
 
-            <div ref={googleButtonRef} className="mt-8 flex min-h-12 justify-center" aria-label="Sign in with Google" />
-            {!import.meta.env.VITE_GOOGLE_CLIENT_ID && (
-              <button type="button" disabled className="mt-8 flex h-12 w-full items-center justify-center border border-stone-200 text-sm text-stone-500">
-                Continue with Google
+            <div
+              ref={googleButtonRef}
+              className={`mt-8 flex min-h-12 justify-center ${googleReady ? '' : 'hidden'}`}
+              aria-label="Sign in with Google"
+            />
+            {!googleReady && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.google?.accounts?.id && import.meta.env.VITE_GOOGLE_CLIENT_ID) {
+                    window.google.accounts.id.prompt();
+                  }
+                }}
+                className="mt-8 flex h-12 w-full items-center justify-center gap-2.5 rounded-sm border border-stone-200 bg-white px-4 text-sm font-medium text-stone-700 shadow-2xs hover:bg-stone-50 transition-colors cursor-pointer"
+              >
+                <FcGoogle className="h-5 w-5 shrink-0" />
+                <span>Continue with Google</span>
               </button>
             )}
             {googleLoading && <p className="mt-2 text-center text-xs text-stone-500">Signing in with Google…</p>}

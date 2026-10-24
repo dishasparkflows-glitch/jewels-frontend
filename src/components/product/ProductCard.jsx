@@ -5,7 +5,6 @@ import { Link } from "react-router-dom";
 import {
   HiOutlineHeart,
   HiHeart,
-  HiOutlineArrowsExpand,
   HiOutlineX,
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
@@ -136,7 +135,10 @@ export default function ProductCard({ product }) {
   const defaultGoldColor = data.colors.find((entry) => /yellow/i.test(entry.name)) || data.colors[0];
   const activeColorName = hoveredColorName || selectedColorName || (isGold ? defaultGoldColor?.name : undefined);
   const color =
-    data.colors.find((entry) => entry.name === activeColorName) || defaultGoldColor || data.colors[0];
+    data.colors.find((entry) => entry.name?.toLowerCase() === activeColorName?.toLowerCase()) ||
+    data.colors.find((entry) => entry.name === activeColorName) ||
+    defaultGoldColor ||
+    data.colors[0];
   const image = color?.image || data.images[0] || "";
   const isGroup = Boolean(product.isGroup);
   const href = isGroup
@@ -260,16 +262,6 @@ export default function ProductCard({ product }) {
             <HiOutlineHeart className="h-4 w-4" />
           )}
         </button>
-        {!!image && (
-          <button
-            type="button"
-            aria-label={`Enlarge ${title} image`}
-            onClick={() => setPreviewOpen(true)}
-            className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3 flex h-8 w-8 items-center justify-center rounded-full border border-white/80 bg-white/90 text-[#8c7968] opacity-0 shadow-xs backdrop-blur-xs transition-opacity hover:bg-white group-hover:opacity-100 focus-visible:opacity-100 z-10"
-          >
-            <HiOutlineArrowsExpand className="h-3.5 w-3.5" />
-          </button>
-        )}
 
         {/* ADD TO CART Button - Matches Screenshot */}
         <div className="absolute inset-x-2 bottom-2 sm:inset-x-3 sm:bottom-3 z-20 transition-all duration-300 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto">
@@ -299,7 +291,7 @@ export default function ProductCard({ product }) {
             className="mt-1.5 sm:mt-2 flex min-h-6 flex-wrap items-center justify-center gap-1 sm:gap-1.5"
           >
             {data.colors.slice(0, 5).map((entry) => {
-              const isSelected = color?.name === entry.name;
+              const isSelected = Boolean(activeColorName && entry.name?.toLowerCase() === activeColorName.toLowerCase());
               const bgGradient = entry.colorCodeEnd
                 ? `linear-gradient(135deg, ${entry.hex}, ${entry.colorCodeEnd})`
                 : entry.hex
@@ -370,7 +362,7 @@ export default function ProductCard({ product }) {
               <span className="text-xs sm:text-[14px] font-semibold text-stone-950">
                 {formatProductPrice(data.price) || "Price on request"}
               </span>
-              {data.originalPrice && (
+              {!isGold && data.originalPrice && (
                 <span className="text-[10px] sm:text-xs text-stone-400 line-through">
                   {formatProductPrice(data.originalPrice)}
                 </span>

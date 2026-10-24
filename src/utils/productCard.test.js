@@ -8,6 +8,8 @@ test('keeps actual price precision and only shows a genuine higher original pric
   assert.equal(card.originalPrice, 25000);
   assert.equal(formatProductPrice(card.price), '₹24,143.01');
   assert.equal(getProductCardData({ price: 100, mrp: 90 }).originalPrice, null);
+  assert.equal(getProductCardData({ productType: 'gold', salePrice: 50000, mrp: 60000 }).originalPrice, null);
+  assert.equal(getProductCardData({ title: 'Gold Ring', salePrice: 50000, mrp: 60000 }).originalPrice, null);
   assert.equal(getProductCardData({}).price, null);
 });
 
@@ -28,3 +30,23 @@ test('uses real colour metadata and associated images without exposing raw IDs',
   assert.deepEqual(card.colors, [{ name: 'Rose Gold', hex: '#cc9999', image: 'rose.webp' }]);
   assert.deepEqual(getProductCardData({}).colors, []);
 });
+
+test('associates metalcolor-wise 1st image for each color swatch', () => {
+  const card = getProductCardData({
+    metalColors: [
+      { name: 'Yellow Gold', colorCode: '#E5C07B', firstPhoto: 'yellow-1.webp' },
+      { name: 'White Gold', colorCode: '#F3F4F6', firstPhoto: 'white-1.webp' },
+      { name: 'Rose Gold', colorCode: '#E8B4B8', firstPhoto: 'rose-1.webp' },
+    ],
+    colorImages: [
+      { metalColorId: { name: 'Yellow Gold' }, firstPhoto: 'yellow-1.webp', images: [{ url: 'yellow-1.webp' }, { url: 'yellow-2.webp' }] },
+      { metalColorId: { name: 'White Gold' }, firstPhoto: 'white-1.webp', images: [{ url: 'white-1.webp' }, { url: 'white-2.webp' }] },
+      { metalColorId: { name: 'Rose Gold' }, firstPhoto: 'rose-1.webp', images: [{ url: 'rose-1.webp' }, { url: 'rose-2.webp' }] },
+    ],
+  });
+  assert.equal(card.colors.length, 3);
+  assert.equal(card.colors[0].image, 'yellow-1.webp');
+  assert.equal(card.colors[1].image, 'white-1.webp');
+  assert.equal(card.colors[2].image, 'rose-1.webp');
+});
+

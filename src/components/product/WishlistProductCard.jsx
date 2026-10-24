@@ -37,6 +37,8 @@ export default function WishlistProductCard({ item, onRemove }) {
         ? item.colorOptions
         : [];
 
+  const isGold = (item.productType === 'gold') || /gold/i.test(item.basicInfo?.title || item.title || item.name || '');
+
   return (
     <article className="group min-w-0 text-center">
       <div className="relative bg-[#f3eadb] p-2 sm:p-3">
@@ -103,7 +105,7 @@ export default function WishlistProductCard({ item, onRemove }) {
             ? formatPrice(item.pricing?.salePrice || item.price)
             : "Price unavailable"}
         </span>
-        {Number(item.pricing?.mrp || item.originalPrice) > Number(item.pricing?.salePrice || item.price) && (
+        {!isGold && Number(item.pricing?.mrp || item.originalPrice) > Number(item.pricing?.salePrice || item.price) && (
           <span className="text-xs text-stone-400 line-through">
             {formatPrice(item.pricing?.mrp || item.originalPrice)}
           </span>

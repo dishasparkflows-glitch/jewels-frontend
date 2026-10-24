@@ -517,11 +517,12 @@ export default function ProductDetail() {
     return match || raw[0] || null;
   }, [product, selectedPurity, selectedColor, selectedCarat, selectedQuality, isCenterDriven]);
 
+  const isGold = (product?.productType === 'gold') || /gold/i.test(product?.basicInfo?.title || product?.title || '');
   const currentPrice = [selectedVariant?.price, product?.pricing?.salePrice]
     .find((value) => Number(value) > 0);
   const mrpPrice = [product?.pricing?.mrp].find((value) => Number(value) > 0) ?? currentPrice;
   const discountPercent =
-    Number(mrpPrice) > Number(currentPrice) ? Math.round(((mrpPrice - currentPrice) / mrpPrice) * 100) : 0;
+    !isGold && Number(mrpPrice) > Number(currentPrice) ? Math.round(((mrpPrice - currentPrice) / mrpPrice) * 100) : 0;
 
   // Itemized Transparent Price Breakdown (Matches Screenshot 4)
   const breakdown = useMemo(() => {
@@ -845,19 +846,19 @@ export default function ProductDetail() {
                   <span className="text-2xl sm:text-3xl font-medium text-stone-900 font-serif">
                     {formatPrice(currentPrice)}
                   </span>
-                  {discountPercent > 0 && (
+                  {!isGold && discountPercent > 0 && (
                     <span className="text-xs text-stone-400 line-through">
                       {formatPrice(mrpPrice)}
                     </span>
                   )}
-                  {discountPercent > 0 && (
+                  {!isGold && discountPercent > 0 && (
                     <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                       {discountPercent}% OFF
                     </span>
                   )}
                 </div>
                 <p className="text-[10.5px] text-stone-400 italic">
-                  (MRP Incl. of all taxes)
+                  ({isGold ? 'Price' : 'MRP'} Incl. of all taxes)
                 </p>
               </div>
 

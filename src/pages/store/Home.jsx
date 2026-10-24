@@ -1,5 +1,5 @@
 import ProductCard from '../../components/product/ProductCard';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   bannersAPI,
@@ -52,6 +52,8 @@ const Home = () => {
   const [activeHeroIdx, setActiveHeroIdx] = useState(0);
 
   const [celebrateItems, setCelebrateItems] = useState([]);
+  const celebrateScrollRef = useRef(null);
+  const [isCelebrateHovered, setIsCelebrateHovered] = useState(false);
 
   const [goldProducts, setGoldProducts] = useState([]);
   const [platinumProducts, setPlatinumProducts] = useState([]);
@@ -208,12 +210,13 @@ const Home = () => {
         });
         else setBookAppointBanner(null);
 
-        const customBannerData = list.find((banner) => banner.display?.bannerKey === 'custom_jewellery' && platformOf(banner) === 'web');
+        const customBannerData = list.find((banner) => (banner.display?.type === 'customizebanner' || banner.display?.bannerKey === 'custom_jewellery') && platformOf(banner) === 'web');
         if (customBannerData) setCustomBanner({
           title: contentOf(customBannerData).title || customBannerData.title || '',
           subtitle: contentOf(customBannerData).subtitle || customBannerData.subtitle || '',
           image: customBannerData.image?.url || '',
           buttonText: contentOf(customBannerData).buttonText || 'START CUSTOMISING',
+          link: customBannerData.link || '',
         });
         else setCustomBanner(null);
       })
@@ -248,7 +251,16 @@ const Home = () => {
         const res = await featuredAPI.getCelebrate();
         const list = res?.data?.data?.items || res?.data?.data || [];
         if (Array.isArray(list)) {
-          const formatted = list.map((item) => ({
+          const featuredSelections = themeConfig?.featuredSelections || [];
+          const celebrateSelections = featuredSelections.filter((s) => (s.placement || 'Celebrate') === 'Celebrate' && s.visible !== false);
+          let filtered = list;
+          if (celebrateSelections.length > 0) {
+            const orderMap = new Map(celebrateSelections.map((s) => [String(s.featuredId?._id || s.featuredId || ''), s.order || 0]));
+            filtered = list
+              .filter((item) => orderMap.has(String(item._id)))
+              .sort((a, b) => (orderMap.get(String(a._id)) || 0) - (orderMap.get(String(b._id)) || 0));
+          }
+          const formatted = filtered.map((item) => ({
             _id: item._id,
             name: item.name || '',
             image: item.image?.url || '',
@@ -261,7 +273,44 @@ const Home = () => {
       }
     };
     fetchCelebrate();
-  }, [themeConfig?.mediaOverrides]);
+  }, [themeConfig?.mediaOverrides, themeConfig?.featuredSelections]);
+
+  const scrollCelebrate = useCallback((direction) => {
+    const el = celebrateScrollRef.current;
+    if (!el) return;
+    const card = el.querySelector('.celebrate-card');
+    const scrollAmount = card ? card.offsetWidth + 20 : el.clientWidth * 0.5;
+    el.scrollBy({
+      left: direction === 'next' ? scrollAmount : -scrollAmount,
+      behavior: 'smooth',
+    });
+  }, []);
+
+  // Auto scroll for Celebrate With Neirah side by side
+  useEffect(() => {
+    if (effectiveCategoryItems.length <= 1) return;
+    let timer;
+
+    const startTimer = () => {
+      timer = setInterval(() => {
+        const el = celebrateScrollRef.current;
+        if (!el) return;
+        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 15) {
+          el.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          const card = el.querySelector('.celebrate-card');
+          const scrollAmount = card ? card.offsetWidth + 20 : el.clientWidth * 0.5;
+          el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+      }, 3500);
+    };
+
+    if (!isCelebrateHovered) {
+      startTimer();
+    }
+
+    return () => clearInterval(timer);
+  }, [effectiveCategoryItems.length, isCelebrateHovered]);
 
   // ─── 3. FETCH PRODUCTS FOR HOME (/api/product/home) ─────────────────
   useEffect(() => {
@@ -296,7 +345,16 @@ const Home = () => {
         const res = await featuredAPI.getGifts();
         const list = res?.data?.data?.items || res?.data?.data || [];
         if (Array.isArray(list)) {
-          const formatted = list.map((item) => ({
+          const featuredSelections = themeConfig?.featuredSelections || [];
+          const giftSelections = featuredSelections.filter((s) => s.placement === 'Gifts' && s.visible !== false);
+          let filtered = list;
+          if (giftSelections.length > 0) {
+            const orderMap = new Map(giftSelections.map((s) => [String(s.featuredId?._id || s.featuredId || ''), s.order || 0]));
+            filtered = list
+              .filter((item) => orderMap.has(String(item._id)))
+              .sort((a, b) => (orderMap.get(String(a._id)) || 0) - (orderMap.get(String(b._id)) || 0));
+          }
+          const formatted = filtered.map((item) => ({
             _id: item._id,
             name: item.name || '',
             image: item.image?.url || '',
@@ -309,7 +367,7 @@ const Home = () => {
       }
     };
     fetchGifts();
-  }, [themeConfig?.mediaOverrides]);
+  }, [themeConfig?.mediaOverrides, themeConfig?.featuredSelections]);
 
   // ─── 9. FETCH REVIEWS (/api/reviews?status=approved) ─────────────────
   useEffect(() => {
@@ -400,35 +458,66 @@ const Home = () => {
           2. CELEBRATE WITH NEIRAH (Dynamic from /api/featured?placement=Celebrate)
       ─────────────────────────────────────────────────────────────────── */}
       {effectiveCategoryItems.length > 0 && (
-        <section style={sectionStyle('categories')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
-          <div className="text-center mb-10">
-            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
+        <section style={sectionStyle('categories')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+          <div className="text-center mb-6 sm:mb-8">
+            <h2 className="font-serif text-2xl sm:text-3xl text-stone-900 font-normal tracking-wide">
               Celebrate With Neirah
             </h2>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-            {effectiveCategoryItems.map((item) => (
-              <Link
-                key={item._id}
-                to={item.link}
-                className="group relative rounded-2xl overflow-hidden aspect-[4/5] bg-[#0c241c] border border-stone-200/90 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col justify-end"
-              >
-                {item.image && (
-                  <img
-                    src={getMediaUrl(item.image)}
-                    alt={item.name}
-                    className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                <div className="relative z-10 p-4 text-center">
-                  <span className="text-xs sm:text-sm font-medium text-white tracking-wide block drop-shadow-md">
-                    {item.name}
-                  </span>
-                </div>
-              </Link>
-            ))}
+          <div
+            className="relative group/celebrate px-1"
+            onMouseEnter={() => setIsCelebrateHovered(true)}
+            onMouseLeave={() => setIsCelebrateHovered(false)}
+          >
+            {/* Left Chevron Button */}
+            <button
+              type="button"
+              onClick={() => scrollCelebrate('prev')}
+              aria-label="Previous categories"
+              className="absolute -left-2 sm:-left-3 lg:-left-5 top-1/2 -translate-y-1/2 z-20 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer"
+            >
+              <HiOutlineChevronLeft className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+            </button>
+
+            {/* Scrollable Container with exact box size and hidden scrollbar */}
+            <div
+              ref={celebrateScrollRef}
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              className="flex items-center gap-3 sm:gap-4 lg:gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory py-2 [&::-webkit-scrollbar]:hidden"
+            >
+              {effectiveCategoryItems.map((item) => (
+                <Link
+                  key={item._id}
+                  to={item.link}
+                  className="celebrate-card group relative rounded-2xl overflow-hidden aspect-[4/5] bg-stone-100 border border-stone-200/80 shadow-xs hover:shadow-lg transition-all duration-500 shrink-0 snap-start flex flex-col justify-end w-[65vw] sm:w-[calc(50%-10px)] md:w-[calc(33.333%-14px)] lg:w-[calc(25%-15px)]"
+                >
+                  {item.image && (
+                    <img
+                      src={getMediaUrl(item.image)}
+                      alt={item.name}
+                      className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                  <div className="relative z-10 p-3 sm:p-4 text-left">
+                    <span className="text-xs sm:text-[13px] font-medium text-white tracking-wide block drop-shadow-md truncate">
+                      {item.name}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Right Chevron Button */}
+            <button
+              type="button"
+              onClick={() => scrollCelebrate('next')}
+              aria-label="Next categories"
+              className="absolute -right-2 sm:-right-3 lg:-right-5 top-1/2 -translate-y-1/2 z-20 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer"
+            >
+              <HiOutlineChevronRight className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+            </button>
           </div>
         </section>
       )}
@@ -549,13 +638,22 @@ const Home = () => {
                 {effectiveCustomBanner.subtitle}
               </p>
               <div>
-                <button
-                  type="button"
-                  onClick={openAppointmentModal}
-                  className="px-7 py-3 rounded-full bg-[#d4af37] hover:bg-[#c39e2d] text-stone-900 text-xs font-bold uppercase tracking-widest transition-all shadow-md active:scale-95 cursor-pointer"
-                >
-                  {effectiveCustomBanner.buttonText || 'START CUSTOMISING'}
-                </button>
+                {effectiveCustomBanner.link ? (
+                  <Link
+                    to={effectiveCustomBanner.link}
+                    className="inline-block px-7 py-3 rounded-full bg-[#d4af37] hover:bg-[#c39e2d] text-stone-900 text-xs font-bold uppercase tracking-widest transition-all shadow-md active:scale-95 cursor-pointer"
+                  >
+                    {effectiveCustomBanner.buttonText || 'START CUSTOMISING'}
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={openAppointmentModal}
+                    className="px-7 py-3 rounded-full bg-[#d4af37] hover:bg-[#c39e2d] text-stone-900 text-xs font-bold uppercase tracking-widest transition-all shadow-md active:scale-95 cursor-pointer"
+                  >
+                    {effectiveCustomBanner.buttonText || 'START CUSTOMISING'}
+                  </button>
+                )}
               </div>
             </div>
 
