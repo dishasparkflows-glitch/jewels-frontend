@@ -12,7 +12,7 @@ const CartContext = createContext(null);
 export const CartProvider = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { token } = useAuth();
+  const { user, token } = useAuth();
   const [cart, setCart] = useState(() => {
     try {
       const saved = localStorage.getItem('jewels_cart');
@@ -51,20 +51,33 @@ export const CartProvider = ({ children }) => {
       const res = await cartAPI.get();
       const data = res?.data?.data || res?.data || {};
       if (Array.isArray(data.items)) {
-        const formattedItems = data.items.map((i) => ({
-          id: i.productId || i._id,
-          productId: i.productId,
-          _id: i._id,
-          name: i.title,
-          title: i.title,
-          price: i.price,
-          originalPrice: i.originalPrice,
-          image: i.image?.url || i.image || '',
-          category: i.category,
-          quantity: i.quantity,
-          selectedMetal: i.selectedMetal || '',
-          selectedSize: i.selectedSize || '',
-        }));
+        const formattedItems = data.items.map((i) => {
+          const itemSlug =
+            i.slug ||
+            i.basicInfo?.slug ||
+            (i.title
+              ? String(i.title)
+                  .toLowerCase()
+                  .trim()
+                  .replace(/[^\w\s-]/g, '')
+                  .replace(/\s+/g, '-')
+              : '');
+          return {
+            id: i.productId || i._id,
+            productId: i.productId,
+            _id: i._id,
+            slug: itemSlug,
+            name: i.title,
+            title: i.title,
+            price: i.price,
+            originalPrice: i.originalPrice,
+            image: i.image?.url || i.image || '',
+            category: i.category,
+            quantity: i.quantity,
+            selectedMetal: i.selectedMetal || '',
+            selectedSize: i.selectedSize || '',
+          };
+        });
         setCart(formattedItems);
         setCartTotals({
           totalItems: data.totalItems ?? formattedItems.length,
@@ -112,6 +125,19 @@ export const CartProvider = ({ children }) => {
     const userId = options.userId || product.userId || null;
     const selectedAttributes = options.selectedAttributes || product.selectedAttributes || undefined;
 
+    const slug =
+      product.basicInfo?.slug ||
+      product.slug ||
+      product.representative?.basicInfo?.slug ||
+      product.representative?.slug ||
+      (title
+        ? String(title)
+            .toLowerCase()
+            .trim()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+        : '');
+
     // 1. Optimistic local update
     setCart((prev) => {
       const existingIndex = prev.findIndex(
@@ -123,6 +149,7 @@ export const CartProvider = ({ children }) => {
         updated = [...prev];
         updated[existingIndex].quantity += parsedQty;
         updated[existingIndex].totalItemPrice = (Number(updated[existingIndex].price) || price) * updated[existingIndex].quantity;
+        if (slug) updated[existingIndex].slug = slug;
         if (selectedAttributes) updated[existingIndex].selectedAttributes = selectedAttributes;
       } else {
         updated = [
@@ -130,6 +157,7 @@ export const CartProvider = ({ children }) => {
           {
             id: productId,
             productId,
+            slug,
             name: title,
             title,
             price,
@@ -163,23 +191,29 @@ export const CartProvider = ({ children }) => {
 
     // 2. Call backend Cart API
     try {
+      const resolvedUserId =
+        userId ||
+        options.userId ||
+        product.userId ||
+        user?._id ||
+        user?.id ||
+        (() => {
+          try {
+            return JSON.parse(localStorage.getItem('user') || '{}')?._id || null;
+          } catch {
+            return null;
+          }
+        })();
+
       const payload = {
-        userId,
+        selectedAttributes: selectedAttributes || null,
+        userId: resolvedUserId,
         productId,
-        addedAt,
-        quantity: parsedQty,
         price,
         totalItemPrice,
-        title,
-        originalPrice: product.originalPrice || null,
-        image,
-        category: product.category || '',
-        selectedMetal,
-        selectedSize: options.selectedSize || '',
-        selectedAttributes,
       };
 
-      const res = await cartAPI.add(payload, parsedQty, { ...options, selectedAttributes, userId, addedAt, totalItemPrice });
+      const res = await cartAPI.add(payload);
       const data = res?.data?.data || res?.data || {};
 
       if (Array.isArray(data.items)) {

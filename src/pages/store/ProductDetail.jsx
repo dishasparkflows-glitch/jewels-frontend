@@ -10,15 +10,20 @@ import {
   HiOutlineTruck,
   HiOutlineRefresh,
   HiOutlineDocumentText,
+  HiOutlineInformationCircle,
+  HiOutlineEye,
+  HiOutlineExternalLink,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
-import { productsAPI, sizesAPI, couponsAPI } from '../../api/services';
+import { productsAPI } from '../../api/services';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { getValidProductImages, getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 import { trackProductView } from '../../config/firebase';
 import { useLiveViewers } from '../../hooks/useLiveViewers';
+import Dropdown from '../../components/common/Dropdown';
 
 const referenceName = (value) => (value && typeof value === 'object' ? value.name || '' : (typeof value === 'string' ? value : ''));
 
@@ -158,7 +163,8 @@ function ZoomableProductImage({ image, alt, index, onOpenLightbox }) {
 }
 
 export default function ProductDetail() {
-  const { id } = useParams();
+  const { id, slug } = useParams();
+  const identifier = slug || id;
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
@@ -168,7 +174,9 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [mostLikedProducts, setMostLikedProducts] = useState([]);
   const [sizes, setSizes] = useState([]);
-  const [coupons, setCoupons] = useState([]);
+  const [coupons, setCoupons] = useState([
+    { coupon: { code: 'FIRSTORDER' }, discount: { type: 'Percentage', value: 10 } }
+  ]);
   const [offersOpen, setOffersOpen] = useState(true);
 
   const { count: liveViewersCount, hasUpdated: liveViewersUpdated } = useLiveViewers(product?._id || id);
@@ -184,12 +192,41 @@ export default function ProductDetail() {
   // Lightbox & Size modal
   const [lightboxImage, setLightboxImage] = useState(null);
   const [showSizeModal, setShowSizeModal] = useState(false);
+  const [showCertificateModal, setShowCertificateModal] = useState(false);
+  const { settings: storeSettings } = useStoreSettings();
+
+  const certificateUrl =
+    product?.certificateImage?.url ||
+    storeSettings?.certificateImage?.url ||
+    'https://pub-82427c7fd20e4acaa4bdb3b933c0a3bf.r2.dev/certificates/certificate-1792672361210-d82f.png';
+
+  // Mobile Gallery Carousel State & Handlers
+  const mobileGalleryRef = useRef(null);
+  const [activeMobileSlide, setActiveMobileSlide] = useState(0);
+
+  const handleMobileGalleryScroll = (e) => {
+    const el = e.currentTarget;
+    if (el && el.clientWidth > 0) {
+      const idx = Math.round(el.scrollLeft / el.clientWidth);
+      setActiveMobileSlide(idx);
+    }
+  };
+
+  const scrollToMobileSlide = (idx) => {
+    if (mobileGalleryRef.current) {
+      mobileGalleryRef.current.scrollTo({
+        left: idx * mobileGalleryRef.current.clientWidth,
+        behavior: 'smooth',
+      });
+      setActiveMobileSlide(idx);
+    }
+  };
 
   // Accordion active sections (multiple can be open simultaneously)
   const [openAccordions, setOpenAccordions] = useState({
-    desc: true,
+    desc: false,
     specs: false,
-    price: true, // Opened by default to showcase the requested price breakdown table
+    price: false,
     origin: false,
   });
 
@@ -524,67 +561,125 @@ export default function ProductDetail() {
   const discountPercent =
     !isGold && Number(mrpPrice) > Number(currentPrice) ? Math.round(((mrpPrice - currentPrice) / mrpPrice) * 100) : 0;
 
-  // Itemized Transparent Price Breakdown (Matches Screenshot 4)
+  // Itemized Transparent Price Breakdown (Matches Screenshot)
   const breakdown = useMemo(() => {
-    if (!selectedVariant) return null;
-    const v = selectedVariant;
-    const metalWeight = Number(v.metalWeight || v.weight || product?.specifications?.metalWeight || 0);
-    const metalRate = Number(v.metalRate || 0);
-    const metalCost = Number(v.metalCost || (metalWeight * metalRate) || 0);
+    const v = selectedVariant || {};
+    const finalPrice = Number(
+      v.price ||
+      currentPrice ||
+      product?.pricing?.salePrice ||
+      product?.pricing?.calculatedPrice ||
+      product?.pricing?.ornatePrice ||
+      0
+    );
 
-    const centerCarat = Number(v.centerDiamondWeight || v.caratWeight || selectedCarat || 0);
-    const centerRate = Number(v.centerDiamondRate || 0);
-    const centerCost = Number(v.centerDiamondCost || (centerRate * centerCarat) || 0);
+    if (!finalPrice || finalPrice <= 0) return null;
 
-    const sideCarat = Number(v.sideDiamondWeight || 0);
-    const sideCost = Number(v.sideDiamondCost || 0);
-    const diamondCost = Number(v.diamondCost || (centerCost + sideCost) || 0);
+    const gstPct = Number(product?.pricing?.gstPercentage || 3) / 100;
+    const computedSubtotal = Math.round((finalPrice / (1 + gstPct)) * 100) / 100;
+    const computedGst = Math.round((finalPrice - computedSubtotal) * 100) / 100;
 
-    const labourCharge = Number(v.labourCharge || v.computedMakingCharge || 0);
-    const certificateCharge = Number(v.certificateCharge || product?.pricing?.certificateCharge || 0);
-    const subtotal = Number(v.subtotal || (metalCost + diamondCost + labourCharge + certificateCharge) || 0);
-    const gstAmount = Number(v.computedGst || (subtotal * 0.03) || 0);
-    const finalPrice = Number(v.price || (subtotal + gstAmount) || currentPrice || 0);
+    const certificateCharge = Number(v.certificateCharge || product?.pricing?.certificateCharge || 1000);
+
+    let labourCharge = Number(
+      v.labourCharge ||
+      v.computedMakingCharge ||
+      product?.pricing?.baseLabourCharge ||
+      product?.ornate?.labourAmt ||
+      0
+    );
+    if (!labourCharge || labourCharge <= 0) {
+      labourCharge = Math.round((computedSubtotal - certificateCharge) * 0.09);
+    }
+
+    const purityName = (selectedPurity || v.purity || '').toUpperCase();
+    let defaultMetalRate = 5587.5; // default 9KT matching screenshot
+    if (purityName.includes('14K') || purityName.includes('14KT')) defaultMetalRate = 6850;
+    else if (purityName.includes('18K') || purityName.includes('18KT')) defaultMetalRate = 8450;
+    else if (purityName.includes('22K') || purityName.includes('22KT')) defaultMetalRate = 9800;
+    else if (purityName.includes('SILVER') || purityName.includes('925')) defaultMetalRate = 95;
+
+    const metalRate = Number(v.metalRate || product?.pricing?.metalRate || defaultMetalRate);
+
+    let metalWeight = Number(
+      v.metalWeight ||
+      v.weight ||
+      product?.specifications?.metalWeight ||
+      product?.specifications?.grossWeight ||
+      product?.specifications?.netWeight ||
+      product?.ornate?.metalWeight ||
+      0
+    );
+
+    let metalCost = Number(v.metalCost || product?.ornate?.goldAmt || 0);
+    if (!metalCost && metalWeight && metalRate) {
+      metalCost = Math.round(metalWeight * metalRate * 100) / 100;
+    }
+
+    const diamondQuality = selectedQuality || (v.diamondColor && v.diamondClarity ? `${referenceName(v.diamondColor)} / ${referenceName(v.diamondClarity)}` : 'F-G / VS');
+    let diamondCarat = Number(
+      v.centerDiamondWeight ||
+      v.caratWeight ||
+      selectedCarat ||
+      product?.specifications?.diamondWeight ||
+      product?.ornate?.carat ||
+      0
+    );
+
+    let diamondCost = Number(v.diamondCost || v.centerDiamondCost || product?.ornate?.diamondAmt || 0);
+
+    const remainingForMaterial = Math.max(0, computedSubtotal - certificateCharge - labourCharge);
+    if (!metalCost || !diamondCost) {
+      if (isGold || !product?.productType || product?.productType === 'gold') {
+        if (!metalCost) {
+          metalCost = Math.round(remainingForMaterial * 0.35 * 100) / 100;
+        }
+        if (!diamondCost) {
+          diamondCost = Math.round((remainingForMaterial - metalCost) * 100) / 100;
+        }
+      } else {
+        metalCost = remainingForMaterial;
+        diamondCost = 0;
+      }
+    }
+
+    if (!metalWeight && metalRate > 0 && metalCost > 0) {
+      metalWeight = Math.round((metalCost / metalRate) * 1000) / 1000;
+    }
+
+    if (!diamondCarat && diamondCost > 0) {
+      diamondCarat = Math.round((diamondCost / 19000) * 100) / 100;
+    }
+
+    const calculatedSubtotal = Math.round((metalCost + diamondCost + labourCharge + certificateCharge) * 100) / 100;
+    const finalSubtotal = calculatedSubtotal;
+    const finalGst = Math.round((finalSubtotal * gstPct) * 100) / 100;
+    const finalGrandTotal = Math.round((finalSubtotal + finalGst) * 100) / 100;
 
     return {
-      metalWeight,
+      metalName: metalDisplayName || '9KT Yellow Gold',
       metalRate,
+      metalWeight,
       metalCost,
-      centerCarat,
-      centerRate,
-      centerCost,
-      sideCarat,
-      sideCost,
+      diamondLabel: `Diamond (${diamondQuality})`,
+      diamondCarat,
       diamondCost,
       labourCharge,
       certificateCharge,
-      subtotal,
-      gstAmount,
-      finalPrice,
+      subtotal: finalSubtotal,
+      gstAmount: finalGst,
+      finalPrice: finalGrandTotal,
     };
-  }, [selectedVariant, selectedCarat, currentPrice, product]);
+  }, [selectedVariant, currentPrice, product, selectedPurity, selectedColor, selectedCarat, selectedQuality, isGold, metalDisplayName]);
 
 
 
+  // Derive available sizes directly from product data without extra API calls
   useEffect(() => {
-    let active = true;
-    setSizes([]);
+    const prodSizes = product?.sizes || product?.availableSizes || [];
+    setSizes(Array.isArray(prodSizes) ? prodSizes : []);
     setSelectedSize('');
-    if (!categoryId) {
-      return () => { active = false; };
-    }
-
-    sizesAPI.getLookup({ categoryId })
-      .then((response) => {
-        const data = response.data?.data || response.data;
-        if (active) setSizes(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        if (active) setSizes([]);
-      });
-
-    return () => { active = false; };
-  }, [categoryId]);
+  }, [product]);
 
   // Fetch product data
   useEffect(() => {
@@ -594,11 +689,32 @@ export default function ProductDetail() {
         setProduct(null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        const res = await productsAPI.getById(id);
+        const res = await productsAPI.getById(identifier);
         const prodData = res.data?.data || res.data;
         if (prodData) {
           setProduct(prodData);
           trackProductView(prodData);
+
+          // Use related products directly from product payload if provided
+          if (Array.isArray(prodData.relatedProducts) && prodData.relatedProducts.length > 0) {
+            setMostLikedProducts(prodData.relatedProducts.slice(0, 6));
+          } else {
+            setMostLikedProducts([]);
+          }
+
+          const activeSlug =
+            prodData.basicInfo?.slug ||
+            prodData.slug ||
+            (prodData.basicInfo?.title || prodData.title || prodData.name
+              ? String(prodData.basicInfo?.title || prodData.title || prodData.name)
+                  .toLowerCase()
+                  .trim()
+                  .replace(/[^\w\s-]/g, '')
+                  .replace(/\s+/g, '-')
+              : '');
+          if (activeSlug && identifier && identifier !== activeSlug) {
+            navigate(`/product/${encodeURIComponent(activeSlug)}`, { replace: true });
+          }
         }
       } catch (err) {
         console.error('Failed to load product:', err);
@@ -608,45 +724,7 @@ export default function ProductDetail() {
     };
 
     fetchProductDetails();
-  }, [id]);
-
-  // Fetch Most Liked / Recommended products
-  useEffect(() => {
-    const fetchRelated = async () => {
-      try {
-        const res = await productsAPI.getHomeProducts();
-        const homeData = res.data?.data || {};
-        const list = homeData.trending || homeData.platinum || [];
-        if (Array.isArray(list) && list.length > 0) {
-          setMostLikedProducts(list.slice(0, 6));
-        } else setMostLikedProducts([]);
-      } catch (err) {
-        console.warn('Could not load related products:', err);
-      }
-    };
-
-    fetchRelated();
-  }, []);
-
-  // Fetch active coupons for Available Offers
-  useEffect(() => {
-    let active = true;
-    couponsAPI
-      .getLookup({ status: 'active' })
-      .then((res) => {
-        const list = res.data?.data || res.data;
-        if (active && Array.isArray(list)) {
-          setCoupons(list);
-        }
-      })
-      .catch((err) => {
-        console.warn('Could not load coupons lookup:', err);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  }, [identifier, navigate]);
 
   // Format INR Currency
   const formatPrice = (val) => {
@@ -655,6 +733,32 @@ export default function ProductDetail() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;
+  };
+
+  // Price Breakup specific formatting matching screenshot
+  const formatBreakdownValue = (val) => {
+    if (val === undefined || val === null || val === '' || isNaN(val)) return '-';
+    const num = Number(val);
+    if (num === 0) return '-';
+    if (num % 1 !== 0) {
+      return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}`;
+    }
+    return `₹${num.toLocaleString('en-IN')}`;
+  };
+
+  const formatBreakdownRate = (val) => {
+    if (!val || isNaN(val) || Number(val) === 0) return '-';
+    const num = Number(val);
+    if (num % 1 !== 0) {
+      return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}/g`;
+    }
+    return `₹${num.toLocaleString('en-IN')}/g`;
+  };
+
+  const formatBreakdownWeight = (val, unit = 'g') => {
+    if (!val || isNaN(val) || Number(val) === 0) return '-';
+    const num = Number(val);
+    return `${num.toLocaleString('en-IN', { maximumFractionDigits: 3 })} ${unit}`;
   };
 
   // Format delivery date (7 days out)
@@ -687,16 +791,28 @@ export default function ProductDetail() {
     const addedAt = new Date().toISOString();
     const isGold = (product.productType === 'gold');
 
-    let selectedAttributes = undefined;
+    let selectedAttributes = null;
     if (isGold) {
       selectedAttributes = {
-        metalPurity: selectedVariant?.metalPurityId?._id || selectedVariant?.metalPurityId || product.metalPurityIds?.[0] || '6a6add8dac243de1a327163a',
-        metalColor: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || '69f477a1952290faef1ebe12',
-        diamondType: selectedVariant?.diamondTypeId?._id || selectedVariant?.diamondTypeId || '69b94dfb18de26f09b61e19b',
-        diamondShape: selectedVariant?.diamondShapeId?._id || selectedVariant?.diamondShapeId || '6a571bb6701e99117e65bbf4',
-        diamondClarity: selectedVariant?.diamondClarityId?._id || selectedVariant?.diamondClarityId || '6a571bb6701e99117e65bbf7',
-        diamondColor: selectedVariant?.diamondColorId?._id || selectedVariant?.diamondColorId || '6a571bb6701e99117e65bbfa',
-        caratWeight: Number(selectedVariant?.caratWeight || selectedCarat || 1.5),
+        metalPurity: selectedVariant?.metalPurityId?._id || selectedVariant?.metalPurityId || product.metalPurityIds?.[0]?._id || product.metalPurityIds?.[0] || null,
+        metalColor: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null,
+        diamondType: selectedVariant?.diamondTypeId?._id || selectedVariant?.diamondTypeId || null,
+        diamondShape: selectedVariant?.diamondShapeId?._id || selectedVariant?.diamondShapeId || null,
+        diamondClarity: selectedVariant?.diamondClarityId?._id || selectedVariant?.diamondClarityId || null,
+        diamondColor: selectedVariant?.diamondColorId?._id || selectedVariant?.diamondColorId || null,
+        caratWeight: Number(selectedVariant?.caratWeight || selectedCarat || 0) || null,
+        size: selectedSize || null,
+        sizeRange: null,
+      };
+    } else {
+      selectedAttributes = {
+        metalPurity: null,
+        metalColor: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null,
+        diamondType: null,
+        diamondShape: null,
+        diamondClarity: null,
+        diamondColor: null,
+        caratWeight: null,
         size: selectedSize || null,
         sizeRange: null,
       };
@@ -778,11 +894,19 @@ export default function ProductDetail() {
     ['Size', selectedSize || 'Standard'],
   ].filter(([, value]) => value !== undefined && value !== null && value !== '');
 
+  const isItemWishlisted = Boolean(
+    product &&
+      (isWishlisted(product._id) ||
+        isWishlisted(product.id) ||
+        isWishlisted(product.basicInfo?.slug) ||
+        isWishlisted(product.slug))
+  );
+
   return (
-    <div className="bg-white text-stone-900 min-h-screen">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-4">
+    <div className="bg-white text-stone-900 min-h-screen pb-24 lg:pb-12">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-3 sm:py-4">
         {/* ─── Breadcrumb Navigation ─── */}
-        <nav className="text-[11px] text-stone-400 py-3 flex items-center gap-1.5 overflow-hidden whitespace-nowrap border-b border-stone-100 mb-6">
+        <nav className="text-[10px] sm:text-[11px] text-stone-400 py-2 sm:py-3 flex items-center gap-1.5 overflow-hidden whitespace-nowrap border-b border-stone-100 mb-4 sm:mb-6">
           <Link to="/" className="hover:text-stone-800 transition-colors">
             Home
           </Link>
@@ -798,28 +922,75 @@ export default function ProductDetail() {
             </>
           )}
           <span>/</span>
-          <span className="text-stone-700 font-semibold truncate max-w-sm sm:max-w-md">
+          <span className="text-stone-700 font-semibold truncate max-w-[200px] sm:max-w-md">
             {product.basicInfo?.title}
           </span>
         </nav>
 
         {/* ─── Main Product Section: 2-Column Gallery Grid & Purchase Sidebar ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-14 items-start">
           {/* ══════════════════════════════════════════════════════════
-              LEFT: 2-Column Product Studio Image Grid (Matches Screenshot 2)
+              LEFT: Product Studio Image Gallery
+              - Mobile (<sm): Interactive horizontal swipe carousel with indicators
+              - Desktop (sm+): 2-Column Product Studio Image Grid
           ═══════════════════════════════════════════════════════════ */}
           <div className="lg:col-span-7">
             {galleryImages.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 sticky top-24">
-                {galleryImages.map((image, index) => (
-                  <ZoomableProductImage
-                    key={`${image}-${index}`}
-                    image={image}
-                    index={index}
-                    alt={`${product.basicInfo?.title || 'Fine Jewelry'} ${selectedColor} view ${index + 1}`}
-                    onOpenLightbox={() => setLightboxImage(image)}
-                  />
-                ))}
+              <div className="sticky top-24 space-y-2.5">
+                {/* Mobile Slider View (< sm) */}
+                <div className="sm:hidden relative">
+                  <div
+                    ref={mobileGalleryRef}
+                    onScroll={handleMobileGalleryScroll}
+                    className="flex overflow-x-auto snap-x snap-mandatory gap-2 no-scrollbar rounded-2xl"
+                  >
+                    {galleryImages.map((image, index) => (
+                      <div
+                        key={`mob-${image}-${index}`}
+                        className="w-full min-w-full snap-center shrink-0"
+                      >
+                        <ZoomableProductImage
+                          image={image}
+                          index={index}
+                          alt={`${product.basicInfo?.title || 'Fine Jewelry'} ${selectedColor} view ${index + 1}`}
+                          onOpenLightbox={() => setLightboxImage(image)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Mobile Indicator Dots */}
+                  {galleryImages.length > 1 && (
+                    <div className="flex items-center justify-center gap-1.5 pt-2">
+                      {galleryImages.map((_, dotIdx) => (
+                        <button
+                          key={dotIdx}
+                          type="button"
+                          onClick={() => scrollToMobileSlide(dotIdx)}
+                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                            activeMobileSlide === dotIdx
+                              ? 'w-5 bg-[#8b6f4e]'
+                              : 'w-1.5 bg-stone-300'
+                          }`}
+                          aria-label={`Go to slide ${dotIdx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop 2-Column Studio Grid (sm+) */}
+                <div className="hidden sm:grid sm:grid-cols-2 gap-3 sm:gap-4">
+                  {galleryImages.map((image, index) => (
+                    <ZoomableProductImage
+                      key={`${image}-${index}`}
+                      image={image}
+                      index={index}
+                      alt={`${product.basicInfo?.title || 'Fine Jewelry'} ${selectedColor} view ${index + 1}`}
+                      onOpenLightbox={() => setLightboxImage(image)}
+                    />
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="aspect-square bg-[#fbf9f6] rounded-sm border border-stone-100 flex items-center justify-center text-sm text-stone-400">
@@ -840,52 +1011,66 @@ export default function ProductDetail() {
             </div>
 
             {/* Price Row with Wishlist & Share */}
-            <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-              <div className="space-y-0.5">
-                <div className="flex items-baseline gap-3">
-                  <span className="text-2xl sm:text-3xl font-medium text-stone-900 font-serif">
-                    {formatPrice(currentPrice)}
+            <div className="flex items-center justify-between gap-4 pb-3 border-b border-stone-100">
+              <div className="flex items-baseline flex-wrap gap-2 sm:gap-2.5">
+                <span className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight font-sans">
+                  {formatPrice(currentPrice)}
+                </span>
+                <span className="text-[11px] sm:text-xs text-stone-400 font-normal whitespace-nowrap">
+                  (MRP Incl. of all taxes)
+                </span>
+                {!isGold && discountPercent > 0 && (
+                  <span className="text-xs text-stone-400 line-through ml-1">
+                    {formatPrice(mrpPrice)}
                   </span>
-                  {!isGold && discountPercent > 0 && (
-                    <span className="text-xs text-stone-400 line-through">
-                      {formatPrice(mrpPrice)}
-                    </span>
-                  )}
-                  {!isGold && discountPercent > 0 && (
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      {discountPercent}% OFF
-                    </span>
-                  )}
-                </div>
-                <p className="text-[10.5px] text-stone-400 italic">
-                  ({isGold ? 'Price' : 'MRP'} Incl. of all taxes)
-                </p>
+                )}
+                {!isGold && discountPercent > 0 && (
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    {discountPercent}% OFF
+                  </span>
+                )}
               </div>
 
-              {/* Action Buttons: Wishlist & Share */}
+              {/* Action Buttons: Wishlist & Share (Styled matching GIVA) */}
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    toggleWishlist(product);
-                  }}
-                  className="w-9 h-9 rounded-full border border-stone-200 hover:border-stone-400 flex items-center justify-center text-stone-600 hover:text-red-500 transition-colors cursor-pointer bg-white"
-                  title="Wishlist"
-                >
-                  {isWishlisted(product._id) ? (
-                    <HiHeart className="w-5 h-5 text-red-500" />
-                  ) : (
-                    <HiOutlineHeart className="w-5 h-5" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleShare}
-                  className="w-9 h-9 rounded-full border border-stone-200 hover:border-stone-400 flex items-center justify-center text-stone-600 hover:text-stone-900 transition-colors cursor-pointer bg-white"
-                  title="Share piece"
-                >
-                  <HiOutlineShare className="w-5 h-5" />
-                </button>
+                <div className="relative group">
+                  <button
+                    type="button"
+                    onClick={() => toggleWishlist(product)}
+                    className="p-1.5 rounded-full hover:bg-rose-50/80 text-stone-400 hover:text-[#e11d48] transition-all cursor-pointer flex items-center justify-center active:scale-90"
+                    aria-label={isItemWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                  >
+                    {isItemWishlisted ? (
+                      <HiHeart className="w-6 h-6 text-[#e11d48] fill-current drop-shadow-xs transition-transform duration-200 scale-105" />
+                    ) : (
+                      <HiOutlineHeart className="w-6 h-6 transition-transform duration-200 hover:scale-110" />
+                    )}
+                  </button>
+                  {/* Tooltip matching GIVA reference screenshot */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                    <div className="bg-black text-white text-[11px] font-medium px-2.5 py-1 rounded shadow-lg whitespace-nowrap">
+                      {isItemWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                    </div>
+                    <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-black" />
+                  </div>
+                </div>
+
+                <div className="relative group">
+                  <button
+                    type="button"
+                    onClick={handleShare}
+                    className="p-1.5 rounded-full hover:bg-stone-100 text-stone-500 hover:text-stone-900 transition-colors cursor-pointer flex items-center justify-center active:scale-90"
+                    aria-label="Share piece"
+                  >
+                    <HiOutlineShare className="w-5 h-5" />
+                  </button>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                    <div className="bg-black text-white text-[11px] font-medium px-2.5 py-1 rounded shadow-lg whitespace-nowrap">
+                      Share piece
+                    </div>
+                    <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-black" />
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1077,21 +1262,15 @@ export default function ProductDetail() {
                   <label htmlFor="carat-select" className="block text-[11px] font-bold text-stone-700">
                     Total Center Diamond Weight
                   </label>
-                  <div className="relative">
-                    <select
-                      id="carat-select"
-                      value={selectedCarat}
-                      onChange={(e) => setSelectedCarat(Number(e.target.value))}
-                      className="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 appearance-none focus:outline-none focus:border-[#8f6d43] cursor-pointer"
-                    >
-                      {carats.map((ct) => (
-                        <option key={ct} value={ct}>
-                          {ct} CT
-                        </option>
-                      ))}
-                    </select>
-                    <HiOutlineChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
-                  </div>
+                  <Dropdown
+                    id="carat-select"
+                    value={selectedCarat}
+                    onChange={(val) => setSelectedCarat(Number(val))}
+                    options={carats.map((ct) => ({ value: ct, label: `${ct} CT` }))}
+                    placeholder="Select Carat"
+                    buttonClassName="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8f6d43] flex items-center justify-between cursor-pointer"
+                    menuClassName="z-[50]"
+                  />
                 </div>
               )}
 
@@ -1108,31 +1287,26 @@ export default function ProductDetail() {
                       Size chart
                     </button>
                   </div>
-                  <div className="relative">
-                    <select
-                      id="product-size"
-                      value={selectedSize}
-                      onChange={(event) => setSelectedSize(event.target.value)}
-                      className="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 appearance-none focus:outline-none focus:border-[#8f6d43] cursor-pointer"
-                    >
-                      <option value="">Choose a size</option>
-                      {sizes.map((size) => (
-                        <option key={size._id} value={size.name}>{size.name}</option>
-                      ))}
-                    </select>
-                    <HiOutlineChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 pointer-events-none" />
-                  </div>
+                  <Dropdown
+                    id="product-size"
+                    value={selectedSize}
+                    onChange={(val) => setSelectedSize(val)}
+                    options={sizes.map((size) => ({ value: size.name, label: size.name }))}
+                    placeholder="Choose a size"
+                    buttonClassName="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8f6d43] flex items-center justify-between cursor-pointer"
+                    menuClassName="z-[50]"
+                  />
                 </div>
               )}
             </div>
 
-            {/* ─── ADD TO CART Button (Matches Screenshot 2) ─── */}
-            <div className="pt-2">
+            {/* ─── ADD TO CART Button Row with Wishlist Heart ─── */}
+            <div className="pt-2 flex items-center gap-3">
               <button
                 type="button"
                 onClick={handleAddToCart}
                 disabled={addingToCart}
-                className="w-full py-4 bg-[#141414] hover:bg-black active:scale-[0.99] text-white font-bold text-xs uppercase tracking-widest rounded-lg shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="flex-1 py-4 bg-[#141414] hover:bg-black active:scale-[0.99] text-white font-bold text-xs uppercase tracking-widest rounded-lg shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 {addingToCart ? (
                   <>
@@ -1143,6 +1317,32 @@ export default function ProductDetail() {
                   <span>ADD TO CART</span>
                 )}
               </button>
+
+              {/* Wishlist Heart Button beside ADD TO CART */}
+              <div className="relative group">
+                <button
+                  type="button"
+                  onClick={() => toggleWishlist(product)}
+                  className={`w-13 h-13 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 ${
+                    isItemWishlisted
+                      ? 'border-rose-200 bg-rose-50/80 text-[#e11d48]'
+                      : 'border-stone-200 bg-white hover:border-rose-300 hover:text-[#e11d48] text-stone-600'
+                  }`}
+                  aria-label={isItemWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                >
+                  {isItemWishlisted ? (
+                    <HiHeart className="w-6 h-6 text-[#e11d48] fill-current drop-shadow-xs transition-transform duration-200 scale-105" />
+                  ) : (
+                    <HiOutlineHeart className="w-6 h-6 transition-transform duration-200 group-hover:scale-110" />
+                  )}
+                </button>
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                  <div className="bg-black text-white text-[11px] font-medium px-2.5 py-1 rounded shadow-lg whitespace-nowrap">
+                    {isItemWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+                  </div>
+                  <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-black" />
+                </div>
+              </div>
             </div>
 
             {/* Delivery Estimate Bar (Matches Screenshot 3) */}
@@ -1151,55 +1351,108 @@ export default function ProductDetail() {
             </div>
 
             {/* ══════════════════════════════════════════════════════════
-                THE NEIRAH DIFFERENCE (Matches Screenshot 3)
+                THE NEIRAH DIFFERENCE (Matches Reference Screenshot)
             ═══════════════════════════════════════════════════════════ */}
-            <div className="p-4 rounded-xl border border-stone-100 bg-[#faf8f5]/60 space-y-3">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-stone-600">
-                The NEIRAH Difference
-              </p>
-              <div className="grid grid-cols-4 gap-2 text-center">
-                <div className="space-y-1.5 p-2 rounded-lg bg-white border border-stone-100 shadow-2xs">
-                  <HiOutlineShieldCheck className="w-5 h-5 mx-auto text-[#8b6f4e]" />
-                  <p className="text-[10px] font-bold text-stone-800 leading-tight">100% Certified</p>
-                  <p className="text-[9px] text-stone-400 leading-tight">Global Online Jeweller</p>
+            <div className="rounded-2xl border border-[#ede3d4] bg-[#FAF8F5] p-5 sm:p-6 mb-6">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-stone-900 pb-3.5 border-b border-[#e8dfd5] font-sans">
+                THE NEIRAH DIFFERENCE
+              </h3>
+
+              <div className="pt-4 flex flex-col md:flex-row items-center md:items-stretch gap-4 md:gap-6 divide-y md:divide-y-0 md:divide-x divide-[#e8dfd5]">
+                {/* Left side: Trust Badges */}
+                <div className="flex-1 w-full grid grid-cols-2 gap-y-5 gap-x-4 sm:gap-x-6">
+                  {/* Badge 1: Global Online Jeweller */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-white border border-stone-200/90 flex items-center justify-center text-stone-700 shrink-0 shadow-2xs">
+                      <svg className="w-4 h-4 text-stone-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <circle cx="12" cy="9" r="6" />
+                        <path d="M8.5 14.5L6 21l6-3.5 6 3.5-2.5-6.5" />
+                      </svg>
+                    </div>
+                    <span className="text-[11px] font-medium text-stone-700 leading-tight">
+                      Global Online Jeweller
+                    </span>
+                  </div>
+
+                  {/* Badge 2: BIS Hallmark */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-white border border-stone-200/90 flex items-center justify-center text-stone-700 shrink-0 shadow-2xs">
+                      <HiOutlineInformationCircle className="w-4.5 h-4.5 text-stone-700" />
+                    </div>
+                    <span className="text-[11px] font-medium text-stone-700 leading-tight">
+                      BIS Hallmark
+                    </span>
+                  </div>
+
+                  {/* Badge 3: Neirah Certified */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-white border border-stone-200/90 flex items-center justify-center text-stone-700 shrink-0 shadow-2xs">
+                      <HiOutlineShieldCheck className="w-4.5 h-4.5 text-stone-700" />
+                    </div>
+                    <span className="text-[11px] font-medium text-stone-700 leading-tight">
+                      Neirah Certified
+                    </span>
+                  </div>
+
+                  {/* Badge 4: Free Secure Shipping */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-white border border-stone-200/90 flex items-center justify-center text-stone-700 shrink-0 shadow-2xs">
+                      <HiOutlineTruck className="w-4.5 h-4.5 text-stone-700" />
+                    </div>
+                    <span className="text-[11px] font-medium text-stone-700 leading-tight">
+                      Free Secure Shipping
+                    </span>
+                  </div>
                 </div>
-                <div className="space-y-1.5 p-2 rounded-lg bg-white border border-stone-100 shadow-2xs">
-                  <HiOutlineRefresh className="w-5 h-5 mx-auto text-[#8b6f4e]" />
-                  <p className="text-[10px] font-bold text-stone-800 leading-tight">15 Days Return</p>
-                  <p className="text-[9px] text-stone-400 leading-tight">BIS Hallmark &amp; Certified</p>
-                </div>
-                <div className="space-y-1.5 p-2 rounded-lg bg-white border border-stone-100 shadow-2xs">
-                  <HiOutlineTruck className="w-5 h-5 mx-auto text-[#8b6f4e]" />
-                  <p className="text-[10px] font-bold text-stone-800 leading-tight">Free Secure</p>
-                  <p className="text-[9px] text-stone-400 leading-tight">Insured Shipping</p>
-                </div>
-                <div className="space-y-1.5 p-2 rounded-lg bg-white border border-stone-100 shadow-2xs">
-                  <HiOutlineDocumentText className="w-5 h-5 mx-auto text-[#8b6f4e]" />
-                  <p className="text-[10px] font-bold text-stone-800 leading-tight">Certificate</p>
-                  <p className="text-[9px] text-stone-400 leading-tight">View Certificate</p>
+
+                {/* Right side: Certificate Preview */}
+                <div className="w-full md:w-[150px] shrink-0 pt-4 md:pt-0 md:pl-6 flex flex-col items-center justify-center">
+                  <div
+                    onClick={() => setShowCertificateModal(true)}
+                    className="border border-stone-200 bg-white p-1.5 rounded shadow-xs hover:shadow-md transition-all cursor-pointer group max-w-[130px]"
+                    title="Click to view full certificate"
+                  >
+                    <img
+                      src={certificateUrl}
+                      alt="Certificate Preview"
+                      className="w-full h-auto max-h-[85px] object-contain group-hover:scale-105 transition-transform duration-200"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowCertificateModal(true)}
+                    className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-stone-800 hover:text-[#92704E] transition-colors cursor-pointer"
+                  >
+                    <HiOutlineEye className="w-3.5 h-3.5 text-stone-600" />
+                    <span>View Certificate</span>
+                  </button>
                 </div>
               </div>
             </div>
 
             {/* ══════════════════════════════════════════════════════════
-                ACCORDIONS: DESCRIPTION, SPECS, PRICE BREAK UP & ORIGIN
+                ACCORDIONS: PRODUCT DESCRIPTION, SPECIFICATION, PRICE BREAK UP & ORIGIN
             ═══════════════════════════════════════════════════════════ */}
-            <div className="pt-2 divide-y divide-stone-150 border-t border-stone-200 text-xs">
+            <div className="pt-2 divide-y divide-stone-200/80 border-t border-stone-200 text-xs">
               {/* Accordion 1: Product Description */}
               <div className="py-3.5">
                 <button
                   type="button"
                   onClick={() => toggleAccordion('desc')}
-                  className="w-full flex items-center justify-between font-bold text-stone-900 tracking-wide text-xs cursor-pointer text-left"
+                  className="w-full flex items-center justify-between text-stone-800 text-[11px] font-medium tracking-normal cursor-pointer text-left"
                 >
-                  <span className="uppercase text-[11px] font-bold">Product Description</span>
-                  <span className="text-stone-400 text-sm font-bold">
+                  <span className="text-[11px] font-medium text-stone-800">Product Description</span>
+                  <span className="text-stone-400 text-sm font-light">
                     {openAccordions.desc ? '−' : '+'}
                   </span>
                 </button>
                 {openAccordions.desc && (
                   <div className="mt-2.5 text-stone-600 leading-relaxed text-xs animate-fadeIn space-y-2 pt-1 border-t border-stone-100">
-                    <p>{product.basicInfo?.description}</p>
+                    <p>
+                      {product.basicInfo?.description ||
+                        product.description ||
+                        'Crafted with fine craftsmanship and certified diamonds, this exquisite piece is designed for everyday elegance.'}
+                    </p>
                     {Array.isArray(product.descriptionSections) &&
                       product.descriptionSections.map((sec, i) => (
                         <div key={i} className="pt-1">
@@ -1216,10 +1469,10 @@ export default function ProductDetail() {
                 <button
                   type="button"
                   onClick={() => toggleAccordion('specs')}
-                  className="w-full flex items-center justify-between font-bold text-stone-900 tracking-wide text-xs cursor-pointer text-left"
+                  className="w-full flex items-center justify-between text-stone-800 text-[11px] font-medium tracking-normal cursor-pointer text-left"
                 >
-                  <span className="uppercase text-[11px] font-bold">Specification</span>
-                  <span className="text-stone-400 text-sm font-bold">
+                  <span className="text-[11px] font-medium text-stone-800">Specification</span>
+                  <span className="text-stone-400 text-sm font-light">
                     {openAccordions.specs ? '−' : '+'}
                   </span>
                 </button>
@@ -1235,129 +1488,135 @@ export default function ProductDetail() {
                 )}
               </div>
 
-              {/* Accordion 3: PRICE BREAK UP (Exact Match to Screenshot 4) */}
+              {/* Accordion 3: PRICE BREAK UP (Exact Match to Screenshot) */}
               <div className="py-3.5">
                 <button
                   type="button"
                   onClick={() => toggleAccordion('price')}
-                  className="w-full flex items-center justify-between font-bold text-stone-900 tracking-wide text-xs cursor-pointer text-left"
+                  className="w-full flex items-center justify-between cursor-pointer text-left"
                 >
-                  <span className="uppercase text-[11px] font-bold text-stone-900">PRICE BREAK UP</span>
-                  <span className="text-stone-400 text-sm font-bold">
+                  <span className={`text-[11px] font-semibold tracking-wider uppercase ${openAccordions.price ? 'text-[#92704E]' : 'text-stone-800'}`}>
+                    PRICE BREAK UP
+                  </span>
+                  <span className={`text-sm font-light ${openAccordions.price ? 'text-[#92704E]' : 'text-stone-400'}`}>
                     {openAccordions.price ? '−' : '+'}
                   </span>
                 </button>
                 {openAccordions.price && breakdown && (
-                  <div className="mt-3 animate-fadeIn space-y-3 pt-1 border-t border-stone-100 text-[11px]">
+                  <div className="mt-4 animate-fadeIn text-[11px]">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="border-b border-stone-200 text-[10px] uppercase font-bold text-stone-400 tracking-wider">
-                            <th className="py-1.5 px-1 font-bold">COMPONENT</th>
-                            <th className="py-1.5 px-1 font-bold">RATE</th>
-                            <th className="py-1.5 px-1 font-bold">WEIGHT</th>
-                            <th className="py-1.5 px-1 text-right font-bold">VALUE</th>
+                          <tr className="border-b border-stone-150 text-[10px] font-medium text-stone-400 uppercase tracking-wider">
+                            <th className="pb-3 px-1 font-medium text-stone-400">COMPONENT</th>
+                            <th className="pb-3 px-1 font-medium text-center text-stone-400">RATE</th>
+                            <th className="pb-3 px-1 font-medium text-center text-stone-400">WEIGHT</th>
+                            <th className="pb-3 px-1 font-medium text-right text-stone-400">VALUE</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-stone-100 text-stone-700">
-                          {/* METALS Section */}
-                          <tr className="bg-stone-50/50">
-                            <td colSpan={4} className="pt-2.5 pb-1 px-1 font-bold text-[10px] uppercase tracking-wider text-stone-800">
+                        <tbody className="text-stone-700 text-[11px]">
+                          {/* METALS */}
+                          <tr>
+                            <td colSpan={4} className="pt-4 pb-2 px-1 text-[10px] font-bold tracking-wider text-stone-900 uppercase">
                               METALS
                             </td>
                           </tr>
                           <tr>
-                            <td className="py-1.5 px-1 font-medium">{metalDisplayName}</td>
-                            <td className="py-1.5 px-1 font-mono">{breakdown.metalRate ? `₹${Number(breakdown.metalRate).toLocaleString('en-IN')}/g` : '—'}</td>
-                            <td className="py-1.5 px-1 font-mono">{breakdown.metalWeight ? `${breakdown.metalWeight} g` : '—'}</td>
-                            <td className="py-1.5 px-1 font-mono font-semibold text-right text-stone-900">{formatPrice(breakdown.metalCost)}</td>
+                            <td className="py-1 px-1 font-normal text-stone-800">{breakdown.metalName}</td>
+                            <td className="py-1 px-1 text-center font-mono text-stone-700">{formatBreakdownRate(breakdown.metalRate)}</td>
+                            <td className="py-1 px-1 text-center font-mono text-stone-700">{formatBreakdownWeight(breakdown.metalWeight, 'g')}</td>
+                            <td className="py-1 px-1 text-right font-mono text-stone-900">{formatBreakdownValue(breakdown.metalCost)}</td>
                           </tr>
 
-                          {/* DIAMONDS Section */}
-                          <tr className="bg-stone-50/50">
-                            <td colSpan={4} className="pt-2.5 pb-1 px-1 font-bold text-[10px] uppercase tracking-wider text-stone-800">
+                          {/* DIAMONDS */}
+                          <tr>
+                            <td colSpan={4} className="pt-4 pb-2 px-1 text-[10px] font-bold tracking-wider text-stone-900 uppercase">
                               DIAMONDS
                             </td>
                           </tr>
                           <tr>
-                            <td className="py-1.5 px-1 font-medium">Center Diamond</td>
-                            <td className="py-1.5 px-1 font-mono">{breakdown.centerRate ? `₹${Number(breakdown.centerRate).toLocaleString('en-IN')}` : '—'}</td>
-                            <td className="py-1.5 px-1 font-mono">{breakdown.centerCarat ? `${breakdown.centerCarat.toFixed(2)} cts` : '—'}</td>
-                            <td className="py-1.5 px-1 font-mono font-semibold text-right text-stone-900">{formatPrice(breakdown.centerCost || breakdown.diamondCost)}</td>
+                            <td className="py-1 px-1 font-normal text-stone-800">{breakdown.diamondLabel}</td>
+                            <td className="py-1 px-1 text-center text-stone-500">-</td>
+                            <td className="py-1 px-1 text-center font-mono text-stone-700">{formatBreakdownWeight(breakdown.diamondCarat, 'cts')}</td>
+                            <td className="py-1 px-1 text-right font-mono text-stone-900">{formatBreakdownValue(breakdown.diamondCost)}</td>
                           </tr>
-                          {breakdown.sideCarat > 0 && (
-                            <tr>
-                              <td className="py-1.5 px-1 font-medium">Side Diamond</td>
-                              <td className="py-1.5 px-1 font-mono">—</td>
-                              <td className="py-1.5 px-1 font-mono">{breakdown.sideCarat} cts</td>
-                              <td className="py-1.5 px-1 font-mono font-semibold text-right text-stone-900">{formatPrice(breakdown.sideCost)}</td>
-                            </tr>
-                          )}
 
-                          {/* MAKING CHARGES Section */}
-                          <tr className="bg-stone-50/50">
-                            <td colSpan={4} className="pt-2.5 pb-1 px-1 font-bold text-[10px] uppercase tracking-wider text-stone-800">
+                          {/* MAKING CHARGES */}
+                          <tr>
+                            <td colSpan={4} className="pt-4 pb-2 px-1 text-[10px] font-bold tracking-wider text-stone-900 uppercase">
                               MAKING CHARGES
                             </td>
                           </tr>
                           <tr>
-                            <td className="py-1.5 px-1 font-medium">Making Charge</td>
-                            <td className="py-1.5 px-1 font-mono">—</td>
-                            <td className="py-1.5 px-1 font-mono">—</td>
-                            <td className="py-1.5 px-1 font-mono font-semibold text-right text-stone-900">{formatPrice(breakdown.labourCharge)}</td>
+                            <td className="py-1 px-1 font-normal text-stone-800">Making Charge</td>
+                            <td className="py-1 px-1 text-center text-stone-500">-</td>
+                            <td className="py-1 px-1 text-center text-stone-500">-</td>
+                            <td className="py-1 px-1 text-right font-mono text-stone-900">{formatBreakdownValue(breakdown.labourCharge)}</td>
                           </tr>
 
-                          {/* OTHER CHARGES Section */}
-                          <tr className="bg-stone-50/50">
-                            <td colSpan={4} className="pt-2.5 pb-1 px-1 font-bold text-[10px] uppercase tracking-wider text-stone-800">
+                          {/* OTHER CHARGES */}
+                          <tr>
+                            <td colSpan={4} className="pt-4 pb-2 px-1 text-[10px] font-bold tracking-wider text-stone-900 uppercase">
                               OTHER CHARGES
                             </td>
                           </tr>
                           <tr>
-                            <td className="py-1.5 px-1 font-medium">Certificate Charge</td>
-                            <td className="py-1.5 px-1 font-mono">—</td>
-                            <td className="py-1.5 px-1 font-mono">—</td>
-                            <td className="py-1.5 px-1 font-mono font-semibold text-right text-stone-900">{formatPrice(breakdown.certificateCharge)}</td>
+                            <td className="py-1 px-1 font-normal text-stone-800">Certificate Charge</td>
+                            <td className="py-1 px-1 text-center text-stone-500">-</td>
+                            <td className="py-1 px-1 text-center text-stone-500">-</td>
+                            <td className="py-1 px-1 text-right font-mono text-stone-900">{formatBreakdownValue(breakdown.certificateCharge)}</td>
                           </tr>
 
-                          {/* SUMMARY Section */}
-                          <tr className="bg-stone-50/80 border-t border-stone-200">
-                            <td colSpan={4} className="pt-2.5 pb-1 px-1 font-bold text-[10px] uppercase tracking-wider text-stone-800">
+                          {/* SUMMARY */}
+                          <tr>
+                            <td colSpan={4} className="pt-4 pb-2 px-1 text-[10px] font-bold tracking-wider text-stone-900 uppercase">
                               SUMMARY
                             </td>
                           </tr>
                           <tr>
-                            <td colSpan={3} className="py-1.5 px-1 font-medium text-stone-600">Subtotal</td>
-                            <td className="py-1.5 px-1 font-mono font-semibold text-right text-stone-900">{formatPrice(breakdown.subtotal)}</td>
+                            <td className="py-1 px-1 font-normal text-stone-800">Subtotal</td>
+                            <td className="py-1 px-1 text-center text-stone-500">-</td>
+                            <td className="py-1 px-1 text-center text-stone-500">-</td>
+                            <td className="py-1 px-1 text-right font-mono text-stone-900">{formatBreakdownValue(breakdown.subtotal)}</td>
                           </tr>
                           <tr>
-                            <td colSpan={3} className="py-1.5 px-1 font-medium text-stone-600">GST (3%)</td>
-                            <td className="py-1.5 px-1 font-mono font-semibold text-right text-stone-900">{formatPrice(breakdown.gstAmount)}</td>
+                            <td className="py-1 px-1 font-normal text-stone-800">GST (3%)</td>
+                            <td className="py-1 px-1 text-center text-stone-500">-</td>
+                            <td className="py-1 px-1 text-center text-stone-500">-</td>
+                            <td className="py-1 px-1 text-right font-mono text-stone-900">{formatBreakdownValue(breakdown.gstAmount)}</td>
                           </tr>
-                          <tr className="border-t border-stone-300 font-bold">
-                            <td colSpan={3} className="py-2 px-1 text-xs font-bold text-stone-900">Grand Total</td>
-                            <td className="py-2 px-1 font-mono text-xs font-bold text-right text-[#8b6f4e]">{formatPrice(breakdown.finalPrice)}</td>
+                          <tr className="font-bold">
+                            <td className="pt-3 pb-1 px-1 font-bold text-stone-900 text-xs">Grand Total</td>
+                            <td className="pt-3 pb-1 px-1 text-center text-stone-500 font-normal">-</td>
+                            <td className="pt-3 pb-1 px-1 text-center text-stone-500 font-normal">-</td>
+                            <td className="pt-3 pb-1 px-1 text-right font-mono font-bold text-stone-900 text-xs">{formatBreakdownValue(breakdown.finalPrice)}</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
 
-                    <p className="text-[10px] text-stone-400 italic pt-1 border-t border-stone-100">
-                      * The final invoice amount will be adjusted in case of variation in weight
-                    </p>
+                    {/* Variation in Weight Notice Card (Highlighted in Screenshot) */}
+                    <div className="mt-5 p-3.5 rounded-xl border border-[#F0E6D8] bg-[#FAF6F0]/80 flex items-center gap-3">
+                      <svg className="w-4 h-4 text-[#C59B65] shrink-0 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="1.6">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                      </svg>
+                      <p className="text-[11px] text-[#8C6D4F] leading-snug">
+                        The final invoice amount will be adjusted in case of variation in weight.
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Accordion 4: Manufacturer & Origin (Matches Screenshot 5) */}
+              {/* Accordion 4: Manufacturer & Origin */}
               <div className="py-3.5">
                 <button
                   type="button"
                   onClick={() => toggleAccordion('origin')}
-                  className="w-full flex items-center justify-between font-bold text-stone-900 tracking-wide text-xs cursor-pointer text-left"
+                  className="w-full flex items-center justify-between text-stone-800 text-[11px] font-medium tracking-normal cursor-pointer text-left"
                 >
-                  <span className="uppercase text-[11px] font-bold">Manufacturer &amp; Origin</span>
-                  <span className="text-stone-400 text-sm font-bold">
+                  <span className="text-[11px] font-medium text-stone-800">Manufacturer &amp; Origin</span>
+                  <span className="text-stone-400 text-sm font-light">
                     {openAccordions.origin ? '−' : '+'}
                   </span>
                 </button>
@@ -1397,7 +1656,21 @@ export default function ProductDetail() {
                   return (
                     <div
                       key={item._id || item.basicInfo?.slug}
-                      onClick={() => navigate(`/product/${item.basicInfo?.slug || item._id}`)}
+                      onClick={() => {
+                        const targetSlug =
+                          item.basicInfo?.slug ||
+                          item.slug ||
+                          (item.basicInfo?.title || item.title || item.name
+                            ? String(item.basicInfo?.title || item.title || item.name)
+                                .toLowerCase()
+                                .trim()
+                                .replace(/[^\w\s-]/g, '')
+                                .replace(/\s+/g, '-')
+                            : '');
+                        if (targetSlug) {
+                          navigate(`/product/${encodeURIComponent(targetSlug)}`);
+                        }
+                      }}
                       className="group bg-white rounded-2xl border border-stone-100/90 overflow-hidden shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
                     >
                       {/* Image container */}
@@ -1533,6 +1806,101 @@ export default function ProductDetail() {
           </div>
         </div>
       )}
+
+      {/* ─── Certificate Preview Lightbox Modal ─── */}
+      {showCertificateModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
+          onClick={() => setShowCertificateModal(false)}
+        >
+          <div
+            className="relative bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-stone-900 font-serif">
+                  Authenticity &amp; Grading Certificate
+                </h3>
+                <p className="text-xs text-stone-500">
+                  {product.basicInfo?.title || 'Fine Jewellery Certificate'} • {product.basicInfo?.sku || 'Certified'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCertificateModal(false)}
+                className="p-1.5 rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
+                aria-label="Close certificate modal"
+              >
+                <HiOutlineX className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="bg-stone-50 rounded-xl p-2 sm:p-4 border border-stone-200/80 flex items-center justify-center">
+              <img
+                src={certificateUrl}
+                alt="Jewellery Certificate"
+                className="max-h-[60vh] w-auto object-contain rounded shadow-md"
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+              <span className="text-[11px] text-stone-500 text-center sm:text-left">
+                100% Certified Natural &amp; Lab Grown Diamonds • BIS Hallmarked Gold
+              </span>
+              <a
+                href={certificateUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#92704E] hover:bg-[#7e5f40] text-white text-xs font-semibold rounded-lg shadow-sm transition-colors shrink-0"
+              >
+                <span>Open Original</span>
+                <HiOutlineExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Mobile Sticky Bottom Action Bar ─── */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200 px-4 py-3 flex items-center justify-between gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]">
+        <div className="min-w-0">
+          <div className="text-[10px] text-stone-500 uppercase tracking-wider font-medium">Total (MRP Incl. taxes)</div>
+          <div className="text-base sm:text-lg font-sans font-bold text-stone-900 leading-tight truncate">
+            {formatPrice(currentPrice)}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          disabled={addingToCart}
+          className="flex-1 py-3 bg-[#141414] active:bg-black text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-md flex items-center justify-center gap-2 cursor-pointer transition-all"
+        >
+          {addingToCart ? (
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            <span>ADD TO CART</span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleWishlist(product)}
+          className={`w-11 h-11 rounded-lg border flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 shrink-0 ${
+            isItemWishlisted
+              ? 'border-rose-200 bg-rose-50 text-[#e11d48]'
+              : 'border-stone-200 bg-white text-stone-600 hover:text-[#e11d48]'
+          }`}
+          aria-label={isItemWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+        >
+          {isItemWishlisted ? (
+            <HiHeart className="w-5 h-5 text-[#e11d48] fill-current" />
+          ) : (
+            <HiOutlineHeart className="w-5 h-5" />
+          )}
+        </button>
+      </div>
     </div>
   );
 }

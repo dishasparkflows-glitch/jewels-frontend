@@ -45,12 +45,10 @@ export function StoreSettingsProvider({ children }) {
         .catch((error) => console.warn('Failed to refresh store settings:', error));
     };
 
-    const timer = window.setInterval(refreshStoreData, 60_000);
-    window.addEventListener('focus', refreshStoreData);
+    const timer = window.setInterval(refreshStoreData, 300_000);
     return () => {
       mounted = false;
       window.clearInterval(timer);
-      window.removeEventListener('focus', refreshStoreData);
     };
   }, []);
 

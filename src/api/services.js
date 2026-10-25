@@ -117,8 +117,8 @@ export const productsAPI = {
   getAll: (params) => getOnce('/products/storefront', { params }),
   getStorefront: (params) => getOnce('/products/storefront', { params }),
   getSearchStorefront: (params) => api.get('/products/search/storefront', { params }),
-  getHomeProducts: (params) => getOnce('/product/home', { params }),
-  getHomeStorefront: (params) => getOnce('/product/home', { params }),
+  getHomeProducts: (params) => getOnce('/products/home', { params }),
+  getHomeStorefront: (params) => getOnce('/products/home', { params }),
   getById: (id) => getOnce(`/products/${id}`),
 };
 
@@ -151,17 +151,13 @@ export const wishlistAPI = {
 // ─── Cart ─────────────────────────────────────────
 export const cartAPI = {
   get: () => getOnce('/cart'),
-  add: (productData, quantity = 1, options = {}) =>
+  add: (payload) =>
     api.post('/cart/add', {
-      product: productData,
-      quantity,
-      options,
-      userId: productData.userId || options.userId || null,
-      productId: productData.productId || productData.id || productData._id,
-      addedAt: productData.addedAt || options.addedAt || new Date().toISOString(),
-      price: productData.price,
-      totalItemPrice: productData.totalItemPrice || ((Number(productData.price) || 0) * quantity),
-      selectedAttributes: productData.selectedAttributes || options.selectedAttributes || undefined,
+      selectedAttributes: payload?.selectedAttributes ?? null,
+      userId: payload?.userId ?? null,
+      productId: payload?.productId || payload?.id || payload?._id,
+      price: Number(payload?.price) || 0,
+      totalItemPrice: Number(payload?.totalItemPrice) || Number(payload?.price) || 0,
     }),
   updateQuantity: (productId, quantity, options = {}) =>
     api.put('/cart/quantity', { productId, quantity, options }),

@@ -92,7 +92,7 @@ const Cart = () => {
                   {item.category}
                 </span>
                 <Link
-                  to={`/product/${item.id}`}
+                  to={`/product/${encodeURIComponent(item.slug || (item.name ? item.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : ''))}`}
                   className="block font-serif text-lg font-medium text-[#2c2722] hover:text-[#8b6b47] transition-colors"
                 >
                   {item.name}

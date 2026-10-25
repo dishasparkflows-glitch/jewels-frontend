@@ -30,7 +30,7 @@ export default function CartDrawer({ open, onClose }) {
               <li key={`${item.id}-${item.selectedMetal || ''}`} className="flex gap-4 py-5">
                 <img src={getImageUrl(item.image) || getPrimaryProductImage(item) || '/featured/ring.jpg'} alt={item.name} className="h-24 w-20 shrink-0 bg-[#f3f0eb] object-contain p-2" />
                 <div className="min-w-0 flex-1">
-                  <Link to={`/product/${item.id}`} onClick={onClose} className="line-clamp-2 text-sm leading-5 hover:text-[#92704e]">{item.name}</Link>
+                  <Link to={`/product/${encodeURIComponent(item.slug || (item.name ? item.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : ''))}`} onClick={onClose} className="line-clamp-2 text-sm leading-5 hover:text-[#92704e]">{item.name}</Link>
                   <p className="mt-1 text-xs text-stone-500">Qty {item.quantity}{item.selectedMetal ? ` · ${item.selectedMetal}` : ''}</p>
                   <p className="mt-2 text-sm font-semibold">{formatPrice(item.price)}</p>
                 </div>

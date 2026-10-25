@@ -9,6 +9,7 @@ import {
   HiOutlineClock,
 } from 'react-icons/hi';
 import Modal from './Modal';
+import Dropdown from './Dropdown';
 
 /* eslint-disable react/prop-types */
 const TIME_SLOTS = [
@@ -50,14 +51,21 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
 
     try {
       setLoading(true);
+      const rawPhone = formData.phoneNumber.trim().replace(/^\+91\s*/, '');
       const payload = {
-        fullName: formData.fullName.trim(),
-        email: formData.email.trim(),
-        phoneNumber: formData.phoneNumber.startsWith('+91')
-          ? formData.phoneNumber
-          : `+91 ${formData.phoneNumber.trim()}`,
-        appointmentDate: new Date(formData.appointmentDate),
-        preferredTime: formData.preferredTime,
+        customer: {
+          name: formData.fullName.trim(),
+          email: formData.email.trim(),
+          phone: {
+            countryCode: '91',
+            number: rawPhone,
+          },
+        },
+        appointment: {
+          date: new Date(formData.appointmentDate),
+          preferredTime: formData.preferredTime,
+          serviceType: 'Jewellery Viewing',
+        },
       };
 
       await appointmentsAPI.create(payload);
@@ -182,22 +190,15 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
               <label className="block text-[11px] font-bold text-stone-700 tracking-wider uppercase">
                 TIME <span className="text-red-500">*</span>
               </label>
-              <div className="relative flex items-center border border-stone-200 rounded-xl px-3.5 py-2.5 focus-within:border-[#1e463a] focus-within:ring-1 focus-within:ring-[#1e463a]/30 transition-all bg-white">
-                <HiOutlineClock className="w-5 h-5 text-stone-400 mr-2 shrink-0" />
-                <select
-                  value={formData.preferredTime}
-                  onChange={(e) => setFormData({ ...formData, preferredTime: e.target.value })}
-                  required
-                  className="w-full text-xs sm:text-sm text-stone-800 bg-transparent focus:outline-none"
-                >
-                  <option value="">Select Time</option>
-                  {TIME_SLOTS.map((slot) => (
-                    <option key={slot} value={slot}>
-                      {slot}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Dropdown
+                value={formData.preferredTime}
+                onChange={(val) => setFormData({ ...formData, preferredTime: val })}
+                options={TIME_SLOTS}
+                placeholder="Select Time"
+                prefixIcon={<HiOutlineClock className="w-5 h-5 text-stone-400" />}
+                buttonClassName="w-full h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#1e463a] focus:ring-1 focus:ring-[#1e463a]/30 transition-all flex items-center justify-between cursor-pointer"
+                menuClassName="z-[90]"
+              />
             </div>
           </div>
 

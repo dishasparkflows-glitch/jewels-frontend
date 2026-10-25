@@ -125,25 +125,7 @@ export function useLiveViewers(productId) {
       socket.on('live_viewers_update', handleUpdate);
       socket.emit('join_product', { productId: pid });
 
-      // 2. Fetch initial via REST as immediate bootstrap
-      fetch(`${API_BASE_URL}/products/${pid}/live-viewers`)
-        .then((res) => res.json())
-        .then((json) => {
-          if (json?.success && json?.data?.count) {
-            const apiCount = Number(json.data.count);
-            if (apiCount >= MIN_VIEWERS && apiCount <= MAX_VIEWERS) {
-              setCount(apiCount);
-              try {
-                sessionStorage.setItem(`live_viewers_${pid}`, String(apiCount));
-              } catch {}
-            }
-          }
-        })
-        .catch(() => {
-          // Silent fallback if offline
-        });
-
-      // 3. Fallback / supplementary organic ticker
+      // 2. Fallback / supplementary organic ticker
       // If socket stops transmitting or network disconnects, continue smooth realistic random walk
       const scheduleLocalTick = () => {
         const delay = Math.floor(4500 + Math.random() * 3500); // 4.5s - 8s

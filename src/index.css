@@ -31,6 +31,10 @@
     font-family: 'Playfair Display', Georgia, serif;
   }
 
+  .unna-font {
+    font-family: 'Unna', 'Cormorant Garamond', Georgia, serif;
+  }
+
   /* Custom Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
@@ -270,4 +274,13 @@
   .animate-announcement-vertical {
     animation: none;
   }
+}
+
+/* Hide scrollbar utility for clean mobile horizontal sliders */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

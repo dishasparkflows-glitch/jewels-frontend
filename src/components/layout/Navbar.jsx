@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
@@ -19,9 +19,19 @@ import {
   HiOutlinePhone,
   HiOutlineVideoCamera,
 } from 'react-icons/hi';
+import { IoDiamondOutline } from 'react-icons/io5';
 
 import VirtualAppointmentModal from '../common/VirtualAppointmentModal';
 import CartDrawer from '../store/CartDrawer';
+
+const TRENDING_SEARCHES = [
+  'Solitaire Rings',
+  'Diamond Earrings',
+  'Huggie Hoops',
+  '18K Yellow Gold',
+  'Lab Grown Diamonds',
+  'Daily Wear',
+];
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -38,12 +48,16 @@ const Navbar = () => {
     mobile: getImageUrl(storeSettings.mobileLogoImage?.url),
   };
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [searchTotal, setSearchTotal] = useState(0);
+  const [searchTab, setSearchTab] = useState('all');
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const searchContainerRef = useRef(null);
+  const searchInputRef = useRef(null);
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const navigate = useNavigate();
@@ -57,6 +71,7 @@ const Navbar = () => {
     const trimmed = searchQuery.trim();
     if (!trimmed || trimmed.length < 2) {
       setSearchResults([]);
+      setSearchTotal(0);
       setIsSearching(false);
       return;
     }
@@ -64,16 +79,20 @@ const Navbar = () => {
     setIsSearching(true);
     const timer = setTimeout(() => {
       productsAPI
-        .getSearchStorefront({ search: trimmed, limit: 6 })
+        .getSearchStorefront({ search: trimmed, limit: 12 })
         .then((response) => {
-          const items = Array.isArray(response.data?.data)
-            ? response.data.data
-            : response.data?.data?.items || [];
+          const resData = response.data?.data;
+          const items = Array.isArray(resData)
+            ? resData
+            : resData?.items || [];
+          const total = resData?.pagination?.totalDocs ?? resData?.pagination?.total ?? items.length;
           setSearchResults(items);
+          setSearchTotal(total);
           setShowSearchDropdown(true);
         })
         .catch(() => {
           setSearchResults([]);
+          setSearchTotal(0);
         })
         .finally(() => {
           setIsSearching(false);
@@ -82,6 +101,43 @@ const Navbar = () => {
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Curated collections for the collections tab
+  const CURATED_COLLECTIONS = useMemo(() => [
+    { id: 'solitaires', name: 'Solitaire Rings', query: 'Solitaire' },
+    { id: 'halo', name: 'Halo Collection', query: 'Halo' },
+    { id: 'bridal', name: 'Bridal Heritage', query: 'Bridal' },
+    { id: 'earrings', name: 'Diamond Earrings', query: 'Earrings' },
+    { id: 'daily', name: 'Everyday Luxury', query: 'Daily' },
+    { id: 'festive', name: 'Festive Sparkle', query: 'Festive' },
+  ], []);
+
+  const matchedCategories = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!Array.isArray(categories) || !categories.length) return [];
+    if (!q) return categories.slice(0, 6);
+    const direct = categories.filter((cat) => {
+      const name = (cat.name || cat.title || '').toLowerCase();
+      const slug = (cat.slug || '').toLowerCase();
+      return name.includes(q) || slug.includes(q);
+    });
+    if (direct.length > 0) return direct;
+    return categories.slice(0, 6);
+  }, [searchQuery, categories]);
+
+  const matchedCollections = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return CURATED_COLLECTIONS;
+    const direct = CURATED_COLLECTIONS.filter((col) => col.name.toLowerCase().includes(q));
+    if (direct.length > 0) return direct;
+    return CURATED_COLLECTIONS.slice(0, 4);
+  }, [searchQuery, CURATED_COLLECTIONS]);
+
+  const productCount = searchTotal || searchResults.length;
+  const categoryCount = matchedCategories.length > 0 ? matchedCategories.length : Math.min(categories.length || 6, 6);
+  const collectionCount = matchedCollections.length > 0 ? matchedCollections.length : 4;
+  const allCount = productCount;
+  const displayedProducts = searchResults.slice(0, 6);
 
   // Close dropdown on outside click or route navigation
   useEffect(() => {
@@ -97,6 +153,30 @@ const Navbar = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Shortcut ⌘K / Ctrl+K to focus search
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        setShowSearchDropdown(true);
+      }
+      if (e.key === 'Escape' && showSearchDropdown) {
+        setShowSearchDropdown(false);
+        searchInputRef.current?.blur();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showSearchDropdown]);
+
+  const handleTrendingClick = (keyword) => {
+    setSearchQuery(keyword);
+    navigate(`/shop?search=${encodeURIComponent(keyword)}`);
+    setShowSearchDropdown(false);
+    setMobileSearchOpen(false);
+  };
 
   // Listen for open appointment modal event from anywhere in the app
   useEffect(() => {
@@ -150,9 +230,9 @@ const Navbar = () => {
     if (e && e.preventDefault) e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
       setShowSearchDropdown(false);
       setMobileMenuOpen(false);
+      setMobileSearchOpen(false);
     }
   };
 
@@ -196,12 +276,12 @@ const Navbar = () => {
 
       {/* ─── Main Header / Brand & Search Bar (#22201e) ───────────── */}
       <div className="bg-[#22201e] text-white px-4 sm:px-6 lg:px-8 border-b border-white/5">
-        <div className={`max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-4 ${isCheckout ? 'h-14 sm:h-16' : 'h-16 sm:h-20'}`}>
+        <div className={`max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-6 ${isCheckout ? 'h-16 sm:h-20' : 'h-20 sm:h-24 lg:h-26'}`}>
           {/* Mobile hamburger */}
           <div className="order-last flex items-center lg:order-none lg:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-stone-300 hover:text-white transition-colors"
+              className="p-2 text-stone-300 hover:text-white transition-colors cursor-pointer"
               aria-label="Toggle menu"
               aria-expanded={mobileMenuOpen}
             >
@@ -209,102 +289,310 @@ const Navbar = () => {
             </button>
           </div>
 
+          {/* ─── Prominent Brand Logo ─── */}
           <Link
             to="/"
             onClick={() => {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="order-first flex items-center leading-none group shrink-0 min-w-0"
+            className="order-first flex items-center leading-none group shrink-0 min-w-0 py-1"
             aria-label={storeSettings.companyName || 'Home'}
           >
             {brandLogo.desktop ? (
-              <picture>
+              <picture className="flex items-center">
                 {brandLogo.mobile && <source media="(max-width: 639px)" srcSet={brandLogo.mobile} />}
-                <img src={brandLogo.desktop} alt={storeSettings.companyName || ''} className="h-9 sm:h-12 max-w-[120px] sm:max-w-[210px] object-contain" />
+                <img
+                  src={brandLogo.desktop}
+                  alt={storeSettings.companyName || 'Neirah Jewels'}
+                  className="h-12 sm:h-16 lg:h-20 w-auto max-w-[170px] sm:max-w-[260px] lg:max-w-[340px] object-contain object-left transition-transform duration-300 group-hover:scale-[1.02]"
+                />
               </picture>
             ) : (
-              storeSettings.companyName && <span className="font-cinzel text-lg sm:text-3xl font-medium tracking-[0.16em] sm:tracking-[0.2em] text-[#f2ede6] group-hover:text-white transition-colors">{storeSettings.companyName}</span>
+              storeSettings.companyName && (
+                <span className="font-cinzel text-xl sm:text-3xl lg:text-4xl font-semibold tracking-[0.18em] sm:tracking-[0.2em] text-[#f5f0eb] group-hover:text-amber-100 transition-colors uppercase">
+                  {storeSettings.companyName}
+                </span>
+              )
             )}
           </Link>
 
-          {/* Center Search Input */}
-          <div ref={searchContainerRef} className="flex-1 max-w-lg mx-4 hidden md:block relative">
-            <form onSubmit={handleSearch} className="relative">
-              <HiOutlineSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4 pointer-events-none" />
+          {/* ─── Compact Luxury Search Bar ─── */}
+          <div ref={searchContainerRef} className="flex-1 max-w-sm lg:max-w-md mx-3 sm:mx-6 lg:mx-8 hidden md:block relative z-40">
+            <form
+              onSubmit={handleSearch}
+              className="relative flex items-center w-full h-9 sm:h-9.5 rounded-full bg-white border border-stone-200/90 shadow-2xs hover:border-[#8b6f4e]/60 focus-within:border-[#8b6f4e] focus-within:ring-2 focus-within:ring-[#8b6f4e]/20 transition-all duration-300"
+            >
+              <HiOutlineSearch className="w-4 h-4 ml-3.5 text-stone-400 shrink-0 pointer-events-none transition-colors" />
               <input
+                ref={searchInputRef}
                 type="text"
-                placeholder="Search jewellery, diamonds and more..."
+                placeholder="Search jewellery, diamonds, rings..."
                 value={searchQuery}
-                onFocus={() => { if (searchResults.length > 0) setShowSearchDropdown(true); }}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/[0.08] border border-white/10 rounded-full pl-11 pr-4 py-2.5 text-xs text-white placeholder-stone-400 focus:outline-none focus:ring-1 focus:ring-amber-200/40 focus:bg-white/[0.12] transition-all"
+                onFocus={() => setShowSearchDropdown(true)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (!showSearchDropdown) setShowSearchDropdown(true);
+                }}
+                className="w-full bg-transparent px-2.5 text-xs sm:text-[13px] text-stone-900 placeholder:text-stone-400 font-normal focus:outline-none"
               />
+
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    searchInputRef.current?.focus();
+                  }}
+                  className="p-1 mr-1 text-stone-400 hover:text-stone-700 rounded-full hover:bg-stone-100 transition-colors cursor-pointer"
+                  title="Clear search"
+                >
+                  <HiOutlineX className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              <button
+                type="submit"
+                aria-label="Submit search"
+                className="mr-1 w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full bg-[#8c6f4b] hover:bg-[#785d3c] active:scale-95 text-white flex items-center justify-center shadow-2xs transition-all cursor-pointer shrink-0"
+                title="Search"
+              >
+                <HiOutlineSearch className="w-3.5 h-3.5 stroke-[2.2]" />
+              </button>
             </form>
 
-            {/* Desktop Instant Search Dropdown */}
-            {showSearchDropdown && searchQuery.trim().length >= 2 && (
-              <div className="absolute left-0 right-0 top-full mt-2 bg-[#1c1a18] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 divide-y divide-white/5 text-left">
-                {isSearching ? (
-                  <div className="py-4 text-center text-xs text-stone-400">Searching jewellery...</div>
-                ) : searchResults.length > 0 ? (
+            {/* Desktop Instant Search Dropdown (Matches Screenshot) */}
+            {showSearchDropdown && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-3 w-[780px] lg:w-[890px] xl:w-[980px] max-w-[calc(100vw-2rem)] bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-stone-200/90 p-5 z-50 text-left animate-fadeIn">
+                {/* Empty / Short query -> Trending Suggestions */}
+                {searchQuery.trim().length < 2 ? (
+                  <div className="py-2">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#8b6f4e] flex items-center gap-1.5">
+                        <span>✨</span> Trending Searches
+                      </span>
+                      <span className="text-[11px] text-stone-400">Popular fine jewellery</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {TRENDING_SEARCHES.map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => handleTrendingClick(item)}
+                          className="px-3.5 py-1.5 rounded-full text-xs font-medium text-stone-700 bg-[#f8f6f0] hover:bg-[#8b6f4e]/15 hover:text-[#8b6f4e] border border-stone-200 transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <HiOutlineSearch className="w-3 h-3 text-[#8b6f4e]" />
+                          <span>{item}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
                   <>
-                    <div className="max-h-72 overflow-y-auto divide-y divide-white/5">
-                      {searchResults.map((item) => {
-                        const targetId = item.slug || item._id;
-                        const productHref = `/product/${encodeURIComponent(targetId)}`;
-                        const price = item.pricing?.salePrice || item.pricing?.minPrice || 0;
-                        return (
-                          <Link
-                            key={item._id}
-                            to={productHref}
-                            onClick={() => {
-                              setShowSearchDropdown(false);
-                              setSearchQuery('');
-                            }}
-                            className="flex items-center gap-3 p-2.5 hover:bg-white/[0.06] transition-colors group"
-                          >
-                            {item.image ? (
-                              <img
-                                src={item.image}
-                                alt={item.title}
-                                className="w-10 h-10 object-cover rounded bg-stone-800 shrink-0 border border-white/10"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded bg-stone-800 border border-white/10 shrink-0 flex items-center justify-center text-stone-500 text-[10px]">
-                                Jewellery
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                {item.isOrnate && (
-                                  <span className="text-[9px] uppercase px-1 py-0.5 rounded bg-amber-400/10 text-amber-300 font-medium shrink-0">
-                                    Silver
-                                  </span>
-                                )}
-                                <p className="text-xs text-stone-200 group-hover:text-amber-200 transition-colors truncate font-medium">
+                    {/* Top Tab Bar: All (128) | Products (128) | Collections (4) | Categories (6) | View all -> */}
+                    <div className="flex items-center justify-between border-b border-stone-100 pb-3 mb-4">
+                      <div className="flex items-center gap-5 sm:gap-7 text-xs sm:text-sm">
+                        <button
+                          type="button"
+                          onClick={() => setSearchTab('all')}
+                          className={`font-semibold transition-all relative pb-2 cursor-pointer ${
+                            searchTab === 'all'
+                              ? 'text-[#8b6f4e] font-bold'
+                              : 'text-stone-500 hover:text-stone-900'
+                          }`}
+                        >
+                          <span>All ({allCount})</span>
+                          {searchTab === 'all' && (
+                            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8b6f4e] rounded-full" />
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setSearchTab('products')}
+                          className={`font-semibold transition-all relative pb-2 cursor-pointer ${
+                            searchTab === 'products'
+                              ? 'text-[#8b6f4e] font-bold'
+                              : 'text-stone-500 hover:text-stone-900'
+                          }`}
+                        >
+                          <span>Products ({productCount})</span>
+                          {searchTab === 'products' && (
+                            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8b6f4e] rounded-full" />
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setSearchTab('collections')}
+                          className={`font-semibold transition-all relative pb-2 cursor-pointer ${
+                            searchTab === 'collections'
+                              ? 'text-[#8b6f4e] font-bold'
+                              : 'text-stone-500 hover:text-stone-900'
+                          }`}
+                        >
+                          <span>Collections ({collectionCount})</span>
+                          {searchTab === 'collections' && (
+                            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8b6f4e] rounded-full" />
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setSearchTab('categories')}
+                          className={`font-semibold transition-all relative pb-2 cursor-pointer ${
+                            searchTab === 'categories'
+                              ? 'text-[#8b6f4e] font-bold'
+                              : 'text-stone-500 hover:text-stone-900'
+                          }`}
+                        >
+                          <span>Categories ({categoryCount})</span>
+                          {searchTab === 'categories' && (
+                            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8b6f4e] rounded-full" />
+                          )}
+                        </button>
+                      </div>
+
+                      <Link
+                        to={`/shop?search=${encodeURIComponent(searchQuery.trim())}`}
+                        onClick={() => setShowSearchDropdown(false)}
+                        className="text-xs sm:text-sm font-semibold text-stone-700 hover:text-[#8b6f4e] flex items-center gap-1 group transition-colors cursor-pointer shrink-0"
+                      >
+                        <span>View all</span>
+                        <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                      </Link>
+                    </div>
+
+                    {/* Content Section based on selected tab */}
+                    {isSearching ? (
+                      <div className="py-12 flex flex-col items-center justify-center gap-2.5 text-stone-400">
+                        <div className="w-6 h-6 border-2 border-[#8b6f4e] border-t-transparent rounded-full animate-spin" />
+                        <span className="text-xs font-medium">Searching luxury collection...</span>
+                      </div>
+                    ) : (searchTab === 'all' || searchTab === 'products') ? (
+                      displayedProducts.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-3.5">
+                          {displayedProducts.map((item) => {
+                            const targetSlug =
+                              item.basicInfo?.slug ||
+                              item.slug ||
+                              (item.title ? item.title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
+                            const productHref = `/product/${encodeURIComponent(targetSlug)}`;
+                            const price = item.pricing?.salePrice || item.pricing?.minPrice || 0;
+                            const imgUrl = item.image || (Array.isArray(item.images) && item.images[0]) || '';
+
+                            return (
+                              <Link
+                                key={item._id}
+                                to={productHref}
+                                onClick={() => {
+                                  setShowSearchDropdown(false);
+                                  setSearchQuery('');
+                                }}
+                                className="group flex flex-col text-left"
+                              >
+                                {/* Warm Ivory Image Container */}
+                                <div className="w-full aspect-square rounded-2xl bg-[#f8f6f0] border border-stone-100 flex items-center justify-center p-2.5 overflow-hidden group-hover:border-[#8b6f4e]/40 transition-all shadow-2xs">
+                                  {imgUrl ? (
+                                    <img
+                                      src={imgUrl}
+                                      alt={item.title}
+                                      className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-stone-300">
+                                      <IoDiamondOutline className="w-8 h-8 text-[#8b6f4e]/40" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Title */}
+                                <p className="text-xs font-semibold text-stone-800 line-clamp-2 mt-2 leading-tight group-hover:text-[#8b6f4e] transition-colors min-h-[2rem]">
                                   {item.title}
                                 </p>
-                              </div>
-                              <p className="text-[11px] text-stone-400">
-                                {price > 0 ? formatProductPrice(price) : ''}
-                              </p>
+
+                                {/* Price */}
+                                <p className="text-xs font-bold text-[#8b6f4e] mt-1">
+                                  {price > 0 ? formatProductPrice(price) : ''}
+                                </p>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="py-8 px-4 text-center">
+                          <p className="text-xs text-stone-500">
+                            No products found matching &ldquo;<span className="text-stone-900 font-semibold">{searchQuery}</span>&rdquo;.
+                          </p>
+                          <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                            {TRENDING_SEARCHES.map((t) => (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={() => handleTrendingClick(t)}
+                                className="px-3 py-1 rounded-full text-xs bg-[#f8f6f0] hover:bg-[#8b6f4e]/10 text-stone-700 hover:text-[#8b6f4e] border border-stone-200 transition-colors"
+                              >
+                                {t}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    ) : searchTab === 'collections' ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                        {matchedCollections.map((col) => (
+                          <button
+                            key={col.id}
+                            type="button"
+                            onClick={() => handleTrendingClick(col.query)}
+                            className="p-3 rounded-2xl bg-[#f8f6f0] hover:bg-[#8b6f4e]/10 border border-stone-100 hover:border-[#8b6f4e]/40 transition-all text-left group cursor-pointer"
+                          >
+                            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-[#8b6f4e] mb-2 shadow-2xs group-hover:scale-105 transition-transform">
+                              <IoDiamondOutline className="w-4 h-4" />
                             </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleSearch}
-                      className="w-full py-2.5 px-3 text-center text-xs text-amber-200/90 hover:text-amber-200 hover:bg-white/[0.04] transition-colors font-medium cursor-pointer"
-                    >
-                      View all results for &ldquo;{searchQuery}&rdquo; →
-                    </button>
+                            <p className="text-xs font-bold text-stone-900 group-hover:text-[#8b6f4e] transition-colors">
+                              {col.name}
+                            </p>
+                            <span className="text-[10px] text-stone-400 group-hover:text-[#8b6f4e] mt-1 inline-block">
+                              Explore collection →
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                        {matchedCategories.map((cat) => {
+                          const catImage = cat.image?.url || cat.icon?.url;
+                          return (
+                            <Link
+                              key={cat._id}
+                              to={`/shop?category=${encodeURIComponent(cat._id)}`}
+                              onClick={() => {
+                                setShowSearchDropdown(false);
+                                setSearchQuery('');
+                              }}
+                              className="p-2.5 rounded-2xl bg-[#f8f6f0] hover:bg-[#8b6f4e]/10 border border-stone-100 hover:border-[#8b6f4e]/40 transition-all text-center group"
+                            >
+                              <div className="w-full aspect-square rounded-xl bg-white mb-2 overflow-hidden flex items-center justify-center p-2 shadow-2xs">
+                                {catImage ? (
+                                  <img
+                                    src={getImageUrl(catImage)}
+                                    alt={cat.name}
+                                    className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                                  />
+                                ) : (
+                                  <IoDiamondOutline className="w-6 h-6 text-[#8b6f4e]/60" />
+                                )}
+                              </div>
+                              <p className="text-xs font-bold text-stone-800 group-hover:text-[#8b6f4e] truncate transition-colors">
+                                {cat.name}
+                              </p>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
                   </>
-                ) : (
-                  <div className="py-4 text-center text-xs text-stone-400">
-                    No jewellery found matching &ldquo;{searchQuery}&rdquo;
-                  </div>
                 )}
               </div>
             )}
@@ -312,6 +600,17 @@ const Navbar = () => {
 
           {/* Actions: Wishlist, Profile, Shopping Bag */}
           <div className="order-2 flex items-center space-x-1 sm:space-x-4">
+            {/* Mobile Search Icon */}
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen((prev) => !prev)}
+              className="p-1.5 text-stone-300 hover:text-white transition-colors md:hidden"
+              title="Search"
+              aria-label="Search"
+            >
+              <HiOutlineSearch className="w-[18px] h-[18px]" />
+            </button>
+
             {isCheckout && <span className="hidden items-center gap-1.5 rounded-full border border-white/15 px-2.5 py-1.5 text-[11px] text-white sm:inline-flex"><span aria-hidden="true">🇮🇳</span> INR <span aria-hidden="true">⌄</span></span>}
             {/* Wishlist Icon */}
             <Link
@@ -325,7 +624,7 @@ const Navbar = () => {
             >
               <HiOutlineHeart className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
               {wishlistCount > 0 && (
-                  <span className="absolute top-0 right-0 bg-[#a9865c] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
+                <span className="absolute top-0 right-0 bg-[#223834] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold shadow-xs">
                   {wishlistCount}
                 </span>
               )}
@@ -391,45 +690,199 @@ const Navbar = () => {
               aria-expanded={cartDrawerOpen}
             >
               <HiOutlineShoppingBag className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
-              <span className="absolute top-0 right-0 bg-[#a9865c] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
+              <span className="absolute top-0 right-0 bg-[#223834] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
                 {totalItems || 0}
               </span>
             </button>
           </div>
         </div>
-
-        <div className="hidden lg:block">
-          <MegaMenuNav categories={categories} error={navigationError} onRetry={() => setNavigationRevision((value) => value + 1)} />
-        </div>
       </div>
+
+      {/* ─── Category Navigation Bar & Full-Width Mega Menu ───────── */}
+      <div className="hidden lg:block w-full">
+        <MegaMenuNav categories={categories} error={navigationError} onRetry={() => setNavigationRevision((value) => value + 1)} />
+      </div>
+
+      {/* ─── Mobile Instant Search Bar ──────────────────────────────── */}
+      {mobileSearchOpen && (
+        <div className="md:hidden bg-[#22201e] border-b border-stone-800 px-4 py-3 animate-fadeIn">
+          <form
+            onSubmit={handleSearch}
+            className="relative flex items-center w-full h-11 rounded-full bg-white border border-stone-200 shadow-xs focus-within:border-[#8b6f4e] transition-all"
+          >
+            <HiOutlineSearch className="w-4 h-4 ml-3.5 text-stone-400 pointer-events-none shrink-0" />
+            <input
+              type="text"
+              autoFocus
+              placeholder="Search jewellery, diamonds, rings..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-transparent px-3 text-xs text-stone-900 placeholder:text-stone-400 font-medium focus:outline-none"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="p-1 mr-1 text-stone-400 hover:text-stone-700"
+              >
+                <HiOutlineX className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              type="submit"
+              className="mr-1 w-8 h-8 rounded-full bg-[#8c6f4b] hover:bg-[#785d3c] text-white flex items-center justify-center shrink-0 cursor-pointer shadow-xs active:scale-95"
+            >
+              <HiOutlineSearch className="w-3.5 h-3.5 stroke-[2.2]" />
+            </button>
+          </form>
+
+          {/* Mobile Search Results */}
+          {searchQuery.trim().length >= 2 && (
+            <div className="mt-3 bg-white rounded-2xl shadow-xl border border-stone-200/90 p-3.5 text-left animate-fadeIn">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-2 mb-3">
+                <div className="flex items-center gap-3 text-xs overflow-x-auto scrollbar-none">
+                  <button
+                    type="button"
+                    onClick={() => setSearchTab('all')}
+                    className={`font-semibold pb-1 whitespace-nowrap ${searchTab === 'all' ? 'text-[#8b6f4e] border-b-2 border-[#8b6f4e]' : 'text-stone-500'}`}
+                  >
+                    All ({allCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSearchTab('products')}
+                    className={`font-semibold pb-1 whitespace-nowrap ${searchTab === 'products' ? 'text-[#8b6f4e] border-b-2 border-[#8b6f4e]' : 'text-stone-500'}`}
+                  >
+                    Products ({productCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSearchTab('collections')}
+                    className={`font-semibold pb-1 whitespace-nowrap ${searchTab === 'collections' ? 'text-[#8b6f4e] border-b-2 border-[#8b6f4e]' : 'text-stone-500'}`}
+                  >
+                    Collections ({collectionCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSearchTab('categories')}
+                    className={`font-semibold pb-1 whitespace-nowrap ${searchTab === 'categories' ? 'text-[#8b6f4e] border-b-2 border-[#8b6f4e]' : 'text-stone-500'}`}
+                  >
+                    Categories ({categoryCount})
+                  </button>
+                </div>
+                <Link
+                  to={`/shop?search=${encodeURIComponent(searchQuery.trim())}`}
+                  onClick={() => {
+                    setMobileSearchOpen(false);
+                    setShowSearchDropdown(false);
+                  }}
+                  className="text-xs font-semibold text-stone-700 hover:text-[#8b6f4e] shrink-0 ml-2"
+                >
+                  View all →
+                </Link>
+              </div>
+
+              {isSearching ? (
+                <div className="py-6 text-center text-xs text-stone-400">Searching jewellery...</div>
+              ) : displayedProducts.length > 0 ? (
+                <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-1">
+                  {displayedProducts.map((item) => {
+                    const targetSlug =
+                      item.basicInfo?.slug ||
+                      item.slug ||
+                      (item.title ? item.title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
+                    const productHref = `/product/${encodeURIComponent(targetSlug)}`;
+                    const price = item.pricing?.salePrice || item.pricing?.minPrice || 0;
+                    const imgUrl = item.image || (Array.isArray(item.images) && item.images[0]) || '';
+                    return (
+                      <Link
+                        key={item._id}
+                        to={productHref}
+                        onClick={() => {
+                          setMobileSearchOpen(false);
+                          setShowSearchDropdown(false);
+                          setSearchQuery('');
+                        }}
+                        className="w-28 shrink-0 flex flex-col text-left group"
+                      >
+                        <div className="w-28 h-28 rounded-xl bg-[#f8f6f0] border border-stone-100 flex items-center justify-center p-2 overflow-hidden shadow-2xs">
+                          {imgUrl ? (
+                            <img
+                              src={imgUrl}
+                              alt={item.title}
+                              className="w-full h-full object-contain mix-blend-multiply"
+                            />
+                          ) : (
+                            <IoDiamondOutline className="w-6 h-6 text-[#8b6f4e]/40" />
+                          )}
+                        </div>
+                        <p className="text-[11px] font-semibold text-stone-800 line-clamp-2 mt-1.5 leading-tight">
+                          {item.title}
+                        </p>
+                        <p className="text-[11px] font-bold text-[#8b6f4e] mt-0.5">
+                          {price > 0 ? formatProductPrice(price) : ''}
+                        </p>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-4 text-center text-xs text-stone-400">No products found</div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ─── Mobile Drawer ───────────────────────────────────────── */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-[#22201e] border-b border-stone-800 px-4 sm:px-6 py-5 space-y-5 animate-slide-up">
           {/* Mobile Search */}
           <div className="relative w-full">
-            <form onSubmit={handleSearch} className="relative w-full">
-              <HiOutlineSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400 w-4 h-4" />
+            <form
+              onSubmit={handleSearch}
+              className="relative flex items-center w-full h-11 rounded-full bg-white border border-stone-200 shadow-xs focus-within:border-[#8b6f4e] transition-all"
+            >
+              <HiOutlineSearch className="w-4 h-4 ml-3.5 text-stone-400 pointer-events-none shrink-0" />
               <input
                 type="text"
                 placeholder="Search jewellery, diamonds..."
                 value={searchQuery}
                 onFocus={() => { if (searchResults.length > 0) setShowSearchDropdown(true); }}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white/[0.08] border border-white/10 rounded-full pl-10 pr-4 py-2 text-xs text-white placeholder-stone-400 focus:outline-none"
+                className="w-full bg-transparent px-3 text-xs text-stone-900 placeholder:text-stone-400 font-medium focus:outline-none"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="p-1 mr-1 text-stone-400 hover:text-stone-700"
+                >
+                  <HiOutlineX className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                type="submit"
+                className="mr-1 w-8 h-8 rounded-full bg-[#8c6f4b] hover:bg-[#785d3c] text-white flex items-center justify-center shrink-0 cursor-pointer shadow-xs active:scale-95"
+              >
+                <HiOutlineSearch className="w-3.5 h-3.5 stroke-[2.2]" />
+              </button>
             </form>
             {showSearchDropdown && searchQuery.trim().length >= 2 && (
-              <div className="mt-2 bg-[#1c1a18] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 divide-y divide-white/5 text-left">
+              <div className="mt-2 bg-white border border-stone-200 rounded-2xl shadow-xl p-3 text-left animate-fadeIn">
                 {isSearching ? (
                   <div className="py-3 text-center text-xs text-stone-400">Searching jewellery...</div>
-                ) : searchResults.length > 0 ? (
+                ) : displayedProducts.length > 0 ? (
                   <>
-                    <div className="max-h-60 overflow-y-auto divide-y divide-white/5">
-                      {searchResults.map((item) => {
-                        const targetId = item.slug || item._id;
-                        const productHref = `/product/${encodeURIComponent(targetId)}`;
+                    <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-2">
+                      {displayedProducts.map((item) => {
+                        const targetSlug =
+                          item.basicInfo?.slug ||
+                          item.slug ||
+                          (item.title ? item.title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
+                        const productHref = `/product/${encodeURIComponent(targetSlug)}`;
                         const price = item.pricing?.salePrice || item.pricing?.minPrice || 0;
+                        const imgUrl = item.image || (Array.isArray(item.images) && item.images[0]) || '';
                         return (
                           <Link
                             key={item._id}
@@ -439,19 +892,21 @@ const Navbar = () => {
                               setSearchQuery('');
                               setMobileMenuOpen(false);
                             }}
-                            className="flex items-center gap-3 p-2 hover:bg-white/[0.06] transition-colors group"
+                            className="w-24 shrink-0 flex flex-col text-left group"
                           >
-                            {item.image && (
-                              <img
-                                src={item.image}
-                                alt={item.title}
-                                className="w-8 h-8 object-cover rounded bg-stone-800 shrink-0 border border-white/10"
-                              />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs text-stone-200 truncate font-medium">{item.title}</p>
-                              <p className="text-[10px] text-stone-400">{price > 0 ? formatProductPrice(price) : ''}</p>
+                            <div className="w-24 h-24 rounded-xl bg-[#f8f6f0] border border-stone-100 flex items-center justify-center p-1.5 overflow-hidden">
+                              {imgUrl ? (
+                                <img
+                                  src={imgUrl}
+                                  alt={item.title}
+                                  className="w-full h-full object-contain mix-blend-multiply"
+                                />
+                              ) : (
+                                <IoDiamondOutline className="w-5 h-5 text-[#8b6f4e]/40" />
+                              )}
                             </div>
+                            <p className="text-[10px] font-semibold text-stone-800 truncate mt-1">{item.title}</p>
+                            <p className="text-[10px] font-bold text-[#8b6f4e]">{price > 0 ? formatProductPrice(price) : ''}</p>
                           </Link>
                         );
                       })}
@@ -459,7 +914,7 @@ const Navbar = () => {
                     <button
                       type="button"
                       onClick={handleSearch}
-                      className="w-full py-2 px-3 text-center text-xs text-amber-200/90 font-medium cursor-pointer"
+                      className="w-full py-2 px-3 text-center text-xs text-[#8b6f4e] font-bold hover:underline cursor-pointer border-t border-stone-100 mt-1"
                     >
                       View all results →
                     </button>
@@ -485,7 +940,7 @@ const Navbar = () => {
             >
               <span>My Wishlist</span>
               {wishlistCount > 0 && (
-                <span className="bg-[#60574d] text-white text-[10px] px-2 py-0.5 rounded-full">
+                <span className="bg-[#223834] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
                   {wishlistCount}
                 </span>
               )}

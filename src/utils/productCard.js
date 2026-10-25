@@ -136,10 +136,17 @@ export function getProductCardData(product) {
     String(product.productType || '').toLowerCase() === 'gold' ||
     (!product.productType && /gold/i.test(product.basicInfo?.title || product.title || product.name || ''));
   const originalPrice = isGold ? null : firstPrice(product.pricing?.mrp, product.mrp, product.originalPrice);
-  const name = product.basicInfo?.title || product.title || product.name || product.itemName || 'Untitled product';
+  const name = product.basicInfo?.title || product.title || product.name || 'Untitled product';
+  const rawSlug = product.basicInfo?.slug || product.slug || product.representative?.basicInfo?.slug || product.representative?.slug;
+  const slug =
+    rawSlug ||
+    (name && name !== 'Untitled product'
+      ? name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-')
+      : '');
 
   return {
     id: String(product._id || product.id || ''),
+    slug,
     name,
     images,
     colors: resolvedColors,

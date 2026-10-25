@@ -12,17 +12,34 @@ export const WishlistProvider = ({ children }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [wishlistItems, setWishlistItems] = useState([]);
-  const [wishlistMap, setWishlistMap] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [wishlistItems, setWishlistItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem('jewels_wishlist');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [wishlistMap, setWishlistMap] = useState(() => {
+    try {
+      const saved = localStorage.getItem('jewels_wishlist');
+      const list = saved ? JSON.parse(saved) : [];
+      const map = {};
+      list.forEach((item) => {
+        const id = String(item._id || item.productId || item.id || '');
+        if (id) map[id] = true;
+      });
+      return map;
+    } catch {
+      return {};
+    }
+  });
+  const [loading, setLoading] = useState(false);
 
   // Fetch wishlist from backend
   const fetchWishlist = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token && !user) {
-      setWishlistItems([]);
-      setWishlistMap({});
-      setLoading(false);
       return;
     }
 
@@ -34,6 +51,10 @@ export const WishlistProvider = ({ children }) => {
       const items = rawProductList.filter((item) => item && typeof item === 'object');
 
       setWishlistItems(items);
+      try {
+        localStorage.setItem('jewels_wishlist', JSON.stringify(items));
+      } catch {}
+
       const map = {};
       if (Array.isArray(data.productIds)) {
         data.productIds.forEach((id) => {
@@ -70,25 +91,8 @@ export const WishlistProvider = ({ children }) => {
   const toggleWishlist = async (product) => {
     if (!product) return false;
 
-    // Check if user is logged in
-    const token = localStorage.getItem('token');
-    if (!token && !user) {
-      toast('Please sign in to save items to your wishlist', {
-        icon: '🔒',
-        style: {
-          background: '#22201e',
-          color: '#f5f0eb',
-          border: '1px solid rgba(212, 175, 55, 0.4)',
-        },
-      });
-      navigate('/login', {
-        state: { from: location },
-      });
-      return false;
-    }
-
     const productId = String(product.id || product._id || product.productId || '').trim();
-    if (!productId) return;
+    if (!productId) return false;
 
     const wasWishlisted = !!wishlistMap[productId];
     const willBeWishlisted = !wasWishlisted;
@@ -104,131 +108,116 @@ export const WishlistProvider = ({ children }) => {
       return next;
     });
 
-    // Normalized payload for backend
-    const payload = {
-      productId,
-    };
-
-    try {
-      const res = await wishlistAPI.toggle(payload);
-      const result = res?.data?.data || {};
-
-      if (result.items && Array.isArray(result.items)) {
-        setWishlistItems(result.items);
-      } else {
-        // Re-fetch to get populated fields
-        fetchWishlist();
-      }
-
-      if (Array.isArray(result.productIds)) {
-        const nextMap = {};
-        result.productIds.forEach((id) => {
-          if (id) nextMap[String(id._id || id)] = true;
-        });
-        setWishlistMap(nextMap);
-      }
-
-      const productTitle = product.title || product.basicInfo?.title || product.name || 'item';
+    setWishlistItems((prev) => {
+      let next;
       if (willBeWishlisted) {
-        toast.success(`Saved "${productTitle}" to your wishlist ❤️`, {
-          icon: '💎',
-          style: {
-            background: '#22201e',
-            color: '#f5f0eb',
-            border: '1px solid rgba(212, 175, 55, 0.4)',
-          },
-        });
+        const exists = prev.some((i) => String(i._id || i.productId || i.id) === productId);
+        next = exists ? prev : [product, ...prev];
       } else {
-        toast('Removed from your wishlist', {
-          icon: '🤍',
-          style: {
-            background: '#22201e',
-            color: '#f5f0eb',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-          },
-        });
+        next = prev.filter((i) => String(i._id || i.productId || i.id) !== productId);
       }
+      try {
+        localStorage.setItem('jewels_wishlist', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
 
-      return result.isWishlisted;
-    } catch (err) {
-      console.error('Error toggling wishlist:', err);
-      // Revert optimistic update
-      setWishlistMap((prev) => ({
-        ...prev,
-        [productId]: wasWishlisted,
-      }));
-      if (
-        err.response?.status === 401 ||
-        err.response?.data?.message?.includes('token') ||
-        err.response?.data?.message?.includes('Access denied')
-      ) {
-        toast('Please sign in to manage your wishlist', {
-          icon: '🔒',
-          style: {
-            background: '#22201e',
-            color: '#f5f0eb',
-            border: '1px solid rgba(212, 175, 55, 0.4)',
-          },
-        });
-        navigate('/login', {
-          state: { from: location },
-        });
-        return wasWishlisted;
-      }
-
-      toast.error('Could not update wishlist. Please try again.');
-      return wasWishlisted;
+    if (willBeWishlisted) {
+      toast.success('Added to wishlist', {
+        icon: '❤️',
+        style: {
+          background: '#22201e',
+          color: '#f5f0eb',
+          border: '1px solid rgba(225, 29, 72, 0.4)',
+        },
+      });
+    } else {
+      toast('Removed from wishlist', {
+        icon: '🤍',
+        style: {
+          background: '#22201e',
+          color: '#f5f0eb',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+        },
+      });
     }
+
+    const token = localStorage.getItem('token');
+    if (token || user) {
+      try {
+        const res = await wishlistAPI.toggle({ productId });
+        const result = res?.data?.data || {};
+
+        if (result.items && Array.isArray(result.items)) {
+          setWishlistItems(result.items);
+          localStorage.setItem('jewels_wishlist', JSON.stringify(result.items));
+        }
+        if (Array.isArray(result.productIds)) {
+          const nextMap = {};
+          result.productIds.forEach((id) => {
+            if (id) nextMap[String(id._id || id)] = true;
+          });
+          setWishlistMap(nextMap);
+        }
+      } catch (err) {
+        console.error('Error syncing wishlist with backend:', err);
+      }
+    }
+
+    return willBeWishlisted;
   };
 
   // Remove item by productId
   const removeFromWishlist = async (productId) => {
     if (!productId) return;
-    const token = localStorage.getItem('token');
-    if (!token && !user) {
-      navigate('/login', { state: { from: location } });
-      return;
-    }
     const strId = String(productId);
 
-    try {
-      await wishlistAPI.remove(strId);
-      setWishlistMap((prev) => {
-        const next = { ...prev };
-        delete next[strId];
-        return next;
-      });
-      setWishlistItems((prev) =>
-        prev.filter((i) => String(i.productId) !== strId && String(i._id) !== strId)
-      );
-      toast('Item removed from wishlist', {
-        icon: '🤍',
-        style: {
-          background: '#22201e',
-          color: '#f5f0eb',
-        },
-      });
-    } catch (err) {
-      console.error('Error removing from wishlist:', err);
-      toast.error('Failed to remove item');
+    setWishlistMap((prev) => {
+      const next = { ...prev };
+      delete next[strId];
+      return next;
+    });
+    setWishlistItems((prev) => {
+      const next = prev.filter((i) => String(i.productId) !== strId && String(i._id) !== strId && String(i.id) !== strId);
+      try {
+        localStorage.setItem('jewels_wishlist', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    toast('Item removed from wishlist', {
+      icon: '🤍',
+      style: {
+        background: '#22201e',
+        color: '#f5f0eb',
+      },
+    });
+
+    const token = localStorage.getItem('token');
+    if (token || user) {
+      try {
+        await wishlistAPI.remove(strId);
+      } catch (err) {
+        console.error('Error removing from backend wishlist:', err);
+      }
     }
   };
 
   // Clear entire wishlist
   const clearWishlist = async () => {
-    const token = localStorage.getItem('token');
-    if (!token && !user) {
-      navigate('/login', { state: { from: location } });
-      return;
-    }
+    setWishlistItems([]);
+    setWishlistMap({});
     try {
-      await wishlistAPI.clear();
-      setWishlistItems([]);
-      setWishlistMap({});
-      toast.success('Wishlist cleared');
-    } catch (err) {
-      console.error('Error clearing wishlist:', err);
-      toast.error('Failed to clear wishlist');
+      localStorage.removeItem('jewels_wishlist');
+    } catch {}
+    toast.success('Wishlist cleared');
+
+    const token = localStorage.getItem('token');
+    if (token || user) {
+      try {
+        await wishlistAPI.clear();
+      } catch (err) {
+        console.error('Error clearing backend wishlist:', err);
+      }
     }
   };
 
