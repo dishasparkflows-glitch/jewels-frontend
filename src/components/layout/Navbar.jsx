@@ -58,6 +58,7 @@ const Navbar = () => {
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const searchContainerRef = useRef(null);
   const searchInputRef = useRef(null);
+  const userDropdownRef = useRef(null);
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const navigate = useNavigate();
@@ -142,6 +143,7 @@ const Navbar = () => {
   // Close dropdown on outside click or route navigation
   useEffect(() => {
     setShowSearchDropdown(false);
+    setUserDropdownOpen(false);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -149,12 +151,19 @@ const Navbar = () => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
         setShowSearchDropdown(false);
       }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target)) {
+        setUserDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
-  // Shortcut ⌘K / Ctrl+K to focus search
+  // Shortcut ⌘K / Ctrl+K to focus search and Escape to close dropdowns
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -162,14 +171,19 @@ const Navbar = () => {
         searchInputRef.current?.focus();
         setShowSearchDropdown(true);
       }
-      if (e.key === 'Escape' && showSearchDropdown) {
-        setShowSearchDropdown(false);
-        searchInputRef.current?.blur();
+      if (e.key === 'Escape') {
+        if (showSearchDropdown) {
+          setShowSearchDropdown(false);
+          searchInputRef.current?.blur();
+        }
+        if (userDropdownOpen) {
+          setUserDropdownOpen(false);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showSearchDropdown]);
+  }, [showSearchDropdown, userDropdownOpen]);
 
   const handleTrendingClick = (keyword) => {
     setSearchQuery(keyword);
@@ -625,7 +639,7 @@ const Navbar = () => {
             {/* User Account / Profile */}
             <div className="relative">
               {user ? (
-                <div className="relative">
+                <div className="relative" ref={userDropdownRef}>
                   <button
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                     className="flex items-center gap-2 p-1.5 rounded-full hover:bg-white/10 transition-colors"

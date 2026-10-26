@@ -5,7 +5,6 @@ import toast from 'react-hot-toast';
 import {
   HiOutlineTrash,
   HiOutlineArrowNarrowLeft,
-  HiOutlineShieldCheck,
   HiOutlineLockClosed,
 } from 'react-icons/hi';
 import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
@@ -193,11 +192,6 @@ const Cart = () => {
             <HiOutlineLockClosed className="w-5 h-5" />
             <span>Proceed to Secure Checkout</span>
           </button>
-
-          <div className="flex items-center justify-center gap-2 text-[11px] text-stone-500 text-center">
-            <HiOutlineShieldCheck className="w-4 h-4 text-[#9b7951] flex-shrink-0" />
-            <span>256-bit Encrypted Checkout • Full Transit Insurance</span>
-          </div>
         </div>
       </div>
     </div>

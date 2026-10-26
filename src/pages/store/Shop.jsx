@@ -2,7 +2,7 @@ import api from '../../api/axios';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { HiOutlineAdjustments, HiOutlineX } from 'react-icons/hi';
+import { HiOutlineAdjustments, HiOutlineX, HiOutlineTrash } from 'react-icons/hi';
 import ProductCard from '../../components/product/ProductCard';
 import FilterGroup from '../../components/product/FilterGroup';
 import Dropdown from '../../components/common/Dropdown';
@@ -314,9 +314,10 @@ export default function Shop() {
                 <button
                   type="button"
                   onClick={() => setParams({})}
-                  className="text-[11px] font-bold uppercase tracking-wider text-stone-500 hover:text-stone-900 underline underline-offset-2 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] text-xs font-medium transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
                 >
-                  CLEAR ALL
+                  <HiOutlineTrash className="w-3.5 h-3.5 text-[#8b6f4e]" />
+                  <span>Clear All</span>
                 </button>
               )}
             </div>
@@ -629,9 +630,10 @@ export default function Shop() {
                 {filtersActive && (
                   <button
                     onClick={() => setParams({})}
-                    className="mt-6 rounded border border-stone-300 px-5 py-2.5 text-sm hover:bg-stone-50 cursor-pointer"
+                    className="mt-6 inline-flex items-center gap-2 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] px-4 py-2 text-xs sm:text-[13px] font-medium text-[#8b6f4e] bg-white hover:bg-[#FAF7F2] transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
                   >
-                    Clear filters
+                    <HiOutlineTrash className="w-4 h-4 text-[#8b6f4e]" />
+                    <span>Clear All Filters</span>
                   </button>
                 )}
               </div>

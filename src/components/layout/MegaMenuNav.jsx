@@ -14,76 +14,15 @@ const slugify = (value = '') =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 
-const DEFAULT_CATEGORY_CARDS = {
-  rings: [
-    {
-      title: 'Solitaire Rings',
-      image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=600&q=80',
-    },
-    {
-      title: 'Halo Engagement Rings',
-      image: 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?auto=format&fit=crop&w=600&q=80',
-    },
-  ],
-  earrings: [
-    {
-      title: 'Diamond Earring',
-      image: 'https://pub-e3b67182a2c44631ad54fab41304d36a.r2.dev/Neirah_Jewellers/admin/Products/1792433539330-359_Y-_viwe4.png',
-    },
-    {
-      title: 'Solitaire Studs',
-      image: 'https://pub-e3b67182a2c44631ad54fab41304d36a.r2.dev/Neirah_Jewellers/admin/Products/1792384361062-ER-0008_Y-_viwe4.png',
-    },
-  ],
-  pendant: [
-    {
-      title: 'Diamond Pendants',
-      image: 'https://pub-82427c7fd20e4acaa4bdb3b933c0a3bf.r2.dev/OrnateProducts/1792642608828-925PD_114.jpg',
-    },
-    {
-      title: 'Solitaire Necklace',
-      image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=600&q=80',
-    },
-  ],
-  'bangles-bracelets': [
-    {
-      title: 'Bracelets',
-      image: 'https://images.unsplash.com/photo-1611591475155-42845c994b7e?auto=format&fit=crop&w=600&q=80',
-    },
-    {
-      title: 'Bangles',
-      image: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?auto=format&fit=crop&w=600&q=80',
-    },
-  ],
-  'silver-collection': [
-    {
-      title: 'Silver Rings',
-      image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=600&q=80',
-    },
-    {
-      title: 'Silver Earrings',
-      image: 'https://pub-e3b67182a2c44631ad54fab41304d36a.r2.dev/Neirah_Jewellers/admin/Products/1792433539330-359_Y-_viwe4.png',
-    },
-  ],
-};
-
 function MenuContents({ category, onNavigate, mobile = false }) {
   const sections = (category.menuSections || []).filter((section) => section.menuItems?.length);
-  const banners = (category.promoBanners || []).filter((banner) => banner.image?.url);
+  const banners = (category.promoBanners || []).filter((banner) => banner.image?.url || (typeof banner.image === 'string' && banner.image));
 
-  const catKey = slugify(category.slug || category.name);
-  const fallbackCards = DEFAULT_CATEGORY_CARDS[catKey] || DEFAULT_CATEGORY_CARDS.earrings;
-
-  const showcaseCards = banners.length > 0
-    ? banners.map((b) => ({
-        title: b.title || category.name,
-        link: safeLink(b.link, categoryLink(category)),
-        image: getImageUrl(b.image.url),
-      }))
-    : fallbackCards.map((c) => ({
-        ...c,
-        link: categoryLink(category),
-      }));
+  const showcaseCards = banners.map((b) => ({
+    title: b.title || category.name,
+    link: safeLink(b.link, categoryLink(category)),
+    image: getImageUrl(b.image?.url || b.image),
+  })).filter((c) => c.image);
 
   if (mobile) {
     return (

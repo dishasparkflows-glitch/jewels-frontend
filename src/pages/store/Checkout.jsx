@@ -22,6 +22,7 @@ import { checkoutAPI } from '../../api/services';
 import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 import { trackBeginCheckout } from '../../config/firebase';
 import { resolveMetalName, cleanAttribute } from '../../utils/metalColors';
+import Dropdown from '../../components/common/Dropdown';
 
 const inputClassName = 'h-12 w-full rounded-md border border-[#e6e0d8] bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#a77e4e] focus:ring-2 focus:ring-[#a77e4e]/10';
 const fieldClassName = 'relative block';
@@ -265,7 +266,16 @@ export default function Checkout() {
                 <label className="relative sm:col-span-4"><span className="sr-only">Street address</span><HiOutlineHome className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="address-line1" placeholder="Address *" value={form.addressLine} onChange={updateField('addressLine')} required /></label>
                 <label className="sm:col-span-2"><span className="sr-only">Apartment, suite, etc.</span><input className={inputClassName} autoComplete="address-line2" placeholder="Apartment, suite, etc. (optional)" value={form.apartment} onChange={updateField('apartment')} /></label>
                 <label className="relative sm:col-span-2"><span className="sr-only">City</span><HiOutlineMap className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="address-level2" placeholder="City *" value={form.city} onChange={updateField('city')} required /></label>
-                <label className="relative sm:col-span-2"><span className="sr-only">State</span><select className={`${selectClassName} pl-3.5`} autoComplete="address-level1" value={form.state} onChange={updateField('state')} required><option value="">State *</option>{indianStates.map((state) => <option key={state} value={state}>{state}</option>)}</select></label>
+                <div className="relative sm:col-span-2">
+                  <Dropdown
+                    value={form.state}
+                    onChange={(val) => setForm((prev) => ({ ...prev, state: val }))}
+                    options={indianStates.map((st) => ({ value: st, label: st }))}
+                    placeholder="State *"
+                    buttonClassName={`${selectClassName} pl-3.5 flex items-center justify-between w-full h-[46px]`}
+                    menuClassName="z-[50] max-h-56"
+                  />
+                </div>
                 <label className="relative sm:col-span-2"><span className="sr-only">PIN code</span><HiOutlineLocationMarker className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="postal-code" inputMode="numeric" placeholder="PIN Code *" value={form.postalCode} onChange={updateField('postalCode')} required /></label>
                 <div className="flex gap-3 sm:col-span-6">
                   <label className="w-[110px] shrink-0"><span className="sr-only">Country calling code</span><select className={selectClassName} aria-label="Country calling code" value={form.countryCode} onChange={updateField('countryCode')}><option value="+91">🇮🇳 +91</option><option value="+1">🇺🇸 +1</option><option value="+44">🇬🇧 +44</option><option value="+61">🇦🇺 +61</option></select></label>

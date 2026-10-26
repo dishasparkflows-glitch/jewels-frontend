@@ -96,14 +96,14 @@ const Footer = () => {
               </h4>
               <ul className="space-y-3.5">
                 {[
-                  { name: 'Our Story', path: '/shop' },
-                  { name: 'Jewellery Care', path: '/shop' },
+                  { name: 'Our Story', path: '/our-story' },
+                  { name: 'Jewellery Care', path: '/jewellery-care' },
                   { name: 'Neirah Blog', path: '/blog' },
-                  { name: 'Reviews', path: '/shop' },
-                  { name: "FAQ's", path: '/shop' },
-                  { name: 'Track Your Order', path: '/profile' },
-                  { name: 'Corporate', path: '/shop' },
-                  { name: 'Contact Us', path: '/shop', isContact: true },
+                  { name: 'Reviews', path: '/reviews' },
+                  { name: "FAQ's", path: '/faqs' },
+                  { name: 'Track Your Order', path: '/track-your-order' },
+                  { name: 'Corporate', path: '/corporate' },
+                  { name: 'Contact Us', path: '/contact-us', isContact: true },
                 ].map((item) => (
                   <li key={item.name}>
                     {item.isContact ? (
@@ -135,15 +135,15 @@ const Footer = () => {
               </h4>
               <ul className="space-y-3.5">
                 {[
-                  { name: 'Shipping Policy', path: '/shop' },
-                  { name: 'Return & Refund Policy', path: '/shop' },
-                  { name: 'Cancellation Policy', path: '/shop' },
-                  { name: 'Terms & Conditions', path: '/shop' },
-                  { name: 'Privacy Policy', path: '/shop' },
-                  { name: 'Pricing Policy', path: '/shop' },
-                  { name: 'Payment Options', path: '/cart' },
-                  { name: 'Exchange Policy', path: '/shop' },
-                  { name: 'BIS Compliance & Certification', path: '/shop' },
+                  { name: 'Shipping Policy', path: '/shipping-policy' },
+                  { name: 'Return & Refund Policy', path: '/return-refund-policy' },
+                  { name: 'Cancellation Policy', path: '/cancellation-policy' },
+                  { name: 'Terms & Conditions', path: '/terms-conditions' },
+                  { name: 'Privacy Policy', path: '/privacy-policy' },
+                  { name: 'Pricing Policy', path: '/pricing-policy' },
+                  { name: 'Payment Options', path: '/payment-options' },
+                  { name: 'Exchange Policy', path: '/exchange-policy' },
+                  { name: 'BIS Compliance & Certification', path: '/bis-compliance-certification' },
                 ].map((item) => (
                   <li key={item.name}>
                     <Link

@@ -61,6 +61,41 @@ const getMediaUrl = (url) => {
   return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
+const DEFAULT_REVIEWS = [
+  {
+    id: 'def-1',
+    clientName: 'Keval Patel',
+    rating: 5,
+    title: 'Stylish Bracelet with a Unique Design',
+    comment: 'I really like the combination of black beads and silver detailing on this bracelet. The design looks elegant yet masculine, making it a great accessory for everyday we...',
+    image: '',
+  },
+  {
+    id: 'def-2',
+    clientName: 'Richa Jha',
+    rating: 5,
+    title: 'Elegant Movement and Detail',
+    comment: 'The drop style creates a graceful look that can complement evening and festive outfits.',
+    image: '',
+  },
+  {
+    id: 'def-3',
+    clientName: 'Siddhraj Rathod',
+    rating: 5,
+    title: 'A Unique Traditional Design',
+    comment: 'The combination of Rudraksha beads and silver detailing gives this bracelet a distinctive traditional look.',
+    image: '',
+  },
+  {
+    id: 'def-4',
+    clientName: 'Aditi',
+    rating: 5,
+    title: 'Small Details, Beautiful Style',
+    comment: 'The stud design is simple and elegant. A lovely style for anyone who appreciates understated jewellery.',
+    image: '',
+  },
+];
+
 const Home = () => {
   const { settings: storeSettings, theme: themeConfig } = useStoreSettings();
 
@@ -83,6 +118,8 @@ const Home = () => {
   const [platinumProducts, setPlatinumProducts] = useState([]);
   const [silverProducts, setSilverProducts] = useState([]);
   const [trendingProducts, setTrendingProducts] = useState([]);
+  const mostLovedScrollRef = useRef(null);
+  const [isMostLovedHovered, setIsMostLovedHovered] = useState(false);
 
   const [collectionBanners, setCollectionBanners] = useState([]);
 
@@ -96,6 +133,13 @@ const Home = () => {
 
   const [reviews, setReviews] = useState([]);
   const [activeReviewIdx, setActiveReviewIdx] = useState(0);
+
+  const displayReviews = useMemo(() => {
+    if (!reviews || reviews.length === 0) return DEFAULT_REVIEWS;
+    if (reviews.length >= 4) return reviews.slice(0, 4);
+    const needed = 4 - reviews.length;
+    return [...reviews, ...DEFAULT_REVIEWS.slice(0, needed)];
+  }, [reviews]);
 
   const [instagramPosts, setInstagramPosts] = useState(DEFAULT_INSTAGRAM_POSTS);
   const [storeCategories, setStoreCategories] = useState([]);
@@ -350,10 +394,10 @@ const Home = () => {
           setTrendingProducts(data.sections.trending || []);
         } else if (Array.isArray(data.items)) {
           const gold = data.items.filter((p) => p.productType === 'gold');
-          setGoldProducts(gold.length > 0 ? gold.slice(0, 5) : data.items.slice(0, 5));
-          setPlatinumProducts(data.items.slice(0, 5));
-          setSilverProducts(data.items.slice(5, 10));
-          setTrendingProducts(data.items.slice(10, 15));
+          setGoldProducts(gold.length > 0 ? gold.slice(0, 8) : data.items.slice(0, 8));
+          setPlatinumProducts(data.items.slice(0, 8));
+          setSilverProducts(data.items.slice(8, 16));
+          setTrendingProducts(data.items.slice(16, 24));
         }
       } catch (err) {
         console.error('Failed to load home products:', err);
@@ -361,6 +405,33 @@ const Home = () => {
     };
     fetchHomeProducts();
   }, []);
+
+  // Auto scroll for Most Loved on Neirah
+  useEffect(() => {
+    const list = goldProducts.length > 0 ? goldProducts : platinumProducts;
+    if (list.length <= 1) return;
+    let timer;
+
+    const startTimer = () => {
+      timer = setInterval(() => {
+        const el = mostLovedScrollRef.current;
+        if (!el) return;
+        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 15) {
+          el.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          const card = el.querySelector('.product-card-container');
+          const scrollAmount = card ? card.offsetWidth + 24 : 310;
+          el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+      }, 3000);
+    };
+
+    if (!isMostLovedHovered) {
+      startTimer();
+    }
+
+    return () => clearInterval(timer);
+  }, [goldProducts.length, platinumProducts.length, isMostLovedHovered]);
 
 
   // ─── 9. FETCH REVIEWS (/api/reviews?status=approved) ─────────────────
@@ -375,7 +446,9 @@ const Home = () => {
             clientName: r.customer?.name || r.clientName || 'Client',
             location: '',
             rating: r.review?.rating || r.rating || 5,
+            title: r.review?.title || r.title || '',
             comment: r.review?.comment || r.comment || '',
+            image: r.image?.url || (typeof r.image === 'string' ? r.image : ''),
           }));
           setReviews(formatted);
         }
@@ -454,74 +527,113 @@ const Home = () => {
           2. CELEBRATE WITH NEIRAH (Dynamic from /api/featured?placement=Celebrate)
       ─────────────────────────────────────────────────────────────────── */}
       {effectiveCategoryItems.length > 0 && (
-        <section style={sectionStyle('categories')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+        <section style={sectionStyle('categories')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <div className="text-center mb-6 sm:mb-8">
-            <h2 className="font-serif text-2xl sm:text-3xl text-stone-900 font-normal tracking-wide">
+            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
               Celebrate With Neirah
             </h2>
           </div>
 
-          <div
-            className="relative group/celebrate px-1"
-            onMouseEnter={() => setIsCelebrateHovered(true)}
-            onMouseLeave={() => setIsCelebrateHovered(false)}
-          >
-            {/* Left Chevron Button */}
-            <button
-              type="button"
-              onClick={() => scrollCelebrate('prev')}
-              aria-label="Previous categories"
-              className="absolute -left-2 sm:-left-3 lg:-left-5 top-1/2 -translate-y-1/2 z-20 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer"
-            >
-              <HiOutlineChevronLeft className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
-            </button>
-
-            {/* Scrollable Container with exact box size and hidden scrollbar */}
+          {effectiveCategoryItems.length <= 4 ? (
             <div
-              ref={celebrateScrollRef}
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              className="flex items-center gap-3 sm:gap-4 lg:gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory py-2 [&::-webkit-scrollbar]:hidden"
+              className="grid grid-cols-2 lg:grid-cols-4 w-full"
+              style={{ gap: '24px' }}
             >
               {effectiveCategoryItems.map((item) => (
                 <Link
                   key={item._id}
                   to={item.link}
-                  className="celebrate-card group relative rounded-2xl overflow-hidden aspect-[4/5] bg-stone-100 border border-stone-200/80 shadow-xs hover:shadow-lg transition-all duration-500 shrink-0 snap-start flex flex-col justify-end w-[65vw] sm:w-[calc(50%-10px)] md:w-[calc(33.333%-14px)] lg:w-[calc(25%-15px)]"
+                  style={{ borderRadius: '22px' }}
+                  className="group relative overflow-hidden aspect-[3/4] min-h-[380px] sm:min-h-[430px] lg:min-h-[480px] xl:min-h-[520px] bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col justify-end cursor-pointer isolate"
                 >
                   {item.image && (
                     <img
                       src={getMediaUrl(item.image)}
                       alt={item.name}
-                      className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                      style={{ borderRadius: '22px' }}
+                      className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
                     />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                  <div className="relative z-10 p-3 sm:p-4 text-left">
-                    <span className="text-xs sm:text-[13px] font-medium text-white tracking-wide block drop-shadow-md truncate">
+                  <div
+                    style={{ borderBottomLeftRadius: '22px', borderBottomRightRadius: '22px' }}
+                    className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/20 to-transparent transition-opacity duration-500 group-hover:from-black/85 pointer-events-none"
+                  />
+                  <div className="relative z-10 p-4 sm:p-5 text-left">
+                    <span className="text-sm sm:text-base font-medium text-white tracking-wide block drop-shadow-sm">
                       {item.name}
                     </span>
                   </div>
                 </Link>
               ))}
             </div>
-
-            {/* Right Chevron Button */}
-            <button
-              type="button"
-              onClick={() => scrollCelebrate('next')}
-              aria-label="Next categories"
-              className="absolute -right-2 sm:-right-3 lg:-right-5 top-1/2 -translate-y-1/2 z-20 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer"
+          ) : (
+            <div
+              className="relative group/celebrate px-1"
+              onMouseEnter={() => setIsCelebrateHovered(true)}
+              onMouseLeave={() => setIsCelebrateHovered(false)}
             >
-              <HiOutlineChevronRight className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
-            </button>
-          </div>
+              {/* Left Chevron Button */}
+              <button
+                type="button"
+                onClick={() => scrollCelebrate('prev')}
+                aria-label="Previous categories"
+                className="absolute -left-2 sm:-left-3 lg:-left-5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer"
+              >
+                <HiOutlineChevronLeft className="h-5 w-5" />
+              </button>
+
+              {/* Scrollable Container */}
+              <div
+                ref={celebrateScrollRef}
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', gap: '24px' }}
+                className="flex items-center overflow-x-auto scroll-smooth snap-x snap-mandatory py-2 [&::-webkit-scrollbar]:hidden w-full"
+              >
+                {effectiveCategoryItems.map((item) => (
+                  <Link
+                    key={item._id}
+                    to={item.link}
+                    style={{ borderRadius: '22px' }}
+                    className="celebrate-card group relative overflow-hidden aspect-[3/4] min-h-[380px] sm:min-h-[430px] lg:min-h-[480px] xl:min-h-[520px] bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 shrink-0 snap-start flex flex-col justify-end cursor-pointer isolate w-[calc(50%-12px)] lg:w-[calc(25%-18px)]"
+                  >
+                    {item.image && (
+                      <img
+                        src={getMediaUrl(item.image)}
+                        alt={item.name}
+                        style={{ borderRadius: '22px' }}
+                        className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
+                      />
+                    )}
+                    <div
+                      style={{ borderBottomLeftRadius: '22px', borderBottomRightRadius: '22px' }}
+                      className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/20 to-transparent transition-opacity duration-500 group-hover:from-black/85 pointer-events-none"
+                    />
+                    <div className="relative z-10 p-4 sm:p-5 text-left">
+                      <span className="text-sm sm:text-base font-medium text-white tracking-wide block drop-shadow-sm">
+                        {item.name}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* Right Chevron Button */}
+              <button
+                type="button"
+                onClick={() => scrollCelebrate('next')}
+                aria-label="Next categories"
+                className="absolute -right-2 sm:-right-3 lg:-right-5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer"
+              >
+                <HiOutlineChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+          )}
         </section>
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
           3. PRODUCTS SECTION (Dynamic from /api/products/home)
       ─────────────────────────────────────────────────────────────────── */}
-      <section style={sectionStyle('products')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-16">
+      <section style={sectionStyle('products')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-16">
         {/* Most Loved on Neirah - Gold Products Sub-Section */}
         {(goldProducts.length > 0 || platinumProducts.length > 0) && (
           <div>
@@ -531,16 +643,23 @@ const Home = () => {
               </h3>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4 lg:gap-5">
-              {(goldProducts.length > 0 ? goldProducts : platinumProducts).map((product) => (
-                <ProductCard key={product.id || product._id} product={product} />
+            <div
+              ref={mostLovedScrollRef}
+              onMouseEnter={() => setIsMostLovedHovered(true)}
+              onMouseLeave={() => setIsMostLovedHovered(false)}
+              className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 scrollbar-none snap-x snap-mandatory scroll-smooth"
+            >
+              {(goldProducts.length > 0 ? goldProducts : platinumProducts).slice(0, 8).map((product) => (
+                <div key={product.id || product._id} className="product-card-container flex-shrink-0 w-[240px] sm:w-[270px] lg:w-[290px] xl:w-[310px] snap-start">
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
 
             {/* DISCOVER Button Matching Screenshot */}
             <div className="text-center mt-8 sm:mt-10">
               <Link
-                to="/shop?productType=gold"
+                to="/shop"
                 className="inline-flex items-center justify-center border border-stone-800 text-stone-900 text-[11px] sm:text-xs font-medium tracking-[0.2em] px-10 py-2.5 uppercase hover:bg-stone-900 hover:text-white transition-all duration-300"
               >
                 DISCOVER
@@ -553,16 +672,17 @@ const Home = () => {
         {silverProducts.length > 0 && (
           <div>
             <div className="text-center mb-8">
-              <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-stone-400 block mb-1">
-                925 STERLING PURITY
-              </span>
               <h3 className="font-serif text-2xl sm:text-3xl text-stone-900 font-normal tracking-wide">
                 Silver Jewellery
               </h3>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
-              {silverProducts.map((product) => <ProductCard key={product.id || product._id} product={product} />)}
+            <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 scrollbar-none snap-x snap-mandatory">
+              {silverProducts.map((product) => (
+                <div key={product.id || product._id} className="flex-shrink-0 w-[240px] sm:w-[270px] lg:w-[290px] xl:w-[310px] snap-start">
+                  <ProductCard product={product} />
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -572,15 +692,15 @@ const Home = () => {
           4. CURATED COLLECTION BANNERS (Dynamic Bento Grid from /api/banners)
       ─────────────────────────────────────────────────────────────────── */}
       {effectiveCollectionBanners.length > 0 && (
-        <section style={sectionStyle('collections')} className="mx-auto max-w-[1440px] space-y-8 px-4 py-12 sm:px-6 lg:px-8">
+        <section style={sectionStyle('collections')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto space-y-8 px-4 py-12 sm:px-6 lg:px-8">
           {effectiveCollectionBanners.map((collection) => {
             const [image1, image2, image3, image4] = collection.images || [];
             if (!image1 || !image2 || !image3 || !image4) return null;
-            const tileClass = 'group relative block overflow-hidden bg-stone-100';
-            const tileImageClass = 'h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]';
+            const tileClass = 'group relative block overflow-hidden rounded-2xl sm:rounded-[22px] bg-stone-100 shadow-2xs hover:shadow-md transition-shadow duration-300';
+            const tileImageClass = 'h-full w-full object-cover rounded-2xl sm:rounded-[22px] transition-transform duration-700 group-hover:scale-[1.02]';
             return (
-              <div key={collection.id} className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-3">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div key={collection.id} className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-5">
                   <Link to={image1.link} className={`${tileClass} aspect-square`} aria-label={`${collection.title} image 1`}>
                     <img src={getMediaUrl(image1.url)} alt={image1.categoryName || `${collection.title} 1`} loading="lazy" className={tileImageClass} />
                   </Link>
@@ -604,23 +724,25 @@ const Home = () => {
           5. TRUST BADGES ROW (Dynamic from Settings)
       ─────────────────────────────────────────────────────────────────── */}
       {activeTrustBadges.length > 0 && (
-        <section style={sectionStyle('trustBadges')} className="border-y border-stone-200/70 bg-[#faf9f7] py-6 px-4">
-          <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-center sm:justify-around gap-6 text-center">
+        <section style={sectionStyle('trustBadges')} className="bg-white py-10 sm:py-12 lg:py-14 px-4 sm:px-6 lg:px-8 border-y border-stone-100">
+          <div className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 items-start justify-items-center gap-y-8 gap-x-4 sm:gap-x-6 lg:gap-x-4 text-center">
             {activeTrustBadges.map((item, index) => {
               const imageUrl = item.image?.url ? getMediaUrl(item.image.url) : null;
               return (
-                <div key={item._id || index} className="flex flex-col items-center justify-center gap-1.5 text-stone-600 px-3 py-1">
+                <div key={item._id || index} className="flex flex-col items-center justify-start text-center group w-full max-w-[160px]">
                   {imageUrl && (
-                    <img
-                      src={imageUrl}
-                      alt={item.title}
-                      className="h-6 w-6 object-contain"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
+                    <div className="h-12 sm:h-14 lg:h-16 w-full flex items-center justify-center mb-3 sm:mb-3.5">
+                      <img
+                        src={imageUrl}
+                        alt={item.title}
+                        className="h-10 sm:h-12 lg:h-14 w-auto max-w-[62px] object-contain transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
                   )}
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-800 text-center">
+                  <span className="text-[11px] sm:text-xs lg:text-[13px] font-semibold uppercase tracking-[0.12em] text-[#1a1815] text-center leading-snug">
                     {item.title}
                   </span>
                 </div>
@@ -713,7 +835,7 @@ const Home = () => {
           7. GIFTS SECTION (Dynamic from /api/featured?placement=Gifts)
       ─────────────────────────────────────────────────────────────────── */}
       {giftItems.length > 0 && (
-        <section style={sectionStyle('gifts')} className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <section style={sectionStyle('gifts')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <div className="text-center mb-6 sm:mb-8">
             <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
               Gifts That Say It All
@@ -729,7 +851,7 @@ const Home = () => {
                 key={gift._id}
                 to={gift.link}
                 style={{ borderRadius: '22px' }}
-                className="group relative overflow-hidden aspect-[3/4] min-h-[360px] sm:min-h-[390px] lg:min-h-[415px] bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col justify-end cursor-pointer isolate"
+                className="group relative overflow-hidden aspect-[3/4] min-h-[380px] sm:min-h-[430px] lg:min-h-[480px] xl:min-h-[520px] bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col justify-end cursor-pointer isolate"
               >
                 {gift.image && (
                   <img
@@ -759,108 +881,73 @@ const Home = () => {
       ─────────────────────────────────────────────────────────────────── */}
       {mobileAppBanner?.image && (
         <section style={sectionStyle('mobileApp')} className="pt-8 sm:pt-14">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8">
             {/* Desktop view */}
-            <div className="hidden md:flex relative w-full aspect-[1440/420] min-h-[360px] lg:min-h-[420px] rounded-[24px] lg:rounded-[30px] overflow-hidden shadow-sm items-center border border-[#F0E6D8]/80 bg-[#FBF3EB]">
-              <img
-                src={getMediaUrl(mobileAppBanner.image)}
-                alt="NEIRAH Mobile App"
-                className="absolute inset-0 w-full h-full object-cover object-left lg:object-center select-none pointer-events-none"
-              />
-              <div className="relative z-10 w-full md:w-[54%] lg:w-[50%] xl:w-[48%] ml-auto flex flex-col items-center text-center px-4 md:px-6 lg:px-12 py-4">
-                <h2 className="unna-font font-serif text-[#5C3617] text-2xl md:text-[26px] lg:text-[34px] xl:text-[38px] font-normal leading-[1.22] tracking-tight whitespace-pre-line">
-                  {mobileAppBanner.title}
-                </h2>
-                <p className="font-sans text-[#8C461E] font-medium text-xs md:text-sm lg:text-[16px] mt-3 lg:mt-4 mb-4 lg:mb-5 leading-snug whitespace-pre-line">
-                  {mobileAppBanner.subtitle}
-                </p>
-                <div className="flex items-center justify-center gap-3 lg:gap-4 flex-wrap">
-                  <a
-                    href={mobileAppBanner.googlePlayUrl || 'https://play.google.com/store'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2.5 px-3.5 py-2 lg:px-4 lg:py-2.5 bg-black hover:bg-neutral-900 border border-neutral-700 hover:border-neutral-500 rounded-xl transition-all duration-200 text-left cursor-pointer shrink-0 shadow-sm hover:scale-[1.03]"
-                  >
-                    <svg className="w-5 h-5 lg:w-6 lg:h-6 shrink-0" viewBox="0 0 512 512">
-                      <path fill="#410593" d="M92.1 40.7L276.8 225.5 92.1 410.3c-4.4-4.8-7.1-11.2-7.1-18.4V60.1c0-7.2 2.7-13.6 7.1-19.4z" />
-                      <path fill="#00e5ff" d="M366.1 176.2L120.2 34.2c-7.9-4.5-17.3-4.3-24.9.4l181.5 181.5 89.3-40z" />
-                      <path fill="#ff1053" d="M95.3 477.4c7.6 4.7 17 .4 24.9-4.1l245.9-142-89.3-39.9L95.3 477.4z" />
-                      <path fill="#ffc200" d="M428.4 235.1l-62.3-36-79.3 56.9 79.3 56.9 62.3-36c11.6-6.7 18.6-18.8 18.6-32s-7-25.2-18.6-31.8z" />
-                    </svg>
-                    <div className="flex flex-col text-left">
-                      <span className="text-[8px] lg:text-[9px] text-gray-300 font-medium uppercase leading-tight">GET IT ON</span>
-                      <span className="text-[12px] lg:text-[14px] text-white font-bold leading-tight">Google Play</span>
-                    </div>
-                  </a>
-                  <a
-                    href={mobileAppBanner.appStoreUrl || 'https://www.apple.com/app-store/'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2.5 px-3.5 py-2 lg:px-4 lg:py-2.5 bg-black hover:bg-neutral-900 border border-neutral-700 hover:border-neutral-500 rounded-xl transition-all duration-200 text-left cursor-pointer shrink-0 shadow-sm hover:scale-[1.03]"
-                  >
-                    <svg className="w-5 h-5 lg:w-6 lg:h-6 fill-current text-white shrink-0" viewBox="0 0 384 512">
-                      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 52.3-13.7 69.5-34.3z" />
-                    </svg>
-                    <div className="flex flex-col text-left">
-                      <span className="text-[8px] lg:text-[9px] text-gray-300 font-medium leading-tight">Download on the</span>
-                      <span className="text-[12px] lg:text-[14px] text-white font-bold leading-tight">App Store</span>
-                    </div>
-                  </a>
-                </div>
+            <div className="hidden md:block relative w-full aspect-[1440/420] min-h-[380px] lg:min-h-[440px] xl:min-h-[500px] rounded-[24px] lg:rounded-[30px] overflow-hidden shadow-sm border border-[#F0E6D8]/80 bg-[#FBF3EB]">
+              {mobileAppBanner.link ? (
+                <a
+                  href={mobileAppBanner.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full h-full cursor-pointer"
+                >
+                  <img
+                    src={getMediaUrl(mobileAppBanner.image)}
+                    alt="NEIRAH Mobile App"
+                    className="w-full h-full object-cover object-left lg:object-center select-none"
+                  />
+                </a>
+              ) : (
+                <img
+                  src={getMediaUrl(mobileAppBanner.image)}
+                  alt="NEIRAH Mobile App"
+                  className="w-full h-full object-cover object-left lg:object-center select-none"
+                />
+              )}
+
+              {/* Clickable hotspots for Google Play and App Store buttons in banner artwork */}
+              <div className="absolute right-4 sm:right-8 md:right-12 lg:right-16 bottom-5 sm:bottom-7 lg:bottom-9 z-10 flex items-center gap-2 sm:gap-3">
+                <a
+                  href={mobileAppBanner.googlePlayUrl || 'https://play.google.com/store'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-28 sm:w-32 lg:w-36 h-9 sm:h-10 lg:h-12 cursor-pointer"
+                  title="Get it on Google Play"
+                  aria-label="Google Play"
+                />
+                <a
+                  href={mobileAppBanner.appStoreUrl || 'https://www.apple.com/app-store/'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-28 sm:w-32 lg:w-36 h-9 sm:h-10 lg:h-12 cursor-pointer"
+                  title="Download on the App Store"
+                  aria-label="App Store"
+                />
               </div>
             </div>
 
             {/* Mobile view */}
-            <div className="block md:hidden relative w-full rounded-[20px] overflow-hidden bg-gradient-to-b from-[#FBF2EA] via-[#F8EAE0] to-[#F5DFCC] border border-[#EADAC8]/70 shadow-sm">
-              <div className="w-full h-52 sm:h-64 relative overflow-hidden bg-[#FBF3EB]">
+            <div className="block md:hidden relative w-full rounded-[20px] overflow-hidden bg-[#FBF3EB] border border-[#EADAC8]/70 shadow-sm">
+              {mobileAppBanner.link ? (
+                <a
+                  href={mobileAppBanner.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full h-full cursor-pointer"
+                >
+                  <img
+                    src={getMediaUrl(mobileAppBanner.mobileImage || mobileAppBanner.image)}
+                    alt="NEIRAH Mobile App"
+                    className="w-full h-auto object-cover"
+                  />
+                </a>
+              ) : (
                 <img
-                  src={getMediaUrl(mobileAppBanner.image)}
+                  src={getMediaUrl(mobileAppBanner.mobileImage || mobileAppBanner.image)}
                   alt="NEIRAH Mobile App"
-                  className="w-full h-full object-cover object-left"
+                  className="w-full h-auto object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#FBF2EA]" />
-              </div>
-              <div className="p-6 pt-3 text-center flex flex-col items-center -mt-4 relative z-10">
-                <h2 className="unna-font font-serif text-[#5C3617] text-2xl sm:text-3xl font-normal leading-snug tracking-tight whitespace-pre-line">
-                  {mobileAppBanner.title}
-                </h2>
-                <p className="font-sans text-[#8C461E] font-medium text-xs sm:text-sm mt-2 mb-4 leading-snug whitespace-pre-line">
-                  {mobileAppBanner.subtitle}
-                </p>
-                <div className="flex items-center justify-center gap-3 flex-wrap">
-                  <a
-                    href={mobileAppBanner.googlePlayUrl || 'https://play.google.com/store'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-1.5 bg-black rounded-lg text-left shadow-sm"
-                  >
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 512 512">
-                      <path fill="#410593" d="M92.1 40.7L276.8 225.5 92.1 410.3c-4.4-4.8-7.1-11.2-7.1-18.4V60.1c0-7.2 2.7-13.6 7.1-19.4z" />
-                      <path fill="#00e5ff" d="M366.1 176.2L120.2 34.2c-7.9-4.5-17.3-4.3-24.9.4l181.5 181.5 89.3-40z" />
-                      <path fill="#ff1053" d="M95.3 477.4c7.6 4.7 17 .4 24.9-4.1l245.9-142-89.3-39.9L95.3 477.4z" />
-                      <path fill="#ffc200" d="M428.4 235.1l-62.3-36-79.3 56.9 79.3 56.9 62.3-36c11.6-6.7 18.6-18.8 18.6-32s-7-25.2-18.6-31.8z" />
-                    </svg>
-                    <div className="flex flex-col text-left">
-                      <span className="text-[7px] text-gray-300 font-medium uppercase leading-tight">GET IT ON</span>
-                      <span className="text-[11px] text-white font-bold leading-tight">Google Play</span>
-                    </div>
-                  </a>
-                  <a
-                    href={mobileAppBanner.appStoreUrl || 'https://www.apple.com/app-store/'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-1.5 bg-black rounded-lg text-left shadow-sm"
-                  >
-                    <svg className="w-4 h-4 fill-current text-white shrink-0" viewBox="0 0 384 512">
-                      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 52.3-13.7 69.5-34.3z" />
-                    </svg>
-                    <div className="flex flex-col text-left">
-                      <span className="text-[7px] text-gray-300 font-medium leading-tight">Download on the</span>
-                      <span className="text-[11px] text-white font-bold leading-tight">App Store</span>
-                    </div>
-                  </a>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </section>
@@ -869,14 +956,18 @@ const Home = () => {
       {/* ─────────────────────────────────────────────────────────────────
           9. TRENDING JEWELLERY SECTION (Dynamic from /api/products/home)
       ─────────────────────────────────────────────────────────────────── */}
-      <section style={sectionStyle('products')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+      <section style={sectionStyle('products')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h3 className="font-serif text-xl sm:text-2xl text-stone-900 font-normal mb-8">
           Trending jewellery in lab grown diamond
         </h3>
 
         {trendingProducts.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 text-left">
-            {trendingProducts.map((product) => <ProductCard key={product.id || product._id} product={product} />)}
+          <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 scrollbar-none snap-x snap-mandatory text-left">
+            {trendingProducts.map((product) => (
+              <div key={product.id || product._id} className="flex-shrink-0 w-[240px] sm:w-[270px] lg:w-[290px] xl:w-[310px] snap-start">
+                <ProductCard product={product} />
+              </div>
+            ))}
           </div>
         ) : (
           <div className="py-8 space-y-3">
@@ -953,53 +1044,64 @@ const Home = () => {
       {/* ─────────────────────────────────────────────────────────────────
           11. WHAT OUR CLIENTS ARE SAYING (Dynamic from /api/reviews)
       ─────────────────────────────────────────────────────────────────── */}
-      {reviews.length > 0 && currentReview && (
-        <section style={sectionStyle('reviews')} className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 text-center">
-          <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-stone-400 block mb-2">
-            TESTIMONIALS
-          </span>
-          <h2 className="font-serif text-2xl sm:text-3xl text-stone-900 font-normal tracking-wide mb-10">
-            WHAT OUR CLIENTS ARE SAYING
-          </h2>
+      <section style={sectionStyle('reviews')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+        <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide text-center mb-10 sm:mb-12">
+          What Customers are Saying
+        </h2>
 
-          <div className="bg-[#fcfaf7] border border-stone-200/90 rounded-3xl p-8 sm:p-12 shadow-sm relative">
-            <div className="flex items-center justify-center gap-1 text-amber-400 mb-4">
-              {Array.from({ length: currentReview.rating || 5 }).map((_, i) => (
-                <HiStar key={i} className="w-5 h-5 fill-current" />
-              ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {displayReviews.map((rev, idx) => (
+            <div
+              key={rev.id || idx}
+              className="bg-white rounded-2xl border border-stone-200/90 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col"
+            >
+              {/* Top Area: Image or Warm Champagne Container with Quote Icon */}
+              <div className="h-44 sm:h-48 bg-[#f5efe6] relative overflow-hidden flex items-center justify-center shrink-0">
+                {rev.image ? (
+                  <img
+                    src={rev.image}
+                    alt={rev.title || rev.clientName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-white shadow-2xs flex items-center justify-center text-[#8b6f4e] text-lg font-serif">
+                    “
+                  </div>
+                )}
+              </div>
+
+              {/* Content Area */}
+              <div className="p-5 sm:p-6 flex flex-col flex-1 text-center justify-between">
+                {/* 5 Stars */}
+                <div className="flex items-center justify-center gap-1 text-amber-400 mb-2.5">
+                  {Array.from({ length: Number(rev.rating) || 5 }).map((_, i) => (
+                    <HiStar key={i} className="w-4 h-4 fill-current" />
+                  ))}
+                </div>
+
+                {/* Review Headline / Title */}
+                {rev.title && (
+                  <h3 className="font-bold text-stone-900 text-sm sm:text-[14px] leading-snug mb-2 line-clamp-2">
+                    {rev.title}
+                  </h3>
+                )}
+
+                {/* Review Comment / Testimonial Text */}
+                <p className="text-xs sm:text-[13px] text-stone-600 leading-relaxed mb-4 flex-1 line-clamp-3">
+                  {rev.comment}
+                </p>
+
+                {/* Client Name */}
+                <div className="mt-auto pt-1">
+                  <span className="font-bold text-xs sm:text-[13px] text-stone-900 tracking-wide block">
+                    {rev.clientName}
+                  </span>
+                </div>
+              </div>
             </div>
-
-            <p className="font-serif italic text-base sm:text-lg text-stone-700 leading-relaxed max-w-2xl mx-auto mb-6">
-              &ldquo;{currentReview.comment}&rdquo;
-            </p>
-
-            <div className="font-sans">
-              <span className="text-xs font-bold tracking-widest uppercase text-stone-900 block">
-                {currentReview.clientName}
-              </span>
-            </div>
-
-            {reviews.length > 1 && (
-              <>
-                <button
-                  onClick={() => setActiveReviewIdx((prev) => (prev - 1 + reviews.length) % reviews.length)}
-                  className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-stone-600 hover:text-black transition-colors cursor-pointer"
-                  aria-label="Previous review"
-                >
-                  <HiOutlineChevronLeft className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setActiveReviewIdx((prev) => (prev + 1) % reviews.length)}
-                  className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center text-stone-600 hover:text-black transition-colors cursor-pointer"
-                  aria-label="Next review"
-                >
-                  <HiOutlineChevronRight className="w-4 h-4" />
-                </button>
-              </>
-            )}
-          </div>
-        </section>
-      )}
+          ))}
+        </div>
+      </section>
 
       {/* ─────────────────────────────────────────────────────────────────
           12. FOLLOW US ON INSTAGRAM (Matches neirah.in)

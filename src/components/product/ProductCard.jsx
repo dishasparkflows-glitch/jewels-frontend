@@ -273,9 +273,9 @@ export default function ProductCard({ product }) {
 
   return (
     <article
-      className="group flex h-full min-w-0 flex-col justify-between p-2.5 sm:p-3 rounded-2xl border border-stone-200/90 bg-white shadow-2xs hover:shadow-md transition-all duration-300 cursor-pointer"
+      className="group flex h-full min-w-0 flex-col bg-transparent cursor-pointer transition-all duration-300"
     >
-      <div className="relative aspect-square overflow-hidden rounded-xl bg-[#FAF9F7] flex items-center justify-center transition-colors">
+      <div className="relative aspect-square overflow-hidden rounded-[20px] bg-[#FAF8F5] flex items-center justify-center transition-colors">
         <Link
           to={href}
           aria-label={`View ${title}`}
@@ -284,11 +284,11 @@ export default function ProductCard({ product }) {
           <ProductImage
             src={image}
             name={title}
-            className="h-full w-full object-contain p-4 sm:p-5 transition-transform duration-700 motion-safe:group-hover:scale-105"
+            className="h-full w-full object-contain p-3.5 sm:p-4 transition-transform duration-500 motion-safe:group-hover:scale-105"
           />
         </Link>
 
-        {/* Wishlist Button (Top Right) */}
+        {/* Wishlist Button (Top Right Matching Reference Design) */}
         <button
           type="button"
           disabled={wishlistBusy}
@@ -299,30 +299,13 @@ export default function ProductCard({ product }) {
             e.stopPropagation();
             handleWishlist();
           }}
-          className="absolute right-2.5 top-2.5 sm:right-3 sm:top-3 z-20 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/80 hover:bg-white text-stone-600 hover:text-stone-900 border border-stone-200/70 shadow-2xs transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 cursor-pointer"
+          className="absolute right-2.5 top-2.5 sm:right-3 sm:top-3 z-20 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white shadow-sm hover:shadow text-stone-600 hover:text-stone-900 border border-stone-100 transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 cursor-pointer"
         >
           {wished ? (
             <HiHeart className="h-4 w-4 text-[#e11d48] fill-current" />
           ) : (
-            <HiOutlineHeart className="h-4 w-4" />
+            <HiOutlineHeart className="h-4 w-4 text-stone-500" />
           )}
-        </button>
-
-        {/* Quick Preview / Expand Button (Bottom Left) */}
-        <button
-          type="button"
-          title="Quick preview"
-          aria-label="Expand image"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setPreviewOpen(true);
-          }}
-          className="absolute bottom-2.5 left-2.5 sm:bottom-3 sm:left-3 z-20 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded bg-white/90 hover:bg-white text-stone-500 hover:text-stone-900 border border-stone-200/80 shadow-2xs transition-all cursor-pointer"
-        >
-          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
-          </svg>
         </button>
 
         {/* Carousel Prev/Next Arrows */}
@@ -354,38 +337,24 @@ export default function ProductCard({ product }) {
             </button>
           </>
         )}
-
-        {/* Carousel Pagination Dots */}
-        {cardImages.length > 1 && (
-          <div className="absolute bottom-2.5 inset-x-0 z-10 flex items-center justify-center gap-1.5 pointer-events-none">
-            {cardImages.slice(0, 5).map((_, idx) => (
-              <span
-                key={idx}
-                className={`h-1.5 rounded-full transition-all duration-200 ${
-                  idx === imageIndex ? 'w-3.5 bg-stone-800' : 'w-1.5 bg-stone-300'
-                }`}
-              />
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Product Information (Left-aligned) */}
-      <div className="flex flex-1 flex-col pt-3 pb-1 px-1 text-left justify-between bg-white">
-        <div>
+      {/* Product Information (Centered, uppercase title, centered swatches, centered price) */}
+      <div className="flex flex-1 flex-col pt-3 pb-1 px-1 text-center items-center justify-between bg-transparent w-full">
+        <div className="w-full flex flex-col items-center">
           <Link
             to={href}
-            className="block line-clamp-2 min-h-[32px] sm:min-h-[36px] text-xs sm:text-[13px] font-normal leading-[1.35] text-stone-800 hover:text-[#8b6f4e] transition-colors"
+            className="block line-clamp-2 min-h-[32px] sm:min-h-[36px] text-[11px] sm:text-xs lg:text-[12.5px] font-medium leading-snug tracking-wide uppercase text-stone-800 hover:text-[#8b6f4e] transition-colors text-center"
           >
             {title}
           </Link>
 
-          {/* Metal Color Swatches */}
+          {/* Metal Color Swatches (Centered) */}
           {!!colors.length && (
             <div
               role="group"
               aria-label={`${title} colours`}
-              className="my-2 flex min-h-[20px] flex-wrap items-center gap-1.5"
+              className="my-1.5 flex min-h-[18px] flex-wrap items-center justify-center gap-1.5"
             >
               {colors.slice(0, 5).map((entry) => {
                 const isSelected = Boolean(activeColorName && entry.name?.toLowerCase() === activeColorName.toLowerCase());
@@ -413,9 +382,9 @@ export default function ProductCard({ product }) {
                     {entry.hex ? (
                       <span
                         style={{ background: bgGradient || entry.hex }}
-                        className={`block h-3 w-3 rounded-full border transition-all ${
+                        className={`block h-3.5 w-3.5 rounded-full border transition-all ${
                           isSelected
-                            ? "ring-1 ring-stone-900 ring-offset-1 scale-110 border-transparent"
+                            ? "ring-1 ring-stone-900 ring-offset-1 scale-105 border-transparent"
                             : "border-stone-300/80 hover:border-stone-400"
                         }`}
                       />
@@ -440,18 +409,23 @@ export default function ProductCard({ product }) {
           )}
         </div>
 
-        {/* Price */}
-        <div className="pt-0.5">
+        {/* Price (Centered with optional Strikethrough MRP) */}
+        <div className="pt-0.5 flex items-center justify-center gap-1.5 text-center flex-wrap">
           {isGroup && product.pricing?.minPrice && product.pricing?.maxPrice && product.pricing.minPrice !== product.pricing.maxPrice ? (
-            <div className="flex flex-col">
-              <span className="text-xs sm:text-[14px] font-bold text-stone-950">
-                {formatProductPrice(product.pricing.minPrice)} – {formatProductPrice(product.pricing.maxPrice)}
-              </span>
-            </div>
-          ) : (
-            <span className="text-xs sm:text-[14px] font-bold text-stone-950 tracking-tight">
-              {formatProductPrice(data.price) || "Price on request"}
+            <span className="text-xs sm:text-[13.5px] font-bold text-stone-950">
+              {formatProductPrice(product.pricing.minPrice)} – {formatProductPrice(product.pricing.maxPrice)}
             </span>
+          ) : (
+            <>
+              <span className="text-xs sm:text-[13.5px] font-bold text-stone-950">
+                {formatProductPrice(data.price) || "Price on request"}
+              </span>
+              {data.originalPrice && Number(data.originalPrice) > Number(data.price) && (
+                <span className="text-[11px] sm:text-xs text-stone-400 line-through font-normal">
+                  {formatProductPrice(data.originalPrice)}
+                </span>
+              )}
+            </>
           )}
         </div>
       </div>

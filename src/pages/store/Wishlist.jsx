@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { HiHeart, HiOutlineArrowRight } from 'react-icons/hi';
+import { HiHeart, HiOutlineArrowRight, HiOutlineTrash } from 'react-icons/hi';
 import WishlistProductCard from '../../components/product/WishlistProductCard';
 import { useWishlist } from '../../contexts/WishlistContext';
 
@@ -25,8 +25,13 @@ export default function Wishlist() {
             My Wishlist <span className="font-normal text-stone-500">({wishlistCount})</span>
           </h1>
           {wishlistCount > 0 && (
-            <button type="button" onClick={clearWishlist} className="text-xs text-stone-500 transition hover:text-rose-600">
-              Clear all
+            <button
+              type="button"
+              onClick={clearWishlist}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] text-xs sm:text-[13px] font-medium transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
+            >
+              <HiOutlineTrash className="w-4 h-4 text-[#8b6f4e]" />
+              <span>Clear All</span>
             </button>
           )}
         </header>

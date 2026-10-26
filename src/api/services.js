@@ -207,3 +207,9 @@ export const blogsAPI = {
   getRecent: (limit = 4) => getOnce(`/blogs/recent?limit=${limit}`),
 };
 
+// ─── Static Pages ─────────────────────────────────
+export const staticPagesAPI = {
+  getAll: (params) => getOnce('/static-pages', { params }),
+  getBySlug: (slug) => getOnce(`/static-pages/slug/${slug}`),
+};
+

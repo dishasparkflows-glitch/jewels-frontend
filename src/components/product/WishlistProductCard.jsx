@@ -74,6 +74,62 @@ export default function WishlistProductCard({ item, onRemove }) {
   const maxPrice = activeProduct.pricing?.maxPrice;
   const hasRange = minPrice && maxPrice && minPrice !== maxPrice;
 
+  const [addingToCart, setAddingToCart] = useState(false);
+
+  const handleAddToCart = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (addingToCart) return;
+    setAddingToCart(true);
+
+    try {
+      const colorEntry = activeColor;
+      const metalColorId = colorEntry?.id || activeProduct.metalColorIds?.[0]?._id || activeProduct.metalColorIds?.[0] || null;
+
+      let selectedAttributes = activeProduct.selectedAttributes ? { ...activeProduct.selectedAttributes } : undefined;
+      if (metalColorId) {
+        selectedAttributes = {
+          ...(selectedAttributes || {}),
+          metalColor: metalColorId,
+        };
+      }
+
+      const itemPrice = Number(price) || 0;
+      const quantity = 1;
+      const totalItemPrice = itemPrice * quantity;
+      const addedAt = new Date().toISOString();
+
+      await addToCart(
+        {
+          id,
+          productId: id,
+          userId: user?._id || user?.id || null,
+          title: name,
+          price: itemPrice,
+          totalItemPrice,
+          addedAt,
+          quantity,
+          originalPrice: cardData.originalPrice,
+          image: displayImage,
+          category: activeProduct.category || activeProduct.categoryIds?.[0]?.name || '',
+          productType: activeProduct.productType || '',
+          selectedAttributes,
+          selectedMetal: activeColorName || colorEntry?.name || '',
+        },
+        1,
+        {
+          selectedMetal: activeColorName || colorEntry?.name || '',
+        }
+      );
+    } catch (err) {
+      console.error('Failed to add to cart from wishlist:', err);
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
   return (
     <article className="group min-w-0 flex flex-col justify-between text-center transition-all duration-300">
       {/* ─── Image Box (Warm subtle background matching reference) ─── */}
@@ -173,6 +229,22 @@ export default function WishlistProductCard({ item, onRemove }) {
               {formatProductPrice(price) || 'Price unavailable'}
             </span>
           )}
+        </div>
+
+        {/* ─── ADD TO CART Button ─── */}
+        <div className="mt-3.5 w-full">
+          <button
+            type="button"
+            disabled={addingToCart}
+            onClick={handleAddToCart}
+            className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#201e1b] hover:bg-[#8b6f4e] text-white text-[11px] sm:text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 shadow-2xs hover:shadow-sm active:scale-98 cursor-pointer disabled:opacity-60"
+          >
+            {addingToCart ? (
+              <span>ADDING…</span>
+            ) : (
+              <span>ADD TO CART</span>
+            )}
+          </button>
         </div>
       </div>
     </article>

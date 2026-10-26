@@ -20,6 +20,7 @@ import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import Profile from './pages/user/Profile';
+import StaticPageView from './pages/store/StaticPageView';
 
 function App() {
   return (
@@ -83,6 +84,8 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/pages/:slug" element={<StaticPageView />} />
+              <Route path="/:slug" element={<StaticPageView />} />
             </Route>
 
             {/* Catch-all redirect to Home */}
