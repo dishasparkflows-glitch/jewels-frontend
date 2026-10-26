@@ -61,7 +61,20 @@ export const bannersAPI = {
 
 // ─── Store settings ───────────────────────────────
 let storeSettingsRequest;
+let commonSettingsRequest;
 export const settingsAPI = {
+  getCommonSettings: (options = {}) => {
+    if (options?.fresh) {
+      return api.get('/settings/common');
+    }
+    if (!commonSettingsRequest) {
+      commonSettingsRequest = getOnce('/settings/common').catch((error) => {
+        commonSettingsRequest = null;
+        throw error;
+      });
+    }
+    return commonSettingsRequest;
+  },
   getStoreSettings: (options = {}) => {
     if (options?.fresh) {
       return api.get('/settings');
@@ -98,11 +111,21 @@ export const couponsAPI = {
   validate: (code, cartAmount) => api.post('/coupons/validate', { code, cartAmount }),
 };
 
+// ─── Addresses ─────────────────────────────────────
+export const addressesAPI = {
+  getAll: () => api.get('/addresses'),
+  getById: (id) => getOnce(`/addresses/${id}`),
+  create: (data) => api.post('/addresses', data),
+  update: (id, data) => api.put(`/addresses/${id}`, data),
+  delete: (id) => api.delete(`/addresses/${id}`),
+  setDefault: (id, type = 'both') => api.patch(`/addresses/${id}/default`, { type }),
+};
+
 // ─── Checkout ──────────────────────────────────────
 export const checkoutAPI = {
   validateCoupon: (code, cartAmount) => api.post('/coupons/validate', { code, cartAmount }),
   calculateCodFee: (amount) => getOnce('/cod-sequences/calculate', { params: { amount } }),
-  getAddresses: () => getOnce('/addresses'),
+  getAddresses: () => api.get('/addresses'),
 };
 
 // ─── Featured / Celebrate / Gifts ─────────────────
@@ -142,6 +165,7 @@ export const footerAPI = {
 // ─── Wishlist ─────────────────────────────────────
 export const wishlistAPI = {
   get: () => getOnce('/wishlist'),
+  getCounts: () => getOnce('/cart/counts'),
   toggle: (productData) => api.post('/wishlist/toggle', productData),
   add: (productData) => api.post('/wishlist/add', productData),
   remove: (productId) => api.delete(`/wishlist/${productId}`),
@@ -151,13 +175,18 @@ export const wishlistAPI = {
 // ─── Cart ─────────────────────────────────────────
 export const cartAPI = {
   get: () => getOnce('/cart'),
+  getCounts: () => getOnce('/cart/counts'),
   add: (payload) =>
     api.post('/cart/add', {
       selectedAttributes: payload?.selectedAttributes ?? null,
+      selectedMetal: payload?.selectedMetal || payload?.options?.selectedMetal || null,
+      selectedSize: payload?.selectedSize || payload?.options?.selectedSize || null,
       userId: payload?.userId ?? null,
       productId: payload?.productId || payload?.id || payload?._id,
       price: Number(payload?.price) || 0,
       totalItemPrice: Number(payload?.totalItemPrice) || Number(payload?.price) || 0,
+      quantity: payload?.quantity || 1,
+      options: payload?.options || {},
     }),
   updateQuantity: (productId, quantity, options = {}) =>
     api.put('/cart/quantity', { productId, quantity, options }),

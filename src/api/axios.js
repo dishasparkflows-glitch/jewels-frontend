@@ -40,10 +40,6 @@ function getOrCreateSessionId() {
 // Request interceptor - attach token & session ID
 api.interceptors.request.use(
   (config) => {
-    const isMobileBannerLookup = /^\/banners\/lookup(?:\?|$)/.test(config.url || '') && config.params?.platform === 'mobile';
-    if ((!config.method || config.method === 'get') && !isMobileBannerLookup && /^\/(banners|categories|featured)(\/|\?|$)/.test(config.url || '')) {
-      config.params = { ...config.params, themeMedia: true };
-    }
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

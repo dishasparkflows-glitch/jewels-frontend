@@ -7,17 +7,27 @@ const StoreSettingsContext = createContext(null);
 
 export function StoreSettingsProvider({ children }) {
   const [settings, setSettings] = useState({});
+  const [footerSettings, setFooterSettings] = useState({});
+  const [topAnnouncement, setTopAnnouncement] = useState({ isEnabled: false, displayDirection: 'horizontal', autoplayInterval: 4000, items: [] });
   const [websiteConfig, setWebsiteConfig] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
-    Promise.allSettled([settingsAPI.getStoreSettings(), websiteAPI.getConfig()])
-      .then(([settingsResult, themeResult]) => {
+    Promise.allSettled([settingsAPI.getCommonSettings(), websiteAPI.getConfig()])
+      .then(([commonResult, themeResult]) => {
         if (!mounted) return;
-        if (settingsResult.status === 'fulfilled') setSettings(settingsResult.value?.data?.data || {});
-        else console.warn('Failed to load store settings:', settingsResult.reason);
+        if (commonResult.status === 'fulfilled') {
+          const commonData = commonResult.value?.data?.data || {};
+          setSettings(commonData.settings || {});
+          setFooterSettings(commonData.footerSettings || {});
+          if (commonData.topAnnouncement) {
+            setTopAnnouncement(commonData.topAnnouncement);
+          }
+        } else {
+          console.warn('Failed to load store settings:', commonResult.reason);
+        }
         if (themeResult.status === 'fulfilled') setWebsiteConfig(themeResult.value?.data?.data || null);
         else console.warn('Failed to load website theme configuration:', themeResult.reason);
       })
@@ -37,10 +47,15 @@ export function StoreSettingsProvider({ children }) {
         })
         .catch((error) => console.warn('Failed to refresh website theme configuration:', error));
 
-      settingsAPI.getStoreSettings({ fresh: true })
+      settingsAPI.getCommonSettings({ fresh: true })
         .then(({ data }) => {
           if (!mounted) return;
-          setSettings(data?.data || {});
+          const commonData = data?.data || {};
+          setSettings(commonData.settings || {});
+          setFooterSettings(commonData.footerSettings || {});
+          if (commonData.topAnnouncement) {
+            setTopAnnouncement(commonData.topAnnouncement);
+          }
         })
         .catch((error) => console.warn('Failed to refresh store settings:', error));
     };
@@ -84,7 +99,7 @@ export function StoreSettingsProvider({ children }) {
   }, [theme]);
 
   return (
-    <StoreSettingsContext.Provider value={{ settings, websiteConfig, theme, themeStyle, loading }}>
+    <StoreSettingsContext.Provider value={{ settings, footerSettings, topAnnouncement, websiteConfig, theme, themeStyle, loading }}>
       {children}
     </StoreSettingsContext.Provider>
   );

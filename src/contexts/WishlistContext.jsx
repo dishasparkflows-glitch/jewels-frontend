@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { wishlistAPI } from '../api/services';
 import { useAuth } from './AuthContext';
 import { getPrimaryProductImage } from '../utils/productImages';
+import { joinUserSocketRooms, onWishlistCountUpdate } from '../services/socket';
 
 /* eslint-disable react/prop-types, react-refresh/only-export-components */
 const WishlistContext = createContext(null);
@@ -66,6 +67,7 @@ export const WishlistProvider = ({ children }) => {
         if (item._id) map[String(item._id)] = true;
       });
       setWishlistMap(map);
+      setWishlistCount(items.length);
     } catch (err) {
       console.warn('Failed to fetch wishlist from API:', err);
     } finally {
@@ -73,10 +75,56 @@ export const WishlistProvider = ({ children }) => {
     }
   }, [user]);
 
-  // Fetch on mount or when user changes
+  const [wishlistCount, setWishlistCount] = useState(() => {
+    try {
+      const saved = localStorage.getItem('jewels_wishlist');
+      return saved ? JSON.parse(saved).length : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  // Fast counts fetcher (only asks for badge counts, never full wishlist)
+  const fetchWishlistCount = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token && !user) return;
+    try {
+      const res = await wishlistAPI.getCounts();
+      const data = res?.data?.data || res?.data || {};
+      if (data.wishlistCount !== undefined) {
+        setWishlistCount(Number(data.wishlistCount));
+      }
+    } catch (err) {
+      console.warn('Failed to fetch wishlist count:', err);
+    }
+  }, [user]);
+
+  // Realtime Socket.IO synchronization for instant counts across tabs and devices
   useEffect(() => {
-    fetchWishlist();
-  }, [fetchWishlist, user]);
+    joinUserSocketRooms({ userId: user?._id || user?.id });
+
+    const unsubscribe = onWishlistCountUpdate((data) => {
+      if (data?.wishlistCount !== undefined) {
+        setWishlistCount(Number(data.wishlistCount));
+      }
+      if (data?.productId) {
+        setWishlistMap((prev) => ({
+          ...prev,
+          [String(data.productId)]: Boolean(data.isWishlisted),
+        }));
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Sync count on mount or user/route change: only fetch full wishlist if directly on /wishlist page
+  useEffect(() => {
+    fetchWishlistCount();
+    if (location.pathname === '/wishlist') {
+      fetchWishlist();
+    }
+  }, [fetchWishlistCount, fetchWishlist, user, location.pathname]);
 
   // Check if a specific product is wishlisted
   const isWishlisted = useCallback(
@@ -87,26 +135,28 @@ export const WishlistProvider = ({ children }) => {
     [wishlistMap]
   );
 
-  // Toggle item in wishlist with optimistic UI update & API sync
-  const toggleWishlist = async (product) => {
+  // Toggle item in wishlist with instant optimistic UI update & API sync
+  const toggleWishlist = async (product, isCurrentlyWished = null) => {
     if (!product) return false;
 
     const productId = String(product.id || product._id || product.productId || '').trim();
     if (!productId) return false;
 
-    const wasWishlisted = !!wishlistMap[productId];
+    // Determine actual current status accurately
+    const wasWishlisted =
+      isCurrentlyWished !== null
+        ? Boolean(isCurrentlyWished)
+        : wishlistMap[productId] !== undefined
+        ? Boolean(wishlistMap[productId])
+        : Boolean(product.inWishlist);
+
     const willBeWishlisted = !wasWishlisted;
 
-    // Optimistic UI update
-    setWishlistMap((prev) => {
-      const next = { ...prev };
-      if (willBeWishlisted) {
-        next[productId] = true;
-      } else {
-        delete next[productId];
-      }
-      return next;
-    });
+    // Instant optimistic UI update
+    setWishlistMap((prev) => ({
+      ...prev,
+      [productId]: willBeWishlisted,
+    }));
 
     setWishlistItems((prev) => {
       let next;
@@ -121,6 +171,9 @@ export const WishlistProvider = ({ children }) => {
       } catch {}
       return next;
     });
+
+    // Instantly increment / decrement count!
+    setWishlistCount((prev) => (willBeWishlisted ? prev + 1 : Math.max(0, prev - 1)));
 
     if (willBeWishlisted) {
       toast.success('Added to wishlist', {
@@ -158,6 +211,9 @@ export const WishlistProvider = ({ children }) => {
             if (id) nextMap[String(id._id || id)] = true;
           });
           setWishlistMap(nextMap);
+          setWishlistCount(result.productIds.length);
+        } else if (result.wishlistCount !== undefined) {
+          setWishlistCount(Number(result.wishlistCount));
         }
       } catch (err) {
         console.error('Error syncing wishlist with backend:', err);
@@ -177,6 +233,7 @@ export const WishlistProvider = ({ children }) => {
       delete next[strId];
       return next;
     });
+    setWishlistCount((prev) => Math.max(0, prev - 1));
     setWishlistItems((prev) => {
       const next = prev.filter((i) => String(i.productId) !== strId && String(i._id) !== strId && String(i.id) !== strId);
       try {
@@ -206,6 +263,7 @@ export const WishlistProvider = ({ children }) => {
   const clearWishlist = async () => {
     setWishlistItems([]);
     setWishlistMap({});
+    setWishlistCount(0);
     try {
       localStorage.removeItem('jewels_wishlist');
     } catch {}
@@ -221,14 +279,13 @@ export const WishlistProvider = ({ children }) => {
     }
   };
 
-  const wishlistCount = Object.keys(wishlistMap).length;
-
   return (
     <WishlistContext.Provider
       value={{
         wishlistItems,
         wishlistMap,
         wishlistCount,
+        fetchWishlistCount,
         loading,
         isWishlisted,
         toggleWishlist,

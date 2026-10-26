@@ -1,10 +1,15 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { HiHeart, HiOutlineArrowRight } from 'react-icons/hi';
 import WishlistProductCard from '../../components/product/WishlistProductCard';
 import { useWishlist } from '../../contexts/WishlistContext';
 
 export default function Wishlist() {
-  const { wishlistItems, wishlistCount, loading, removeFromWishlist, clearWishlist } = useWishlist();
+  const { wishlistItems, wishlistCount, loading, removeFromWishlist, clearWishlist, refreshWishlist } = useWishlist();
+
+  useEffect(() => {
+    refreshWishlist();
+  }, [refreshWishlist]);
 
   return (
     <section className="min-h-[75vh] bg-white py-10 sm:py-16">

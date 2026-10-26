@@ -25,7 +25,7 @@ test('excludes videos and internal ERP media and deduplicates images', () => {
 test('uses real colour metadata and associated images without exposing raw IDs', () => {
   const card = getProductCardData({
     metalColors: ['507f1f77bcf86cd799439011', { name: 'Rose Gold', hex: '#cc9999' }, null],
-    colorImages: [{ metalColorId: { name: 'Rose Gold', hex: '#cc9999' }, images: [{ url: 'rose.webp' }] }, { metalColor: null }],
+    colorImages: [{ metalColorId: { name: 'Rose Gold', hex: '#cc9999' }, images: [{ url: 'rose.webp' }] }, { metalColorId: null }],
   });
   assert.deepEqual(card.colors, [{ name: 'Rose Gold', hex: '#cc9999', image: 'rose.webp' }]);
   assert.deepEqual(getProductCardData({}).colors, []);

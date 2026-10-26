@@ -1,10 +1,12 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { cartAPI } from '../api/services';
 import { getPrimaryProductImage } from '../utils/productImages';
 import { trackAddToCart, trackRemoveFromCart } from '../config/firebase';
 import { useAuth } from './AuthContext';
+import { resolveMetalName, cleanAttribute } from '../utils/metalColors';
+import { joinUserSocketRooms, onCartCountUpdate } from '../services/socket';
 
 /* eslint-disable react/prop-types, react-refresh/only-export-components */
 const CartContext = createContext(null);
@@ -13,10 +15,19 @@ export const CartProvider = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, token } = useAuth();
+  const isFetchingCartRef = useRef(false);
+  const isFetchingCountsRef = useRef(false);
   const [cart, setCart] = useState(() => {
     try {
       const saved = localStorage.getItem('jewels_cart');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((item) => ({
+        ...item,
+        selectedMetal: resolveMetalName(item.selectedMetal),
+        selectedSize: cleanAttribute(item.selectedSize),
+      }));
     } catch {
       return [];
     }
@@ -46,6 +57,8 @@ export const CartProvider = ({ children }) => {
 
   // Fetch cart from backend API
   const fetchCart = useCallback(async () => {
+    if (isFetchingCartRef.current) return;
+    isFetchingCartRef.current = true;
     try {
       setLoading(true);
       const res = await cartAPI.get();
@@ -74,8 +87,8 @@ export const CartProvider = ({ children }) => {
             image: i.image?.url || i.image || '',
             category: i.category,
             quantity: i.quantity,
-            selectedMetal: i.selectedMetal || '',
-            selectedSize: i.selectedSize || '',
+            selectedMetal: resolveMetalName(i.selectedMetal, i.product),
+            selectedSize: cleanAttribute(i.selectedSize),
           };
         });
         setCart(formattedItems);
@@ -90,16 +103,59 @@ export const CartProvider = ({ children }) => {
       }
     } catch (err) {
       console.warn('Failed to load cart from API, using local fallback:', err);
-      setCartTotals(calculateTotals(cart));
+      setCart((currentCart) => {
+        setCartTotals(calculateTotals(currentCart));
+        return currentCart;
+      });
     } finally {
       setLoading(false);
+      isFetchingCartRef.current = false;
     }
-  }, [calculateTotals, cart]);
+  }, [calculateTotals]);
 
-  useEffect(() => {
-    fetchCart();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Fast counts fetcher (only asks for badge counts, never full cart)
+  const fetchCounts = useCallback(async () => {
+    if (isFetchingCountsRef.current) return null;
+    isFetchingCountsRef.current = true;
+    try {
+      const res = await cartAPI.getCounts();
+      const data = res?.data?.data || res?.data || {};
+      const count = Number(data.cartCount ?? data.totalItems ?? 0);
+      setCartTotals((prev) => ({
+        ...prev,
+        totalItems: count,
+      }));
+      return data;
+    } catch (err) {
+      console.warn('Failed to fetch badge counts:', err);
+      return null;
+    } finally {
+      isFetchingCountsRef.current = false;
+    }
   }, []);
+
+  // Realtime Socket.IO synchronization for instant cart counts across tabs and devices
+  useEffect(() => {
+    joinUserSocketRooms({ userId: user?._id || user?.id });
+
+    const unsubscribe = onCartCountUpdate((data) => {
+      const count = Number(data?.cartCount ?? data?.totalItems ?? 0);
+      setCartTotals((prev) => ({
+        ...prev,
+        totalItems: count,
+      }));
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // On mount or user/route change: fetch lightweight counts, only fetch full cart on cart/checkout pages
+  useEffect(() => {
+    fetchCounts();
+    if (location.pathname === '/cart' || location.pathname === '/checkout') {
+      fetchCart();
+    }
+  }, [user, location.pathname, fetchCounts, fetchCart]);
 
   // Add item to cart with backend API call & optimistic update
   const addToCart = async (product, quantity = 1, options = {}) => {
@@ -115,7 +171,8 @@ export const CartProvider = ({ children }) => {
 
     const productId = String(product.id || product._id || product.productId || '').trim();
     const parsedQty = Math.max(1, parseInt(quantity, 10) || 1);
-    const selectedMetal = options.selectedMetal || product.selectedMetal || '';
+    const selectedMetal = resolveMetalName(options.selectedMetal || product.selectedMetal || '', product);
+    const selectedSize = cleanAttribute(options.selectedSize || product.selectedSize || '');
     const title = product.title || product.name || '';
     const price = Number(product.price) || 0;
     const image = product.image?.url || product.image || getPrimaryProductImage(product);
@@ -167,7 +224,7 @@ export const CartProvider = ({ children }) => {
             category: product.category || '',
             quantity: parsedQty,
             selectedMetal,
-            selectedSize: options.selectedSize || '',
+            selectedSize,
             selectedAttributes,
             addedAt,
           },
@@ -191,27 +248,29 @@ export const CartProvider = ({ children }) => {
 
     // 2. Call backend Cart API
     try {
-      const resolvedUserId =
-        userId ||
-        options.userId ||
-        product.userId ||
-        user?._id ||
-        user?.id ||
-        (() => {
-          try {
-            return JSON.parse(localStorage.getItem('user') || '{}')?._id || null;
-          } catch {
-            return null;
-          }
-        })();
-
       const payload = {
-        selectedAttributes: selectedAttributes || null,
-        userId: resolvedUserId,
         productId,
+        quantity: parsedQty,
         price,
         totalItemPrice,
       };
+
+      if (selectedMetal) {
+        payload.selectedMetal = selectedMetal;
+      }
+      if (selectedSize) {
+        payload.selectedSize = selectedSize;
+      }
+
+      // Only attach selectedAttributes if it contains meaningful non-null values
+      if (selectedAttributes && typeof selectedAttributes === 'object') {
+        const validEntries = Object.entries(selectedAttributes).filter(
+          ([, val]) => val !== null && val !== undefined && val !== ''
+        );
+        if (validEntries.length > 0) {
+          payload.selectedAttributes = Object.fromEntries(validEntries);
+        }
+      }
 
       const res = await cartAPI.add(payload);
       const data = res?.data?.data || res?.data || {};
@@ -228,8 +287,8 @@ export const CartProvider = ({ children }) => {
           image: i.image?.url || i.image || '',
           category: i.category,
           quantity: i.quantity,
-          selectedMetal: i.selectedMetal || '',
-          selectedSize: i.selectedSize || '',
+          selectedMetal: resolveMetalName(i.selectedMetal, i.product),
+          selectedSize: cleanAttribute(i.selectedSize),
         }));
         setCart(formattedItems);
         setCartTotals({
@@ -364,6 +423,7 @@ export const CartProvider = ({ children }) => {
         tax,
         total,
         loading,
+        fetchCounts,
         refreshCart: fetchCart,
       }}
     >

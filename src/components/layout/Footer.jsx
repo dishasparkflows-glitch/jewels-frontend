@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getOnce } from '../../api/axios';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import {
   HiOutlinePhone,
   HiOutlineMail,
@@ -29,28 +30,21 @@ const Footer = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Fetch footer settings from API (/api/footer-settings) - cached once
+  const { footerSettings } = useStoreSettings();
+
+  // Populate footer settings from common StoreSettingsContext (no separate API call)
   useEffect(() => {
-    const fetchFooter = async () => {
-      try {
-        const res = await getOnce('/footer-settings');
-        const data = res?.data?.data || res?.data;
-        if (data) {
-          setFooterData((prev) => ({
-            ...prev,
-            phone: data.phone || data.mobile || prev.phone,
-            email: data.email || prev.email,
-            address: data.address || prev.address,
-            copyright: data.copyright || prev.copyright,
-            socialLinks: Array.isArray(data.socialLinks) && data.socialLinks.length > 0 ? data.socialLinks : prev.socialLinks,
-          }));
-        }
-      } catch (err) {
-        console.error('Footer API error:', err);
-      }
-    };
-    fetchFooter();
-  }, []);
+    if (footerSettings && Object.keys(footerSettings).length > 0) {
+      setFooterData((prev) => ({
+        ...prev,
+        phone: footerSettings.phone || footerSettings.mobile || prev.phone,
+        email: footerSettings.email || prev.email,
+        address: footerSettings.address || prev.address,
+        copyright: footerSettings.copyright || prev.copyright,
+        socialLinks: Array.isArray(footerSettings.socialLinks) && footerSettings.socialLinks.length > 0 ? footerSettings.socialLinks : prev.socialLinks,
+      }));
+    }
+  }, [footerSettings]);
 
   // Fetch categories & navigation items from API - shared cache with Navbar
   useEffect(() => {

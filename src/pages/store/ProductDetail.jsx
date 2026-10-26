@@ -14,6 +14,15 @@ import {
   HiOutlineEye,
   HiOutlineExternalLink,
 } from 'react-icons/hi';
+import {
+  FaWhatsapp,
+  FaFacebookF,
+  FaXTwitter,
+  FaPinterestP,
+  FaEnvelope,
+  FaLink,
+  FaCheck,
+} from 'react-icons/fa6';
 import toast from 'react-hot-toast';
 import { productsAPI } from '../../api/services';
 import { useCart } from '../../contexts/CartContext';
@@ -256,7 +265,7 @@ export default function ProductDetail() {
       const p = referenceName(v.metalPurity || v.metalPurityId) || v.purity || '';
       if (p) pSet.add(p);
 
-      const cObj = v.metalColor || v.metalColorId;
+      const cObj = v.metalColorId;
       const cName = referenceName(cObj) || v.color || '';
       if (cName) {
         const existing = cMap.get(cName) || {};
@@ -306,7 +315,7 @@ export default function ProductDetail() {
 
     if (Array.isArray(product?.colorImages)) {
       product.colorImages.forEach((ci) => {
-        const cObj = ci.metalColorId || ci.metalColor;
+        const cObj = ci.metalColorId;
         const cName = referenceName(cObj) || ci.colorName || ci.name || '';
         if (cName) {
           const existing = cMap.get(cName) || {};
@@ -477,7 +486,7 @@ export default function ProductDetail() {
 
     if (selectedColor && Array.isArray(product.colorImages)) {
       const match = product.colorImages.find((ci) => {
-        const cName = ci.metalColorId?.name || ci.metalColor?.name || ci.colorName || ci.name || '';
+        const cName = ci.metalColorId?.name || ci.colorName || ci.name || '';
         if (cName && cName.toLowerCase() === selectedColor.toLowerCase()) return true;
         const matchedFromList = colors.find(
           (c) => String(c.id || c._id) === String(ci.metalColorId?._id || ci.metalColorId)
@@ -511,7 +520,7 @@ export default function ProductDetail() {
     // 1. Exact match across all active dimensions
     let match = raw.find((v) => {
       const p = referenceName(v.metalPurity || v.metalPurityId) || v.purity || '';
-      const c = referenceName(v.metalColor || v.metalColorId) || v.color || '';
+      const c = referenceName(v.metalColorId) || v.color || '';
       const ct = Number(v.centerDiamondWeight || v.caratWeight || 0);
       const col = referenceName(v.diamondColor || v.diamondColorId) || v.diamondColor || '';
       const cla = referenceName(v.diamondClarity || v.diamondClarityId) || v.diamondClarity || '';
@@ -793,7 +802,7 @@ export default function ProductDetail() {
 
     let selectedAttributes = null;
     if (isGold) {
-      selectedAttributes = {
+      const attrs = {
         metalPurity: selectedVariant?.metalPurityId?._id || selectedVariant?.metalPurityId || product.metalPurityIds?.[0]?._id || product.metalPurityIds?.[0] || null,
         metalColor: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null,
         diamondType: selectedVariant?.diamondTypeId?._id || selectedVariant?.diamondTypeId || null,
@@ -802,26 +811,18 @@ export default function ProductDetail() {
         diamondColor: selectedVariant?.diamondColorId?._id || selectedVariant?.diamondColorId || null,
         caratWeight: Number(selectedVariant?.caratWeight || selectedCarat || 0) || null,
         size: selectedSize || null,
-        sizeRange: null,
       };
-    } else {
-      selectedAttributes = {
-        metalPurity: null,
-        metalColor: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null,
-        diamondType: null,
-        diamondShape: null,
-        diamondClarity: null,
-        diamondColor: null,
-        caratWeight: null,
-        size: selectedSize || null,
-        sizeRange: null,
-      };
+      const validEntries = Object.entries(attrs).filter(([, val]) => val !== null && val !== undefined && val !== '');
+      if (validEntries.length > 0) {
+        selectedAttributes = Object.fromEntries(validEntries);
+      }
     }
+
+    const selectedMetalStr = `${selectedPurity} ${selectedColor}`.trim();
 
     const cartItem = {
       _id: product._id,
       productId: product._id,
-      userId: user?._id || user?.id || null,
       title: product.basicInfo?.title,
       price,
       totalItemPrice,
@@ -830,17 +831,13 @@ export default function ProductDetail() {
       image: galleryImages.find((img) => !isVideoMedia(img)) || galleryImages[0] || getPrimaryProductImage(product),
       category: categoryName,
       productType: product.productType,
+      selectedMetal: selectedMetalStr,
+      selectedSize: selectedSize || '',
       selectedAttributes,
     };
 
     addToCart(cartItem, 1, {
-      userId: user?._id || user?.id || null,
-      price,
-      totalItemPrice,
-      addedAt,
-      selectedMetal: `${selectedPurity} ${selectedColor}`.trim(),
-      selectedVariantId: selectedVariant?._id || '',
-      size: selectedSize,
+      selectedMetal: selectedMetalStr,
       selectedSize,
       selectedAttributes,
     });
@@ -850,13 +847,74 @@ export default function ProductDetail() {
     }, 400);
   };
 
-  // Share handler
-  const handleShare = () => {
-    if (navigator.clipboard) {
+  // Share state & handlers
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    if (navigator?.clipboard?.writeText) {
       navigator.clipboard.writeText(window.location.href);
+      setLinkCopied(true);
       toast.success('Product link copied to clipboard!');
+      setTimeout(() => setLinkCopied(false), 2500);
     } else {
       toast('Share link: ' + window.location.href);
+    }
+  };
+
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    const shareTitle = product?.name || 'Neirah Luxury Jewellery';
+    const shareText = `Discover ${product?.name || 'this luxury piece'} on Neirah Fine Jewellery`;
+
+    const shareData = {
+      title: shareTitle,
+      text: shareText,
+      url: shareUrl,
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (err) {
+        // If user cancelled / closed native share window, do not error or open modal
+        if (err?.name === 'AbortError') return;
+      }
+    }
+
+    // Fallback: Open in-app luxury share dialog
+    setShareModalOpen(true);
+  };
+
+  const [localWished, setLocalWished] = useState(null);
+
+  useEffect(() => {
+    if (product?.inWishlist !== undefined) {
+      setLocalWished(Boolean(product.inWishlist));
+    }
+  }, [product?.inWishlist]);
+
+  const isItemWishlisted =
+    localWished !== null
+      ? localWished
+      : Boolean(
+          product &&
+            (product.inWishlist !== undefined
+              ? product.inWishlist
+              : isWishlisted(product._id) ||
+                isWishlisted(product.id) ||
+                isWishlisted(product.basicInfo?.slug) ||
+                isWishlisted(product.slug))
+        );
+
+  const handleToggleWishlist = async () => {
+    const nextState = !isItemWishlisted;
+    setLocalWished(nextState);
+    try {
+      await toggleWishlist(product);
+    } catch {
+      setLocalWished(!nextState);
     }
   };
 
@@ -882,8 +940,6 @@ export default function ProductDetail() {
     );
   }
 
-
-
   const specificationRows = [
     ['Metal', metalDisplayName || product.specifications?.metalName || 'Gold'],
     ['Diamond Type', diamondType],
@@ -893,14 +949,6 @@ export default function ProductDetail() {
     ['Net Weight', breakdown?.metalWeight ? `${breakdown.metalWeight} g` : '—'],
     ['Size', selectedSize || 'Standard'],
   ].filter(([, value]) => value !== undefined && value !== null && value !== '');
-
-  const isItemWishlisted = Boolean(
-    product &&
-      (isWishlisted(product._id) ||
-        isWishlisted(product.id) ||
-        isWishlisted(product.basicInfo?.slug) ||
-        isWishlisted(product.slug))
-  );
 
   return (
     <div className="bg-white text-stone-900 min-h-screen pb-24 lg:pb-12">
@@ -1036,7 +1084,7 @@ export default function ProductDetail() {
                 <div className="relative group">
                   <button
                     type="button"
-                    onClick={() => toggleWishlist(product)}
+                    onClick={handleToggleWishlist}
                     className="p-1.5 rounded-full hover:bg-rose-50/80 text-stone-400 hover:text-[#e11d48] transition-all cursor-pointer flex items-center justify-center active:scale-90"
                     aria-label={isItemWishlisted ? "Remove from wishlist" : "Add to wishlist"}
                   >
@@ -1300,13 +1348,13 @@ export default function ProductDetail() {
               )}
             </div>
 
-            {/* ─── ADD TO CART Button Row with Wishlist Heart ─── */}
-            <div className="pt-2 flex items-center gap-3">
+            {/* ─── ADD TO CART Button Row ─── */}
+            <div className="pt-2">
               <button
                 type="button"
                 onClick={handleAddToCart}
                 disabled={addingToCart}
-                className="flex-1 py-4 bg-[#141414] hover:bg-black active:scale-[0.99] text-white font-bold text-xs uppercase tracking-widest rounded-lg shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-4 bg-[#141414] hover:bg-black active:scale-[0.99] text-white font-bold text-xs uppercase tracking-widest rounded-lg shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
               >
                 {addingToCart ? (
                   <>
@@ -1317,32 +1365,6 @@ export default function ProductDetail() {
                   <span>ADD TO CART</span>
                 )}
               </button>
-
-              {/* Wishlist Heart Button beside ADD TO CART */}
-              <div className="relative group">
-                <button
-                  type="button"
-                  onClick={() => toggleWishlist(product)}
-                  className={`w-13 h-13 rounded-xl border flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95 ${
-                    isItemWishlisted
-                      ? 'border-rose-200 bg-rose-50/80 text-[#e11d48]'
-                      : 'border-stone-200 bg-white hover:border-rose-300 hover:text-[#e11d48] text-stone-600'
-                  }`}
-                  aria-label={isItemWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-                >
-                  {isItemWishlisted ? (
-                    <HiHeart className="w-6 h-6 text-[#e11d48] fill-current drop-shadow-xs transition-transform duration-200 scale-105" />
-                  ) : (
-                    <HiOutlineHeart className="w-6 h-6 transition-transform duration-200 group-hover:scale-110" />
-                  )}
-                </button>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
-                  <div className="bg-black text-white text-[11px] font-medium px-2.5 py-1 rounded shadow-lg whitespace-nowrap">
-                    {isItemWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-                  </div>
-                  <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-black" />
-                </div>
-              </div>
             </div>
 
             {/* Delivery Estimate Bar (Matches Screenshot 3) */}
@@ -1886,7 +1908,7 @@ export default function ProductDetail() {
         </button>
         <button
           type="button"
-          onClick={() => toggleWishlist(product)}
+          onClick={handleToggleWishlist}
           className={`w-11 h-11 rounded-lg border flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 shrink-0 ${
             isItemWishlisted
               ? 'border-rose-200 bg-rose-50 text-[#e11d48]'
@@ -1901,6 +1923,172 @@ export default function ProductDetail() {
           )}
         </button>
       </div>
+
+      {/* ─── Luxury Share Modal (Fallback / Direct Dialog) ────── */}
+      {shareModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn"
+          onClick={() => setShareModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-stone-200 animate-scaleUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3.5 border-b border-stone-100">
+              <div className="flex items-center gap-2">
+                <HiOutlineShare className="w-5 h-5 text-[#8b6f4e]" />
+                <h3 className="font-serif text-lg font-bold text-stone-900 tracking-wide">
+                  Share
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShareModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
+                aria-label="Close share dialog"
+              >
+                <HiOutlineX className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Product Summary */}
+            <div className="flex items-center gap-3.5 my-4 p-3 rounded-xl bg-stone-50 border border-stone-200/80">
+              {galleryImages?.[0] ? (
+                <img
+                  src={galleryImages[0]}
+                  alt={product?.name || 'Product'}
+                  className="w-14 h-14 object-cover rounded-lg border border-stone-200 shrink-0"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-lg bg-stone-200 flex items-center justify-center text-stone-400 shrink-0">
+                  <HiOutlineShare className="w-5 h-5" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <h4 className="text-sm font-semibold text-stone-900 truncate">
+                  {product?.name || 'Neirah Jewellery'}
+                </h4>
+                {typeof formatPrice === 'function' && finalPrice ? (
+                  <p className="text-xs font-bold text-[#8b6f4e] mt-0.5">
+                    {formatPrice(finalPrice)}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            {/* Copy Link Input Bar */}
+            <div className="space-y-1.5 mb-5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                Link
+              </label>
+              <div className="flex items-center gap-2 p-1.5 pl-3 rounded-xl border border-stone-200 bg-stone-50/70 focus-within:border-[#8b6f4e] focus-within:bg-white transition-colors">
+                <FaLink className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                <input
+                  type="text"
+                  readOnly
+                  value={window.location.href}
+                  className="w-full text-xs text-stone-700 bg-transparent outline-none truncate"
+                />
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                    linkCopied
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-[#8b6f4e] hover:bg-[#725a3d] text-white active:scale-95'
+                  }`}
+                >
+                  {linkCopied ? (
+                    <>
+                      <FaCheck className="w-3 h-3" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <span>Copy</span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Social Share Options */}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-3 text-center">
+                Share directly via
+              </p>
+              <div className="grid grid-cols-5 gap-2 text-center">
+                {/* WhatsApp */}
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent((product?.name ? product.name + '\n' : '') + window.location.href)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-emerald-50 text-stone-600 hover:text-emerald-600 transition-colors group cursor-pointer"
+                  title="Share on WhatsApp"
+                >
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
+                    <FaWhatsapp className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-medium truncate w-full">WhatsApp</span>
+                </a>
+
+                {/* Facebook */}
+                <a
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-blue-50 text-stone-600 hover:text-blue-600 transition-colors group cursor-pointer"
+                  title="Share on Facebook"
+                >
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                    <FaFacebookF className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-medium truncate w-full">Facebook</span>
+                </a>
+
+                {/* Twitter / X */}
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(product?.name || 'Neirah Fine Jewellery')}&url=${encodeURIComponent(window.location.href)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-stone-100 text-stone-600 hover:text-black transition-colors group cursor-pointer"
+                  title="Share on X"
+                >
+                  <div className="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center text-black group-hover:scale-110 transition-transform">
+                    <FaXTwitter className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-medium truncate w-full">Twitter / X</span>
+                </a>
+
+                {/* Pinterest */}
+                <a
+                  href={`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(window.location.href)}&media=${encodeURIComponent(galleryImages?.[0] || '')}&description=${encodeURIComponent(product?.name || 'Neirah Jewellery')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-rose-50 text-stone-600 hover:text-rose-600 transition-colors group cursor-pointer"
+                  title="Share on Pinterest"
+                >
+                  <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 group-hover:scale-110 transition-transform">
+                    <FaPinterestP className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-medium truncate w-full">Pinterest</span>
+                </a>
+
+                {/* Email */}
+                <a
+                  href={`mailto:?subject=${encodeURIComponent(product?.name || 'Neirah Luxury Jewellery')}&body=${encodeURIComponent('Check out this exquisite piece:\n' + window.location.href)}`}
+                  className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-amber-50 text-stone-600 hover:text-amber-700 transition-colors group cursor-pointer"
+                  title="Share via Email"
+                >
+                  <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 group-hover:scale-110 transition-transform">
+                    <FaEnvelope className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-medium truncate w-full">Email</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

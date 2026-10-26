@@ -126,18 +126,13 @@ const Home = () => {
     };
   };
 
-  // ─── Direct Call Banner APIs (Web & Mobile) ───────────
+  // ─── Direct Call Banner API (Single web call, filtered by display.type) ───
   useEffect(() => {
     let mounted = true;
-    Promise.all([
-      bannersAPI.getActive({ platform: 'web' }),
-      bannersAPI.getActive({ platform: 'mobile' }),
-    ])
-      .then(([webRes, mobileRes]) => {
+    bannersAPI.getActive({ platform: 'web' })
+      .then((webRes) => {
         if (!mounted) return;
-        const webBanners = Array.isArray(webRes?.data?.data) ? webRes.data.data : [];
-        const mobileBanners = Array.isArray(mobileRes?.data?.data) ? mobileRes.data.data : [];
-        const allBanners = [...webBanners, ...mobileBanners];
+        const allBanners = Array.isArray(webRes?.data?.data) ? webRes.data.data : [];
 
         const typeOf = (b) => b.display?.type || b.type || '';
         const contentOf = (b) => b.content || {};
@@ -148,7 +143,7 @@ const Home = () => {
         });
 
         // 1. Hero banners
-        const heroList = webBanners.filter((b) => typeOf(b) === 'herobanner');
+        const heroList = allBanners.filter((b) => typeOf(b) === 'herobanner');
         setHeroBanners(
           heroList.map((banner) => ({
             _id: banner._id,
@@ -157,7 +152,7 @@ const Home = () => {
         );
 
         // 2. Curated collection banners
-        const collectionList = webBanners.filter((b) => typeOf(b) === 'collectionbanner');
+        const collectionList = allBanners.filter((b) => typeOf(b) === 'collectionbanner');
         setCollectionBanners(
           collectionList.map((banner) => ({
             id: banner._id,
@@ -181,8 +176,8 @@ const Home = () => {
           }))
         );
 
-        // 3. Customize banner (web)
-        const customBannerData = webBanners.find(
+        // 3. Customize banner
+        const customBannerData = allBanners.find(
           (b) => typeOf(b) === 'customizebanner' || b.display?.bannerKey === 'custom_jewellery'
         );
         if (customBannerData && (customBannerData.image?.url || customBannerData.image)) {
@@ -199,7 +194,7 @@ const Home = () => {
           setCustomBanner(null);
         }
 
-        // 4. Mobile app banner (platform mobile or web)
+        // 4. Mobile app banner (filtered by display.type: mobileappbanner)
         const mobileBanner = allBanners.find((b) => typeOf(b) === 'mobileappbanner');
         if (mobileBanner && (mobileBanner.image?.url || mobileBanner.image)) {
           setMobileAppBanner({
@@ -216,8 +211,8 @@ const Home = () => {
           setMobileAppBanner(null);
         }
 
-        // 5. Book appointment banner (web)
-        const appointmentBanner = webBanners.find((b) => typeOf(b) === 'bookappointbanner');
+        // 5. Book appointment banner
+        const appointmentBanner = allBanners.find((b) => typeOf(b) === 'bookappointbanner');
         if (appointmentBanner && (appointmentBanner.image?.url || appointmentBanner.image)) {
           setBookAppointBanner({
             title: contentOf(appointmentBanner).title && contentOf(appointmentBanner).title !== 'Appointment Banner'
@@ -256,35 +251,52 @@ const Home = () => {
     return () => clearInterval(timer);
   }, [effectiveHeroBanners.length]);
 
-  // ─── 2. FETCH CELEBRATE ITEMS (/api/featured?placement=Celebrate) ───
+  // ─── 2. FETCH ALL FEATURED SHOWCASES (Celebrate & Gifts in a single API call) ───
   useEffect(() => {
-    const fetchCelebrate = async () => {
+    const fetchFeatured = async () => {
       try {
-        const res = await featuredAPI.getCelebrate();
+        const res = await featuredAPI.getAll({ status: 'active', limit: 100 });
         const list = res?.data?.data?.items || res?.data?.data || [];
         if (Array.isArray(list)) {
           const featuredSelections = themeConfig?.featuredSelections || [];
+
+          // Process Celebrate items
           const celebrateSelections = featuredSelections.filter((s) => (s.placement || 'Celebrate') === 'Celebrate' && s.visible !== false);
-          let filtered = list;
+          let rawCelebrate = list.filter((item) => (item.placement || '').toLowerCase() === 'celebrate');
           if (celebrateSelections.length > 0) {
             const orderMap = new Map(celebrateSelections.map((s) => [String(s.featuredId?._id || s.featuredId || ''), s.order || 0]));
-            filtered = list
+            rawCelebrate = rawCelebrate
               .filter((item) => orderMap.has(String(item._id)))
               .sort((a, b) => (orderMap.get(String(a._id)) || 0) - (orderMap.get(String(b._id)) || 0));
           }
-          const formatted = filtered.map((item) => ({
+          setCelebrateItems(rawCelebrate.map((item) => ({
             _id: item._id,
             name: item.name || '',
             image: item.image?.url || '',
             link: `/shop?category=${encodeURIComponent((item.name || '').toLowerCase().replace(/\s+/g, '-'))}`,
-          }));
-          setCelebrateItems(formatted);
+          })));
+
+          // Process Gifts items
+          const giftSelections = featuredSelections.filter((s) => (s.placement || '').toLowerCase() === 'gifts' && s.visible !== false);
+          let rawGifts = list.filter((item) => (item.placement || '').toLowerCase() === 'gifts');
+          if (giftSelections.length > 0) {
+            const orderMap = new Map(giftSelections.map((s) => [String(s.featuredId?._id || s.featuredId || ''), s.order || 0]));
+            rawGifts = rawGifts
+              .filter((item) => orderMap.has(String(item._id)))
+              .sort((a, b) => (orderMap.get(String(a._id)) || 0) - (orderMap.get(String(b._id)) || 0));
+          }
+          setGiftItems(rawGifts.map((item) => ({
+            _id: item._id,
+            name: item.name || '',
+            image: item.image?.url || '',
+            link: `/shop?category=${encodeURIComponent((item.name || '').toLowerCase().replace(/\s+/g, '-'))}`,
+          })));
         }
       } catch (err) {
-        console.error('Failed to load celebrate section:', err);
+        console.error('Failed to load featured showcases:', err);
       }
     };
-    fetchCelebrate();
+    fetchFeatured();
   }, [themeConfig?.mediaOverrides, themeConfig?.featuredSelections]);
 
   const scrollCelebrate = useCallback((direction) => {
@@ -350,36 +362,6 @@ const Home = () => {
     fetchHomeProducts();
   }, []);
 
-  // ─── 5. FETCH GIFTS (/api/featured?placement=Gifts) ─────────────────
-  useEffect(() => {
-    const fetchGifts = async () => {
-      try {
-        const res = await featuredAPI.getGifts();
-        const list = res?.data?.data?.items || res?.data?.data || [];
-        if (Array.isArray(list)) {
-          const featuredSelections = themeConfig?.featuredSelections || [];
-          const giftSelections = featuredSelections.filter((s) => s.placement === 'Gifts' && s.visible !== false);
-          let filtered = list;
-          if (giftSelections.length > 0) {
-            const orderMap = new Map(giftSelections.map((s) => [String(s.featuredId?._id || s.featuredId || ''), s.order || 0]));
-            filtered = list
-              .filter((item) => orderMap.has(String(item._id)))
-              .sort((a, b) => (orderMap.get(String(a._id)) || 0) - (orderMap.get(String(b._id)) || 0));
-          }
-          const formatted = filtered.map((item) => ({
-            _id: item._id,
-            name: item.name || '',
-            image: item.image?.url || '',
-            link: `/shop?category=${encodeURIComponent((item.name || '').toLowerCase().replace(/\s+/g, '-'))}`,
-          }));
-          setGiftItems(formatted);
-        }
-      } catch (err) {
-        console.error('Failed to load gifts:', err);
-      }
-    };
-    fetchGifts();
-  }, [themeConfig?.mediaOverrides, themeConfig?.featuredSelections]);
 
   // ─── 9. FETCH REVIEWS (/api/reviews?status=approved) ─────────────────
   useEffect(() => {
@@ -731,30 +713,38 @@ const Home = () => {
           7. GIFTS SECTION (Dynamic from /api/featured?placement=Gifts)
       ─────────────────────────────────────────────────────────────────── */}
       {giftItems.length > 0 && (
-        <section style={sectionStyle('gifts')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
-          <div className="text-center mb-10">
+        <section style={sectionStyle('gifts')} className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          <div className="text-center mb-6 sm:mb-8">
             <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
-              Gifts That Say A Lot
+              Gifts That Say It All
             </h2>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+          <div
+            className="grid grid-cols-2 lg:grid-cols-4 w-full"
+            style={{ gap: '24px' }}
+          >
             {giftItems.map((gift) => (
               <Link
                 key={gift._id}
                 to={gift.link}
-                className="group relative rounded-2xl overflow-hidden aspect-[4/5] bg-[#0c241c] border border-stone-200/90 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col justify-end"
+                style={{ borderRadius: '22px' }}
+                className="group relative overflow-hidden aspect-[3/4] min-h-[360px] sm:min-h-[390px] lg:min-h-[415px] bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col justify-end cursor-pointer isolate"
               >
                 {gift.image && (
                   <img
                     src={getMediaUrl(gift.image)}
                     alt={gift.name}
-                    className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                    style={{ borderRadius: '22px' }}
+                    className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                <div className="relative z-10 p-4 text-center">
-                  <span className="text-xs sm:text-sm font-medium text-white tracking-wide block drop-shadow-md">
+                <div
+                  style={{ borderBottomLeftRadius: '22px', borderBottomRightRadius: '22px' }}
+                  className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/20 to-transparent transition-opacity duration-500 group-hover:from-black/85 pointer-events-none"
+                />
+                <div className="relative z-10 p-4 sm:p-5 text-left">
+                  <span className="text-sm sm:text-base font-medium text-white tracking-wide block drop-shadow-sm">
                     {gift.name}
                   </span>
                 </div>

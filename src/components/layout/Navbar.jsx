@@ -40,8 +40,8 @@ const Navbar = () => {
   const [categories, setCategories] = useState([]);
   const [navigationError, setNavigationError] = useState(false);
   const [navigationRevision, setNavigationRevision] = useState(0);
-  const { settings: storeSettings, theme: themeConfig } = useStoreSettings();
-  const [topAnnouncement, setTopAnnouncement] = useState({ isEnabled: false, displayDirection: 'horizontal', autoplayInterval: 4000, items: [] });
+  const { settings: storeSettings, theme: themeConfig, topAnnouncement: contextTopAnnouncement } = useStoreSettings();
+  const topAnnouncement = contextTopAnnouncement || { isEnabled: false, displayDirection: 'horizontal', autoplayInterval: 4000, items: [] };
   const [announcementIndex, setAnnouncementIndex] = useState(0);
   const brandLogo = {
     desktop: getImageUrl(storeSettings.logoImage?.url),
@@ -208,14 +208,6 @@ const Navbar = () => {
       .catch(() => { if (active) setNavigationError(true); });
     return () => { active = false; };
   }, [navigationRevision, themeConfig?.navigation, themeConfig?.mediaOverrides]);
-
-  useEffect(() => {
-    let active = true;
-    getOnce('/top-announcements/public')
-      .then((response) => { if (active) setTopAnnouncement(response.data?.data || { isEnabled: false, items: [] }); })
-      .catch(() => { if (active) setTopAnnouncement({ isEnabled: false, items: [] }); });
-    return () => { active = false; };
-  }, []);
 
   useEffect(() => {
     const items = topAnnouncement.items || [];
@@ -624,7 +616,7 @@ const Navbar = () => {
             >
               <HiOutlineHeart className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
               {wishlistCount > 0 && (
-                <span className="absolute top-0 right-0 bg-[#223834] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold shadow-xs">
+                <span className="absolute -top-1 -right-1 bg-[#e11d48] text-white text-[9px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center font-bold shadow-md ring-2 ring-[#201e1b] transition-transform animate-scaleIn">
                   {wishlistCount}
                 </span>
               )}
@@ -690,9 +682,11 @@ const Navbar = () => {
               aria-expanded={cartDrawerOpen}
             >
               <HiOutlineShoppingBag className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
-              <span className="absolute top-0 right-0 bg-[#223834] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-medium">
-                {totalItems || 0}
-              </span>
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#bd9462] text-white text-[9px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center font-bold shadow-md ring-2 ring-[#201e1b] transition-transform animate-scaleIn">
+                  {totalItems}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -940,7 +934,7 @@ const Navbar = () => {
             >
               <span>My Wishlist</span>
               {wishlistCount > 0 && (
-                <span className="bg-[#223834] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                <span className="bg-[#e11d48] text-white text-[10px] min-w-[18px] h-[18px] px-1.5 rounded-full flex items-center justify-center font-bold">
                   {wishlistCount}
                 </span>
               )}

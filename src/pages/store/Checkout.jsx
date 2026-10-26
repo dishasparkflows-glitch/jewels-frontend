@@ -21,6 +21,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { checkoutAPI } from '../../api/services';
 import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 import { trackBeginCheckout } from '../../config/firebase';
+import { resolveMetalName, cleanAttribute } from '../../utils/metalColors';
 
 const inputClassName = 'h-12 w-full rounded-md border border-[#e6e0d8] bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#a77e4e] focus:ring-2 focus:ring-[#a77e4e]/10';
 const fieldClassName = 'relative block';
@@ -327,7 +328,13 @@ export default function Checkout() {
                       </div>
                       <span className="shrink-0 text-xs font-semibold">{formatPrice(Number(item.price) * Number(item.quantity || 1))}</span>
                     </div>
-                    {(item.selectedMetal || item.selectedSize) && <p className="mt-1 text-[10px] text-stone-500">{[item.selectedMetal, item.selectedSize && `Size: ${item.selectedSize}`].filter(Boolean).join('　|　')}</p>}
+                    {(() => {
+                      const cleanMetal = resolveMetalName(item.selectedMetal);
+                      const cleanSize = cleanAttribute(item.selectedSize);
+                      return (cleanMetal || cleanSize) ? (
+                        <p className="mt-1 text-[10px] text-stone-500">{[cleanMetal, cleanSize && `Size: ${cleanSize}`].filter(Boolean).join('　|　')}</p>
+                      ) : null;
+                    })()}
                     <label className="mt-2 inline-flex items-center gap-1.5 rounded border border-stone-200 px-2 py-1 text-[10px] text-stone-700"><span>Qty:</span><select className="bg-transparent font-medium outline-none" aria-label={`Quantity for ${item.name || item.title}`} value={item.quantity} onChange={(event) => updateQuantity(item.id, Number(event.target.value))}>{Array.from({ length: 10 }, (_, index) => index + 1).map((quantity) => <option key={quantity} value={quantity}>{quantity}</option>)}</select></label>
                   </div>
                 </article>;

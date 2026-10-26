@@ -1,4 +1,5 @@
 import { getValidProductImages, isOrnateImage } from './productImages.js';
+import { MASTER_METAL_COLORS } from './metalColors.js';
 
 const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
 export const formatProductPrice = (value) => Number.isFinite(Number(value)) && Number(value) > 0 ? money.format(Number(value)) : '';
@@ -33,8 +34,8 @@ export function getProductCardData(product) {
   // 1. Process metalColors directly if provided by API
   for (const mc of product.metalColors || []) {
     if (!mc) continue;
-    const name = typeof mc === 'object' ? mc.name || '' : (typeof mc === 'string' && !/^[a-f0-9]{24}$/i.test(mc) ? mc : '');
     const id = typeof mc === 'object' ? String(mc.id || mc._id || '') : (/^[a-f0-9]{24}$/i.test(mc) ? mc : '');
+    const name = typeof mc === 'object' ? (mc.name || MASTER_METAL_COLORS[id] || '') : (typeof mc === 'string' && !/^[a-f0-9]{24}$/i.test(mc) ? mc : (MASTER_METAL_COLORS[id] || ''));
     const hex = typeof mc === 'object' ? (mc.colorCode || mc.hex || mc.code || colorHex[name.toLowerCase()]) : colorHex[name.toLowerCase()];
     const colorCodeEnd = typeof mc === 'object' ? (mc.colorCodeEnd || '') : '';
     const image = typeof mc === 'object' ? (mc.firstPhoto || mc.firstImage || mc.image || '') : '';
@@ -62,9 +63,9 @@ export function getProductCardData(product) {
   // 2. Process colorImages (each color entry with its images)
   for (const row of product.colorImages || []) {
     if (!row || row.status === 'inactive') continue;
-    const color = row.metalColor || row.metalColorId || row.color;
-    const name = typeof color === 'object' ? color?.name || '' : typeof color === 'string' && !/^[a-f0-9]{24}$/i.test(color) ? color : '';
+    const color = row.metalColorId || row.color;
     const id = typeof color === 'object' ? String(color._id || color.id || '') : (typeof color === 'string' && /^[a-f0-9]{24}$/i.test(color) ? color : '');
+    const name = typeof color === 'object' ? (color?.name || MASTER_METAL_COLORS[id] || '') : (typeof color === 'string' && !/^[a-f0-9]{24}$/i.test(color) ? color : (MASTER_METAL_COLORS[id] || ''));
     const hex = color?.colorCode || color?.hex || color?.code || row.hex || colorHex[name.toLowerCase()];
     const colorCodeEnd = color?.colorCodeEnd || row.colorCodeEnd || '';
     const rowImages = (row.images || []).filter(imageOnly).map((image) => typeof image === 'string' ? image : image?.url).filter(Boolean);
@@ -93,8 +94,8 @@ export function getProductCardData(product) {
 
   // 3. Fallback for metalColorIds / swatches
   for (const color of [...(product.metalColorIds || []), ...(product.swatches || [])]) {
-    const name = typeof color === 'object' ? color?.name || '' : typeof color === 'string' && !/^[a-f0-9]{24}$/i.test(color) ? color : '';
     const id = typeof color === 'object' ? String(color._id || color.id || '') : (typeof color === 'string' && /^[a-f0-9]{24}$/i.test(color) ? color : '');
+    const name = typeof color === 'object' ? (color?.name || MASTER_METAL_COLORS[id] || '') : (typeof color === 'string' && !/^[a-f0-9]{24}$/i.test(color) ? color : (MASTER_METAL_COLORS[id] || ''));
     const hex = color?.colorCode || color?.hex || color?.code || (validHex(name) ? name : colorHex[name.toLowerCase()]);
     const colorCodeEnd = typeof color === 'object' ? color?.colorCodeEnd || '' : '';
     const image = typeof color === 'object' ? (color?.firstPhoto || color?.firstImage || color?.image || '') : '';

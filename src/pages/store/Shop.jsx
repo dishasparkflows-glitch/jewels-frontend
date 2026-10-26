@@ -1,6 +1,6 @@
 import api from '../../api/axios';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { HiOutlineAdjustments, HiOutlineX } from 'react-icons/hi';
 import ProductCard from '../../components/product/ProductCard';
@@ -57,18 +57,14 @@ export default function Shop() {
   const sort = params.get('sort') || 'newest';
   const page = Math.max(1, Number(params.get('page')) || 1);
 
-  // 1. Fetch Masters for all 8 filter accordions in parallel
+  // 1. Fetch Navigation & Common Filters in parallel (Single common API returning needed value & _id)
   useEffect(() => {
     let current = true;
 
     Promise.allSettled([
       categoriesAPI.getNavigation(),
-      api.get('/diamond-types'),
-      api.get('/diamond-clarities'),
-      api.get('/carat-weights'),
-      api.get('/featured'),
-      api.get('/birthstones'),
-    ]).then(([catsRes, dtypesRes, dclaritiesRes, cweightsRes, featRes, bstonesRes]) => {
+      api.get('/products/filters'),
+    ]).then(([catsRes, filtersRes]) => {
       if (!current) return;
 
       if (catsRes.status === 'fulfilled') {
@@ -78,25 +74,31 @@ export default function Shop() {
         setNavigationError(true);
       }
 
-      if (dtypesRes.status === 'fulfilled') {
-        const d = dtypesRes.value?.data?.data?.items || dtypesRes.value?.data?.data || [];
-        if (Array.isArray(d)) setDiamondTypes(d);
-      }
-      if (dclaritiesRes.status === 'fulfilled') {
-        const d = dclaritiesRes.value?.data?.data?.items || dclaritiesRes.value?.data?.data || [];
-        if (Array.isArray(d)) setDiamondClarities(d);
-      }
-      if (cweightsRes.status === 'fulfilled') {
-        const d = cweightsRes.value?.data?.data?.items || cweightsRes.value?.data?.data || [];
-        if (Array.isArray(d)) setCaratWeights(d);
-      }
-      if (featRes.status === 'fulfilled') {
-        const d = featRes.value?.data?.data?.items || featRes.value?.data?.data || [];
-        if (Array.isArray(d)) setCollections(d);
-      }
-      if (bstonesRes.status === 'fulfilled') {
-        const d = bstonesRes.value?.data?.data?.items || bstonesRes.value?.data?.data || [];
-        if (Array.isArray(d)) setBirthstones(d);
+      if (filtersRes.status === 'fulfilled') {
+        const filtersData = filtersRes.value?.data?.data;
+        if (Array.isArray(filtersData)) {
+          // If returned as an array of filter groups
+          filtersData.forEach((group) => {
+            if ((group.key === 'diamondType' || group.id === 'diamond-types') && Array.isArray(group.options)) {
+              setDiamondTypes(group.options);
+            }
+            if ((group.key === 'clarity' || group.id === 'diamond-clarities') && Array.isArray(group.options)) {
+              setDiamondClarities(group.options);
+            }
+            if ((group.key === 'carat' || group.id === 'carat-weights') && Array.isArray(group.options)) {
+              setCaratWeights(group.options);
+            }
+            if ((group.key === 'collection' || group.id === 'collections') && Array.isArray(group.options)) {
+              setCollections(group.options);
+            }
+          });
+        } else if (filtersData && typeof filtersData === 'object') {
+          // If returned as an object with arrays
+          if (Array.isArray(filtersData.diamondTypes)) setDiamondTypes(filtersData.diamondTypes);
+          if (Array.isArray(filtersData.diamondClarities)) setDiamondClarities(filtersData.diamondClarities);
+          if (Array.isArray(filtersData.caratWeights)) setCaratWeights(filtersData.caratWeights);
+          if (Array.isArray(filtersData.collections)) setCollections(filtersData.collections);
+        }
       }
     }).finally(() => {
       if (current) setNavigationReady(true);
@@ -112,7 +114,7 @@ export default function Shop() {
     setLoading(true);
     setError('');
 
-    const query = { status: 'active', page, limit: 24, sort, includeFacets: true, includeGroups: true };
+    const query = { status: 'approved', page, limit: 24, sort, includeFacets: true, includeGroups: true };
     if (shopFor) query.shopFor = shopFor;
     if (categoryId) query.category = categoryId;
     if (menuItem) query.menuItem = menuItem;
@@ -236,8 +238,19 @@ export default function Shop() {
     selectedBirthstone && { label: selectedBirthstone, onRemove: () => updateFilters({ birthstone: '' }) },
   ].filter(Boolean);
 
-  // Page title
-  const pageTitle = category?.name || (search ? `Search: "${search}"` : 'Rings');
+  // 1st display gold products, then silver products (unless explicit price sort)
+  const sortedDisplayedProducts = useMemo(() => {
+    const isPriceSorted = sort === 'price-low' || sort === 'price-high';
+    if (isPriceSorted) return displayedProducts;
+    return [...displayedProducts].sort((a, b) => {
+      const isGoldA = (a.productType || a.representative?.productType || '').toLowerCase() === 'gold' ? 0 : 1;
+      const isGoldB = (b.productType || b.representative?.productType || '').toLowerCase() === 'gold' ? 0 : 1;
+      return isGoldA - isGoldB;
+    });
+  }, [displayedProducts, sort]);
+
+  // Page title: When nothing in filter, display 'All Jewellery'
+  const pageTitle = category?.name || (search ? `Search: "${search}"` : (selectedCollection || 'All Jewellery'));
 
   return (
     <div className="min-h-[75vh] bg-white px-4 pb-16 pt-4 sm:px-8 lg:px-12">
@@ -485,7 +498,8 @@ export default function Shop() {
                 })}
               </FilterGroup>
 
-              {/* 7. BIRTHSTONES */}
+              {/* 7. BIRTHSTONES (Disabled for now as requested) */}
+              {/*
               <FilterGroup title="Birthstones" defaultOpen={!!selectedBirthstone}>
                 {birthstones.length ? (
                   birthstones.map((bs) => {
@@ -526,6 +540,7 @@ export default function Shop() {
                   })
                 )}
               </FilterGroup>
+              */}
 
               {/* 8. GENDER */}
               <FilterGroup title="Gender" defaultOpen={!!selectedAudiences.length}>
@@ -597,9 +612,9 @@ export default function Shop() {
                   Try again
                 </button>
               </div>
-            ) : displayedProducts.length ? (
+            ) : sortedDisplayedProducts.length ? (
               <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">
-                {displayedProducts.map((product) => (
+                {sortedDisplayedProducts.map((product) => (
                   <ProductCard key={product._id || product.id} product={product} />
                 ))}
               </div>

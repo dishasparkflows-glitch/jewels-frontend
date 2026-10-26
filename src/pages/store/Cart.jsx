@@ -9,6 +9,9 @@ import {
   HiOutlineLockClosed,
 } from 'react-icons/hi';
 import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
+import { resolveMetalName, cleanAttribute } from '../../utils/metalColors';
+
+import EmptyCartView from '../../components/store/EmptyCartView';
 
 const formatPrice = (price) => `₹${Number(price || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
@@ -32,24 +35,7 @@ const Cart = () => {
   const finalTotal = Math.max(0, total - discountAmount);
 
   if (cart.length === 0) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-24 text-center space-y-6 text-[#2b2926]">
-        <div className="w-20 h-20 rounded-full bg-white border border-stone-200 flex items-center justify-center text-3xl mx-auto shadow-sm">
-          💎
-        </div>
-        <h1 className="font-serif text-3xl sm:text-4xl font-normal text-[#26221e]">
-          Your Shopping Bag is Empty
-        </h1>
-        <p className="text-sm text-stone-500 max-w-sm mx-auto leading-relaxed">
-          Discover our curated collection of fine jewelry, engagement rings, and certified solitaire diamonds.
-        </p>
-        <div className="pt-2">
-          <Link to="/shop" className="btn-gold text-xs uppercase tracking-wider">
-            Explore Creations
-          </Link>
-        </div>
-      </div>
-    );
+    return <EmptyCartView />;
   }
 
   return (
@@ -92,14 +78,21 @@ const Cart = () => {
                   {item.category}
                 </span>
                 <Link
-                  to={`/product/${encodeURIComponent(item.slug || (item.name ? item.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : ''))}`}
+                  to={`/product/${encodeURIComponent(item.slug || (item.name ? item.name.toLowerCase().trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') : ''))}`}
                   className="block font-serif text-lg font-medium text-[#2c2722] hover:text-[#8b6b47] transition-colors"
                 >
                   {item.name}
                 </Link>
-                <p className="text-xs text-stone-500">
-                  Metal: <span className="text-stone-700">{item.selectedMetal}</span>
-                </p>
+                {resolveMetalName(item.selectedMetal) && (
+                  <p className="text-xs text-stone-500">
+                    Metal: <span className="text-stone-700">{resolveMetalName(item.selectedMetal)}</span>
+                  </p>
+                )}
+                {cleanAttribute(item.selectedSize) && (
+                  <p className="text-xs text-stone-500">
+                    Size: <span className="text-stone-700">{cleanAttribute(item.selectedSize)}</span>
+                  </p>
+                )}
                 <p className="text-sm font-semibold text-[#2c2722] pt-1">
                   {formatPrice(item.price)}
                 </p>
@@ -125,7 +118,7 @@ const Cart = () => {
 
                 <button
                   onClick={() => removeFromCart(item.id)}
-                  className="text-stone-400 hover:text-rose-600 text-xs flex items-center gap-1 transition-colors"
+                  className="text-red-500 hover:text-red-700 text-xs flex items-center gap-1 transition-colors"
                 >
                   <HiOutlineTrash className="w-4 h-4" />
                   <span>Remove</span>

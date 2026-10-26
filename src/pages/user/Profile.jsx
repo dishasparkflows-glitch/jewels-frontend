@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { usersAPI } from '../../api/services';
+import { usersAPI, addressesAPI } from '../../api/services';
 import { toast } from 'react-hot-toast';
 import {
   HiOutlineUser,
@@ -26,10 +26,11 @@ const Profile = () => {
     bio: '',
   });
 
-  // Address edit state
+  // Dedicated Address state
+  const [addresses, setAddresses] = useState([]);
   const [addressModalOpen, setAddressModalOpen] = useState(false);
   const [addressModalType, setAddressModalType] = useState('billing'); // 'billing' | 'shipping' | 'edit-additional' | 'add-additional'
-  const [editingAddressIndex, setEditingAddressIndex] = useState(null);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [addressForm, setAddressForm] = useState({
     fullName: '',
     addressLine: '',
@@ -56,6 +57,23 @@ const Profile = () => {
     }
   }, [user]);
 
+  // Load addresses from dedicated Address model
+  const fetchAddresses = async () => {
+    try {
+      const res = await addressesAPI.getAll();
+      const list = res?.data?.data || res?.data || [];
+      setAddresses(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('Failed to load addresses:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (user?._id) {
+      fetchAddresses();
+    }
+  }, [user?._id]);
+
   // Handle outside click for modals
   useEffect(() => {
     const handleOutside = (e) => {
@@ -72,10 +90,24 @@ const Profile = () => {
     };
   }, [editProfileOpen, addressModalOpen]);
 
-  // Current effective addresses
-  const billingAddress = user?.billingAddress || user?.addresses?.billing || {};
-  const shippingAddress = user?.shippingAddress || user?.addresses?.shipping || {};
-  const additionalAddresses = Array.isArray(user?.addresses?.saved) ? user.addresses.saved : [];
+  // User display name helper
+  const userFullName = useMemo(() => {
+    if (!user) return '';
+    return user.fullName || [user.profile?.firstName || user.firstName, user.profile?.lastName || user.lastName].filter(Boolean).join(' ') || '';
+  }, [user]);
+
+  // Current effective addresses from dedicated addresses table
+  const billingAddress = useMemo(() => {
+    return addresses.find((a) => a.isBillingDefault) || addresses.find((a) => a.isDefault) || addresses[0] || {};
+  }, [addresses]);
+
+  const shippingAddress = useMemo(() => {
+    return addresses.find((a) => a.isShippingDefault) || addresses.find((a) => a.isDefault) || addresses[0] || {};
+  }, [addresses]);
+
+  const additionalAddresses = useMemo(() => {
+    return addresses.filter((a) => a._id !== billingAddress?._id && a._id !== shippingAddress?._id);
+  }, [addresses, billingAddress?._id, shippingAddress?._id]);
 
   // ─── Save Profile Updates to API ───────────────────────────────
   const handleSaveProfile = async (e) => {
@@ -104,24 +136,48 @@ const Profile = () => {
   };
 
   // ─── Open Address Modal ─────────────────────────────────────────
-  const openAddressModal = (type, index = null) => {
+  const openAddressModal = (type, addr = null) => {
     setAddressModalType(type);
-    setEditingAddressIndex(index);
 
-    if (type === 'billing') {
-      setAddressForm({ ...billingAddress });
-    } else if (type === 'shipping') {
-      setAddressForm({ ...shippingAddress });
-    } else if (type === 'edit-additional' && index !== null) {
-      setAddressForm({ ...additionalAddresses[index] });
-    } else {
+    if (type === 'billing' && billingAddress?._id) {
+      setSelectedAddressId(billingAddress._id);
       setAddressForm({
-        fullName: '',
+        fullName: billingAddress.fullName || userFullName,
+        addressLine: billingAddress.addressLine || '',
+        city: billingAddress.city || '',
+        state: billingAddress.state || '',
+        pincode: billingAddress.pincode || '',
+        phone: billingAddress.phone || user?.phone || '',
+      });
+    } else if (type === 'shipping' && shippingAddress?._id) {
+      setSelectedAddressId(shippingAddress._id);
+      setAddressForm({
+        fullName: shippingAddress.fullName || userFullName,
+        addressLine: shippingAddress.addressLine || '',
+        city: shippingAddress.city || '',
+        state: shippingAddress.state || '',
+        pincode: shippingAddress.pincode || '',
+        phone: shippingAddress.phone || user?.phone || '',
+      });
+    } else if (type === 'edit-additional' && addr) {
+      setSelectedAddressId(addr._id);
+      setAddressForm({
+        fullName: addr.fullName || userFullName,
+        addressLine: addr.addressLine || '',
+        city: addr.city || '',
+        state: addr.state || '',
+        pincode: addr.pincode || '',
+        phone: addr.phone || user?.phone || '',
+      });
+    } else {
+      setSelectedAddressId(null);
+      setAddressForm({
+        fullName: userFullName,
         addressLine: '',
         city: 'Gandhinagar',
         state: 'Gujarat',
         pincode: '382006',
-        phone: '',
+        phone: user?.phone || '',
       });
     }
     setAddressModalOpen(true);
@@ -135,9 +191,6 @@ const Profile = () => {
     setLocating(true);
     navigator.geolocation.getCurrentPosition(async ({ coords }) => {
       try {
-        // This lookup is only made after the user taps the location button and
-        // grants browser permission. Nominatim's reverse endpoint returns
-        // address components (unlike city-only geocoders).
         const params = new URLSearchParams({
           format: 'jsonv2',
           lat: String(coords.latitude),
@@ -178,37 +231,42 @@ const Profile = () => {
     }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 });
   };
 
-  // ─── Save Address Updates to API ───────────────────────────────
+  // ─── Save Address Updates to Dedicated Address API ────────────
   const handleSaveAddress = async (e) => {
     e.preventDefault();
     try {
       setSaving(true);
-      let payload = {};
+      const payload = {
+        fullName: addressForm.fullName,
+        addressLine: addressForm.addressLine,
+        city: addressForm.city,
+        state: addressForm.state,
+        pincode: addressForm.pincode,
+        phone: addressForm.phone,
+      };
 
       if (addressModalType === 'billing') {
-        payload = { billingAddress: { ...addressForm } };
+        payload.isBillingDefault = true;
+        if (selectedAddressId) {
+          await addressesAPI.update(selectedAddressId, payload);
+        } else {
+          await addressesAPI.create(payload);
+        }
       } else if (addressModalType === 'shipping') {
-        payload = { shippingAddress: { ...addressForm } };
-      } else if (addressModalType === 'edit-additional' && editingAddressIndex !== null) {
-        const nextList = [...additionalAddresses];
-        nextList[editingAddressIndex] = { ...addressForm, title: `ADDRESS ${editingAddressIndex + 1}` };
-        payload = { addresses: nextList };
-      } else if (addressModalType === 'add-additional') {
-        const nextList = [
-          ...additionalAddresses,
-          { ...addressForm, title: `ADDRESS ${additionalAddresses.length + 1}` },
-        ];
-        payload = { addresses: nextList };
+        payload.isShippingDefault = true;
+        payload.isDefault = true;
+        if (selectedAddressId) {
+          await addressesAPI.update(selectedAddressId, payload);
+        } else {
+          await addressesAPI.create(payload);
+        }
+      } else if (addressModalType === 'edit-additional' && selectedAddressId) {
+        await addressesAPI.update(selectedAddressId, payload);
+      } else {
+        await addressesAPI.create(payload);
       }
 
-      const res = await usersAPI.updateMe(payload);
-      const updated = res?.data?.data || res?.data;
-      if (updated) {
-        updateUser({ ...user, ...updated });
-      } else {
-        // Fallback update in state
-        updateUser({ ...user, ...payload });
-      }
+      await fetchAddresses();
       toast.success('Address saved successfully!');
       setAddressModalOpen(false);
     } catch (err) {
@@ -219,22 +277,17 @@ const Profile = () => {
     }
   };
 
-  // ─── Delete Address ─────────────────────────────────────────────
-  const handleDeleteAddress = async (index) => {
+  // ─── Delete Address via Dedicated Address API ──────────────────
+  const handleDeleteAddress = async (addressId) => {
+    if (!addressId) return;
     if (!window.confirm('Are you sure you want to delete this address?')) return;
     try {
-      const nextList = additionalAddresses.filter((_, i) => i !== index);
-      const res = await usersAPI.updateMe({ addresses: nextList });
-      const updated = res?.data?.data || res?.data;
-      if (updated) {
-        updateUser({ ...user, ...updated });
-      } else {
-        updateUser({ ...user, addresses: nextList });
-      }
+      await addressesAPI.delete(addressId);
+      await fetchAddresses();
       toast.success('Address deleted successfully!');
     } catch (err) {
       console.error('Failed to delete address:', err);
-      toast.error('Failed to delete address');
+      toast.error(err.response?.data?.message || 'Failed to delete address');
     }
   };
 
@@ -433,12 +486,14 @@ const Profile = () => {
                           Edit
                         </button>
                       </div>
-                      <p className="font-normal text-stone-900">{billingAddress.fullName}</p>
-                      <p className="text-stone-600 leading-relaxed">{billingAddress.addressLine}</p>
-                      <p className="text-stone-600">
-                        {billingAddress.city}, {billingAddress.state} {billingAddress.pincode}
-                      </p>
-                      <p className="text-stone-600 pt-1">{billingAddress.phone}</p>
+                      <p className="font-normal text-stone-900">{billingAddress.fullName || userFullName}</p>
+                      <p className="text-stone-600 leading-relaxed">{billingAddress.addressLine || 'No address set'}</p>
+                      {billingAddress.city && (
+                        <p className="text-stone-600">
+                          {billingAddress.city}, {billingAddress.state} {billingAddress.pincode}
+                        </p>
+                      )}
+                      {billingAddress.phone && <p className="text-stone-600 pt-1">{billingAddress.phone}</p>}
                     </div>
 
                     {/* Default Shipping Address */}
@@ -454,12 +509,14 @@ const Profile = () => {
                           Edit
                         </button>
                       </div>
-                      <p className="font-normal text-stone-900">{shippingAddress.fullName}</p>
-                      <p className="text-stone-600 leading-relaxed">{shippingAddress.addressLine}</p>
-                      <p className="text-stone-600">
-                        {shippingAddress.city}, {shippingAddress.state} {shippingAddress.pincode}
-                      </p>
-                      <p className="text-stone-600 pt-1">{shippingAddress.phone}</p>
+                      <p className="font-normal text-stone-900">{shippingAddress.fullName || userFullName}</p>
+                      <p className="text-stone-600 leading-relaxed">{shippingAddress.addressLine || 'No address set'}</p>
+                      {shippingAddress.city && (
+                        <p className="text-stone-600">
+                          {shippingAddress.city}, {shippingAddress.state} {shippingAddress.pincode}
+                        </p>
+                      )}
+                      {shippingAddress.phone && <p className="text-stone-600 pt-1">{shippingAddress.phone}</p>}
                     </div>
                   </div>
                 </div>
@@ -490,12 +547,14 @@ const Profile = () => {
                           Edit
                         </button>
                       </div>
-                      <p className="font-normal text-stone-900">{billingAddress.fullName}</p>
-                      <p className="text-stone-600 leading-relaxed">{billingAddress.addressLine}</p>
-                      <p className="text-stone-600">
-                        {billingAddress.city}, {billingAddress.state} {billingAddress.pincode}
-                      </p>
-                      <p className="text-stone-600 pt-1">{billingAddress.phone}</p>
+                      <p className="font-normal text-stone-900">{billingAddress.fullName || userFullName}</p>
+                      <p className="text-stone-600 leading-relaxed">{billingAddress.addressLine || 'No address set'}</p>
+                      {billingAddress.city && (
+                        <p className="text-stone-600">
+                          {billingAddress.city}, {billingAddress.state} {billingAddress.pincode}
+                        </p>
+                      )}
+                      {billingAddress.phone && <p className="text-stone-600 pt-1">{billingAddress.phone}</p>}
                     </div>
 
                     {/* Default Shipping Address */}
@@ -511,12 +570,14 @@ const Profile = () => {
                           Edit
                         </button>
                       </div>
-                      <p className="font-normal text-stone-900">{shippingAddress.fullName}</p>
-                      <p className="text-stone-600 leading-relaxed">{shippingAddress.addressLine}</p>
-                      <p className="text-stone-600">
-                        {shippingAddress.city}, {shippingAddress.state} {shippingAddress.pincode}
-                      </p>
-                      <p className="text-stone-600 pt-1">{shippingAddress.phone}</p>
+                      <p className="font-normal text-stone-900">{shippingAddress.fullName || userFullName}</p>
+                      <p className="text-stone-600 leading-relaxed">{shippingAddress.addressLine || 'No address set'}</p>
+                      {shippingAddress.city && (
+                        <p className="text-stone-600">
+                          {shippingAddress.city}, {shippingAddress.state} {shippingAddress.pincode}
+                        </p>
+                      )}
+                      {shippingAddress.phone && <p className="text-stone-600 pt-1">{shippingAddress.phone}</p>}
                     </div>
                   </div>
                 </div>
@@ -535,13 +596,13 @@ const Profile = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {additionalAddresses.map((addr, idx) => (
                           <div
-                            key={addr.id || idx}
+                            key={addr._id || idx}
                             className="border border-stone-200 rounded-xl p-4 space-y-2 text-xs sm:text-sm text-stone-700 bg-white"
                           >
                             <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
-                              {addr.title || `ADDRESS ${idx + 1}`}
+                              {addr.addressType ? addr.addressType.toUpperCase() : `ADDRESS ${idx + 1}`}
                             </span>
-                            <p className="font-normal text-stone-900">{addr.fullName}</p>
+                            <p className="font-normal text-stone-900">{addr.fullName || userFullName}</p>
                             <p className="text-stone-600 text-xs leading-relaxed">{addr.addressLine}</p>
                             <p className="text-stone-600 text-xs">
                               {addr.city}, {addr.state} {addr.pincode}
@@ -550,13 +611,13 @@ const Profile = () => {
 
                             <div className="flex items-center gap-4 pt-3 border-t border-stone-100 text-xs">
                               <button
-                                onClick={() => openAddressModal('edit-additional', idx)}
+                                onClick={() => openAddressModal('edit-additional', addr)}
                                 className="text-stone-600 hover:text-black hover:underline"
                               >
                                 Edit
                               </button>
                               <button
-                                onClick={() => handleDeleteAddress(idx)}
+                                onClick={() => handleDeleteAddress(addr._id)}
                                 className="text-red-500 hover:text-red-700 hover:underline"
                               >
                                 Delete

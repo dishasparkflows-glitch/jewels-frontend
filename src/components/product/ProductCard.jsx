@@ -122,7 +122,7 @@ function ImagePreview({ images, name, onClose }) {
 
 export default function ProductCard({ product }) {
   const data = getProductCardData(product);
-  const { isWishlisted, toggleWishlist } = useWishlist();
+  const { isWishlisted, toggleWishlist, wishlistMap } = useWishlist();
   const { addToCart } = useCart();
   const { user } = useAuth();
   const [selectedColorName, setSelectedColorName] = useState(null);
@@ -143,7 +143,7 @@ export default function ProductCard({ product }) {
 
   const matchingColorRow = (product.colorImages || []).find((row) => {
     if (!row || row.status === 'inactive') return false;
-    const c = row.metalColor || row.metalColorId || row.color;
+    const c = row.metalColorId || row.color;
     const rowName = typeof c === 'object' ? c?.name : (typeof c === 'string' ? c : '');
     const rowId = typeof c === 'object' ? String(c?._id || c?.id || '') : (typeof c === 'string' ? c : '');
     return (
@@ -179,12 +179,29 @@ export default function ProductCard({ product }) {
     product.itemName ||
     data?.name ||
     'Jewellery';
-  const wished = isWishlisted(data.id);
+
+  const [localWished, setLocalWished] = useState(() => {
+    if (wishlistMap && wishlistMap[data.id] !== undefined) return Boolean(wishlistMap[data.id]);
+    if (product?.inWishlist !== undefined) return Boolean(product.inWishlist);
+    return undefined;
+  });
+
+  useEffect(() => {
+    if (wishlistMap && wishlistMap[data.id] !== undefined) {
+      setLocalWished(Boolean(wishlistMap[data.id]));
+    } else if (product?.inWishlist !== undefined) {
+      setLocalWished(Boolean(product.inWishlist));
+    }
+  }, [wishlistMap, data.id, product?.inWishlist]);
+
+  const wished = localWished !== undefined ? localWished : isWishlisted(data.id);
   const previewImages = [...new Set([image, ...cardImages, ...data.images].filter(Boolean))];
 
   async function handleWishlist() {
     if (wishlistBusy) return;
     setWishlistBusy(true);
+    const nextWished = !wished;
+    setLocalWished(nextWished);
     try {
       await toggleWishlist({
         ...product,
@@ -192,7 +209,9 @@ export default function ProductCard({ product }) {
         title,
         price: data.price,
         image,
-      });
+      }, wished);
+    } catch {
+      setLocalWished(!nextWished);
     } finally {
       setWishlistBusy(false);
     }
@@ -242,12 +261,7 @@ export default function ProductCard({ product }) {
         },
         1,
         {
-          userId: user?._id || user?.id || null,
-          price,
-          totalItemPrice,
-          addedAt,
           selectedMetal: activeColorName || color?.name || '',
-          selectedAttributes,
         }
       );
     } catch (err) {
@@ -259,9 +273,9 @@ export default function ProductCard({ product }) {
 
   return (
     <article
-      className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-stone-200/90 bg-white transition-all duration-300 hover:shadow-md cursor-pointer justify-between"
+      className="group flex h-full min-w-0 flex-col justify-between p-2.5 sm:p-3 rounded-2xl border border-stone-200/90 bg-white shadow-2xs hover:shadow-md transition-all duration-300 cursor-pointer"
     >
-      <div className="relative aspect-square overflow-hidden flex items-center justify-center bg-white">
+      <div className="relative aspect-square overflow-hidden rounded-xl bg-[#FAF9F7] flex items-center justify-center transition-colors">
         <Link
           to={href}
           aria-label={`View ${title}`}
@@ -357,7 +371,7 @@ export default function ProductCard({ product }) {
       </div>
 
       {/* Product Information (Left-aligned) */}
-      <div className="flex flex-1 flex-col p-3.5 sm:p-4 pt-2.5 text-left justify-between bg-white">
+      <div className="flex flex-1 flex-col pt-3 pb-1 px-1 text-left justify-between bg-white">
         <div>
           <Link
             to={href}

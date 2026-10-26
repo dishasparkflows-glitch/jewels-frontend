@@ -1,15 +1,26 @@
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { HiOutlineShoppingBag, HiOutlineTrash, HiOutlineX } from 'react-icons/hi';
 import { useCart } from '../../contexts/CartContext';
 import Modal from '../common/Modal';
+import EmptyCartView from './EmptyCartView';
 import { getImageUrl } from '../../utils/imageUrl';
 import { getPrimaryProductImage } from '../../utils/productImages';
+import { resolveMetalName } from '../../utils/metalColors';
 
 /* eslint-disable react/prop-types */
 const formatPrice = (price) => `₹${Number(price || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
 export default function CartDrawer({ open, onClose }) {
-  const { cart, totalItems, subtotal, removeFromCart } = useCart();
+  const { cart, totalItems, subtotal, removeFromCart, refreshCart } = useCart();
+  const wasOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (open && !wasOpenRef.current) {
+      refreshCart();
+    }
+    wasOpenRef.current = open;
+  }, [open, refreshCart]);
 
   return (
     <Modal open={open} onClose={onClose} label="Shopping bag" className="cart-drawer">
@@ -26,28 +37,25 @@ export default function CartDrawer({ open, onClose }) {
 
         {cart.length ? (
           <ul className="flex-1 divide-y divide-stone-100 overflow-y-auto px-6">
-            {cart.map((item) => (
-              <li key={`${item.id}-${item.selectedMetal || ''}`} className="flex gap-4 py-5">
-                <img src={getImageUrl(item.image) || getPrimaryProductImage(item) || '/featured/ring.jpg'} alt={item.name} className="h-24 w-20 shrink-0 bg-[#f3f0eb] object-contain p-2" />
-                <div className="min-w-0 flex-1">
-                  <Link to={`/product/${encodeURIComponent(item.slug || (item.name ? item.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : ''))}`} onClick={onClose} className="line-clamp-2 text-sm leading-5 hover:text-[#92704e]">{item.name}</Link>
-                  <p className="mt-1 text-xs text-stone-500">Qty {item.quantity}{item.selectedMetal ? ` · ${item.selectedMetal}` : ''}</p>
-                  <p className="mt-2 text-sm font-semibold">{formatPrice(item.price)}</p>
-                </div>
-                <button type="button" onClick={() => removeFromCart(item.id)} aria-label={`Remove ${item.name} from cart`} className="self-start p-2 text-stone-400 transition hover:text-rose-600">
-                  <HiOutlineTrash className="h-4 w-4" />
-                </button>
-              </li>
-            ))}
+            {cart.map((item) => {
+              const metalName = resolveMetalName(item.selectedMetal);
+              return (
+                <li key={`${item.id}-${item.selectedMetal || ''}`} className="flex gap-4 py-5">
+                  <img src={getImageUrl(item.image) || getPrimaryProductImage(item) || '/featured/ring.jpg'} alt={item.name} className="h-24 w-20 shrink-0 bg-[#f3f0eb] object-contain p-2" />
+                  <div className="min-w-0 flex-1">
+                    <Link to={`/product/${encodeURIComponent(item.slug || (item.name ? item.name.toLowerCase().trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') : ''))}`} onClick={onClose} className="line-clamp-2 text-sm leading-5 hover:text-[#92704e]">{item.name}</Link>
+                    <p className="mt-1 text-xs text-stone-500">Qty {item.quantity}{metalName ? ` · ${metalName}` : ''}</p>
+                    <p className="mt-2 text-sm font-semibold">{formatPrice(item.price)}</p>
+                  </div>
+                  <button type="button" onClick={() => removeFromCart(item.id)} aria-label={`Remove ${item.name} from cart`} className="self-start p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors">
+                    <HiOutlineTrash className="h-4 w-4" />
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-            <HiOutlineShoppingBag className="h-12 w-12 text-stone-200" aria-hidden="true" />
-            <p className="mt-5 text-sm text-stone-500">Your cart is empty</p>
-            <Link to="/shop" onClick={onClose} className="mt-6 bg-[#201e1b] px-8 py-3 text-xs font-semibold uppercase tracking-wider text-white transition hover:bg-[#92704e]">
-              Start shopping
-            </Link>
-          </div>
+          <EmptyCartView isDrawer onClose={onClose} />
         )}
 
         <footer className="border-t border-stone-200 bg-white px-6 pb-6 pt-5">
