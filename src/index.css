@@ -276,11 +276,15 @@
   }
 }
 
-/* Hide scrollbar utility for clean mobile horizontal sliders */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+/* Hide scrollbar utility for clean mobile and desktop horizontal sliders */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }

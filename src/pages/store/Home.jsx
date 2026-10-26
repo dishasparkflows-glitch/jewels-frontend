@@ -347,7 +347,8 @@ const Home = () => {
     const el = celebrateScrollRef.current;
     if (!el) return;
     const card = el.querySelector('.celebrate-card');
-    const scrollAmount = card ? card.offsetWidth + 20 : el.clientWidth * 0.5;
+    const gap = window.innerWidth >= 640 ? 24 : 16;
+    const scrollAmount = card ? card.offsetWidth + gap : el.clientWidth * 0.5;
     el.scrollBy({
       left: direction === 'next' ? scrollAmount : -scrollAmount,
       behavior: 'smooth',
@@ -367,7 +368,8 @@ const Home = () => {
           el.scrollTo({ left: 0, behavior: 'smooth' });
         } else {
           const card = el.querySelector('.celebrate-card');
-          const scrollAmount = card ? card.offsetWidth + 20 : el.clientWidth * 0.5;
+          const gap = window.innerWidth >= 640 ? 24 : 16;
+          const scrollAmount = card ? card.offsetWidth + gap : el.clientWidth * 0.5;
           el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
         }
       }, 3500);
@@ -536,15 +538,14 @@ const Home = () => {
 
           {effectiveCategoryItems.length <= 4 ? (
             <div
-              className="grid grid-cols-2 lg:grid-cols-4 w-full"
-              style={{ gap: '24px' }}
+              className="grid grid-cols-2 lg:grid-cols-4 w-full gap-4 sm:gap-6"
             >
               {effectiveCategoryItems.map((item) => (
                 <Link
                   key={item._id}
                   to={item.link}
                   style={{ borderRadius: '22px' }}
-                  className="group relative overflow-hidden aspect-[3/4] min-h-[380px] sm:min-h-[430px] lg:min-h-[480px] xl:min-h-[520px] bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col justify-end cursor-pointer isolate"
+                  className="group relative overflow-hidden aspect-[3/4] w-full min-w-0 bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col justify-end cursor-pointer isolate"
                 >
                   {item.image && (
                     <img
@@ -559,7 +560,7 @@ const Home = () => {
                     className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/20 to-transparent transition-opacity duration-500 group-hover:from-black/85 pointer-events-none"
                   />
                   <div className="relative z-10 p-4 sm:p-5 text-left">
-                    <span className="text-sm sm:text-base font-medium text-white tracking-wide block drop-shadow-sm">
+                    <span className="text-sm sm:text-base font-medium text-white tracking-wide block drop-shadow-sm truncate">
                       {item.name}
                     </span>
                   </div>
@@ -585,15 +586,15 @@ const Home = () => {
               {/* Scrollable Container */}
               <div
                 ref={celebrateScrollRef}
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', gap: '24px' }}
-                className="flex items-center overflow-x-auto scroll-smooth snap-x snap-mandatory py-2 [&::-webkit-scrollbar]:hidden w-full"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                className="flex items-center overflow-x-auto scroll-smooth snap-x snap-mandatory py-2 [&::-webkit-scrollbar]:hidden w-full gap-4 sm:gap-6"
               >
                 {effectiveCategoryItems.map((item) => (
                   <Link
                     key={item._id}
                     to={item.link}
                     style={{ borderRadius: '22px' }}
-                    className="celebrate-card group relative overflow-hidden aspect-[3/4] min-h-[380px] sm:min-h-[430px] lg:min-h-[480px] xl:min-h-[520px] bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 shrink-0 snap-start flex flex-col justify-end cursor-pointer isolate w-[calc(50%-12px)] lg:w-[calc(25%-18px)]"
+                    className="celebrate-card group relative overflow-hidden aspect-[3/4] w-[calc(50%-8px)] sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] min-w-0 bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 shrink-0 snap-start flex flex-col justify-end cursor-pointer isolate"
                   >
                     {item.image && (
                       <img
@@ -608,7 +609,7 @@ const Home = () => {
                       className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/20 to-transparent transition-opacity duration-500 group-hover:from-black/85 pointer-events-none"
                     />
                     <div className="relative z-10 p-4 sm:p-5 text-left">
-                      <span className="text-sm sm:text-base font-medium text-white tracking-wide block drop-shadow-sm">
+                      <span className="text-sm sm:text-base font-medium text-white tracking-wide block drop-shadow-sm truncate">
                         {item.name}
                       </span>
                     </div>
@@ -647,7 +648,8 @@ const Home = () => {
               ref={mostLovedScrollRef}
               onMouseEnter={() => setIsMostLovedHovered(true)}
               onMouseLeave={() => setIsMostLovedHovered(false)}
-              className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 scrollbar-none snap-x snap-mandatory scroll-smooth"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-mandatory scroll-smooth"
             >
               {(goldProducts.length > 0 ? goldProducts : platinumProducts).slice(0, 8).map((product) => (
                 <div key={product.id || product._id} className="product-card-container flex-shrink-0 w-[240px] sm:w-[270px] lg:w-[290px] xl:w-[310px] snap-start">
@@ -677,7 +679,10 @@ const Home = () => {
               </h3>
             </div>
 
-            <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 scrollbar-none snap-x snap-mandatory">
+            <div
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-mandatory"
+            >
               {silverProducts.map((product) => (
                 <div key={product.id || product._id} className="flex-shrink-0 w-[240px] sm:w-[270px] lg:w-[290px] xl:w-[310px] snap-start">
                   <ProductCard product={product} />
@@ -843,15 +848,14 @@ const Home = () => {
           </div>
 
           <div
-            className="grid grid-cols-2 lg:grid-cols-4 w-full"
-            style={{ gap: '24px' }}
+            className="grid grid-cols-2 lg:grid-cols-4 w-full gap-4 sm:gap-6"
           >
             {giftItems.map((gift) => (
               <Link
                 key={gift._id}
                 to={gift.link}
                 style={{ borderRadius: '22px' }}
-                className="group relative overflow-hidden aspect-[3/4] min-h-[380px] sm:min-h-[430px] lg:min-h-[480px] xl:min-h-[520px] bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col justify-end cursor-pointer isolate"
+                className="group relative overflow-hidden aspect-[3/4] w-full min-w-0 bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col justify-end cursor-pointer isolate"
               >
                 {gift.image && (
                   <img
@@ -866,7 +870,7 @@ const Home = () => {
                   className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/20 to-transparent transition-opacity duration-500 group-hover:from-black/85 pointer-events-none"
                 />
                 <div className="relative z-10 p-4 sm:p-5 text-left">
-                  <span className="text-sm sm:text-base font-medium text-white tracking-wide block drop-shadow-sm">
+                  <span className="text-sm sm:text-base font-medium text-white tracking-wide block drop-shadow-sm truncate">
                     {gift.name}
                   </span>
                 </div>
@@ -883,7 +887,7 @@ const Home = () => {
         <section style={sectionStyle('mobileApp')} className="pt-8 sm:pt-14">
           <div className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8">
             {/* Desktop view */}
-            <div className="hidden md:block relative w-full aspect-[1440/420] min-h-[380px] lg:min-h-[440px] xl:min-h-[500px] rounded-[24px] lg:rounded-[30px] overflow-hidden shadow-sm border border-[#F0E6D8]/80 bg-[#FBF3EB]">
+            <div className="hidden md:block relative w-full aspect-[1440/420] rounded-[24px] lg:rounded-[30px] overflow-hidden shadow-sm border border-[#F0E6D8]/80 bg-[#FBF3EB]">
               {mobileAppBanner.link ? (
                 <a
                   href={mobileAppBanner.link}
@@ -962,7 +966,10 @@ const Home = () => {
         </h3>
 
         {trendingProducts.length > 0 ? (
-          <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 scrollbar-none snap-x snap-mandatory text-left">
+          <div
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-mandatory text-left"
+          >
             {trendingProducts.map((product) => (
               <div key={product.id || product._id} className="flex-shrink-0 w-[240px] sm:w-[270px] lg:w-[290px] xl:w-[310px] snap-start">
                 <ProductCard product={product} />
@@ -983,7 +990,7 @@ const Home = () => {
       {bookAppointBanner?.image && (
         <section style={sectionStyle('appointment')} className="pt-10 sm:pt-16 relative overflow-hidden">
           {/* Desktop view */}
-          <div className="hidden md:block relative w-full aspect-[2400/720] min-h-[320px]">
+          <div className="hidden md:block relative w-full aspect-[2400/720]">
             <div className="absolute inset-0 z-0 w-full h-full">
               <img
                 src={getMediaUrl(bookAppointBanner.image)}
