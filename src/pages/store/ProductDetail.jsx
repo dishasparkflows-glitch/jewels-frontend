@@ -260,7 +260,7 @@ export default function ProductDetail() {
 
   // Accordion active sections (multiple can be open simultaneously)
   const [openAccordions, setOpenAccordions] = useState({
-    desc: true,
+    desc: false,
     specs: false,
     price: false,
     origin: false,
@@ -357,8 +357,8 @@ export default function ProductDetail() {
       });
     }
 
-    // Default fallback to 3 core luxury colors if none configured
-    if (cMap.size === 0) {
+    // Default fallback to 3 core luxury colors if none configured (only for gold/non-silver products)
+    if (cMap.size === 0 && product?.productType !== 'silver' && !product?.isOrnate) {
       cMap.set('Rose Gold', { name: 'Rose Gold', code: '' });
       cMap.set('Yellow Gold', { name: 'Yellow Gold', code: '' });
       cMap.set('White Gold', { name: 'White Gold', code: '' });
@@ -588,33 +588,46 @@ export default function ProductDetail() {
   };
 
   const modalColorsToRender = useMemo(() => {
-    const defaultPalette = [
-      { name: 'Yellow Gold', gradient: 'linear-gradient(135deg, #F5D382 0%, #D8A546 100%)' },
-      { name: 'Rose Gold', gradient: 'linear-gradient(135deg, #F7C8BC 0%, #E39987 100%)' },
-      { name: 'White Gold', gradient: 'linear-gradient(135deg, #F0F2F5 0%, #CCD1D9 100%)' },
-    ];
+    // Only display metal colors in modal if dynamic metal colors are actually configured on this product
+    const hasDynamicColors =
+      (Array.isArray(product?.metalColors) && product.metalColors.length > 0) ||
+      (Array.isArray(product?.metalColorIds) &&
+        product.metalColorIds.some(
+          (c) => (typeof c === 'object' && c?.name) || (typeof c === 'string' && !/^[a-f0-9]{24}$/i.test(c))
+        )) ||
+      (Array.isArray(product?.colorImages) &&
+        product.colorImages.some((ci) => {
+          const cObj = ci.metalColorId;
+          return (typeof cObj === 'object' && cObj?.name) || ci.metalColorName || ci.colorName;
+        }));
 
-    if (!colors || colors.length === 0) return defaultPalette;
+    if (!hasDynamicColors || !colors || colors.length === 0) {
+      return [];
+    }
 
     return colors.map((c) => {
       const cName = c.name || '';
-      let grad = defaultPalette.find((dp) => dp.name.toLowerCase() === cName.toLowerCase())?.gradient;
+      let grad =
+        c.colorCode && c.colorCodeEnd
+          ? `linear-gradient(135deg, ${c.colorCode} 0%, ${c.colorCodeEnd} 100%)`
+          : c.colorCode || null;
+
       if (!grad) {
-        if (c.colorCode && c.colorCodeEnd) {
-          grad = `linear-gradient(135deg, ${c.colorCode} 0%, ${c.colorCodeEnd} 100%)`;
-        } else if (c.colorCode) {
-          grad = c.colorCode;
-        } else if (cName.toLowerCase().includes('yellow')) {
+        if (cName.toLowerCase().includes('yellow')) {
           grad = 'linear-gradient(135deg, #F5D382 0%, #D8A546 100%)';
         } else if (cName.toLowerCase().includes('rose') || cName.toLowerCase().includes('pink')) {
           grad = 'linear-gradient(135deg, #F7C8BC 0%, #E39987 100%)';
-        } else {
+        } else if (cName.toLowerCase().includes('white') || cName.toLowerCase().includes('platinum')) {
           grad = 'linear-gradient(135deg, #F0F2F5 0%, #CCD1D9 100%)';
+        } else if (cName.toLowerCase().includes('silver')) {
+          grad = 'linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%)';
+        } else {
+          grad = 'linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%)';
         }
       }
       return { name: cName, gradient: grad };
     });
-  }, [colors]);
+  }, [colors, product]);
 
   // Category from final schema (categoryIds[0])
   const category = product?.categoryIds?.[0] || null;
@@ -1924,28 +1937,6 @@ export default function ProductDetail() {
                     </button>
                   );
                 })}
-
-                {/* 360° View Button */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const vidIdx = galleryImages.findIndex((img) => isVideoMedia(img));
-                    if (vidIdx !== -1) {
-                      openLightboxAtIndex(vidIdx);
-                    } else {
-                      openLightboxAtIndex(galleryImages.length > 1 ? 1 : 0);
-                    }
-                  }}
-                  className="w-full aspect-square rounded-xl border border-stone-200/80 bg-white hover:bg-stone-50 flex flex-col items-center justify-center p-1.5 transition-all cursor-pointer group shadow-2xs"
-                  title="360° View"
-                >
-                  <div className="w-6 h-6 rounded-full bg-[#FAF5EE] border border-[#ECDCC7] flex items-center justify-center text-[#C59B65] group-hover:scale-110 transition-transform">
-                    <svg className="w-3.5 h-3.5 fill-current ml-0.5" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </div>
-                  <span className="text-[10px] font-medium text-stone-700 mt-1">360° View</span>
-                </button>
               </div>
 
               <button
@@ -1962,36 +1953,38 @@ export default function ProductDetail() {
 
             {/* ─── COLUMN 2: Main Image Canvas Stage (Center) ─── */}
             <div className="flex-1 relative flex items-center justify-center bg-[#FDFBF7] overflow-hidden select-none min-h-[350px]">
-              {/* TOP: Metal Color Swatches (Moved above the image) */}
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 sm:gap-3 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full border border-stone-200/80 shadow-md">
-                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-stone-600 select-none">
-                  VIEW SIMILAR COLORS
-                </span>
-                <div className="flex items-center gap-2">
-                  {modalColorsToRender.map((c) => {
-                    const isSelected = selectedColor?.toLowerCase() === c.name?.toLowerCase();
-                    return (
-                      <button
-                        key={c.name}
-                        type="button"
-                        onClick={() => {
-                          setSelectedColor(c.name);
-                          setLightboxIndex(0);
-                          setLightboxZoom(1);
-                          setLightboxPan({ x: 0, y: 0 });
-                        }}
-                        className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full transition-all cursor-pointer shadow-inner relative flex items-center justify-center border border-black/10 ${
-                          isSelected
-                            ? 'ring-2 ring-stone-900 ring-offset-2 scale-110'
-                            : 'hover:scale-105 opacity-80 hover:opacity-100'
-                        }`}
-                        style={{ background: c.gradient }}
-                        title={c.name}
-                      />
-                    );
-                  })}
+              {/* TOP: Metal Color Swatches (Only displayed if dynamic metal colors exist) */}
+              {modalColorsToRender && modalColorsToRender.length > 0 && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 sm:gap-3 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full border border-stone-200/80 shadow-md">
+                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-stone-600 select-none">
+                    VIEW SIMILAR COLORS
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {modalColorsToRender.map((c) => {
+                      const isSelected = selectedColor?.toLowerCase() === c.name?.toLowerCase();
+                      return (
+                        <button
+                          key={c.name}
+                          type="button"
+                          onClick={() => {
+                            setSelectedColor(c.name);
+                            setLightboxIndex(0);
+                            setLightboxZoom(1);
+                            setLightboxPan({ x: 0, y: 0 });
+                          }}
+                          className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full transition-all cursor-pointer shadow-inner relative flex items-center justify-center border border-black/10 ${
+                            isSelected
+                              ? 'ring-2 ring-stone-900 ring-offset-2 scale-110'
+                              : 'hover:scale-105 opacity-80 hover:opacity-100'
+                          }`}
+                          style={{ background: c.gradient }}
+                          title={c.name}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Previous Image Arrow */}
               {galleryImages.length > 1 && (

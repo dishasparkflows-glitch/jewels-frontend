@@ -273,88 +273,114 @@ export default function ProductCard({ product }) {
 
   return (
     <article
-      className="group flex h-full min-w-0 flex-col bg-transparent cursor-pointer transition-all duration-300"
+      className="group relative flex h-full min-w-0 flex-col justify-between bg-white rounded-2xl border border-stone-200/90 p-3 sm:p-3.5 hover:shadow-md hover:border-stone-300/90 transition-all duration-300 cursor-pointer"
     >
-      <div className="relative aspect-square overflow-hidden rounded-[20px] bg-[#FAF8F5] flex items-center justify-center transition-colors">
-        <Link
-          to={href}
-          aria-label={`View ${title}`}
-          className="block h-full w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b6f4e]"
-        >
-          <ProductImage
-            src={image}
-            name={title}
-            className="h-full w-full object-contain p-3.5 sm:p-4 transition-transform duration-500 motion-safe:group-hover:scale-105"
-          />
-        </Link>
-
-        {/* Wishlist Button (Top Right Matching Reference Design) */}
-        <button
-          type="button"
-          disabled={wishlistBusy}
-          aria-label={`${wished ? "Remove" : "Save"} ${title} ${wished ? "from" : "to"} wishlist`}
-          aria-pressed={wished}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleWishlist();
-          }}
-          className="absolute right-2.5 top-2.5 sm:right-3 sm:top-3 z-20 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white shadow-sm hover:shadow text-stone-600 hover:text-stone-900 border border-stone-100 transition-all duration-200 hover:scale-110 active:scale-95 disabled:opacity-50 cursor-pointer"
-        >
-          {wished ? (
-            <HiHeart className="h-4 w-4 text-[#e11d48] fill-current" />
-          ) : (
-            <HiOutlineHeart className="h-4 w-4 text-stone-500" />
-          )}
-        </button>
-
-        {/* Carousel Prev/Next Arrows */}
-        {cardImages.length > 1 && (
-          <>
-            <button
-              type="button"
-              aria-label="Previous image"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setImageIndex((prev) => (prev - 1 + cardImages.length) % cardImages.length);
-              }}
-              className="absolute left-1.5 top-1/2 -translate-y-1/2 z-20 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-white/90 hover:bg-white text-stone-700 shadow-xs border border-stone-200 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-            >
-              <HiOutlineChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              aria-label="Next image"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setImageIndex((prev) => (prev + 1) % cardImages.length);
-              }}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 z-20 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-white/90 hover:bg-white text-stone-700 shadow-xs border border-stone-200 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-            >
-              <HiOutlineChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Product Information (Centered, uppercase title, centered swatches, centered price) */}
-      <div className="flex flex-1 flex-col pt-3 pb-1 px-1 text-center items-center justify-between bg-transparent w-full">
-        <div className="w-full flex flex-col items-center">
+      <div>
+        <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white flex items-center justify-center">
           <Link
             to={href}
-            className="block line-clamp-2 min-h-[32px] sm:min-h-[36px] text-[11px] sm:text-xs lg:text-[12.5px] font-medium leading-snug tracking-wide uppercase text-stone-800 hover:text-[#8b6f4e] transition-colors text-center"
+            aria-label={`View ${title}`}
+            className="block h-full w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b6f4e]"
+          >
+            <ProductImage
+              src={image}
+              name={title}
+              className="h-full w-full object-contain p-2 sm:p-2.5 transition-transform duration-500 motion-safe:group-hover:scale-105"
+            />
+          </Link>
+
+          {/* Wishlist Button (Top Right) */}
+          <button
+            type="button"
+            disabled={wishlistBusy}
+            aria-label={`${wished ? "Remove" : "Save"} ${title} ${wished ? "from" : "to"} wishlist`}
+            aria-pressed={wished}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleWishlist();
+            }}
+            className="absolute right-1.5 top-1.5 z-20 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 hover:bg-white text-stone-400 hover:text-stone-700 transition-all duration-200 active:scale-95 disabled:opacity-50 cursor-pointer shadow-2xs border border-stone-100"
+          >
+            {wished ? (
+              <HiHeart className="h-4 w-4 text-[#e11d48] fill-current" />
+            ) : (
+              <HiOutlineHeart className="h-4 w-4 stroke-[1.6]" />
+            )}
+          </button>
+
+          {/* Quick View / Fullscreen Preview Button (Bottom Left) */}
+          <button
+            type="button"
+            aria-label={`Preview images for ${title}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setPreviewOpen(true);
+            }}
+            className="absolute left-1.5 bottom-1.5 z-20 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-md bg-white/90 hover:bg-white text-stone-400 hover:text-stone-700 transition-colors shadow-2xs cursor-pointer border border-stone-100"
+            title="Quick view images"
+          >
+            <svg
+              className="w-3.5 h-3.5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+            </svg>
+          </button>
+
+          {/* Carousel Prev/Next Arrows */}
+          {cardImages.length > 1 && (
+            <>
+              <button
+                type="button"
+                aria-label="Previous image"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setImageIndex((prev) => (prev - 1 + cardImages.length) % cardImages.length);
+                }}
+                className="absolute left-1.5 top-1/2 -translate-y-1/2 z-20 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-white/90 hover:bg-white text-stone-700 shadow-xs border border-stone-200 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              >
+                <HiOutlineChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next image"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setImageIndex((prev) => (prev + 1) % cardImages.length);
+                }}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 z-20 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-white/90 hover:bg-white text-stone-700 shadow-xs border border-stone-200 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              >
+                <HiOutlineChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Product Information (Left-aligned, standard title case, swatches, price) */}
+        <div className="flex flex-col pt-2.5 pb-0.5 text-left items-start w-full">
+          <Link
+            to={href}
+            className="block line-clamp-2 min-h-[34px] sm:min-h-[36px] text-[11.5px] sm:text-[12.5px] font-normal leading-snug text-stone-800 hover:text-[#8b6f4e] transition-colors text-left"
+            title={title}
           >
             {title}
           </Link>
 
-          {/* Metal Color Swatches (Centered) */}
+          {/* Metal Color Swatches (Left-aligned) */}
           {!!colors.length && (
             <div
               role="group"
               aria-label={`${title} colours`}
-              className="my-1.5 flex min-h-[18px] flex-wrap items-center justify-center gap-1.5"
+              className="mt-1.5 mb-1 flex min-h-[16px] flex-wrap items-center justify-start gap-1.5"
             >
               {colors.slice(0, 5).map((entry) => {
                 const isSelected = Boolean(activeColorName && entry.name?.toLowerCase() === activeColorName.toLowerCase());
@@ -377,12 +403,12 @@ export default function ProductCard({ product }) {
                       setSelectedColorName(entry.name);
                       setImageIndex(0);
                     }}
-                    className="flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b6f4e] cursor-pointer"
+                    className="flex h-3.5 w-3.5 sm:h-4 sm:w-4 items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b6f4e] cursor-pointer"
                   >
                     {entry.hex ? (
                       <span
                         style={{ background: bgGradient || entry.hex }}
-                        className={`block h-3.5 w-3.5 rounded-full border transition-all ${
+                        className={`block h-3 w-3 sm:h-3.5 sm:w-3.5 rounded-full border transition-all ${
                           isSelected
                             ? "ring-1 ring-stone-900 ring-offset-1 scale-105 border-transparent"
                             : "border-stone-300/80 hover:border-stone-400"
@@ -400,7 +426,7 @@ export default function ProductCard({ product }) {
                 <Link
                   to={href}
                   aria-label={`View all ${colors.length} colours`}
-                  className="px-1 text-[10px] text-stone-500 hover:text-[#8b6f4e]"
+                  className="px-0.5 text-[10px] text-stone-500 hover:text-[#8b6f4e]"
                 >
                   +{colors.length - 5}
                 </Link>
@@ -408,27 +434,28 @@ export default function ProductCard({ product }) {
             </div>
           )}
         </div>
-
-        {/* Price (Centered with optional Strikethrough MRP) */}
-        <div className="pt-0.5 flex items-center justify-center gap-1.5 text-center flex-wrap">
-          {isGroup && product.pricing?.minPrice && product.pricing?.maxPrice && product.pricing.minPrice !== product.pricing.maxPrice ? (
-            <span className="text-xs sm:text-[13.5px] font-bold text-stone-950">
-              {formatProductPrice(product.pricing.minPrice)} – {formatProductPrice(product.pricing.maxPrice)}
-            </span>
-          ) : (
-            <>
-              <span className="text-xs sm:text-[13.5px] font-bold text-stone-950">
-                {formatProductPrice(data.price) || "Price on request"}
-              </span>
-              {data.originalPrice && Number(data.originalPrice) > Number(data.price) && (
-                <span className="text-[11px] sm:text-xs text-stone-400 line-through font-normal">
-                  {formatProductPrice(data.originalPrice)}
-                </span>
-              )}
-            </>
-          )}
-        </div>
       </div>
+
+      {/* Price (Left-aligned at bottom) */}
+      <div className="pt-1 flex items-baseline justify-start gap-1.5 text-left flex-wrap w-full">
+        {isGroup && product.pricing?.minPrice && product.pricing?.maxPrice && product.pricing.minPrice !== product.pricing.maxPrice ? (
+          <span className="text-xs sm:text-[13.5px] font-bold text-stone-900 tracking-tight">
+            {formatProductPrice(product.pricing.minPrice)} – {formatProductPrice(product.pricing.maxPrice)}
+          </span>
+        ) : (
+          <>
+            <span className="text-xs sm:text-[13.5px] font-bold text-stone-900 tracking-tight">
+              {formatProductPrice(data.price) || "Price on request"}
+            </span>
+            {data.originalPrice && Number(data.originalPrice) > Number(data.price) && (
+              <span className="text-[11px] sm:text-xs text-stone-400 line-through font-normal">
+                {formatProductPrice(data.originalPrice)}
+              </span>
+            )}
+          </>
+        )}
+      </div>
+
       {previewOpen && (
         <ImagePreview
           images={previewImages}
