@@ -735,7 +735,7 @@ const Profile = () => {
                 </div>
                 <h3 className="font-serif text-xl font-normal text-stone-800">Returns & Exchanges</h3>
                 <p className="text-xs text-stone-500 max-w-sm mx-auto">
-                  No active return requests found. We offer 30-day hassle-free returns and lifetime exchange.
+                  No active return requests found.
                 </p>
               </div>
             )}

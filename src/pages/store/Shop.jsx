@@ -622,11 +622,6 @@ export default function Shop() {
             ) : (
               <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
                 <h2 className="text-xl text-stone-800 font-serif">No products available</h2>
-                <p className="mt-3 max-w-sm text-sm leading-6 text-stone-500">
-                  {filtersActive
-                    ? 'No published products match these filters. Try clearing your filters or choosing another category.'
-                    : 'Our collection will appear here as products become available.'}
-                </p>
                 {filtersActive && (
                   <button
                     onClick={() => setParams({})}

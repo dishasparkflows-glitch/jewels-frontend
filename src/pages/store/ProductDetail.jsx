@@ -13,6 +13,13 @@ import {
   HiOutlineInformationCircle,
   HiOutlineEye,
   HiOutlineExternalLink,
+  HiChevronUp,
+  HiChevronDown,
+  HiChevronLeft,
+  HiChevronRight,
+  HiOutlinePlus,
+  HiOutlineMinus,
+  HiOutlineArrowsExpand,
 } from 'react-icons/hi';
 import {
   FaWhatsapp,
@@ -198,8 +205,28 @@ export default function ProductDetail() {
   const [selectedSize, setSelectedSize] = useState('');
   const [addingToCart, setAddingToCart] = useState(false);
 
-  // Lightbox & Size modal
-  const [lightboxImage, setLightboxImage] = useState(null);
+  // Luxury Image Viewer Lightbox Modal & Size modal
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [lightboxPan, setLightboxPan] = useState({ x: 0, y: 0 });
+  const [isLightboxDragging, setIsLightboxDragging] = useState(false);
+  const [isLightboxFullscreen, setIsLightboxFullscreen] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const thumbnailContainerRef = useRef(null);
+
+  const openLightboxAtIndex = (idx) => {
+    setLightboxIndex(idx);
+    setLightboxZoom(1);
+    setLightboxPan({ x: 0, y: 0 });
+  };
+
+  const closeLightbox = () => {
+    setLightboxIndex(null);
+    setLightboxZoom(1);
+    setLightboxPan({ x: 0, y: 0 });
+    setIsLightboxFullscreen(false);
+  };
+
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [showCertificateModal, setShowCertificateModal] = useState(false);
   const { settings: storeSettings } = useStoreSettings();
@@ -233,7 +260,7 @@ export default function ProductDetail() {
 
   // Accordion active sections (multiple can be open simultaneously)
   const [openAccordions, setOpenAccordions] = useState({
-    desc: false,
+    desc: true,
     specs: false,
     price: false,
     origin: false,
@@ -242,6 +269,7 @@ export default function ProductDetail() {
   const toggleAccordion = (key) => {
     setOpenAccordions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+
 
   // Determine whether this product is Case 1 (Center Diamond Driven) or Case 2 (Side Diamond Driven)
   const isCenterDriven = useMemo(() => {
@@ -506,6 +534,87 @@ export default function ProductDetail() {
     const fallback = getValidProductImages(product);
     return fallback.length > 0 ? fallback : [];
   }, [product, selectedColor, colors]);
+
+  // Keyboard navigation & handlers for Luxury Image Viewer Modal
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        closeLightbox();
+      } else if (e.key === 'ArrowLeft') {
+        setLightboxIndex((prev) => (prev > 0 ? prev - 1 : galleryImages.length - 1));
+        setLightboxZoom(1);
+        setLightboxPan({ x: 0, y: 0 });
+      } else if (e.key === 'ArrowRight') {
+        setLightboxIndex((prev) => (prev + 1) % galleryImages.length);
+        setLightboxZoom(1);
+        setLightboxPan({ x: 0, y: 0 });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxIndex, galleryImages.length]);
+
+  const handleLightboxMouseDown = (e) => {
+    if (lightboxZoom <= 1) return;
+    setIsLightboxDragging(true);
+    dragStartRef.current = {
+      x: e.clientX - lightboxPan.x,
+      y: e.clientY - lightboxPan.y,
+    };
+  };
+
+  const handleLightboxMouseMove = (e) => {
+    if (!isLightboxDragging || lightboxZoom <= 1) return;
+    const maxPan = (lightboxZoom - 1) * 250;
+    const newX = Math.max(-maxPan, Math.min(maxPan, e.clientX - dragStartRef.current.x));
+    const newY = Math.max(-maxPan, Math.min(maxPan, e.clientY - dragStartRef.current.y));
+    setLightboxPan({ x: newX, y: newY });
+  };
+
+  const handleLightboxMouseUp = () => {
+    setIsLightboxDragging(false);
+  };
+
+  const handleLightboxDoubleClick = () => {
+    if (lightboxZoom > 1) {
+      setLightboxZoom(1);
+      setLightboxPan({ x: 0, y: 0 });
+    } else {
+      setLightboxZoom(2);
+    }
+  };
+
+  const modalColorsToRender = useMemo(() => {
+    const defaultPalette = [
+      { name: 'Yellow Gold', gradient: 'linear-gradient(135deg, #F5D382 0%, #D8A546 100%)' },
+      { name: 'Rose Gold', gradient: 'linear-gradient(135deg, #F7C8BC 0%, #E39987 100%)' },
+      { name: 'White Gold', gradient: 'linear-gradient(135deg, #F0F2F5 0%, #CCD1D9 100%)' },
+    ];
+
+    if (!colors || colors.length === 0) return defaultPalette;
+
+    return colors.map((c) => {
+      const cName = c.name || '';
+      let grad = defaultPalette.find((dp) => dp.name.toLowerCase() === cName.toLowerCase())?.gradient;
+      if (!grad) {
+        if (c.colorCode && c.colorCodeEnd) {
+          grad = `linear-gradient(135deg, ${c.colorCode} 0%, ${c.colorCodeEnd} 100%)`;
+        } else if (c.colorCode) {
+          grad = c.colorCode;
+        } else if (cName.toLowerCase().includes('yellow')) {
+          grad = 'linear-gradient(135deg, #F5D382 0%, #D8A546 100%)';
+        } else if (cName.toLowerCase().includes('rose') || cName.toLowerCase().includes('pink')) {
+          grad = 'linear-gradient(135deg, #F7C8BC 0%, #E39987 100%)';
+        } else {
+          grad = 'linear-gradient(135deg, #F0F2F5 0%, #CCD1D9 100%)';
+        }
+      }
+      return { name: cName, gradient: grad };
+    });
+  }, [colors]);
 
   // Category from final schema (categoryIds[0])
   const category = product?.categoryIds?.[0] || null;
@@ -1001,7 +1110,7 @@ export default function ProductDetail() {
                           image={image}
                           index={index}
                           alt={`${product.basicInfo?.title || 'Fine Jewelry'} ${selectedColor} view ${index + 1}`}
-                          onOpenLightbox={() => setLightboxImage(image)}
+                          onOpenLightbox={() => openLightboxAtIndex(index)}
                         />
                       </div>
                     ))}
@@ -1035,7 +1144,7 @@ export default function ProductDetail() {
                       image={image}
                       index={index}
                       alt={`${product.basicInfo?.title || 'Fine Jewelry'} ${selectedColor} view ${index + 1}`}
-                      onOpenLightbox={() => setLightboxImage(image)}
+                      onOpenLightbox={() => openLightboxAtIndex(index)}
                     />
                   ))}
                 </div>
@@ -1455,21 +1564,25 @@ export default function ProductDetail() {
             {/* ══════════════════════════════════════════════════════════
                 ACCORDIONS: PRODUCT DESCRIPTION, SPECIFICATION, PRICE BREAK UP & ORIGIN
             ═══════════════════════════════════════════════════════════ */}
-            <div className="pt-2 divide-y divide-stone-200/80 border-t border-stone-200 text-xs">
+            {/* ══════════════════════════════════════════════════════════
+                ACCORDIONS: PRODUCT DESCRIPTION, SPECIFICATION, PRICE BREAK UP & ORIGIN
+                (Matches live website boxed layout and text colors)
+            ═══════════════════════════════════════════════════════════ */}
+            <div className="border border-stone-200 divide-y divide-stone-200 bg-white rounded-none sm:rounded-sm overflow-hidden text-xs">
               {/* Accordion 1: Product Description */}
-              <div className="py-3.5">
+              <div>
                 <button
                   type="button"
                   onClick={() => toggleAccordion('desc')}
-                  className="w-full flex items-center justify-between text-stone-800 text-[11px] font-medium tracking-normal cursor-pointer text-left"
+                  className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
                 >
-                  <span className="text-[11px] font-medium text-stone-800">Product Description</span>
-                  <span className="text-stone-400 text-sm font-light">
+                  <span className="text-xs sm:text-[13px] font-medium text-stone-900 tracking-normal">Product Description</span>
+                  <span className="text-stone-500 text-sm font-light select-none">
                     {openAccordions.desc ? '−' : '+'}
                   </span>
                 </button>
                 {openAccordions.desc && (
-                  <div className="mt-2.5 text-stone-600 leading-relaxed text-xs animate-fadeIn space-y-2 pt-1 border-t border-stone-100">
+                  <div className="px-5 pb-5 pt-0 text-stone-600 text-xs sm:text-[12.5px] leading-relaxed animate-fadeIn space-y-2">
                     <p>
                       {product.basicInfo?.description ||
                         product.description ||
@@ -1478,8 +1591,8 @@ export default function ProductDetail() {
                     {Array.isArray(product.descriptionSections) &&
                       product.descriptionSections.map((sec, i) => (
                         <div key={i} className="pt-1">
-                          <strong className="text-stone-800">{sec.header}: </strong>
-                          <span>{sec.description}</span>
+                          <strong className="text-stone-900 font-medium">{sec.header}: </strong>
+                          <span className="text-stone-600">{sec.description}</span>
                         </div>
                       ))}
                   </div>
@@ -1487,139 +1600,139 @@ export default function ProductDetail() {
               </div>
 
               {/* Accordion 2: Specification */}
-              <div className="py-3.5">
+              <div>
                 <button
                   type="button"
                   onClick={() => toggleAccordion('specs')}
-                  className="w-full flex items-center justify-between text-stone-800 text-[11px] font-medium tracking-normal cursor-pointer text-left"
+                  className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
                 >
-                  <span className="text-[11px] font-medium text-stone-800">Specification</span>
-                  <span className="text-stone-400 text-sm font-light">
+                  <span className="text-xs sm:text-[13px] font-medium text-stone-900 tracking-normal">Specification</span>
+                  <span className="text-stone-500 text-sm font-light select-none">
                     {openAccordions.specs ? '−' : '+'}
                   </span>
                 </button>
                 {openAccordions.specs && (
-                  <div className="mt-2.5 text-stone-600 text-xs animate-fadeIn space-y-1.5 divide-y divide-stone-50 pt-1 border-t border-stone-100">
+                  <div className="px-5 pb-5 pt-0 text-xs animate-fadeIn space-y-1.5">
                     {specificationRows.map(([label, value]) => (
-                      <div key={label} className="flex justify-between py-1">
-                        <span className="text-stone-400">{label}</span>
-                        <span className="font-semibold text-stone-800">{value}</span>
+                      <div key={label} className="flex justify-between items-center py-1.5 border-b border-stone-100 last:border-b-0">
+                        <span className="text-stone-500 font-normal">{label}</span>
+                        <span className="font-medium text-stone-900">{value}</span>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* Accordion 3: PRICE BREAK UP (Exact Match to Screenshot) */}
-              <div className="py-3.5">
+              {/* Accordion 3: PRICE BREAK UP */}
+              <div>
                 <button
                   type="button"
                   onClick={() => toggleAccordion('price')}
-                  className="w-full flex items-center justify-between cursor-pointer text-left"
+                  className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
                 >
-                  <span className={`text-[11px] font-semibold tracking-wider uppercase ${openAccordions.price ? 'text-[#92704E]' : 'text-stone-800'}`}>
+                  <span className="text-[11.5px] sm:text-xs font-semibold tracking-wider uppercase text-stone-900">
                     PRICE BREAK UP
                   </span>
-                  <span className={`text-sm font-light ${openAccordions.price ? 'text-[#92704E]' : 'text-stone-400'}`}>
+                  <span className="text-stone-500 text-sm font-light select-none">
                     {openAccordions.price ? '−' : '+'}
                   </span>
                 </button>
                 {openAccordions.price && breakdown && (
-                  <div className="mt-4 animate-fadeIn text-[11px]">
+                  <div className="px-5 pb-5 pt-1 text-xs animate-fadeIn">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="border-b border-stone-150 text-[10px] font-medium text-stone-400 uppercase tracking-wider">
-                            <th className="pb-3 px-1 font-medium text-stone-400">COMPONENT</th>
-                            <th className="pb-3 px-1 font-medium text-center text-stone-400">RATE</th>
-                            <th className="pb-3 px-1 font-medium text-center text-stone-400">WEIGHT</th>
-                            <th className="pb-3 px-1 font-medium text-right text-stone-400">VALUE</th>
+                          <tr className="border-b border-stone-200 text-[10px] sm:text-[10.5px] font-medium text-stone-400 uppercase tracking-wider">
+                            <th className="pb-2.5 px-1 font-medium text-stone-400 text-left">COMPONENT</th>
+                            <th className="pb-2.5 px-1 font-medium text-stone-400 text-center">RATE</th>
+                            <th className="pb-2.5 px-1 font-medium text-stone-400 text-center">WEIGHT</th>
+                            <th className="pb-2.5 px-1 font-medium text-stone-400 text-right">VALUE</th>
                           </tr>
                         </thead>
-                        <tbody className="text-stone-700 text-[11px]">
+                        <tbody className="text-xs">
                           {/* METALS */}
                           <tr>
-                            <td colSpan={4} className="pt-4 pb-2 px-1 text-[10px] font-bold tracking-wider text-stone-900 uppercase">
+                            <td colSpan={4} className="pt-3.5 pb-1.5 px-1 text-[10.5px] font-bold tracking-wider text-stone-900 uppercase">
                               METALS
                             </td>
                           </tr>
                           <tr>
                             <td className="py-1 px-1 font-normal text-stone-800">{breakdown.metalName}</td>
-                            <td className="py-1 px-1 text-center font-mono text-stone-700">{formatBreakdownRate(breakdown.metalRate)}</td>
-                            <td className="py-1 px-1 text-center font-mono text-stone-700">{formatBreakdownWeight(breakdown.metalWeight, 'g')}</td>
-                            <td className="py-1 px-1 text-right font-mono text-stone-900">{formatBreakdownValue(breakdown.metalCost)}</td>
+                            <td className="py-1 px-1 text-center font-normal text-stone-700">{formatBreakdownRate(breakdown.metalRate)}</td>
+                            <td className="py-1 px-1 text-center font-normal text-stone-700">{formatBreakdownWeight(breakdown.metalWeight, 'g')}</td>
+                            <td className="py-1 px-1 text-right font-normal text-stone-900">{formatBreakdownValue(breakdown.metalCost)}</td>
                           </tr>
 
                           {/* DIAMONDS */}
                           <tr>
-                            <td colSpan={4} className="pt-4 pb-2 px-1 text-[10px] font-bold tracking-wider text-stone-900 uppercase">
+                            <td colSpan={4} className="pt-3.5 pb-1.5 px-1 text-[10.5px] font-bold tracking-wider text-stone-900 uppercase">
                               DIAMONDS
                             </td>
                           </tr>
                           <tr>
                             <td className="py-1 px-1 font-normal text-stone-800">{breakdown.diamondLabel}</td>
-                            <td className="py-1 px-1 text-center text-stone-500">-</td>
-                            <td className="py-1 px-1 text-center font-mono text-stone-700">{formatBreakdownWeight(breakdown.diamondCarat, 'cts')}</td>
-                            <td className="py-1 px-1 text-right font-mono text-stone-900">{formatBreakdownValue(breakdown.diamondCost)}</td>
+                            <td className="py-1 px-1 text-center text-stone-400">-</td>
+                            <td className="py-1 px-1 text-center font-normal text-stone-700">{formatBreakdownWeight(breakdown.diamondCarat, 'cts')}</td>
+                            <td className="py-1 px-1 text-right font-normal text-stone-900">{formatBreakdownValue(breakdown.diamondCost)}</td>
                           </tr>
 
                           {/* MAKING CHARGES */}
                           <tr>
-                            <td colSpan={4} className="pt-4 pb-2 px-1 text-[10px] font-bold tracking-wider text-stone-900 uppercase">
+                            <td colSpan={4} className="pt-3.5 pb-1.5 px-1 text-[10.5px] font-bold tracking-wider text-stone-900 uppercase">
                               MAKING CHARGES
                             </td>
                           </tr>
                           <tr>
                             <td className="py-1 px-1 font-normal text-stone-800">Making Charge</td>
-                            <td className="py-1 px-1 text-center text-stone-500">-</td>
-                            <td className="py-1 px-1 text-center text-stone-500">-</td>
-                            <td className="py-1 px-1 text-right font-mono text-stone-900">{formatBreakdownValue(breakdown.labourCharge)}</td>
+                            <td className="py-1 px-1 text-center text-stone-400">-</td>
+                            <td className="py-1 px-1 text-center text-stone-400">-</td>
+                            <td className="py-1 px-1 text-right font-normal text-stone-900">{formatBreakdownValue(breakdown.labourCharge)}</td>
                           </tr>
 
                           {/* OTHER CHARGES */}
                           <tr>
-                            <td colSpan={4} className="pt-4 pb-2 px-1 text-[10px] font-bold tracking-wider text-stone-900 uppercase">
+                            <td colSpan={4} className="pt-3.5 pb-1.5 px-1 text-[10.5px] font-bold tracking-wider text-stone-900 uppercase">
                               OTHER CHARGES
                             </td>
                           </tr>
                           <tr>
                             <td className="py-1 px-1 font-normal text-stone-800">Certificate Charge</td>
-                            <td className="py-1 px-1 text-center text-stone-500">-</td>
-                            <td className="py-1 px-1 text-center text-stone-500">-</td>
-                            <td className="py-1 px-1 text-right font-mono text-stone-900">{formatBreakdownValue(breakdown.certificateCharge)}</td>
+                            <td className="py-1 px-1 text-center text-stone-400">-</td>
+                            <td className="py-1 px-1 text-center text-stone-400">-</td>
+                            <td className="py-1 px-1 text-right font-normal text-stone-900">{formatBreakdownValue(breakdown.certificateCharge)}</td>
                           </tr>
 
                           {/* SUMMARY */}
                           <tr>
-                            <td colSpan={4} className="pt-4 pb-2 px-1 text-[10px] font-bold tracking-wider text-stone-900 uppercase">
+                            <td colSpan={4} className="pt-3.5 pb-1.5 px-1 text-[10.5px] font-bold tracking-wider text-stone-900 uppercase">
                               SUMMARY
                             </td>
                           </tr>
                           <tr>
                             <td className="py-1 px-1 font-normal text-stone-800">Subtotal</td>
-                            <td className="py-1 px-1 text-center text-stone-500">-</td>
-                            <td className="py-1 px-1 text-center text-stone-500">-</td>
-                            <td className="py-1 px-1 text-right font-mono text-stone-900">{formatBreakdownValue(breakdown.subtotal)}</td>
+                            <td className="py-1 px-1 text-center text-stone-400">-</td>
+                            <td className="py-1 px-1 text-center text-stone-400">-</td>
+                            <td className="py-1 px-1 text-right font-normal text-stone-900">{formatBreakdownValue(breakdown.subtotal)}</td>
                           </tr>
                           <tr>
                             <td className="py-1 px-1 font-normal text-stone-800">GST (3%)</td>
-                            <td className="py-1 px-1 text-center text-stone-500">-</td>
-                            <td className="py-1 px-1 text-center text-stone-500">-</td>
-                            <td className="py-1 px-1 text-right font-mono text-stone-900">{formatBreakdownValue(breakdown.gstAmount)}</td>
+                            <td className="py-1 px-1 text-center text-stone-400">-</td>
+                            <td className="py-1 px-1 text-center text-stone-400">-</td>
+                            <td className="py-1 px-1 text-right font-normal text-stone-900">{formatBreakdownValue(breakdown.gstAmount)}</td>
                           </tr>
-                          <tr className="font-bold">
+                          <tr className="border-t border-stone-200">
                             <td className="pt-3 pb-1 px-1 font-bold text-stone-900 text-xs">Grand Total</td>
-                            <td className="pt-3 pb-1 px-1 text-center text-stone-500 font-normal">-</td>
-                            <td className="pt-3 pb-1 px-1 text-center text-stone-500 font-normal">-</td>
-                            <td className="pt-3 pb-1 px-1 text-right font-mono font-bold text-stone-900 text-xs">{formatBreakdownValue(breakdown.finalPrice)}</td>
+                            <td className="pt-3 pb-1 px-1 text-center text-stone-400 font-normal">-</td>
+                            <td className="pt-3 pb-1 px-1 text-center text-stone-400 font-normal">-</td>
+                            <td className="pt-3 pb-1 px-1 text-right font-bold text-stone-900 text-xs">{formatBreakdownValue(breakdown.finalPrice)}</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
 
-                    {/* Variation in Weight Notice Card (Highlighted in Screenshot) */}
-                    <div className="mt-5 p-3.5 rounded-xl border border-[#F0E6D8] bg-[#FAF6F0]/80 flex items-center gap-3">
-                      <svg className="w-4 h-4 text-[#C59B65] shrink-0 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="1.6">
+                    {/* Variation in Weight Notice Card */}
+                    <div className="mt-4 p-3 rounded border border-[#F0E6D8] bg-[#FAF8F5] flex items-center gap-2.5">
+                      <svg className="w-3.5 h-3.5 text-[#C59B65] shrink-0 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="1.6">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
                       </svg>
                       <p className="text-[11px] text-[#8C6D4F] leading-snug">
@@ -1631,26 +1744,26 @@ export default function ProductDetail() {
               </div>
 
               {/* Accordion 4: Manufacturer & Origin */}
-              <div className="py-3.5">
+              <div>
                 <button
                   type="button"
                   onClick={() => toggleAccordion('origin')}
-                  className="w-full flex items-center justify-between text-stone-800 text-[11px] font-medium tracking-normal cursor-pointer text-left"
+                  className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
                 >
-                  <span className="text-[11px] font-medium text-stone-800">Manufacturer &amp; Origin</span>
-                  <span className="text-stone-400 text-sm font-light">
+                  <span className="text-xs sm:text-[13px] font-medium text-stone-900 tracking-normal">Manufacturer &amp; Origin</span>
+                  <span className="text-stone-500 text-sm font-light select-none">
                     {openAccordions.origin ? '−' : '+'}
                   </span>
                 </button>
                 {openAccordions.origin && (
-                  <div className="mt-2.5 text-stone-700 text-xs animate-fadeIn space-y-2 pt-1 border-t border-stone-100">
-                    <div className="grid grid-cols-3 gap-2 py-1">
-                      <span className="text-stone-500 font-medium">Manufacturer:</span>
-                      <span className="col-span-2 font-semibold text-stone-900">Neirah E-Retail India Pvt. Ltd.</span>
+                  <div className="px-5 pb-5 pt-0 text-xs animate-fadeIn space-y-1.5">
+                    <div className="flex justify-between items-center py-1.5 border-b border-stone-100">
+                      <span className="text-stone-500 font-normal">Manufacturer:</span>
+                      <span className="font-medium text-stone-900">Neirah E-Retail India Pvt. Ltd.</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 py-1">
-                      <span className="text-stone-500 font-medium">Country of Origin:</span>
-                      <span className="col-span-2 font-semibold text-stone-900">India</span>
+                    <div className="flex justify-between items-center py-1.5">
+                      <span className="text-stone-500 font-normal">Country of Origin:</span>
+                      <span className="font-medium text-stone-900">India</span>
                     </div>
                   </div>
                 )}
@@ -1738,40 +1851,273 @@ export default function ProductDetail() {
         )}
       </div>
 
-      {/* ─── Lightbox Modal ─── */}
-      {lightboxImage && (
+      {/* ─── Luxury High-Resolution Image Viewer Lightbox Modal ─── */}
+      {lightboxIndex !== null && galleryImages[lightboxIndex] && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4 animate-fadeIn"
-          onClick={() => setLightboxImage(null)}
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/75 backdrop-blur-sm animate-fadeIn"
+          onClick={closeLightbox}
         >
           <div
-            className="relative max-w-4xl max-h-[90vh] w-full flex items-center justify-center"
+            className={`bg-white shadow-2xl relative flex flex-col md:flex-row overflow-hidden transition-all duration-300 ${
+              isLightboxFullscreen
+                ? 'w-full h-full rounded-none'
+                : 'w-full max-w-[960px] h-[88vh] max-h-[700px] rounded-2xl sm:rounded-3xl border border-stone-150'
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Close Button at top-right */}
             <button
               type="button"
-              onClick={() => setLightboxImage(null)}
-              className="absolute -top-10 right-0 text-white hover:text-stone-300 text-sm font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+              onClick={closeLightbox}
+              className="absolute top-3.5 right-3.5 z-30 p-2 rounded-full bg-white/90 hover:bg-white text-stone-500 hover:text-stone-900 shadow-sm border border-stone-200/60 transition-colors cursor-pointer"
+              aria-label="Close image viewer"
             >
-              <HiOutlineX className="w-6 h-6" />
-              <span>Close</span>
+              <HiOutlineX className="w-5 h-5" />
             </button>
-            {isVideoMedia(lightboxImage) ? (
-              <video
-                src={lightboxImage}
-                controls
-                autoPlay
-                loop
-                playsInline
-                className="max-h-[85vh] max-w-full object-contain rounded-2xl shadow-2xl bg-black"
-              />
-            ) : (
-              <img
-                src={lightboxImage}
-                alt="High Resolution Zoom"
-                className="max-h-[85vh] max-w-full object-contain rounded-2xl shadow-2xl bg-white"
-              />
-            )}
+
+            {/* ─── COLUMN 1: Vertical Thumbnail Strip (Left) ─── */}
+            <div className="hidden md:flex w-24 sm:w-28 shrink-0 flex-col items-center py-4 px-2 border-r border-stone-150 bg-[#FAFAFA]/80 select-none">
+              <button
+                type="button"
+                onClick={() => {
+                  thumbnailContainerRef.current?.scrollBy({ top: -120, behavior: 'smooth' });
+                }}
+                className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-200/50 transition-colors cursor-pointer mb-2"
+                aria-label="Scroll thumbnails up"
+              >
+                <HiChevronUp className="w-5 h-5" />
+              </button>
+
+              <div
+                ref={thumbnailContainerRef}
+                className="flex-1 w-full overflow-y-auto no-scrollbar space-y-2.5 px-1 py-1"
+              >
+                {galleryImages.map((img, idx) => {
+                  const isActive = idx === lightboxIndex;
+                  const isVid = isVideoMedia(img);
+                  return (
+                    <button
+                      key={`thumb-${img}-${idx}`}
+                      type="button"
+                      onClick={() => openLightboxAtIndex(idx)}
+                      className={`w-full aspect-square rounded-xl overflow-hidden p-1 bg-white cursor-pointer transition-all flex items-center justify-center relative ${
+                        isActive
+                          ? 'border-2 border-[#D4A373] ring-2 ring-[#D4A373]/20 shadow-xs scale-102'
+                          : 'border border-stone-200/80 hover:border-stone-300 opacity-75 hover:opacity-100'
+                      }`}
+                    >
+                      {isVid ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-stone-50 text-[#C59B65]">
+                          <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <img
+                          src={img}
+                          alt={`Thumbnail ${idx + 1}`}
+                          className="w-full h-full object-contain"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+
+                {/* 360° View Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const vidIdx = galleryImages.findIndex((img) => isVideoMedia(img));
+                    if (vidIdx !== -1) {
+                      openLightboxAtIndex(vidIdx);
+                    } else {
+                      openLightboxAtIndex(galleryImages.length > 1 ? 1 : 0);
+                    }
+                  }}
+                  className="w-full aspect-square rounded-xl border border-stone-200/80 bg-white hover:bg-stone-50 flex flex-col items-center justify-center p-1.5 transition-all cursor-pointer group shadow-2xs"
+                  title="360° View"
+                >
+                  <div className="w-6 h-6 rounded-full bg-[#FAF5EE] border border-[#ECDCC7] flex items-center justify-center text-[#C59B65] group-hover:scale-110 transition-transform">
+                    <svg className="w-3.5 h-3.5 fill-current ml-0.5" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                  <span className="text-[10px] font-medium text-stone-700 mt-1">360° View</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  thumbnailContainerRef.current?.scrollBy({ top: 120, behavior: 'smooth' });
+                }}
+                className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-200/50 transition-colors cursor-pointer mt-2"
+                aria-label="Scroll thumbnails down"
+              >
+                <HiChevronDown className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* ─── COLUMN 2: Main Image Canvas Stage (Center) ─── */}
+            <div className="flex-1 relative flex items-center justify-center bg-[#FDFBF7] overflow-hidden select-none min-h-[350px]">
+              {/* TOP: Metal Color Swatches (Moved above the image) */}
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 sm:gap-3 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full border border-stone-200/80 shadow-md">
+                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-stone-600 select-none">
+                  VIEW SIMILAR COLORS
+                </span>
+                <div className="flex items-center gap-2">
+                  {modalColorsToRender.map((c) => {
+                    const isSelected = selectedColor?.toLowerCase() === c.name?.toLowerCase();
+                    return (
+                      <button
+                        key={c.name}
+                        type="button"
+                        onClick={() => {
+                          setSelectedColor(c.name);
+                          setLightboxIndex(0);
+                          setLightboxZoom(1);
+                          setLightboxPan({ x: 0, y: 0 });
+                        }}
+                        className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full transition-all cursor-pointer shadow-inner relative flex items-center justify-center border border-black/10 ${
+                          isSelected
+                            ? 'ring-2 ring-stone-900 ring-offset-2 scale-110'
+                            : 'hover:scale-105 opacity-80 hover:opacity-100'
+                        }`}
+                        style={{ background: c.gradient }}
+                        title={c.name}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Previous Image Arrow */}
+              {galleryImages.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLightboxIndex((prev) => (prev > 0 ? prev - 1 : galleryImages.length - 1));
+                    setLightboxZoom(1);
+                    setLightboxPan({ x: 0, y: 0 });
+                  }}
+                  className="absolute left-3 sm:left-4 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white shadow-md border border-stone-200/70 flex items-center justify-center text-stone-700 hover:text-black cursor-pointer transition-all hover:scale-105 active:scale-95"
+                  aria-label="Previous image"
+                >
+                  <HiChevronLeft className="w-5 h-5" />
+                </button>
+              )}
+
+              {/* Next Image Arrow */}
+              {galleryImages.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLightboxIndex((prev) => (prev + 1) % galleryImages.length);
+                    setLightboxZoom(1);
+                    setLightboxPan({ x: 0, y: 0 });
+                  }}
+                  className="absolute right-3 sm:right-4 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white shadow-md border border-stone-200/70 flex items-center justify-center text-stone-700 hover:text-black cursor-pointer transition-all hover:scale-105 active:scale-95"
+                  aria-label="Next image"
+                >
+                  <HiChevronRight className="w-5 h-5" />
+                </button>
+              )}
+
+              {/* Active Image / Video Stage with Zoom & Pan */}
+              <div
+                className={`w-full h-full flex items-center justify-center p-4 sm:p-8 pt-16 ${
+                  lightboxZoom > 1 ? (isLightboxDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'
+                }`}
+                onMouseDown={handleLightboxMouseDown}
+                onMouseMove={handleLightboxMouseMove}
+                onMouseUp={handleLightboxMouseUp}
+                onMouseLeave={handleLightboxMouseUp}
+                onDoubleClick={handleLightboxDoubleClick}
+              >
+                {isVideoMedia(galleryImages[lightboxIndex]) ? (
+                  <video
+                    src={galleryImages[lightboxIndex]}
+                    controls
+                    autoPlay
+                    loop
+                    playsInline
+                    className="max-h-full max-w-full object-contain rounded-xl shadow-md"
+                  />
+                ) : (
+                  <div
+                    style={{
+                      transform: `translate(${lightboxPan.x}px, ${lightboxPan.y}px) scale(${lightboxZoom})`,
+                      transition: isLightboxDragging ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)',
+                    }}
+                    className="w-full h-full flex items-center justify-center origin-center pointer-events-none"
+                  >
+                    <img
+                      src={galleryImages[lightboxIndex]}
+                      alt="Zoomed Product View"
+                      className="max-h-full max-w-full object-contain"
+                      draggable={false}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Floating Bottom Pill Toolbar (Zoom Controls) */}
+              {!isVideoMedia(galleryImages[lightboxIndex]) && (
+                <div className="absolute bottom-4 sm:bottom-5 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md px-4 py-1.5 sm:py-2 rounded-full shadow-lg border border-stone-200/80 flex items-center gap-3 text-stone-700 select-none">
+                  <button
+                    type="button"
+                    onClick={() => setLightboxZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))}
+                    className="p-1 hover:text-stone-950 hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                    title="Zoom in"
+                    aria-label="Zoom in"
+                  >
+                    <HiOutlinePlus className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLightboxZoom(1);
+                      setLightboxPan({ x: 0, y: 0 });
+                    }}
+                    className="text-xs font-semibold tracking-wider text-stone-800 min-w-[42px] text-center hover:text-[#92704E] cursor-pointer"
+                    title="Click to reset zoom"
+                  >
+                    {Math.round(lightboxZoom * 100)}%
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLightboxZoom((z) => {
+                        const next = Math.max(1, +(z - 0.25).toFixed(2));
+                        if (next === 1) setLightboxPan({ x: 0, y: 0 });
+                        return next;
+                      });
+                    }}
+                    className="p-1 hover:text-stone-950 hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                    title="Zoom out"
+                    aria-label="Zoom out"
+                  >
+                    <HiOutlineMinus className="w-4 h-4" />
+                  </button>
+
+                  <div className="h-3.5 w-px bg-stone-300" />
+
+                  <button
+                    type="button"
+                    onClick={() => setIsLightboxFullscreen((f) => !f)}
+                    className="p-1 hover:text-stone-950 hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                    title={isLightboxFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                    aria-label="Toggle fullscreen"
+                  >
+                    <HiOutlineArrowsExpand className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
