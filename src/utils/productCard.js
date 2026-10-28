@@ -125,20 +125,59 @@ export function getProductCardData(product) {
     image: c.image || images[0] || '',
   }));
 
-  const price = firstPrice(
-    product.pricing?.salePrice,
-    product.salePrice,
-    product.pricing?.mrp,
-    product.mrp,
-    product.cataloguePrice,
-    product.price
-  );
+  const rep = product?.representative || {};
+  const repPricing = rep.pricing || {};
+  const prodPricing = product?.pricing || {};
+
+  const productType = String(
+    product?.productType ||
+    rep.productType ||
+    ''
+  ).toLowerCase();
+
+  const isSilver =
+    productType === 'silver' ||
+    Boolean(product?.isOrnate || rep.isOrnate) ||
+    /silver/i.test(product?.basicInfo?.title || product?.title || product?.name || '') ||
+    /silver/i.test(product?.ornate?.metalName || rep.ornate?.metalName || '');
+
   const isGold =
-    String(product.productType || '').toLowerCase() === 'gold' ||
-    (!product.productType && /gold/i.test(product.basicInfo?.title || product.title || product.name || ''));
-  const originalPrice = isGold ? null : firstPrice(product.pricing?.mrp, product.mrp, product.originalPrice);
-  const name = product.basicInfo?.title || product.title || product.name || 'Untitled product';
-  const rawSlug = product.basicInfo?.slug || product.slug || product.representative?.basicInfo?.slug || product.representative?.slug;
+    productType === 'gold' ||
+    (!productType && !isSilver && /gold/i.test(product?.basicInfo?.title || product?.title || product?.name || ''));
+
+  const salePrice = firstPrice(
+    prodPricing.salePrice,
+    product?.salePrice,
+    repPricing.salePrice,
+    rep.salePrice,
+    prodPricing.calculatedPrice,
+    repPricing.calculatedPrice,
+    prodPricing.ornatePrice,
+    prodPricing.price,
+    product?.price,
+    prodPricing.costPrice
+  );
+
+  const mrp = firstPrice(
+    prodPricing.mrp,
+    product?.mrp,
+    repPricing.mrp,
+    rep.mrp,
+    product?.originalPrice
+  );
+
+  const price = salePrice || firstPrice(
+    prodPricing.salePrice,
+    product?.salePrice,
+    prodPricing.mrp,
+    product?.mrp,
+    prodPricing.cataloguePrice,
+    product?.price
+  );
+
+  const originalPrice = !isGold && mrp && Number(mrp) > Number(price) ? mrp : null;
+  const name = product?.basicInfo?.title || product?.title || product?.name || rep.basicInfo?.title || 'Untitled product';
+  const rawSlug = product?.basicInfo?.slug || product?.slug || rep.basicInfo?.slug || rep.slug;
   const slug =
     rawSlug ||
     (name && name !== 'Untitled product'
@@ -146,12 +185,16 @@ export function getProductCardData(product) {
       : '');
 
   return {
-    id: String(product._id || product.id || ''),
+    id: String(product?._id || product?.id || ''),
     slug,
     name,
     images,
     colors: resolvedColors,
     price,
-    originalPrice: !isGold && originalPrice > price && price ? originalPrice : null,
+    originalPrice,
+    salePrice,
+    mrp,
+    productType: productType || (isSilver ? 'silver' : ''),
+    isSilver,
   };
 }

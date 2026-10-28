@@ -54,6 +54,15 @@ export const getValidProductImages = (product) => {
   }
 
   // 3. Ornate images fallback
+  if (valid.length === 0 && Array.isArray(product.representative?.ornate?.ornateImages)) {
+    product.representative.ornate.ornateImages.forEach((img) => {
+      const url = typeof img === 'string' ? img : img?.url;
+      if (url && typeof url === 'string' && url.trim()) {
+        valid.push(url.trim());
+      }
+    });
+  }
+
   if (valid.length === 0 && Array.isArray(product.ornate?.ornateImages)) {
     product.ornate.ornateImages.forEach((img) => {
       const url = typeof img === 'string' ? img : img?.url;

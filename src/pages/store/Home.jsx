@@ -1120,12 +1120,21 @@ const Home = () => {
               Follow Us on Instagram
             </h2>
             <a
-              href="https://www.instagram.com/neirah.officials/"
+              href={storeSettings?.socialMedia?.instagram || "https://www.instagram.com/neirah.officials/"}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-gray-600 hover:text-[#8B6B42] hover:underline font-medium text-sm md:text-base transition-colors"
             >
-              @neirah.officials
+              {(() => {
+                const instaUrl = storeSettings?.socialMedia?.instagram || 'https://www.instagram.com/neirah.officials/';
+                try {
+                  const cleaned = instaUrl.split('?')[0].replace(/\/+$/, '');
+                  const handle = cleaned.split('/').filter(Boolean).pop();
+                  return handle ? `@${handle}` : '@neirah.officials';
+                } catch (_) {
+                  return '@neirah.officials';
+                }
+              })()}
             </a>
           </div>
 

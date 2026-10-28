@@ -20,6 +20,7 @@ import {
   HiOutlineMap,
   HiOutlineViewGrid,
   HiChevronDown,
+  HiOutlinePlus,
 } from 'react-icons/hi';
 
 const INDIAN_STATES = [
@@ -642,10 +643,18 @@ const Profile = () => {
 
                 {/* Section 2: Additional Address Entries */}
                 <div className="bg-white rounded-xl border border-stone-200 shadow-sm overflow-hidden">
-                  <div className="px-4 py-3 border-b border-stone-100">
+                  <div className="px-4 sm:px-5 py-3.5 border-b border-stone-100 flex items-center justify-between gap-3">
                     <span className="text-[11px] font-bold tracking-wider uppercase text-stone-800">
                       ADDITIONAL ADDRESS ENTRIES
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => openAddressModal('add-additional')}
+                      className="bg-[#8b6f4e] hover:bg-[#785e40] text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-2xs hover:shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <HiOutlinePlus className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Add New Address</span>
+                    </button>
                   </div>
                   <div className="p-4 sm:p-5">
                     {additionalAddresses.length === 0 ? (
@@ -688,17 +697,12 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Bottom Actions: Add New Address and Back */}
-                <div className="flex items-center justify-between pt-2">
+                {/* Bottom Actions: Back */}
+                <div className="flex items-center justify-end pt-2">
                   <button
-                    onClick={() => openAddressModal('add-additional')}
-                    className="bg-black hover:bg-stone-800 text-white text-xs font-medium px-6 py-2.5 rounded shadow-sm transition-colors"
-                  >
-                    Add New Address
-                  </button>
-                  <button
+                    type="button"
                     onClick={() => setActiveTab('profile')}
-                    className="text-xs font-semibold uppercase tracking-wider text-stone-600 hover:text-black"
+                    className="text-xs font-semibold uppercase tracking-wider text-stone-600 hover:text-[#8b6f4e] transition-colors cursor-pointer"
                   >
                     BACK
                   </button>

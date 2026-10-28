@@ -62,7 +62,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"Poppins"', '"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        poppins: ['"Poppins"', 'sans-serif'],
         serif: ['"Playfair Display"', 'Georgia', 'serif'],
         cinzel: ['"Cinzel"', 'serif'],
         montserrat: ['"Montserrat"', 'sans-serif'],

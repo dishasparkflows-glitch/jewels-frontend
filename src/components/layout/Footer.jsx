@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { getOnce } from '../../api/axios';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
@@ -9,7 +9,25 @@ import {
   HiOutlineChatAlt2,
   HiChevronUp,
 } from 'react-icons/hi';
-import { FaFacebookF, FaInstagram } from 'react-icons/fa';
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaYoutube,
+  FaPinterestP,
+  FaLinkedinIn,
+  FaWhatsapp,
+} from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
+
+const SOCIAL_PLATFORMS = [
+  { key: 'instagram', label: 'Instagram', icon: FaInstagram },
+  { key: 'facebook', label: 'Facebook', icon: FaFacebookF },
+  { key: 'youtube', label: 'YouTube', icon: FaYoutube },
+  { key: 'pinterest', label: 'Pinterest', icon: FaPinterestP },
+  { key: 'twitter', label: 'X (Twitter)', icon: FaXTwitter },
+  { key: 'linkedin', label: 'LinkedIn', icon: FaLinkedinIn },
+  { key: 'whatsapp', label: 'WhatsApp', icon: FaWhatsapp },
+];
 
 const Footer = () => {
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -30,7 +48,7 @@ const Footer = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const { footerSettings } = useStoreSettings();
+  const { settings, footerSettings } = useStoreSettings();
 
   // Populate footer settings from common StoreSettingsContext (no separate API call)
   useEffect(() => {
@@ -45,6 +63,44 @@ const Footer = () => {
       }));
     }
   }, [footerSettings]);
+
+  // Compute active dynamic social media links from settings (falling back to footerSettings or brand defaults)
+  const activeSocialLinks = useMemo(() => {
+    const sm = settings?.socialMedia;
+    const defaults = {
+      instagram: 'https://www.instagram.com/neirah.officials?igsh=MWRrcDE3YnlhaTd6eg%3D%3D&utm_source=qr',
+      facebook: 'https://www.facebook.com/share/1Cosh9cg8h/?mibextid=wwXIfr',
+    };
+
+    const list = [];
+    SOCIAL_PLATFORMS.forEach((platform) => {
+      let url = sm?.[platform.key]?.trim?.() || (typeof sm?.[platform.key] === 'string' ? sm[platform.key].trim() : '');
+
+      // Check footerSettings.socialLinks array as secondary fallback
+      if (!url && Array.isArray(footerSettings?.socialLinks)) {
+        const match = footerSettings.socialLinks.find(
+          (s) => s.platform?.toLowerCase() === platform.key.toLowerCase()
+        );
+        if (match?.url) url = match.url.trim();
+      }
+
+      // Initial brand default if not loaded or set
+      if (!url && !sm && defaults[platform.key]) {
+        url = defaults[platform.key];
+      }
+
+      if (url) {
+        list.push({
+          key: platform.key,
+          label: platform.label,
+          url,
+          Icon: platform.icon,
+        });
+      }
+    });
+
+    return list;
+  }, [settings?.socialMedia, footerSettings?.socialLinks]);
 
   // Fetch categories & navigation items from API - shared cache with Navbar
   useEffect(() => {
@@ -238,7 +294,11 @@ const Footer = () => {
 
                 {/* WhatsApp */}
                 <a
-                  href={`https://wa.me/${footerData.phone.replace(/[^0-9]/g, '')}?text=Hi%20Neirah%20Jewels`}
+                  href={
+                    settings?.socialMedia?.whatsapp && settings.socialMedia.whatsapp.trim()
+                      ? settings.socialMedia.whatsapp.trim()
+                      : `https://wa.me/${footerData.phone.replace(/[^0-9]/g, '')}?text=Hi%20Neirah%20Jewels`
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 text-[14px] sm:text-[15px] opacity-90 hover:opacity-100 group transition-all underline text-[#C8B89E]"
@@ -255,31 +315,28 @@ const Footer = () => {
               </div>
 
               {/* FOLLOW US */}
-              <div className="mt-6">
-                <h4 className="text-[14px] sm:text-[15px] font-bold tracking-[0.1em] mb-3 uppercase text-[#F3EAD8]">
-                  FOLLOW US
-                </h4>
-                <div className="flex items-center gap-3">
-                  <a
-                    href="https://www.facebook.com/share/1Cosh9cg8h/?mibextid=wwXIfr"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 border border-[#8B6B42]/40 rounded-full hover:bg-[#8B6B42] hover:text-[#F0E8DA] transition-all flex items-center justify-center text-[#C8B89E]"
-                    aria-label="Facebook"
-                  >
-                    <FaFacebookF className="w-3.5 h-3.5" />
-                  </a>
-                  <a
-                    href="https://www.instagram.com/neirah.officials?igsh=MWRrcDE3YnlhaTd6eg%3D%3D&utm_source=qr"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 border border-[#8B6B42]/40 rounded-full hover:bg-[#8B6B42] hover:text-[#F0E8DA] transition-all flex items-center justify-center text-[#C8B89E]"
-                    aria-label="Instagram"
-                  >
-                    <FaInstagram className="w-4 h-4" />
-                  </a>
+              {activeSocialLinks.length > 0 && (
+                <div className="mt-6">
+                  <h4 className="text-[14px] sm:text-[15px] font-bold tracking-[0.1em] mb-3 uppercase text-[#F3EAD8]">
+                    FOLLOW US
+                  </h4>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {activeSocialLinks.map(({ key, label, url, Icon }) => (
+                      <a
+                        key={key}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-2 border border-[#8B6B42]/40 rounded-full hover:bg-[#8B6B42] hover:text-[#F0E8DA] transition-all flex items-center justify-center text-[#C8B89E]"
+                        aria-label={label}
+                        title={label}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                      </a>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Column 5: DOWNLOAD OUR MOBILE APP (Exact buttons matching neirah.in) */}

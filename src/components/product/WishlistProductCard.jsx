@@ -220,15 +220,62 @@ export default function WishlistProductCard({ item, onRemove }) {
 
         {/* ─── Price ─── */}
         <div className="pt-0.5 flex flex-wrap items-baseline justify-center gap-1.5">
-          {hasRange ? (
-            <span className="text-xs sm:text-[13px] font-bold text-stone-950">
-              {formatProductPrice(minPrice)} – {formatProductPrice(maxPrice)}
-            </span>
-          ) : (
-            <span className="text-xs sm:text-[13px] font-bold text-stone-950">
-              {formatProductPrice(price) || 'Price unavailable'}
-            </span>
-          )}
+          {(() => {
+            const isSilver =
+              Boolean(cardData.isSilver) ||
+              String(activeProduct?.productType || activeProduct?.representative?.productType || '').toLowerCase() === 'silver' ||
+              Boolean(activeProduct?.isOrnate || activeProduct?.representative?.isOrnate);
+
+            const salePrice =
+              cardData.salePrice ||
+              activeProduct?.pricing?.salePrice ||
+              activeProduct?.representative?.pricing?.salePrice ||
+              price;
+
+            const mrp =
+              cardData.mrp ||
+              activeProduct?.pricing?.mrp ||
+              activeProduct?.representative?.pricing?.mrp ||
+              cardData.originalPrice;
+
+            const hasDiscount = mrp && Number(mrp) > Number(salePrice);
+
+            if (isSilver) {
+              return (
+                <>
+                  <span className="text-xs sm:text-[13px] font-bold text-stone-950">
+                    {formatProductPrice(salePrice) || 'Price unavailable'}
+                  </span>
+                  {hasDiscount && (
+                    <span className="text-[11px] sm:text-xs text-stone-400 line-through font-normal">
+                      {formatProductPrice(mrp)}
+                    </span>
+                  )}
+                </>
+              );
+            }
+
+            if (hasRange) {
+              return (
+                <span className="text-xs sm:text-[13px] font-bold text-stone-950">
+                  {formatProductPrice(minPrice)} – {formatProductPrice(maxPrice)}
+                </span>
+              );
+            }
+
+            return (
+              <>
+                <span className="text-xs sm:text-[13px] font-bold text-stone-950">
+                  {formatProductPrice(price) || 'Price unavailable'}
+                </span>
+                {cardData.originalPrice && Number(cardData.originalPrice) > Number(price) && (
+                  <span className="text-[11px] sm:text-xs text-stone-400 line-through font-normal">
+                    {formatProductPrice(cardData.originalPrice)}
+                  </span>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {/* ─── ADD TO CART Button ─── */}

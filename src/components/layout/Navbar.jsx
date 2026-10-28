@@ -245,7 +245,7 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-40 w-full shadow-sm font-sans">
       {/* ─── Top announcement bar (Neirah Taupe #60574d) ───────────── */}
-      {!isCheckout && <div className="bg-[#60574d] text-white/95 text-[10px] sm:text-xs py-2 px-3 sm:px-4 border-b border-black/10">
+      {!isCheckout && <div className="bg-[#60574d] text-white/95 text-[10px] sm:text-xs py-1.5 px-3 sm:px-4 border-b border-black/10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Left: Virtual Appointment */}
           <button
@@ -282,7 +282,7 @@ const Navbar = () => {
 
       {/* ─── Main Header / Brand & Search Bar (#22201e) ───────────── */}
       <div className="bg-[#22201e] text-white px-4 sm:px-6 lg:px-8 border-b border-white/5">
-        <div className={`max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-6 ${isCheckout ? 'h-16 sm:h-20' : 'h-20 sm:h-24 lg:h-26'}`}>
+        <div className={`max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-6 ${isCheckout ? 'h-14 sm:h-16' : 'h-14 sm:h-16 lg:h-[68px]'}`}>
           {/* Mobile hamburger */}
           <div className="order-last flex items-center lg:order-none lg:hidden">
             <button
@@ -301,21 +301,21 @@ const Navbar = () => {
             onClick={() => {
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="order-first flex items-center leading-none group shrink-0 min-w-0 py-1"
+            className="order-first flex items-center leading-none group shrink-0 min-w-0 py-1 h-full"
             aria-label={storeSettings.companyName || 'Home'}
           >
             {brandLogo.desktop ? (
-              <picture className="flex items-center">
+              <picture className="flex items-center h-full">
                 {brandLogo.mobile && <source media="(max-width: 639px)" srcSet={brandLogo.mobile} />}
                 <img
                   src={brandLogo.desktop}
                   alt={storeSettings.companyName || 'Neirah Jewels'}
-                  className="h-12 sm:h-16 lg:h-20 w-auto max-w-[170px] sm:max-w-[260px] lg:max-w-[340px] object-contain object-left transition-transform duration-300 group-hover:scale-[1.02]"
+                  className="h-8 sm:h-9.5 lg:h-10.5 w-auto max-w-[150px] sm:max-w-[185px] lg:max-w-[215px] object-contain object-left transition-transform duration-300 group-hover:scale-[1.02]"
                 />
               </picture>
             ) : (
               storeSettings.companyName && (
-                <span className="font-cinzel text-xl sm:text-3xl lg:text-4xl font-semibold tracking-[0.18em] sm:tracking-[0.2em] text-[#f5f0eb] group-hover:text-amber-100 transition-colors uppercase">
+                <span className="font-cinzel text-base sm:text-xl lg:text-2xl font-semibold tracking-[0.18em] sm:tracking-[0.2em] text-[#f5f0eb] group-hover:text-amber-100 transition-colors uppercase">
                   {storeSettings.companyName}
                 </span>
               )

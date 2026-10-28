@@ -438,22 +438,62 @@ export default function ProductCard({ product }) {
 
       {/* Price (Left-aligned at bottom) */}
       <div className="pt-1 flex items-baseline justify-start gap-1.5 text-left flex-wrap w-full">
-        {isGroup && product.pricing?.minPrice && product.pricing?.maxPrice && product.pricing.minPrice !== product.pricing.maxPrice ? (
-          <span className="text-xs sm:text-[13.5px] font-bold text-stone-900 tracking-tight">
-            {formatProductPrice(product.pricing.minPrice)} – {formatProductPrice(product.pricing.maxPrice)}
-          </span>
-        ) : (
-          <>
-            <span className="text-xs sm:text-[13.5px] font-bold text-stone-900 tracking-tight">
-              {formatProductPrice(data.price) || "Price on request"}
-            </span>
-            {data.originalPrice && Number(data.originalPrice) > Number(data.price) && (
-              <span className="text-[11px] sm:text-xs text-stone-400 line-through font-normal">
-                {formatProductPrice(data.originalPrice)}
+        {(() => {
+          const isSilver =
+            Boolean(data.isSilver) ||
+            String(product?.productType || product?.representative?.productType || '').toLowerCase() === 'silver' ||
+            Boolean(product?.isOrnate || product?.representative?.isOrnate);
+
+          const salePrice =
+            data.salePrice ||
+            product?.pricing?.salePrice ||
+            product?.representative?.pricing?.salePrice ||
+            data.price;
+
+          const mrp =
+            data.mrp ||
+            product?.pricing?.mrp ||
+            product?.representative?.pricing?.mrp ||
+            data.originalPrice;
+
+          const hasDiscount = mrp && Number(mrp) > Number(salePrice);
+
+          if (isSilver) {
+            return (
+              <>
+                <span className="text-xs sm:text-[13.5px] font-bold text-stone-900 tracking-tight">
+                  {formatProductPrice(salePrice) || "Price on request"}
+                </span>
+                {hasDiscount && (
+                  <span className="text-[11px] sm:text-xs text-stone-400 line-through font-normal">
+                    {formatProductPrice(mrp)}
+                  </span>
+                )}
+              </>
+            );
+          }
+
+          if (isGroup && product?.pricing?.minPrice && product?.pricing?.maxPrice && product.pricing.minPrice !== product.pricing.maxPrice) {
+            return (
+              <span className="text-xs sm:text-[13.5px] font-bold text-stone-900 tracking-tight">
+                {formatProductPrice(product.pricing.minPrice)} – {formatProductPrice(product.pricing.maxPrice)}
               </span>
-            )}
-          </>
-        )}
+            );
+          }
+
+          return (
+            <>
+              <span className="text-xs sm:text-[13.5px] font-bold text-stone-900 tracking-tight">
+                {formatProductPrice(data.price) || "Price on request"}
+              </span>
+              {data.originalPrice && Number(data.originalPrice) > Number(data.price) && (
+                <span className="text-[11px] sm:text-xs text-stone-400 line-through font-normal">
+                  {formatProductPrice(data.originalPrice)}
+                </span>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {previewOpen && (

@@ -206,8 +206,7 @@ export default function Shop() {
       if (!text.includes(selectedBirthstone.toLowerCase())) return false;
     }
     if (selectedCollection) {
-      const matchFeatured = prod.featuredIds?.some((f) => (f.name || f.title || f).toLowerCase() === selectedCollection.toLowerCase());
-      if (!text.includes(selectedCollection.toLowerCase()) && !matchFeatured) return false;
+      if (!text.includes(selectedCollection.toLowerCase())) return false;
     }
     return true;
   });

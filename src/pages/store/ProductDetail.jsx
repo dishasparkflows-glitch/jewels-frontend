@@ -20,6 +20,8 @@ import {
   HiOutlinePlus,
   HiOutlineMinus,
   HiOutlineArrowsExpand,
+  HiOutlineTag,
+  HiOutlineDuplicate,
 } from 'react-icons/hi';
 import {
   FaWhatsapp,
@@ -31,7 +33,7 @@ import {
   FaCheck,
 } from 'react-icons/fa6';
 import toast from 'react-hot-toast';
-import { productsAPI } from '../../api/services';
+import { productsAPI, couponsAPI } from '../../api/services';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -191,9 +193,38 @@ export default function ProductDetail() {
   const [mostLikedProducts, setMostLikedProducts] = useState([]);
   const [sizes, setSizes] = useState([]);
   const [coupons, setCoupons] = useState([
-    { coupon: { code: 'FIRSTORDER' }, discount: { type: 'Percentage', value: 10 } }
+    {
+      _id: 'default-firstorder',
+      coupon: { code: 'FIRSTORDER', description: 'Valid on your first fine jewelry purchase' },
+      discount: { type: 'Percentage', value: 10, minimumOrderAmount: 0 }
+    }
   ]);
   const [offersOpen, setOffersOpen] = useState(true);
+  const [copiedCode, setCopiedCode] = useState(null);
+
+  useEffect(() => {
+    couponsAPI
+      .getLookup()
+      .then(({ data }) => {
+        const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+        const active = list.filter((c) => c.status === 'active' || !c.status);
+        if (active.length > 0) {
+          setCoupons(active);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleCopyCoupon = (code) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code);
+    }
+    setCopiedCode(code);
+    toast.success(`Coupon "${code}" copied to clipboard!`);
+    setTimeout(() => {
+      setCopiedCode((prev) => (prev === code ? null : prev));
+    }, 2500);
+  };
 
   const { count: liveViewersCount, hasUpdated: liveViewersUpdated } = useLiveViewers(product?._id || id);
 
@@ -373,9 +404,12 @@ export default function ProductDetail() {
     };
   }, [product]);
 
+  const isSilver = (product?.productType === 'silver') || Boolean(product?.isOrnate);
+  const isGold = !isSilver && ((product?.productType === 'gold') || !product?.productType || /gold/i.test(product?.basicInfo?.title || product?.title || ''));
+
   // Auto-initialize options on product load
   useEffect(() => {
-    if (!product) return;
+    if (!product || !isGold) return;
     if (purities.length && !selectedPurity) {
       const defaultP = purities.find((p) => p.includes('9K') || p.includes('9KT')) ||
                        purities.find((p) => p.includes('14')) ||
@@ -397,24 +431,13 @@ export default function ProductDetail() {
       const defaultQ = qualities.find((q) => q.includes('F-G') && q.includes('VS')) || qualities[0];
       setSelectedQuality(defaultQ);
     }
-  }, [product, purities, colors, carats, qualities, selectedPurity, selectedColor, selectedCarat, selectedQuality]);
+  }, [product, isGold, purities, colors, carats, qualities, selectedPurity, selectedColor, selectedCarat, selectedQuality]);
 
   // Swatches for the combined Metal (Purity + Color) selector matching Neirah standard
   // Swatches for the combined Metal (Purity + Color) selector
   const metalSwatches = useMemo(() => {
-    const isSilverProduct = product?.productType === 'silver';
-    if (isSilverProduct) {
-      const silverPurity = purities.find((p) =>
-        p.toLowerCase().includes('silver') || p.toLowerCase().includes('925')
-      ) || '925 Silver';
-
-      return [{
-        id: 'SS-Silver',
-        label: 'SS',
-        purity: silverPurity,
-        color: 'Silver',
-        type: 'silver',
-      }];
+    if (!isGold) {
+      return [];
     }
 
     // Standard gold color palette order: White Gold, Rose Gold, Yellow Gold
@@ -479,7 +502,7 @@ export default function ProductDetail() {
     }
 
     return swatches;
-  }, [product, purities, colors]);
+  }, [product, purities, colors, isGold]);
 
   const isSwatchSelected = useCallback((swatch) => {
     const curPurity = (selectedPurity || '').toLowerCase();
@@ -499,6 +522,9 @@ export default function ProductDetail() {
 
   // Active metal display title (e.g. "9KT Yellow Gold")
   const metalDisplayName = useMemo(() => {
+    if (!isGold) {
+      return product?.specifications?.metalName || '925 Sterling Silver';
+    }
     const pStr = (selectedPurity || '').replace(/ Gold/i, '').trim();
     const cStr = (selectedColor || '').trim();
 
@@ -506,7 +532,7 @@ export default function ProductDetail() {
       return `${pStr} ${cStr}`;
     }
     return pStr || cStr || product?.specifications?.metalName || 'Gold';
-  }, [selectedPurity, selectedColor, product]);
+  }, [selectedPurity, selectedColor, product, isGold]);
 
   // Extract clean studio gallery images for the current selected metal color
   const galleryImages = useMemo(() => {
@@ -634,6 +660,10 @@ export default function ProductDetail() {
   const categoryId = category?._id || '';
   const categoryName = category?.name || '';
 
+  // Category size chart returned directly from backend (no extra frontend conditions needed)
+  const sizeChart = product?.sizeChart || null;
+  const hasCategorySizeChart = Boolean(sizeChart?.url);
+
   // Multi-dimensional variant resolution
   const selectedVariant = useMemo(() => {
     const raw = Array.isArray(product?.variants) ? product.variants : [];
@@ -685,7 +715,7 @@ export default function ProductDetail() {
     return match || raw[0] || null;
   }, [product, selectedPurity, selectedColor, selectedCarat, selectedQuality, isCenterDriven]);
 
-  const isGold = (product?.productType === 'gold') || /gold/i.test(product?.basicInfo?.title || product?.title || '');
+  // isGold and isSilver are declared above
   const currentPrice = [selectedVariant?.price, product?.pricing?.salePrice]
     .find((value) => Number(value) > 0);
   const mrpPrice = [product?.pricing?.mrp].find((value) => Number(value) > 0) ?? currentPrice;
@@ -694,6 +724,7 @@ export default function ProductDetail() {
 
   // Itemized Transparent Price Breakdown (Matches Screenshot)
   const breakdown = useMemo(() => {
+    if (!isGold) return null;
     const v = selectedVariant || {};
     const finalPrice = Number(
       v.price ||
@@ -1062,21 +1093,29 @@ export default function ProductDetail() {
     );
   }
 
-  const specificationRows = [
-    ['Metal', metalDisplayName || product.specifications?.metalName || 'Gold'],
-    ['Diamond Type', diamondType],
-    ['Diamond Color · Clarity', selectedQuality || '—'],
-    ['Center Diamond Weight', selectedCarat ? `${selectedCarat} ct` : (breakdown?.centerCarat ? `${breakdown.centerCarat} ct` : '—')],
-    ['Gross Weight', breakdown?.metalWeight ? `${breakdown.metalWeight} g` : (product.specifications?.metalWeight ? `${product.specifications.metalWeight} g` : '—')],
-    ['Net Weight', breakdown?.metalWeight ? `${breakdown.metalWeight} g` : '—'],
-    ['Size', selectedSize || 'Standard'],
-  ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+  const specificationRows = isGold
+    ? [
+        ['Metal', metalDisplayName || product.specifications?.metalName || 'Gold'],
+        ['Diamond Type', diamondType],
+        ['Diamond Color · Clarity', selectedQuality || '—'],
+        ['Center Diamond Weight', selectedCarat ? `${selectedCarat} ct` : (breakdown?.centerCarat ? `${breakdown.centerCarat} ct` : '—')],
+        ['Gross Weight', breakdown?.metalWeight ? `${breakdown.metalWeight} g` : (product.specifications?.metalWeight ? `${product.specifications.metalWeight} g` : '—')],
+        ['Net Weight', breakdown?.metalWeight ? `${breakdown.metalWeight} g` : '—'],
+        ['Size', selectedSize || (sizes.length > 0 ? 'Standard' : null)],
+      ].filter(([, value]) => value !== undefined && value !== null && value !== '')
+    : [
+        ['Metal', product.specifications?.metalName || '925 Sterling Silver'],
+        ['Gross Weight', product.specifications?.metalWeight ? `${product.specifications.metalWeight} g` : (product.ornate?.grossWeight ? `${product.ornate.grossWeight} g` : null)],
+        ['Net Weight', product.specifications?.metalWeight ? `${product.specifications.metalWeight} g` : (product.ornate?.netWeight ? `${product.ornate.netWeight} g` : null)],
+        ['Purity', product.specifications?.purity || (product.ornate?.purity ? `${product.ornate.purity}` : '92.5')],
+        ['Size', selectedSize || null],
+      ].filter(([, value]) => value !== undefined && value !== null && value !== '');
 
   return (
     <div className="bg-white text-stone-900 min-h-screen pb-24 lg:pb-12">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-3 sm:py-4">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-1.5 sm:py-2.5">
         {/* ─── Breadcrumb Navigation ─── */}
-        <nav className="text-[10px] sm:text-[11px] text-stone-400 py-2 sm:py-3 flex items-center gap-1.5 overflow-hidden whitespace-nowrap border-b border-stone-100 mb-4 sm:mb-6">
+        <nav className="text-[10px] sm:text-[11px] text-stone-400 py-1.5 sm:py-2 flex items-center gap-1.5 overflow-hidden whitespace-nowrap border-b border-stone-100 mb-3 sm:mb-4">
           <Link to="/" className="hover:text-stone-800 transition-colors">
             Home
           </Link>
@@ -1175,10 +1214,50 @@ export default function ProductDetail() {
           <div className="lg:col-span-5 space-y-6">
             {/* Title & Brand */}
             <div className="space-y-1">
-              <h1 className="text-xl sm:text-2xl font-normal text-stone-900 leading-snug tracking-tight font-serif">
-                {product.basicInfo?.title}
+              <h1 className="text-xl sm:text-2xl text-gray-900 mb-2 font-medium leading-tight tracking-[0.02em] font-poppins">
+                {product.basicInfo?.title || product?.title || ''}
               </h1>
             </div>
+
+            {/* ─── Social Proof & Urgency (Reviews & Sold Counter) ─── */}
+            {(() => {
+              const spConfig = storeSettings?.socialProof || {};
+              const showReviews = spConfig.showReviews !== false;
+              const showSold = spConfig.showSoldCounter !== false;
+              if (!showReviews && !showSold) return null;
+
+              const soldHours = spConfig.soldTimeHours || 3;
+              const soldCount = Number(product?.demoMetrics?.soldCount ?? spConfig.defaultSoldCount ?? 24);
+              const reviewCount = Number(product?.demoMetrics?.reviewCount ?? spConfig.defaultReviewCount ?? 13);
+
+              if (soldCount <= 0 && reviewCount <= 0) return null;
+
+              return (
+                <div className="space-y-1 pt-0.5 pb-1 select-none">
+                  {/* Reviews Star Rating Badge */}
+                  {showReviews && reviewCount > 0 && (
+                    <div className="flex items-center gap-1.5 text-xs text-stone-600">
+                      <div className="flex items-center text-amber-400 text-xs tracking-tight" aria-label="5 star rating">
+                        ★★★★★
+                      </div>
+                      <span className="text-[12px] text-stone-600 font-medium">
+                        {reviewCount} reviews
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Hourly Sold Counter Badge */}
+                  {showSold && soldCount > 0 && (
+                    <div className="flex items-center gap-1.5 text-xs text-stone-700">
+                      <span className="text-sm leading-none" role="img" aria-label="fire">🔥</span>
+                      <span className="text-[12px] font-medium text-stone-700">
+                        <strong className="font-semibold text-stone-900">{soldCount}</strong> sold in last {soldHours} hours
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Price Row with Wishlist & Share */}
             <div className="flex items-center justify-between gap-4 pb-3 border-b border-stone-100">
@@ -1186,19 +1265,14 @@ export default function ProductDetail() {
                 <span className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight font-sans">
                   {formatPrice(currentPrice)}
                 </span>
-                <span className="text-[11px] sm:text-xs text-stone-400 font-normal whitespace-nowrap">
-                  (MRP Incl. of all taxes)
-                </span>
-                {!isGold && discountPercent > 0 && (
-                  <span className="text-xs text-stone-400 line-through ml-1">
+                {!isGold && Number(mrpPrice) > Number(currentPrice) && (
+                  <span className="text-sm sm:text-base text-stone-400 line-through">
                     {formatPrice(mrpPrice)}
                   </span>
                 )}
-                {!isGold && discountPercent > 0 && (
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    {discountPercent}% OFF
-                  </span>
-                )}
+                <span className="text-[11px] sm:text-xs text-stone-400 font-normal whitespace-nowrap">
+                  (MRP Incl. of all taxes)
+                </span>
               </div>
 
               {/* Action Buttons: Wishlist & Share (Styled matching GIVA) */}
@@ -1244,218 +1318,300 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            {/* People Viewing Banner (Live Socket / Organic Real Viewer Count) */}
-            <div className="flex items-center gap-2 text-xs text-stone-600 select-none">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
-              </span>
-              <span className="text-[11.5px] font-medium text-stone-600 flex items-center gap-1">
-                <strong
-                  className={`font-semibold text-stone-900 transition-all duration-300 inline-block ${
-                    liveViewersUpdated ? 'text-[#8b6f4e] scale-110' : ''
-                  }`}
-                >
-                  {liveViewersCount} people
-                </strong>{' '}
-                are viewing this right now
-              </span>
-            </div>
+            {/* People Viewing Banner (Live Socket Real Viewer Count) */}
+            {liveViewersCount > 0 && (
+              <div className="flex items-center gap-2 text-xs text-stone-600 select-none">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+                </span>
+                <span className="text-[11.5px] font-medium text-stone-600 flex items-center gap-1">
+                  <strong
+                    className={`font-semibold text-stone-900 transition-all duration-300 inline-block ${
+                      liveViewersUpdated ? 'text-[#8b6f4e] scale-110' : ''
+                    }`}
+                  >
+                    {liveViewersCount} {liveViewersCount === 1 ? 'person is' : 'people are'}
+                  </strong>{' '}
+                  viewing this right now
+                </span>
+              </div>
+            )}
 
-            {/* Available Offers Box */}
-            <div className="p-3 rounded-xl bg-[#faf8f5] border border-[#eee4d6] space-y-1">
+            {/* ══════════════════════════════════════════════════════════
+                AVAILABLE OFFERS (Luxury Ticket & Celestial Sparkle)
+            ═══════════════════════════════════════════════════════════ */}
+            <div className="relative overflow-hidden rounded-2xl border border-[#E8DEC9] bg-gradient-to-br from-[#FCFAF6] via-[#FDFCF9] to-[#F7F2E8] p-3.5 sm:p-4 shadow-[0_2px_14px_rgba(139,111,78,0.06)] transition-all">
+              {/* Celestial 8-Point Diamond Starburst Watermark (Matches Neirah Screenshot) */}
+              <svg
+                className="absolute -top-3 -right-3 w-20 h-20 text-[#C19B65]/35 pointer-events-none select-none"
+                viewBox="0 0 100 100"
+                fill="none"
+              >
+                <line x1="50" y1="8" x2="50" y2="92" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+                <line x1="8" y1="50" x2="92" y2="50" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+                <line x1="20" y1="20" x2="80" y2="80" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" />
+                <line x1="20" y1="80" x2="80" y2="20" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" />
+                <polygon
+                  points="50,26 55,45 74,50 55,55 50,74 45,55 26,50 45,45"
+                  fill="currentColor"
+                  fillOpacity="0.28"
+                />
+                <circle cx="50" cy="50" r="2.5" fill="currentColor" fillOpacity="0.7" />
+              </svg>
+
+              {/* Header Row: Tag Icon + Title + Toggle */}
               <div
                 className="flex items-center justify-between cursor-pointer select-none"
                 onClick={() => setOffersOpen((prev) => !prev)}
               >
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#8b6f4e]">
-                  AVAILABLE OFFERS
-                </span>
-                <span className="text-[14px] font-bold text-stone-700 leading-none">
-                  {offersOpen ? '−' : '+'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-[#8b6f4e]/10 border border-[#8b6f4e]/20 flex items-center justify-center text-[#8b6f4e] shadow-2xs">
+                    <HiOutlineTag className="w-3.5 h-3.5 -rotate-12 stroke-[1.8]" />
+                  </div>
+                  <span className="text-[11px] sm:text-[11.5px] font-semibold uppercase tracking-[0.16em] text-[#8b6f4e] font-poppins">
+                    AVAILABLE OFFERS
+                  </span>
+                  {coupons.length > 1 && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#8b6f4e]/12 text-[#8b6f4e]">
+                      {coupons.length} Offers
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 text-[#8b6f4e]">
+                  <span className="text-[10.5px] font-medium text-stone-500 hidden sm:inline">
+                    {offersOpen ? 'Hide' : 'View Offers'}
+                  </span>
+                  <div className="w-5 h-5 rounded-md flex items-center justify-center hover:bg-[#8b6f4e]/10 transition-colors">
+                    <HiChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        offersOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </div>
+                </div>
               </div>
 
+              {/* Offers List */}
               {offersOpen && (
-                <div className="space-y-1.5 pt-0.5">
-                  {coupons.length > 0 ? (
-                    coupons.map((c) => {
-                      const code = c.coupon?.code || 'OFFER';
-                      const discountText =
-                        c.discount?.type === 'Percentage'
-                          ? `${c.discount?.value}% Off`
-                          : `₹${Number(c.discount?.value || 0).toLocaleString('en-IN')} Off`;
-                      return (
-                        <div
-                          key={c._id || code}
-                          className="flex items-center justify-between gap-2"
-                        >
-                          <div className="flex items-center gap-2">
+                <div className="mt-3 space-y-2.5">
+                  {coupons.map((c, idx) => {
+                    const code = c.coupon?.code || 'FIRSTORDER';
+                    const desc = c.coupon?.description || (code === 'FIRSTORDER' ? 'Valid on your first fine jewelry purchase' : '');
+                    const isPercentage = c.discount?.type === 'Percentage';
+                    const discountVal = Number(c.discount?.value || 0);
+                    const discountText = isPercentage
+                      ? `${discountVal}% Off`
+                      : `₹${discountVal.toLocaleString('en-IN')} Off`;
+
+
+
+                    const isCopied = copiedCode === code;
+
+                    return (
+                      <div
+                        key={c._id || code || idx}
+                        className="relative group bg-white/95 hover:bg-white rounded-xl border border-[#EDE3D3] hover:border-[#8b6f4e]/50 p-3 sm:p-3.5 transition-all duration-200 shadow-[0_2px_8px_rgba(139,111,78,0.04)] hover:shadow-[0_4px_14px_rgba(139,111,78,0.08)]"
+                      >
+                        {/* Perforated Voucher Ticket Notches (Left & Right) */}
+                        <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#f8f3ea] border-r border-[#EDE3D3] pointer-events-none" />
+                        <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#f8f3ea] border-l border-[#EDE3D3] pointer-events-none" />
+
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1">
+                          {/* Left Details: Dashed Code Badge + Discount + Savings Tag */}
+                          <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+                            {/* Dashed Code Badge */}
                             <button
                               type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (navigator.clipboard) {
-                                  navigator.clipboard.writeText(code);
-                                  toast.success(`Coupon "${code}" copied!`);
-                                }
-                              }}
-                              className="px-2 py-0.5 rounded bg-white border border-[#d6cfc2] text-[11px] font-bold tracking-wider font-mono text-stone-900 cursor-pointer hover:border-[#8b6f4e] hover:bg-[#faf4ed] transition"
+                              onClick={() => handleCopyCoupon(code)}
+                              className="group/badge relative flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-dashed border-[#C5A880] bg-[#FAF5EE] hover:bg-[#F3EAD9] text-[#785934] font-mono font-bold text-xs tracking-wider cursor-pointer hover:border-[#8b6f4e] transition-all select-all shadow-2xs"
                               title="Click to copy coupon code"
                             >
-                              {code}
+                              <span>{code}</span>
+                              <HiOutlineDuplicate className="w-3.5 h-3.5 text-[#8b6f4e] opacity-60 group-hover/badge:opacity-100 transition-opacity" />
                             </button>
-                            <span className="text-xs text-stone-600 font-medium">
-                              {discountText}
+
+                            {/* Discount Highlight */}
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-[13px] sm:text-sm font-bold text-stone-900 tracking-tight font-poppins">
+                                {discountText}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Right: Action Button & Minimum Order Condition */}
+                          <div className="flex items-center justify-between sm:justify-end gap-2.5 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-[#f2eae0]">
+                            {c.discount?.minimumOrderAmount > 0 && (
+                              <span className="text-[10px] text-stone-400 font-medium">
+                                Min. order ₹{Number(c.discount.minimumOrderAmount).toLocaleString('en-IN')}
+                              </span>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleCopyCoupon(code)}
+                              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-200 cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+                                isCopied
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'bg-[#8b6f4e] hover:bg-[#785e40] text-white shadow-xs'
+                              }`}
+                              title={isCopied ? 'Code copied!' : 'Copy code to clipboard'}
+                            >
+                              {isCopied ? (
+                                <>
+                                  <FaCheck className="w-3 h-3" />
+                                  <span>Copied!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>Copy Code</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Description line if available */}
+                        {desc && (
+                          <div className="mt-1.5 pt-1.5 border-t border-[#f5eee4] flex items-center justify-between text-[10.5px] text-stone-500 px-1">
+                            <span>{desc}</span>
+                            <span className="text-[9.5px] text-[#8b6f4e] font-medium hidden sm:inline">
+                              Tap to copy
                             </span>
                           </div>
-                          {c.discount?.minimumOrderAmount > 0 && (
-                            <span className="text-[10px] text-stone-400">
-                              Min. order ₹{Number(c.discount.minimumOrderAmount).toLocaleString('en-IN')}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (navigator.clipboard) {
-                            navigator.clipboard.writeText('FIRSTORDER');
-                            toast.success('Coupon "FIRSTORDER" copied!');
-                          }
-                        }}
-                        className="px-2 py-0.5 rounded bg-white border border-[#d6cfc2] text-[11px] font-bold tracking-wider font-mono text-stone-900 cursor-pointer hover:border-[#8b6f4e] hover:bg-[#faf4ed] transition"
-                        title="Click to copy coupon code"
-                      >
-                        FIRSTORDER
-                      </button>
-                      <span className="text-xs text-stone-600 font-medium">10% Off</span>
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
             {/* ══════════════════════════════════════════════════════════
-                VARIANT SELECTORS (Matches Screenshot 2)
+                VARIANT SELECTORS (Gold Jewelry Only; Silver has no diamond/metal variants)
             ═══════════════════════════════════════════════════════════ */}
             <div className="space-y-4 pt-1">
-              {/* 1. Diamond Type Selector */}
-              <div className="space-y-1.5">
-                <label className="block text-[11px] font-bold text-stone-700">
-                  Diamond Type: <span className="font-semibold text-stone-900">{diamondType}</span>
-                </label>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="px-3.5 py-1.5 rounded-lg text-xs font-bold tracking-wide uppercase bg-[#1f3a2b] text-white shadow-xs cursor-default"
-                  >
-                    {diamondType}
-                  </button>
-                </div>
-              </div>
-
-              {/* 2. Diamond Quality Selector (Grid Format matching Screenshot 2) */}
-              {qualities.length > 0 && (
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-bold text-stone-700">
-                    Diamond Quality: <span className="font-semibold text-stone-900">{selectedQuality.replace(' · ', ' ')}</span>
-                  </label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {qualities.map((q) => {
-                      const isSel = selectedQuality === q;
-                      const label = q.replace(' · ', ' ');
-                      return (
-                        <button
-                          key={q}
-                          type="button"
-                          onClick={() => setSelectedQuality(q)}
-                          className={`py-2 px-1 text-center rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                            isSel
-                              ? 'bg-[#1f3a2b] text-white shadow-xs ring-1 ring-[#1f3a2b]'
-                              : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-400'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* 3. Metal Selector: Unified Purity + Color Swatches (Matches Neirah Screenshot) */}
-              <div className="space-y-2">
-                <label className="block text-[11px] font-bold text-stone-700">
-                  Metal: <span className="font-semibold text-stone-900">{metalDisplayName}</span>
-                </label>
-
-                <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
-                  {metalSwatches.map((swatch) => {
-                    const isSel = isSwatchSelected(swatch);
-                    const bg = swatch.colorCode && swatch.colorCodeEnd
-                      ? `linear-gradient(135deg, ${swatch.colorCode} 0%, ${swatch.colorCodeEnd} 100%)`
-                      : (swatch.colorCode || swatch.colorCodeEnd || '#f1f5f9');
-
-                    return (
+              {isGold && (
+                <>
+                  {/* 1. Diamond Type Selector */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-stone-700">
+                      Diamond Type: <span className="font-semibold text-stone-900">{diamondType}</span>
+                    </label>
+                    <div className="flex items-center gap-2">
                       <button
-                        key={swatch.id}
                         type="button"
-                        onClick={() => handleSelectMetalSwatch(swatch)}
-                        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-[9px] sm:text-[10px] tracking-tight transition-all cursor-pointer shadow-2xs ${
-                          isSel
-                            ? 'ring-2 ring-stone-900 ring-offset-2 scale-105 z-10'
-                            : 'hover:scale-105 active:scale-95 opacity-90 hover:opacity-100'
-                        }`}
-                        style={{
-                          background: bg,
-                          border: '1px solid rgba(0, 0, 0, 0.12)',
-                          color: '#334155',
-                        }}
-                        title={`${swatch.label} ${swatch.color}`}
-                        aria-label={`${swatch.label} ${swatch.color}`}
+                        className="px-3.5 py-1.5 rounded-lg text-xs font-bold tracking-wide uppercase bg-[#1f3a2b] text-white shadow-xs cursor-default"
                       >
-                        {swatch.label}
+                        {diamondType}
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
+                    </div>
+                  </div>
 
-              {/* 4. Solitaire Center Diamond Carat Weight Dropdown (Matches Screenshot 2) */}
-              {isCenterDriven && carats.length > 0 && (
-                <div className="space-y-1.5">
-                  <label htmlFor="carat-select" className="block text-[11px] font-bold text-stone-700">
-                    Total Center Diamond Weight
-                  </label>
-                  <Dropdown
-                    id="carat-select"
-                    value={selectedCarat}
-                    onChange={(val) => setSelectedCarat(Number(val))}
-                    options={carats.map((ct) => ({ value: ct, label: `${ct} CT` }))}
-                    placeholder="Select Carat"
-                    buttonClassName="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8f6d43] flex items-center justify-between cursor-pointer"
-                    menuClassName="z-[50]"
-                  />
-                </div>
+                  {/* 2. Diamond Quality Selector (Grid Format matching Screenshot 2) */}
+                  {qualities.length > 0 && (
+                    <div className="space-y-2">
+                      <label className="block text-[11px] font-bold text-stone-700">
+                        Diamond Quality: <span className="font-semibold text-stone-900">{selectedQuality.replace(' · ', ' ')}</span>
+                      </label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {qualities.map((q) => {
+                          const isSel = selectedQuality === q;
+                          const label = q.replace(' · ', ' ');
+                          return (
+                            <button
+                              key={q}
+                              type="button"
+                              onClick={() => setSelectedQuality(q)}
+                              className={`py-2 px-1 text-center rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                isSel
+                                  ? 'bg-[#1f3a2b] text-white shadow-xs ring-1 ring-[#1f3a2b]'
+                                  : 'bg-white border border-stone-200 text-stone-700 hover:border-stone-400'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. Metal Selector: Unified Purity + Color Swatches (Matches Neirah Screenshot) */}
+                  {metalSwatches.length > 0 && (
+                    <div className="space-y-2">
+                      <label className="block text-[11px] font-bold text-stone-700">
+                        Metal: <span className="font-semibold text-stone-900">{metalDisplayName}</span>
+                      </label>
+
+                      <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+                        {metalSwatches.map((swatch) => {
+                          const isSel = isSwatchSelected(swatch);
+                          const bg = swatch.colorCode && swatch.colorCodeEnd
+                            ? `linear-gradient(135deg, ${swatch.colorCode} 0%, ${swatch.colorCodeEnd} 100%)`
+                            : (swatch.colorCode || swatch.colorCodeEnd || '#f1f5f9');
+
+                          return (
+                            <button
+                              key={swatch.id}
+                              type="button"
+                              onClick={() => handleSelectMetalSwatch(swatch)}
+                              className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-[9px] sm:text-[10px] tracking-tight transition-all cursor-pointer shadow-2xs ${
+                                isSel
+                                  ? 'ring-2 ring-stone-900 ring-offset-2 scale-105 z-10'
+                                  : 'hover:scale-105 active:scale-95 opacity-90 hover:opacity-100'
+                              }`}
+                              style={{
+                                background: bg,
+                                border: '1px solid rgba(0, 0, 0, 0.12)',
+                                color: '#334155',
+                              }}
+                              title={`${swatch.label} ${swatch.color}`}
+                              aria-label={`${swatch.label} ${swatch.color}`}
+                            >
+                              {swatch.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 4. Solitaire Center Diamond Carat Weight Dropdown (Matches Screenshot 2) */}
+                  {isCenterDriven && carats.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label htmlFor="carat-select" className="block text-[11px] font-bold text-stone-700">
+                        Total Center Diamond Weight
+                      </label>
+                      <Dropdown
+                        id="carat-select"
+                        value={selectedCarat}
+                        onChange={(val) => setSelectedCarat(Number(val))}
+                        options={carats.map((ct) => ({ value: ct, label: `${ct} CT` }))}
+                        placeholder="Select Carat"
+                        buttonClassName="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8f6d43] flex items-center justify-between cursor-pointer"
+                        menuClassName="z-[50]"
+                      />
+                    </div>
+                  )}
+                </>
               )}
 
               {/* 5. Size Selection (If Applicable) */}
               {sizes.length > 0 && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="product-size" className="block text-[11px] font-bold text-stone-700">Size</label>
-                    <button
-                      type="button"
-                      onClick={() => setShowSizeModal(true)}
-                      className="text-[10px] font-bold text-[#8f6d43] hover:underline uppercase tracking-wider cursor-pointer"
-                    >
-                      Size chart
-                    </button>
+                    <label htmlFor="product-size" className="block text-[11px] font-bold text-stone-800">Size</label>
+                    {hasCategorySizeChart && (
+                      <button
+                        type="button"
+                        onClick={() => setShowSizeModal(true)}
+                        className="text-[11px] font-bold text-stone-900 hover:text-[#8f6d43] uppercase tracking-wider underline underline-offset-2 cursor-pointer transition-colors"
+                      >
+                        SIZE CHART
+                      </button>
+                    )}
                   </div>
                   <Dropdown
                     id="product-size"
@@ -1466,6 +1622,19 @@ export default function ProductDetail() {
                     buttonClassName="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8f6d43] flex items-center justify-between cursor-pointer"
                     menuClassName="z-[50]"
                   />
+                </div>
+              )}
+
+              {/* If no size options configured on product but category has a size chart, provide the SIZE CHART link */}
+              {sizes.length === 0 && hasCategorySizeChart && (
+                <div className="flex items-center justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowSizeModal(true)}
+                    className="text-[11px] font-bold text-stone-900 hover:text-[#8f6d43] uppercase tracking-wider underline underline-offset-2 cursor-pointer transition-colors"
+                  >
+                    SIZE CHART
+                  </button>
                 </div>
               )}
             </div>
@@ -1549,8 +1718,9 @@ export default function ProductDetail() {
                   </div>
                 </div>
 
-                {/* Right side: Certificate Preview */}
-                <div className="w-full md:w-[150px] shrink-0 pt-4 md:pt-0 md:pl-6 flex flex-col items-center justify-center">
+                {/* Right side: Certificate Preview (Only for Gold / Diamond items) */}
+                {isGold && (
+                  <div className="w-full md:w-[150px] shrink-0 pt-4 md:pt-0 md:pl-6 flex flex-col items-center justify-center">
                   <div
                     onClick={() => setShowCertificateModal(true)}
                     className="border border-stone-200 bg-white p-1.5 rounded shadow-xs hover:shadow-md transition-all cursor-pointer group max-w-[130px]"
@@ -1571,6 +1741,7 @@ export default function ProductDetail() {
                     <span>View Certificate</span>
                   </button>
                 </div>
+                )}
               </div>
             </div>
 
@@ -1636,11 +1807,12 @@ export default function ProductDetail() {
                 )}
               </div>
 
-              {/* Accordion 3: PRICE BREAK UP */}
-              <div>
-                <button
-                  type="button"
-                  onClick={() => toggleAccordion('price')}
+              {/* Accordion 3: PRICE BREAK UP (Only for Gold items) */}
+              {isGold && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => toggleAccordion('price')}
                   className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
                 >
                   <span className="text-[11.5px] sm:text-xs font-semibold tracking-wider uppercase text-stone-900">
@@ -1755,6 +1927,7 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Accordion 4: Manufacturer & Origin */}
               <div>
@@ -2115,55 +2288,87 @@ export default function ProductDetail() {
         </div>
       )}
 
-      {/* ─── Size Guide Modal ─── */}
+      {/* ─── Category Size Chart Download Modal ─── */}
       {showSizeModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn"
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn"
           onClick={() => setShowSizeModal(false)}
         >
           <div
-            className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4 animate-scaleUp"
+            className="relative bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-stone-100 text-center animate-scaleUp overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-stone-100">
-              <h3 className="text-base font-bold text-stone-900 font-serif">
-                {categoryName ? `${categoryName} size guide` : 'Size guide'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowSizeModal(false)}
-                className="p-1 text-stone-400 hover:text-stone-700 cursor-pointer"
-              >
-                <HiOutlineX className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs text-stone-600">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-stone-50 text-[10px] uppercase font-bold text-stone-500 border-b border-stone-200">
-                      <th className="py-2 px-3">Available sizes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-100">
-                    {sizes.map((size) => (
-                      <tr key={size._id}>
-                        <td className="py-1.5 px-3 font-semibold">{size.name}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
+            {/* Top-Right Circular Close Button */}
             <button
               type="button"
               onClick={() => setShowSizeModal(false)}
-              className="w-full py-2.5 bg-black text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-stone-800 transition-colors cursor-pointer"
+              className="absolute top-4 right-4 h-8 w-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-800 flex items-center justify-center transition cursor-pointer"
+              aria-label="Close"
             >
-              GOT IT
+              <HiOutlineX className="w-4 h-4 stroke-[2.5]" />
             </button>
+
+            {/* Modal Title */}
+            <h3 className="text-xl sm:text-2xl font-serif font-bold text-stone-900 tracking-tight mb-5">
+              {sizeChart?.categoryName || categoryName || 'Jewelry'} Size Chart
+            </h3>
+
+            {/* Center PDF / Guide Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="relative flex flex-col items-center justify-center">
+                <svg className="w-16 h-20 text-stone-800" viewBox="0 0 48 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M4 4C4 1.79086 5.79086 0 8 0H32L44 12V56C44 58.2091 42.2091 60 40 60H8C5.79086 60 4 58.2091 4 56V4Z" fill="white" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"/>
+                  <path d="M32 0V12H44" fill="#E7E5E4" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round"/>
+                  <rect x="9" y="22" width="30" height="15" rx="3" fill="#FEE2E2" stroke="#DC2626" strokeWidth="1.5"/>
+                  <text x="24" y="33" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#DC2626" fontFamily="sans-serif">PDF</text>
+                  <path d="M24 43V51M24 51L20 47M24 51L28 47" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+            </div>
+
+            {/* Document Title & Description */}
+            <h4 className="text-sm font-bold text-stone-900 tracking-tight">
+              Download {sizeChart?.categoryName || categoryName || 'Jewelry'} Size Guide{sizeChart?.isPdf ? ' PDF' : ''}
+            </h4>
+            <p className="text-xs text-stone-500 mt-1 max-w-xs mx-auto leading-relaxed">
+              Click to download the practical Size Guide for this category.
+            </p>
+
+            {/* Image Preview if Size Chart is an Image */}
+            {!sizeChart?.isPdf && sizeChart?.url && (
+              <div className="mt-4 max-h-52 overflow-hidden rounded-xl border border-stone-200 bg-stone-50 flex items-center justify-center p-2">
+                <img
+                  src={sizeChart.url}
+                  alt={`${sizeChart.categoryName} Size Guide`}
+                  className="max-h-48 w-auto object-contain rounded"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                />
+              </div>
+            )}
+
+            {/* CLICK HERE Action Button */}
+            <div className="mt-6 flex justify-center">
+              <a
+                href={sizeChart?.url || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+                onClick={(e) => {
+                  if (!sizeChart?.url) {
+                    e.preventDefault();
+                    return;
+                  }
+                  // Open in new tab and auto-close modal
+                  window.open(sizeChart.url, '_blank');
+                  setShowSizeModal(false);
+                }}
+                className="inline-flex items-center justify-center px-10 py-3 rounded-xl bg-stone-900 hover:bg-black text-white text-xs font-bold uppercase tracking-widest shadow-md hover:shadow-lg transition-all cursor-pointer"
+              >
+                CLICK HERE
+              </a>
+            </div>
           </div>
         </div>
       )}

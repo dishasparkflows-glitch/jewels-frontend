@@ -241,7 +241,7 @@ export default function MegaMenuNav({ categories, mobile = false, onNavigate, er
                   to={categoryLink(category)}
                   onClick={close}
                   onFocus={() => setActiveId(category._id)}
-                  className={`border-b-2 py-4 text-[11px] font-medium uppercase tracking-[0.14em] transition-colors cursor-pointer ${
+                  className={`border-b-2 py-2.5 sm:py-3 text-[11px] font-medium uppercase tracking-[0.14em] transition-colors cursor-pointer ${
                     activeId === category._id
                       ? 'border-[#d2b18a] text-[#d2b18a]'
                       : 'border-transparent text-stone-300 hover:text-[#d2b18a]'
