@@ -23,6 +23,7 @@ import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages
 import { trackBeginCheckout } from '../../config/firebase';
 import { resolveMetalName, cleanAttribute } from '../../utils/metalColors';
 import Dropdown from '../../components/common/Dropdown';
+import CountryCodeSelect from '../../components/common/CountryCodeSelect';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
 
 const inputClassName = 'h-12 w-full rounded-md border border-[#e6e0d8] bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#a77e4e] focus:ring-2 focus:ring-[#a77e4e]/10';
@@ -277,7 +278,14 @@ export default function Checkout() {
                 </div>
                 <label className="relative sm:col-span-2"><span className="sr-only">PIN code</span><HiOutlineLocationMarker className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="postal-code" inputMode="numeric" placeholder="PIN Code *" value={form.postalCode} onChange={updateField('postalCode')} required /></label>
                 <div className="flex gap-3 sm:col-span-6">
-                  <label className="w-[110px] shrink-0"><span className="sr-only">Country calling code</span><select className={selectClassName} aria-label="Country calling code" value={form.countryCode} onChange={updateField('countryCode')}><option value="+91">🇮🇳 +91</option><option value="+1">🇺🇸 +1</option><option value="+44">🇬🇧 +44</option><option value="+61">🇦🇺 +61</option></select></label>
+                  <div className="w-[125px] shrink-0">
+                    <CountryCodeSelect
+                      value={form.countryCode}
+                      onChange={(code) => setForm((prev) => ({ ...prev, countryCode: code }))}
+                      className="h-12 w-full"
+                      buttonClassName="flex h-12 w-full items-center justify-between rounded-md border border-[#e6e0d8] bg-white px-3 text-sm text-stone-900 transition hover:bg-stone-50 focus:border-[#a77e4e] focus:ring-2 focus:ring-[#a77e4e]/10 outline-none cursor-pointer"
+                    />
+                  </div>
                   <label className="relative flex-1"><span className="sr-only">Mobile number</span><HiOutlinePhone className={iconClassName} /><input className={`${inputClassName} pl-11`} type="tel" inputMode="tel" autoComplete="tel-national" placeholder="Mobile Number *" value={form.phone} onChange={updateField('phone')} required /></label>
                 </div>
               </div>

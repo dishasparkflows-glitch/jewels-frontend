@@ -34,6 +34,10 @@ export const CartProvider = ({ children }) => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
+  const openCartDrawer = useCallback(() => setCartDrawerOpen(true), []);
+  const closeCartDrawer = useCallback(() => setCartDrawerOpen(false), []);
+
   const [cartTotals, setCartTotals] = useState({
     totalItems: 0,
     subtotal: 0,
@@ -234,6 +238,10 @@ export const CartProvider = ({ children }) => {
       return updated;
     });
 
+    if (location.pathname !== '/cart' && location.pathname !== '/checkout') {
+      setCartDrawerOpen(true);
+    }
+
     trackAddToCart(product, parsedQty);
 
     toast.success(`Added "${title}" to your bag!`, {
@@ -422,6 +430,12 @@ export const CartProvider = ({ children }) => {
         tax,
         total,
         loading,
+        cartDrawerOpen,
+        setCartDrawerOpen,
+        openCartDrawer,
+        closeCartDrawer,
+        isCartOpen: cartDrawerOpen,
+        setIsCartOpen: setCartDrawerOpen,
         fetchCounts,
         refreshCart: fetchCart,
       }}

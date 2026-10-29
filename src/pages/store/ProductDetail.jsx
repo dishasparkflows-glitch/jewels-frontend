@@ -2103,10 +2103,7 @@ export default function ProductDetail() {
             <div className="flex-1 relative flex items-center justify-center bg-[#FDFBF7] overflow-hidden select-none min-h-[350px]">
               {/* TOP: Metal Color Swatches (Only displayed if dynamic metal colors exist) */}
               {modalColorsToRender && modalColorsToRender.length > 0 && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 sm:gap-3 bg-white/95 backdrop-blur-md px-4 py-2 rounded-full border border-stone-200/80 shadow-md">
-                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-stone-600 select-none">
-                    VIEW SIMILAR COLORS
-                  </span>
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full border border-stone-200/80 shadow-md">
                   <div className="flex items-center gap-2">
                     {modalColorsToRender.map((c) => {
                       const isSelected = selectedColor?.toLowerCase() === c.name?.toLowerCase();

@@ -10,10 +10,9 @@ import { getImageUrl, isVideoUrl } from '../../utils/imageUrl';
 export default function ProductMediaImage({
   src,
   alt = 'Product image',
-  className = 'w-full h-full object-contain',
+  className = 'w-full h-full object-cover',
   videoClassName,
   fallbackClassName = 'flex h-full w-full flex-col items-center justify-center gap-1.5 text-stone-300',
-  isSilver = false,
 }) {
   const [failed, setFailed] = useState(false);
 
@@ -46,10 +45,6 @@ export default function ProductMediaImage({
     );
   }
 
-  const finalImgClass = isSilver
-    ? `${className} object-cover`
-    : className;
-
   return (
     <img
       src={resolvedUrl}
@@ -57,7 +52,7 @@ export default function ProductMediaImage({
       loading="lazy"
       decoding="async"
       onError={() => setFailed(true)}
-      className={finalImgClass}
+      className={className}
     />
   );
 }

@@ -139,8 +139,8 @@ export default function ProductCard({ product }) {
           <ProductMediaImage
             src={activeImage}
             alt={title}
-            className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
-            videoClassName="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105 pointer-events-none"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            videoClassName="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 pointer-events-none"
           />
 
           {/* Wishlist Button (Top Right) */}
@@ -238,24 +238,13 @@ export default function ProductCard({ product }) {
         />
 
         <div className="flex flex-wrap items-center justify-center gap-1.5 text-center">
-          {isGroup &&
-          product?.pricing?.minPrice &&
-          product?.pricing?.maxPrice &&
-          product.pricing.minPrice !== product.pricing.maxPrice ? (
-            <p className="text-[11px] sm:text-[14px] text-gray-900 font-bold tracking-tight">
-              {formatProductPrice(product.pricing.minPrice)} – {formatProductPrice(product.pricing.maxPrice)}
+          <p className="text-[11px] sm:text-[14px] text-gray-900 font-bold tracking-tight">
+            {formatProductPrice(salePrice) || "Price on request"}
+          </p>
+          {hasDiscount && (
+            <p className="text-[9px] sm:text-[11px] text-gray-400 line-through font-normal">
+              {formatProductPrice(mrp)}
             </p>
-          ) : (
-            <>
-              <p className="text-[11px] sm:text-[14px] text-gray-900 font-bold tracking-tight">
-                {formatProductPrice(salePrice) || "Price on request"}
-              </p>
-              {hasDiscount && (
-                <p className="text-[9px] sm:text-[11px] text-gray-400 line-through font-normal">
-                  {formatProductPrice(mrp)}
-                </p>
-              )}
-            </>
           )}
         </div>
       </div>

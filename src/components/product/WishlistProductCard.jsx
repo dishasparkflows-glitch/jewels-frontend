@@ -255,14 +255,6 @@ export default function WishlistProductCard({ item, onRemove }) {
               );
             }
 
-            if (hasRange) {
-              return (
-                <span className="text-xs sm:text-[13px] font-bold text-stone-950">
-                  {formatProductPrice(minPrice)} – {formatProductPrice(maxPrice)}
-                </span>
-              );
-            }
-
             return (
               <>
                 <span className="text-xs sm:text-[13px] font-bold text-stone-950">

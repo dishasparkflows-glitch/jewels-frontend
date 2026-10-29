@@ -35,7 +35,7 @@ const TRENDING_SEARCHES = [
 
 const Navbar = () => {
   const { user, logout } = useAuth();
-  const { totalItems } = useCart();
+  const { totalItems, cartDrawerOpen, setCartDrawerOpen } = useCart();
   const { wishlistCount } = useWishlist();
   const [categories, setCategories] = useState([]);
   const [navigationError, setNavigationError] = useState(false);
@@ -60,7 +60,6 @@ const Navbar = () => {
   const searchInputRef = useRef(null);
   const userDropdownRef = useRef(null);
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
-  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const isCheckout = location.pathname === '/checkout';
@@ -86,7 +85,7 @@ const Navbar = () => {
           const items = Array.isArray(resData)
             ? resData
             : resData?.items || [];
-          const total = resData?.pagination?.totalDocs ?? resData?.pagination?.total ?? items.length;
+          const total = resData?.pagination?.totalDocs ?? items.length;
           setSearchResults(items);
           setSearchTotal(total);
           setShowSearchDropdown(true);
