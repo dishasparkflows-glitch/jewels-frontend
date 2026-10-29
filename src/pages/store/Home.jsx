@@ -16,6 +16,7 @@ import {
   HiStar,
 } from 'react-icons/hi';
 import InstagramEmbed from '../../components/common/InstagramEmbed';
+import LuxuryDivider from '../../components/common/LuxuryDivider';
 
 const DEFAULT_INSTAGRAM_POSTS = [
   {
@@ -529,6 +530,7 @@ const Home = () => {
             <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
               Celebrate With Neirah
             </h2>
+            <LuxuryDivider className="mt-2.5 sm:mt-3" />
           </div>
 
           {effectiveCategoryItems.length <= 4 ? (
@@ -858,6 +860,7 @@ const Home = () => {
             <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
               Gifts That Say It All
             </h2>
+            <LuxuryDivider className="mt-2.5 sm:mt-3" />
           </div>
 
           <div
@@ -1068,9 +1071,12 @@ const Home = () => {
           11. WHAT OUR CLIENTS ARE SAYING (Dynamic from /api/reviews)
       ─────────────────────────────────────────────────────────────────── */}
       <section style={sectionStyle('reviews')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
-        <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide text-center mb-10 sm:mb-12">
-          What Customers are Saying
-        </h2>
+        <div className="text-center mb-10 sm:mb-12">
+          <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
+            What Customers are Saying
+          </h2>
+          <LuxuryDivider className="mt-2.5 sm:mt-3" />
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {displayReviews.map((rev, idx) => (

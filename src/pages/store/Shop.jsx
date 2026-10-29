@@ -6,6 +6,7 @@ import { HiOutlineAdjustments, HiOutlineX, HiOutlineTrash } from 'react-icons/hi
 import ProductCard from '../../components/product/ProductCard';
 import FilterGroup from '../../components/product/FilterGroup';
 import Dropdown from '../../components/common/Dropdown';
+import LuxuryDivider from '../../components/common/LuxuryDivider';
 import { categoriesAPI, productsAPI } from '../../api/services';
 
 const slugify = (value = '') => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -258,12 +259,15 @@ export default function Shop() {
           <h1 className="font-serif text-3xl sm:text-4xl lg:text-[40px] text-stone-900 tracking-tight capitalize">
             {pageTitle}
           </h1>
+          <LuxuryDivider className="mt-2.5 sm:mt-3" />
         </div>
 
         {/* ─── Top Meta Toolbar (Results Count & Sort) ─── */}
         <div className="flex items-center justify-between py-3.5 mb-6 border-b border-stone-200/80">
           <div className="flex items-center gap-1.5 text-xs sm:text-[13px] text-stone-600 font-medium">
-            <span>{displayCount} Results Found</span>
+            <span>
+              {displayCount} {displayCount === 1 ? 'product' : 'products'} found
+            </span>
             <span
               title="Count of jewellery matching current selection"
               className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[10px] text-stone-400 hover:text-stone-700 cursor-help"
