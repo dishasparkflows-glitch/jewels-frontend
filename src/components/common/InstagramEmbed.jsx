@@ -18,7 +18,7 @@ const cleanInstagramUrl = (url = '') => {
   return cleaned;
 };
 
-export default function InstagramEmbed({ url, width = '100%', captioned = false }) {
+export default function InstagramEmbed({ url, captioned = false }) {
   const containerRef = useRef(null);
   const cleanUrl = cleanInstagramUrl(url);
 

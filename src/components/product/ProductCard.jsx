@@ -9,39 +9,10 @@ import {
   LuChevronRight,
   LuX,
 } from "react-icons/lu";
-import { IoDiamondOutline } from "react-icons/io5";
-import { useWishlist } from "../../contexts/WishlistContext";
-import { getImageUrl } from "../../utils/imageUrl";
-import {
-  formatProductPrice,
-  getProductCardData,
-} from "../../utils/productCard";
-
-function isVideoUrl(url) {
-  if (!url || typeof url !== "string") return false;
-  return /\.(mp4|webm|mov|ogg|m4v)(\?.*)?$/i.test(url);
-}
-
-function ProductImage({ src, name, className = "" }) {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [src]);
-
-  return src && !failed ? (
-    <img
-      src={getImageUrl(src)}
-      alt={name}
-      loading="lazy"
-      decoding="async"
-      onError={() => setFailed(true)}
-      className={className}
-    />
-  ) : (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-stone-300">
-      <IoDiamondOutline className="h-8 w-8 text-stone-300" />
-      <span className="text-[10px] sm:text-[11px] text-stone-400">Image unavailable</span>
-    </div>
-  );
-}
+import { formatProductPrice } from "../../utils/productCard";
+import { useProductCard } from "../../hooks/useProductCard";
+import ProductMediaImage from "./ProductMediaImage";
+import ColorSwatches from "./ColorSwatches";
 
 function ImagePreview({ images, name, onClose }) {
   const dialog = useRef(null);
@@ -92,23 +63,12 @@ function ImagePreview({ images, name, onClose }) {
         </button>
       </div>
       <div className="relative mt-3 h-[min(60vh,550px)] flex items-center justify-center bg-[#FAF8F5] rounded-xl overflow-hidden">
-        {isVideoUrl(images[index]) ? (
-          <video
-            src={`${getImageUrl(images[index])}#t=0.01`}
-            autoPlay
-            loop
-            muted
-            playsInline
-            controls
-            className="h-full w-full object-contain"
-          />
-        ) : (
-          <ProductImage
-            src={images[index]}
-            name={`${name} — image ${index + 1}`}
-            className="h-full w-full object-contain"
-          />
-        )}
+        <ProductMediaImage
+          src={images[index]}
+          alt={`${name} — image ${index + 1}`}
+          className="h-full w-full object-contain"
+          videoClassName="h-full w-full object-contain"
+        />
         {images.length > 1 && (
           <>
             <button
@@ -140,147 +100,33 @@ function ImagePreview({ images, name, onClose }) {
 
 export default function ProductCard({ product }) {
   const navigate = useNavigate();
-  const data = getProductCardData(product);
-  const { isWishlisted, toggleWishlist, wishlistMap } = useWishlist();
-
-  const [selectedColorName, setSelectedColorName] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [wishlistBusy, setWishlistBusy] = useState(false);
 
-  const colors = data.colors || [];
-  const defaultColor = colors.find((entry) => /yellow/i.test(entry.name)) || colors[0];
-  const activeColorName = selectedColorName || defaultColor?.name;
-  const color =
-    colors.find((entry) => entry.name?.toLowerCase() === activeColorName?.toLowerCase()) ||
-    colors.find((entry) => entry.name === activeColorName) ||
-    defaultColor ||
-    colors[0];
-
-  const matchingColorRow = (product.colorImages || []).find((row) => {
-    if (!row || row.status === "inactive") return false;
-    const c = row.metalColorId || row.color;
-    const rowName = typeof c === "object" ? c?.name : typeof c === "string" ? c : "";
-    const rowId = typeof c === "object" ? String(c?._id || c?.id || "") : typeof c === "string" ? c : "";
-    return (
-      (color?.id && rowId && String(color.id) === rowId) ||
-      (color?.name && rowName && color.name.toLowerCase() === rowName.toLowerCase())
-    );
-  });
-
-  const colorRowImages = (matchingColorRow?.images || [])
-    .map((img) => (typeof img === "string" ? img : img?.url))
-    .filter(Boolean);
-
-  const cardImages = colorRowImages.length > 0
-    ? [...new Set(colorRowImages)]
-    : color?.image
-      ? [color.image, ...data.images.filter((img) => img !== color.image)]
-      : data.images;
-
-  const [imageIndex, setImageIndex] = useState(0);
-
-  useEffect(() => {
-    setImageIndex(0);
-  }, [activeColorName]);
-
-  const activeImage = cardImages[imageIndex] || color?.image || data.images[0] || "";
-
-  const isOrnate =
-    Boolean(product.isOrnate) ||
-    String(product?.productType || "").toLowerCase() === "ornate" ||
-    Boolean(product?.representative?.isOrnate);
-
-  const isGroup = Boolean(product.isGroup);
-
-  const rawSlug =
-    product.basicInfo?.slug ||
-    product.slug ||
-    data.slug ||
-    product.representative?.basicInfo?.slug ||
-    product.representative?.slug;
-
-  const title =
-    (isGroup && product.groupName) ||
-    product.basicInfo?.title ||
-    product.title ||
-    product.name ||
-    product.itemName ||
-    data?.name ||
-    "Jewellery";
-
-  const slug =
-    rawSlug ||
-    (title && title !== "Jewellery"
-      ? title.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-")
-      : String(product._id || product.id || data.id));
-
-  const href = isOrnate
-    ? `/silver-collection/${encodeURIComponent(slug)}`
-    : `/product/${encodeURIComponent(slug)}`;
-
-  const [localWished, setLocalWished] = useState(() => {
-    if (wishlistMap && wishlistMap[data.id] !== undefined) return Boolean(wishlistMap[data.id]);
-    if (product?.inWishlist !== undefined) return Boolean(product.inWishlist);
-    return undefined;
-  });
-
-  useEffect(() => {
-    if (wishlistMap && wishlistMap[data.id] !== undefined) {
-      setLocalWished(Boolean(wishlistMap[data.id]));
-    } else if (product?.inWishlist !== undefined) {
-      setLocalWished(Boolean(product.inWishlist));
-    }
-  }, [wishlistMap, data.id, product?.inWishlist]);
-
-  const wished = localWished !== undefined ? localWished : isWishlisted(data.id);
-  const previewImages = [...new Set([activeImage, ...cardImages, ...data.images].filter(Boolean))];
-
-  async function handleWishlist() {
-    if (wishlistBusy) return;
-    setWishlistBusy(true);
-    const nextWished = !wished;
-    setLocalWished(nextWished);
-    try {
-      await toggleWishlist(
-        {
-          ...product,
-          id: data.id,
-          title,
-          price: data.price,
-          image: activeImage,
-        },
-        wished,
-      );
-    } catch {
-      setLocalWished(!nextWished);
-    } finally {
-      setWishlistBusy(false);
-    }
-  }
+  const {
+    colors,
+    activeColorName,
+    selectColor,
+    cardImages,
+    activeImage,
+    imageIndex,
+    setImageIndex,
+    previewImages,
+    isGroup,
+    title,
+    href,
+    wished,
+    wishlistBusy,
+    handleWishlist,
+    salePrice,
+    mrp,
+    hasDiscount,
+  } = useProductCard(product);
 
   const handleCardClick = () => {
     sessionStorage.setItem("cameFromProduct", "1");
     sessionStorage.setItem("shopScrollPos", String(window.scrollY));
     navigate(href);
   };
-
-  const salePrice =
-    data.salePrice ||
-    product?.pricing?.salePrice ||
-    product?.representative?.pricing?.salePrice ||
-    data.price;
-
-  const mrp =
-    data.mrp ||
-    product?.pricing?.mrp ||
-    product?.representative?.pricing?.mrp ||
-    data.originalPrice;
-
-  const isGold = product.productType === "gold";
-  const hasDiscount = !isGold && mrp && Number(mrp) > Number(salePrice);
-  const discountPercent =
-    product.discount ||
-    (hasDiscount ? Math.round(((Number(mrp) - Number(salePrice)) / Number(mrp)) * 100) : 0);
 
   return (
     <div
@@ -290,24 +136,12 @@ export default function ProductCard({ product }) {
       <div>
         {/* Product Image Area */}
         <div className="relative aspect-square flex items-center justify-center bg-[#FAF8F5] mb-1.5 sm:mb-3 overflow-hidden group/img rounded-md sm:rounded-lg">
-
-          {isVideoUrl(activeImage) ? (
-            <video
-              src={`${getImageUrl(activeImage)}#t=0.01`}
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="metadata"
-              className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105 pointer-events-none"
-            />
-          ) : (
-            <ProductImage
-              src={activeImage}
-              name={title}
-              className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
-            />
-          )}
+          <ProductMediaImage
+            src={activeImage}
+            alt={title}
+            className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
+            videoClassName="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105 pointer-events-none"
+          />
 
           {/* Wishlist Button (Top Right) */}
           <button
@@ -317,7 +151,7 @@ export default function ProductCard({ product }) {
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleWishlist();
+              handleWishlist(e);
             }}
             className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-colors z-20 bg-white/90 backdrop-blur-xs shadow-xs border border-gray-100 hover:bg-white cursor-pointer disabled:opacity-50"
           >
@@ -393,44 +227,15 @@ export default function ProductCard({ product }) {
 
       {/* Bottom Section: Swatches & Price (Centered) */}
       <div className="text-center">
-        {colors && colors.length > 0 && (
-          <div
-            className="flex justify-center items-center gap-1 sm:gap-1.5 mb-1 sm:mb-1.5 mt-0.5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {colors.slice(0, 5).map((entry) => {
-              const isSelected = Boolean(
-                activeColorName && entry.name?.toLowerCase() === activeColorName.toLowerCase(),
-              );
-              const bg = entry.colorCodeEnd
-                ? `linear-gradient(135deg, ${entry.hex || entry.colorCode}, ${entry.colorCodeEnd})`
-                : entry.hex || entry.colorCode || "#ccc";
-
-              return (
-                <button
-                  key={entry.id || entry.name}
-                  type="button"
-                  title={entry.name}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setSelectedColorName(entry.name);
-                    setImageIndex(0);
-                  }}
-                  className={`w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full border transition-all cursor-pointer ${
-                    isSelected ? "ring-1 ring-black scale-110" : "border-gray-200"
-                  }`}
-                  style={{ background: bg }}
-                />
-              );
-            })}
-            {colors.length > 5 && (
-              <span className="text-[10px] text-gray-400 self-center">
-                +{colors.length - 5}
-              </span>
-            )}
-          </div>
-        )}
+        <ColorSwatches
+          colors={colors}
+          activeColorName={activeColorName}
+          onSelectColor={selectColor}
+          maxVisible={5}
+          className="flex justify-center items-center gap-1 sm:gap-1.5 mb-1 sm:mb-1.5 mt-0.5"
+          sizeClass="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5"
+          extraBadgeClass="text-[10px] text-gray-400 self-center"
+        />
 
         <div className="flex flex-wrap items-center justify-center gap-1.5 text-center">
           {isGroup &&

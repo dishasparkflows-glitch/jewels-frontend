@@ -8,11 +8,6 @@ const categoryLink = (category) => `/shop?category=${encodeURIComponent(category
 const itemLink = (category, item) => `${categoryLink(category)}&menuItem=${encodeURIComponent(item._id || item.slug || item.name)}`;
 const safeLink = (value, fallback) => (/^(https?:\/\/|\/(?!\/))/i.test(value || '') ? value : fallback);
 
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-
 function MenuContents({ category, onNavigate, mobile = false }) {
   const sections = (category.menuSections || []).filter((section) => section.menuItems?.length);
   const banners = (category.promoBanners || []).filter((banner) => banner.image?.url || (typeof banner.image === 'string' && banner.image));

@@ -38,6 +38,7 @@ import { getValidProductImages, getPrimaryProductImage, isOrnateImage } from '..
 import { trackProductView } from '../../config/firebase';
 import { useLiveViewers } from '../../hooks/useLiveViewers';
 import Dropdown from '../../components/common/Dropdown';
+import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
 
 const referenceName = (value) => (value && typeof value === 'object' ? value.name || '' : (typeof value === 'string' ? value : ''));
 
@@ -880,15 +881,7 @@ export default function ProductDetail() {
   }, [identifier, navigate]);
 
   // Format INR Currency
-  const formatPrice = (val) => {
-    if (val === undefined || val === null || val === '') return '—';
-    return `₹${Number(val).toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
-
-  // Price Breakup specific formatting matching screenshot
+    // Price Breakup specific formatting matching screenshot
   const formatBreakdownValue = (val) => {
     if (val === undefined || val === null || val === '' || isNaN(val)) return '-';
     const num = Number(val);
@@ -1224,14 +1217,14 @@ export default function ProductDetail() {
               if (soldCount <= 0 && reviewCount <= 0) return null;
 
               return (
-                <div className="space-y-2.5 sm:space-y-3 pt-1 pb-1.5 select-none">
+                <div className="space-y-1.5 sm:space-y-2 pt-0.5 pb-1 select-none">
                   {/* Reviews Star Rating Badge */}
                   {showReviews && reviewCount > 0 && (
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center text-amber-400 text-base sm:text-lg tracking-normal leading-none" aria-label="5 star rating">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center text-amber-400 text-xs sm:text-sm tracking-normal leading-none" aria-label="5 star rating">
                         ★★★★★
                       </div>
-                      <span className="text-sm sm:text-base text-stone-700 font-medium">
+                      <span className="text-xs sm:text-sm text-stone-600 font-medium">
                         <strong className="font-semibold text-stone-900">{reviewCount}</strong> reviews
                       </span>
                     </div>
@@ -1239,9 +1232,9 @@ export default function ProductDetail() {
 
                   {/* Hourly Sold Counter Badge */}
                   {showSold && soldCount > 0 && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-base sm:text-lg leading-none" role="img" aria-label="fire">🔥</span>
-                      <span className="text-sm sm:text-base font-medium text-stone-700">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm leading-none" role="img" aria-label="fire">🔥</span>
+                      <span className="text-xs sm:text-sm font-medium text-stone-700">
                         <strong className="font-semibold text-stone-900">{soldCount}</strong> sold in last {soldHours} hours
                       </span>
                     </div>
@@ -1389,7 +1382,6 @@ export default function ProductDetail() {
                 <div className="mt-3 space-y-2.5">
                   {coupons.map((c, idx) => {
                     const code = c.coupon?.code || 'FIRSTORDER';
-                    const desc = c.coupon?.description || (code === 'FIRSTORDER' ? 'Valid on your first fine jewelry purchase' : '');
                     const isPercentage = c.discount?.type === 'Percentage';
                     const discountVal = Number(c.discount?.value || 0);
                     const discountText = isPercentage
@@ -1463,15 +1455,7 @@ export default function ProductDetail() {
                           </div>
                         </div>
 
-                        {/* Description line if available */}
-                        {desc && (
-                          <div className="mt-1.5 pt-1.5 border-t border-[#f5eee4] flex items-center justify-between text-[10.5px] text-stone-500 px-1">
-                            <span>{desc}</span>
-                            <span className="text-[9.5px] text-[#8b6f4e] font-medium hidden sm:inline">
-                              Tap to copy
-                            </span>
-                          </div>
-                        )}
+
                       </div>
                     );
                   })}

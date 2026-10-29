@@ -1,5 +1,15 @@
 import api from '../api/axios';
 
+/**
+ * Checks whether the given URL points to a video file.
+ * @param {string} url
+ * @returns {boolean}
+ */
+export function isVideoUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  return /\.(mp4|webm|mov|ogg|m4v)(\?.*)?$/i.test(url);
+}
+
 export function getImageUrl(url) {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();

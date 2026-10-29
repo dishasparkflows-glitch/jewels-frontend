@@ -4,12 +4,12 @@ import { HiOutlineTrash, HiOutlineX } from 'react-icons/hi';
 import { useCart } from '../../contexts/CartContext';
 import Modal from '../common/Modal';
 import EmptyCartView from './EmptyCartView';
+import { formatPrice } from '../../utils/currency';
 import { getImageUrl } from '../../utils/imageUrl';
 import { getPrimaryProductImage } from '../../utils/productImages';
 import { resolveMetalName } from '../../utils/metalColors';
 
 /* eslint-disable react/prop-types */
-const formatPrice = (price) => `₹${Number(price || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
 export default function CartDrawer({ open, onClose }) {
   const { cart, totalItems, subtotal, removeFromCart, refreshCart } = useCart();

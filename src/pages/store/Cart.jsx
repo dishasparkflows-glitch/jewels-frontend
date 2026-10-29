@@ -11,8 +11,7 @@ import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages
 import { resolveMetalName, cleanAttribute } from '../../utils/metalColors';
 
 import EmptyCartView from '../../components/store/EmptyCartView';
-
-const formatPrice = (price) => `₹${Number(price || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+import { formatPrice } from '../../utils/currency';
 
 const Cart = () => {
   const { cart, updateQuantity, removeFromCart, subtotal, shipping, tax, total } = useCart();

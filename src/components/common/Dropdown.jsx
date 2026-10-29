@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useId } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import { HiOutlineChevronDown, HiOutlineCheck } from 'react-icons/hi';
 
 /**

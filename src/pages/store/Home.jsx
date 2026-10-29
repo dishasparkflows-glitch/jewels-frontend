@@ -1145,7 +1145,7 @@ const Home = () => {
                   const cleaned = instaUrl.split('?')[0].replace(/\/+$/, '');
                   const handle = cleaned.split('/').filter(Boolean).pop();
                   return handle ? `@${handle}` : '@neirah.officials';
-                } catch (_) {
+                } catch {
                   return '@neirah.officials';
                 }
               })()}
