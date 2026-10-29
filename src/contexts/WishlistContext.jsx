@@ -1,9 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { wishlistAPI } from '../api/services';
 import { useAuth } from './AuthContext';
-import { getPrimaryProductImage } from '../utils/productImages';
 import { joinUserSocketRooms, onWishlistCountUpdate } from '../services/socket';
 
 /* eslint-disable react/prop-types, react-refresh/only-export-components */
@@ -11,7 +10,6 @@ const WishlistContext = createContext(null);
 
 export const WishlistProvider = ({ children }) => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const [wishlistItems, setWishlistItems] = useState(() => {
     try {

@@ -1,4 +1,3 @@
-import ProductCard from '../../components/product/ProductCard';
 import HomeProductCard from '../../components/product/HomeProductCard';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
@@ -15,10 +14,7 @@ import {
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
   HiStar,
-  HiOutlineCheckCircle,
 } from 'react-icons/hi';
-import { IoDiamondOutline } from 'react-icons/io5';
-import { FaInstagram, FaGooglePlay, FaApple } from 'react-icons/fa';
 import InstagramEmbed from '../../components/common/InstagramEmbed';
 
 const DEFAULT_INSTAGRAM_POSTS = [
@@ -133,7 +129,6 @@ const Home = () => {
   const [customBanner, setCustomBanner] = useState(null);
 
   const [reviews, setReviews] = useState([]);
-  const [activeReviewIdx, setActiveReviewIdx] = useState(0);
 
   const displayReviews = useMemo(() => {
     if (!reviews || reviews.length === 0) return DEFAULT_REVIEWS;
@@ -492,7 +487,6 @@ const Home = () => {
   };
 
   const currentHero = effectiveHeroBanners[activeHeroIdx] || effectiveHeroBanners[0];
-  const currentReview = reviews[activeReviewIdx] || reviews[0];
 
   return (
     <div className="flex flex-col bg-white text-stone-900 font-sans antialiased overflow-x-hidden" style={{ minHeight: '100%', backgroundColor: themeConfig?.colors?.background || undefined, color: themeConfig?.colors?.text || undefined, fontFamily: themeConfig?.typography?.bodyFont || undefined }}>

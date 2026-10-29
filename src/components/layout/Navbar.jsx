@@ -257,14 +257,29 @@ const Navbar = () => {
             <span className="hidden sm:inline font-normal">Virtual Appointment</span>
           </button>
 
-          <div className="min-w-0 flex-1 px-3 text-center font-medium tracking-wide sm:flex-none sm:px-0">
+          <div className="min-w-0 flex-1 px-3 text-center font-medium tracking-wide sm:flex-none sm:px-0 h-6 overflow-hidden flex items-center justify-center">
             {topAnnouncement.isEnabled && topAnnouncement.items?.length ? (() => {
               const items = topAnnouncement.items;
               const current = items[announcementIndex % items.length];
-              if (topAnnouncement.displayDirection === 'vertical') {
-                return <div key={current?._id || announcementIndex} className="animate-announcement-vertical truncate">{current?.link ? <a href={current.link}>{current.message}</a> : current?.message}</div>;
-              }
-              return <div className="overflow-hidden whitespace-nowrap"><span key={current?._id || announcementIndex} className="inline-block max-w-full truncate animate-announcement-horizontal">{current?.link ? <a href={current.link}>{current.message}</a> : current?.message}</span></div>;
+              const isVertical = topAnnouncement.displayDirection === 'vertical';
+              return (
+                <div
+                  key={`${announcementIndex}-${topAnnouncement.displayDirection}`}
+                  className={`truncate ${
+                    isVertical
+                      ? 'animate-announcement-vertical'
+                      : 'animate-announcement-horizontal'
+                  }`}
+                >
+                  {current?.link ? (
+                    <a href={current.link} className="hover:underline">
+                      {current.message}
+                    </a>
+                  ) : (
+                    current?.message
+                  )}
+                </div>
+              );
             })() : storeSettings.companyName}
           </div>
 

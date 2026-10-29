@@ -13,7 +13,7 @@ const aliases = { necklaces: 'pendant', bracelets: 'bangles-bracelets' };
 const getItems = (response) => Array.isArray(response?.data?.data) ? response.data.data : response?.data?.data?.items || [];
 
 export default function Shop() {
-  const { websiteConfig } = useStoreSettings();
+  useStoreSettings();
   const [params, setParams] = useSearchParams();
 
   const [categories, setCategories] = useState([]);
@@ -21,7 +21,6 @@ export default function Shop() {
   const [diamondClarities, setDiamondClarities] = useState([]);
   const [caratWeights, setCaratWeights] = useState([]);
   const [collections, setCollections] = useState([]);
-  const [birthstones, setBirthstones] = useState([]);
   const [shopForOptions, setShopForOptions] = useState([
     { value: 'Women', label: 'Women' },
     { value: 'Men', label: 'Men' },

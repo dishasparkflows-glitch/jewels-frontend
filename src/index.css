@@ -236,21 +236,33 @@
   }
 }
 @keyframes announcement-left-to-right {
-  from { transform: translateX(-105%); }
-  to { transform: translateX(105%); }
+  0% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes announcement-top-to-bottom {
-  from { opacity: 0; transform: translateY(-0.75rem); }
-  to { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-announcement-horizontal {
-  animation: announcement-left-to-right 9s linear infinite;
+  animation: announcement-left-to-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .animate-announcement-vertical {
-  animation: announcement-top-to-bottom 350ms ease-out both;
+  animation: announcement-top-to-bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

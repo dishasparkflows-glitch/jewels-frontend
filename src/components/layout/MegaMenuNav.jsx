@@ -8,7 +8,6 @@ const categoryLink = (category) => `/shop?category=${encodeURIComponent(category
 const itemLink = (category, item) => `${categoryLink(category)}&menuItem=${encodeURIComponent(item._id || item.slug || item.name)}`;
 const safeLink = (value, fallback) => (/^(https?:\/\/|\/(?!\/))/i.test(value || '') ? value : fallback);
 
-const slugify = (value = '') =>
   value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')

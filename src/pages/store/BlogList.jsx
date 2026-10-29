@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { HiOutlineClock, HiOutlineSearch, HiOutlineArrowRight, HiOutlineTag } from 'react-icons/hi';
+import { HiOutlineClock, HiOutlineSearch, HiOutlineArrowRight } from 'react-icons/hi';
 import { blogsAPI, blogCategoriesAPI } from '../../api/services';
 
 export default function BlogList() {

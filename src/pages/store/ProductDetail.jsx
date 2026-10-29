@@ -4,12 +4,9 @@ import {
   HiOutlineHeart,
   HiHeart,
   HiOutlineShare,
-  HiOutlineChevronDown,
   HiOutlineX,
   HiOutlineShieldCheck,
   HiOutlineTruck,
-  HiOutlineRefresh,
-  HiOutlineDocumentText,
   HiOutlineInformationCircle,
   HiOutlineEye,
   HiOutlineExternalLink,
@@ -36,7 +33,6 @@ import toast from 'react-hot-toast';
 import { productsAPI, couponsAPI } from '../../api/services';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
-import { useAuth } from '../../contexts/AuthContext';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { getValidProductImages, getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 import { trackProductView } from '../../config/firebase';
@@ -186,7 +182,6 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
-  const { user } = useAuth();
   // Product state
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -719,9 +714,6 @@ export default function ProductDetail() {
   const currentPrice = [selectedVariant?.price, product?.pricing?.salePrice]
     .find((value) => Number(value) > 0);
   const mrpPrice = [product?.pricing?.mrp].find((value) => Number(value) > 0) ?? currentPrice;
-  const discountPercent =
-    !isGold && Number(mrpPrice) > Number(currentPrice) ? Math.round(((mrpPrice - currentPrice) / mrpPrice) * 100) : 0;
-
   // Itemized Transparent Price Breakdown (Matches Screenshot)
   const breakdown = useMemo(() => {
     if (!isGold) return null;
@@ -739,7 +731,6 @@ export default function ProductDetail() {
 
     const gstPct = Number(product?.pricing?.gstPercentage || 3) / 100;
     const computedSubtotal = Math.round((finalPrice / (1 + gstPct)) * 100) / 100;
-    const computedGst = Math.round((finalPrice - computedSubtotal) * 100) / 100;
 
     const certificateCharge = Number(v.certificateCharge || product?.pricing?.certificateCharge || 1000);
 
@@ -1233,24 +1224,24 @@ export default function ProductDetail() {
               if (soldCount <= 0 && reviewCount <= 0) return null;
 
               return (
-                <div className="space-y-1 pt-0.5 pb-1 select-none">
+                <div className="space-y-2.5 sm:space-y-3 pt-1 pb-1.5 select-none">
                   {/* Reviews Star Rating Badge */}
                   {showReviews && reviewCount > 0 && (
-                    <div className="flex items-center gap-1.5 text-xs text-stone-600">
-                      <div className="flex items-center text-amber-400 text-xs tracking-tight" aria-label="5 star rating">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center text-amber-400 text-base sm:text-lg tracking-normal leading-none" aria-label="5 star rating">
                         ★★★★★
                       </div>
-                      <span className="text-[12px] text-stone-600 font-medium">
-                        {reviewCount} reviews
+                      <span className="text-sm sm:text-base text-stone-700 font-medium">
+                        <strong className="font-semibold text-stone-900">{reviewCount}</strong> reviews
                       </span>
                     </div>
                   )}
 
                   {/* Hourly Sold Counter Badge */}
                   {showSold && soldCount > 0 && (
-                    <div className="flex items-center gap-1.5 text-xs text-stone-700">
-                      <span className="text-sm leading-none" role="img" aria-label="fire">🔥</span>
-                      <span className="text-[12px] font-medium text-stone-700">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base sm:text-lg leading-none" role="img" aria-label="fire">🔥</span>
+                      <span className="text-sm sm:text-base font-medium text-stone-700">
                         <strong className="font-semibold text-stone-900">{soldCount}</strong> sold in last {soldHours} hours
                       </span>
                     </div>
@@ -2513,9 +2504,9 @@ export default function ProductDetail() {
                 <h4 className="text-sm font-semibold text-stone-900 truncate">
                   {product?.name || 'Neirah Jewellery'}
                 </h4>
-                {typeof formatPrice === 'function' && finalPrice ? (
+                {typeof formatPrice === 'function' && currentPrice ? (
                   <p className="text-xs font-bold text-[#8b6f4e] mt-0.5">
-                    {formatPrice(finalPrice)}
+                    {formatPrice(currentPrice)}
                   </p>
                 ) : null}
               </div>

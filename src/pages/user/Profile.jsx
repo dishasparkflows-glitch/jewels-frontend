@@ -9,7 +9,6 @@ import {
   HiOutlineRefresh,
   HiOutlineLocationMarker,
   HiOutlinePhone,
-  HiOutlineClock,
   HiOutlineX,
   HiOutlinePencilAlt,
   HiOutlineLogout,
@@ -19,7 +18,6 @@ import {
   HiOutlineOfficeBuilding,
   HiOutlineMap,
   HiOutlineViewGrid,
-  HiChevronDown,
   HiOutlinePlus,
 } from 'react-icons/hi';
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { HiOutlineShoppingBag, HiOutlineTrash, HiOutlineX } from 'react-icons/hi';
+import { HiOutlineTrash, HiOutlineX } from 'react-icons/hi';
 import { useCart } from '../../contexts/CartContext';
 import Modal from '../common/Modal';
 import EmptyCartView from './EmptyCartView';

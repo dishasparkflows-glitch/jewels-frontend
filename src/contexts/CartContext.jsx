@@ -179,8 +179,7 @@ export const CartProvider = ({ children }) => {
 
     const totalItemPrice = options.totalItemPrice || product.totalItemPrice || (price * parsedQty);
     const addedAt = options.addedAt || product.addedAt || new Date().toISOString();
-    const userId = options.userId || product.userId || null;
-    const selectedAttributes = options.selectedAttributes || product.selectedAttributes || undefined;
+      const selectedAttributes = options.selectedAttributes || product.selectedAttributes || undefined;
 
     const slug =
       product.basicInfo?.slug ||
