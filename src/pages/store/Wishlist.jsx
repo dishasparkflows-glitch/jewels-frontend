@@ -51,7 +51,7 @@ export default function Wishlist() {
             <HiHeart className="mx-auto h-10 w-10 text-stone-300" aria-hidden="true" />
             <h2 className="mt-5 font-serif text-2xl text-stone-800">Your wishlist is empty</h2>
             <p className="mt-2 text-sm leading-6 text-stone-500">Save the pieces you love and find them here whenever you return.</p>
-            <Link to="/shop" className="mt-6 inline-flex items-center gap-2 bg-[#201e1b] px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#92704e]">
+            <Link to="/shop" className="mt-6 inline-flex items-center gap-2 btn-theme-primary px-7 py-3 text-xs font-semibold uppercase tracking-[0.16em] transition rounded-lg shadow-sm">
               Explore jewellery <HiOutlineArrowRight className="h-4 w-4" />
             </Link>
           </div>

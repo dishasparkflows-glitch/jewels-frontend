@@ -68,6 +68,33 @@ export function StoreSettingsProvider({ children }) {
   }, []);
 
   const theme = websiteConfig?.theme?.config || null;
+
+  // Dynamically apply primary button colors across the entire storefront & portals
+  useEffect(() => {
+    const root = document.documentElement;
+    const colors = settings?.themeColors || {};
+    const btnBg = colors.buttonColor || settings?.buttonColor || theme?.colors?.primary || '#1f3a2b';
+    const btnHover = colors.buttonHoverColor || settings?.buttonHoverColor || '#162b20';
+    const btnText = colors.buttonTextColor || settings?.buttonTextColor || '#ffffff';
+
+    const topBarBg = colors.topBarBgColor || '#60574d';
+    const topBarText = colors.topBarTextColor || '#ffffff';
+    const headerBg = colors.headerBgColor || '#22201e';
+    const headerText = colors.headerTextColor || '#ffffff';
+    const footerBg = colors.footerBgColor || '#0f0d0b';
+    const footerText = colors.footerTextColor || '#c8b89e';
+
+    root.style.setProperty('--btn-primary-bg', btnBg);
+    root.style.setProperty('--btn-primary-hover', btnHover);
+    root.style.setProperty('--btn-primary-text', btnText);
+
+    root.style.setProperty('--storefront-topbar-bg', topBarBg);
+    root.style.setProperty('--storefront-topbar-text', topBarText);
+    root.style.setProperty('--storefront-header-bg', headerBg);
+    root.style.setProperty('--storefront-header-text', headerText);
+    root.style.setProperty('--storefront-footer-bg', footerBg);
+    root.style.setProperty('--storefront-footer-text', footerText);
+  }, [settings?.themeColors, settings?.buttonColor, settings?.buttonHoverColor, settings?.buttonTextColor, theme?.colors?.primary]);
   useEffect(() => {
     const title = theme?.seo?.metaTitle;
     const description = theme?.seo?.metaDescription;
@@ -83,20 +110,26 @@ export function StoreSettingsProvider({ children }) {
     };
   }, [theme?.seo?.metaTitle, theme?.seo?.metaDescription]);
   const themeStyle = useMemo(() => {
-    if (!theme) return undefined;
-    const colors = theme.colors || {};
+    const colors = theme?.colors || {};
+    const btnBg = settings?.buttonColor || colors.primary || '#1f3a2b';
+    const btnHover = settings?.buttonHoverColor || '#162b20';
+    const btnText = settings?.buttonTextColor || '#ffffff';
+
     return {
-      '--jewel-primary': colors.primary || '#8B6C3A',
+      '--btn-primary-bg': btnBg,
+      '--btn-primary-hover': btnHover,
+      '--btn-primary-text': btnText,
+      '--jewel-primary': btnBg,
       '--jewel-secondary': colors.secondary || '#EADCC8',
       '--jewel-paper': colors.background || '#FBF9F5',
       '--jewel-surface': colors.surface || '#FFFFFF',
       '--jewel-ink': colors.text || '#29251F',
-      '--jewel-accent': colors.accent || colors.primary || '#A67536',
-      '--jewel-heading-font': `'${theme.typography?.headingFont || 'Cormorant Garamond'}', Georgia, serif`,
-      '--jewel-body-font': `'${theme.typography?.bodyFont || 'Montserrat'}', system-ui, sans-serif`,
-      '--jewel-radius': `${Math.min(32, Math.max(0, Number(theme.borderRadius) || 0))}px`,
+      '--jewel-accent': colors.accent || btnBg,
+      '--jewel-heading-font': `'${theme?.typography?.headingFont || 'Cormorant Garamond'}', Georgia, serif`,
+      '--jewel-body-font': `'${theme?.typography?.bodyFont || 'Montserrat'}', system-ui, sans-serif`,
+      '--jewel-radius': `${Math.min(32, Math.max(0, Number(theme?.borderRadius) || 0))}px`,
     };
-  }, [theme]);
+  }, [theme, settings?.buttonColor, settings?.buttonHoverColor, settings?.buttonTextColor]);
 
   return (
     <StoreSettingsContext.Provider value={{ settings, footerSettings, topAnnouncement, websiteConfig, theme, themeStyle, loading }}>

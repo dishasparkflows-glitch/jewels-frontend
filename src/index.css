@@ -55,6 +55,22 @@
   }
 }
 
+:root {
+  --btn-primary-bg: #1f3a2b;
+  --btn-primary-hover: #162b20;
+  --btn-primary-text: #ffffff;
+}
+
+.btn-theme-primary {
+  background-color: var(--btn-primary-bg, #1f3a2b) !important;
+  color: var(--btn-primary-text, #ffffff) !important;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-theme-primary:hover {
+  background-color: var(--btn-primary-hover, #162b20) !important;
+}
+
 /* One visual language for every customer facing route. */
 .store-shell {
   --jewel-ink: #211f1c;
@@ -114,8 +130,15 @@
   color: #e6e1da;
 }
 
+dialog.store-modal,
 .store-modal {
   color: #211f1c;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
 .store-modal::backdrop {

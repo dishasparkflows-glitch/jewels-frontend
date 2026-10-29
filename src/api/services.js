@@ -126,6 +126,25 @@ export const checkoutAPI = {
   validateCoupon: (code, cartAmount) => api.post('/coupons/validate', { code, cartAmount }),
   calculateCodFee: (amount) => getOnce('/cod-sequences/calculate', { params: { amount } }),
   getAddresses: () => api.get('/addresses'),
+  getPaymentConfig: () => getOnce('/payments/config'),
+  createOrder: (orderData) => api.post('/orders', orderData),
+  verifyRazorpay: (data) => api.post('/payments/razorpay/verify', data),
+};
+
+// ─── Orders ─────────────────────────────────────────
+export const ordersAPI = {
+  create: (orderData) => api.post('/orders', orderData),
+  getMyOrders: (params) => api.get('/orders/my-orders', { params }),
+  getById: (id) => api.get(`/orders/${id}`),
+  getByNumber: (orderNumber) => api.get(`/orders/lookup/${orderNumber}`),
+  cancel: (id, reason) => api.post(`/orders/${id}/cancel`, { reason }),
+};
+
+// ─── Payments ───────────────────────────────────────
+export const paymentsAPI = {
+  getConfig: () => getOnce('/payments/config'),
+  initiate: (data) => api.post('/payments/initiate', data),
+  verifyRazorpay: (data) => api.post('/payments/razorpay/verify', data),
 };
 
 // ─── Featured / Celebrate / Gifts ─────────────────

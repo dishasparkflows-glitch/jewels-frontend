@@ -244,7 +244,14 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-40 w-full shadow-sm font-sans">
       {/* ─── Top announcement bar (Neirah Taupe #60574d) ───────────── */}
-      {!isCheckout && <div className="bg-[#60574d] text-white/95 text-[10px] sm:text-xs py-1.5 px-3 sm:px-4 border-b border-black/10">
+      {!isCheckout && (
+        <div
+          style={{
+            backgroundColor: 'var(--storefront-topbar-bg, #60574d)',
+            color: 'var(--storefront-topbar-text, #ffffff)',
+          }}
+          className="text-[10px] sm:text-xs py-1.5 px-3 sm:px-4 border-b border-black/10"
+        >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Left: Virtual Appointment */}
           <button
@@ -292,10 +299,17 @@ const Navbar = () => {
             </a>
           )}
         </div>
-      </div>}
+      </div>
+      )}
 
       {/* ─── Main Header / Brand & Search Bar (#22201e) ───────────── */}
-      <div className="bg-[#22201e] text-white px-4 sm:px-6 lg:px-8 border-b border-white/5">
+      <div
+        style={{
+          backgroundColor: 'var(--storefront-header-bg, #22201e)',
+          color: 'var(--storefront-header-text, #ffffff)',
+        }}
+        className="px-4 sm:px-6 lg:px-8 border-b border-white/5"
+      >
         <div className={`max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-6 ${isCheckout ? 'h-14 sm:h-16' : 'h-14 sm:h-16 lg:h-[68px]'}`}>
           {/* Mobile hamburger */}
           <div className="order-last flex items-center lg:order-none lg:hidden">
@@ -664,7 +678,10 @@ const Navbar = () => {
                   </button>
 
                   {userDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-52 bg-[#22201e] border border-stone-800 rounded-xl shadow-2xl py-2 z-50 text-xs">
+                    <div
+                      style={{ backgroundColor: 'var(--storefront-header-bg, #22201e)' }}
+                      className="absolute right-0 mt-2 w-52 border border-stone-800 rounded-xl shadow-2xl py-2 z-50 text-xs"
+                    >
                       <div className="px-4 py-2 border-b border-stone-800">
                         <p className="font-semibold text-white truncate">{user.firstName} {user.lastName}</p>
                         <p className="text-stone-400 truncate">{user.email}</p>
@@ -727,7 +744,10 @@ const Navbar = () => {
 
       {/* ─── Mobile Instant Search Bar ──────────────────────────────── */}
       {mobileSearchOpen && (
-        <div className="md:hidden bg-[#22201e] border-b border-stone-800 px-4 py-3 animate-fadeIn">
+        <div
+          style={{ backgroundColor: 'var(--storefront-header-bg, #22201e)' }}
+          className="md:hidden border-b border-stone-800 px-4 py-3 animate-fadeIn"
+        >
           <form
             onSubmit={handleSearch}
             className="relative flex items-center w-full h-11 rounded-full bg-white border border-stone-200 shadow-xs focus-within:border-[#8b6f4e] transition-all"
@@ -858,7 +878,10 @@ const Navbar = () => {
 
       {/* ─── Mobile Drawer ───────────────────────────────────────── */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-[#22201e] border-b border-stone-800 px-4 sm:px-6 py-5 space-y-5 animate-slide-up">
+        <div
+          style={{ backgroundColor: 'var(--storefront-header-bg, #22201e)' }}
+          className="lg:hidden border-b border-stone-800 px-4 sm:px-6 py-5 space-y-5 animate-slide-up"
+        >
           {/* Mobile Search */}
           <div className="relative w-full">
             <form

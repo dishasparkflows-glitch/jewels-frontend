@@ -77,7 +77,7 @@ const ResetPassword = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-[#8f6d43] py-3.5 text-xs font-semibold uppercase tracking-[0.18em] text-white transition-colors hover:bg-[#7b5b33] disabled:opacity-60"
+              className="w-full rounded-xl btn-theme-primary py-3.5 text-xs font-semibold uppercase tracking-[0.18em] transition-colors disabled:opacity-60 cursor-pointer"
             >
               {loading ? 'Saving…' : 'Save new password'}
             </button>

@@ -1172,18 +1172,31 @@ export default function ProductDetail() {
                   )}
                 </div>
 
-                {/* Desktop 2-Column Studio Grid (sm+) */}
-                <div className="hidden sm:grid sm:grid-cols-2 gap-3 sm:gap-4">
-                  {galleryImages.map((image, index) => (
-                    <ZoomableProductImage
-                      key={`${image}-${index}`}
-                      image={image}
-                      index={index}
-                      alt={`${product.basicInfo?.title || 'Fine Jewelry'} ${selectedColor} view ${index + 1}`}
-                      onOpenLightbox={() => openLightboxAtIndex(index)}
-                    />
-                  ))}
-                </div>
+                {/* Desktop Studio Gallery (sm+) - Centered if single image, 2-column grid if multiple */}
+                {galleryImages.length === 1 ? (
+                  <div className="hidden sm:flex sm:justify-center sm:items-center py-2">
+                    <div className="w-full max-w-[480px] lg:max-w-[500px]">
+                      <ZoomableProductImage
+                        image={galleryImages[0]}
+                        index={0}
+                        alt={`${product.basicInfo?.title || 'Fine Jewelry'} ${selectedColor} view 1`}
+                        onOpenLightbox={() => openLightboxAtIndex(0)}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="hidden sm:grid sm:grid-cols-2 gap-3 sm:gap-4">
+                    {galleryImages.map((image, index) => (
+                      <ZoomableProductImage
+                        key={`${image}-${index}`}
+                        image={image}
+                        index={index}
+                        alt={`${product.basicInfo?.title || 'Fine Jewelry'} ${selectedColor} view ${index + 1}`}
+                        onOpenLightbox={() => openLightboxAtIndex(index)}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="aspect-square bg-[#fbf9f6] rounded-sm border border-stone-100 flex items-center justify-center text-sm text-stone-400">
@@ -1436,8 +1449,8 @@ export default function ProductDetail() {
                               onClick={() => handleCopyCoupon(code)}
                               className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-200 cursor-pointer flex items-center gap-1.5 active:scale-95 ${
                                 isCopied
-                                  ? 'bg-emerald-600 text-white shadow-xs'
-                                  : 'bg-[#8b6f4e] hover:bg-[#785e40] text-white shadow-xs'
+                                  ? 'bg-[#162b20] text-white shadow-xs'
+                                  : 'btn-theme-primary shadow-xs'
                               }`}
                               title={isCopied ? 'Code copied!' : 'Copy code to clipboard'}
                             >
@@ -2511,8 +2524,8 @@ export default function ProductDetail() {
                   onClick={handleCopyLink}
                   className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
                     linkCopied
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-[#8b6f4e] hover:bg-[#725a3d] text-white active:scale-95'
+                      ? 'bg-[#162b20] text-white'
+                      : 'btn-theme-primary active:scale-95'
                   }`}
                 >
                   {linkCopied ? (

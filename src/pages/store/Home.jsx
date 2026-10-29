@@ -708,7 +708,7 @@ const Home = () => {
           4. CURATED COLLECTION BANNERS (Dynamic Bento Grid from /api/banners)
       ─────────────────────────────────────────────────────────────────── */}
       {effectiveCollectionBanners.length > 0 && (
-        <section style={sectionStyle('collections')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto space-y-8 px-4 py-12 sm:px-6 lg:px-8">
+        <section style={sectionStyle('collections')} className="w-full max-w-7xl 2xl:max-w-[1320px] mx-auto space-y-8 px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           {effectiveCollectionBanners.map((collection) => {
             const [image1, image2, image3, image4] = collection.images || [];
             if (!image1 || !image2 || !image3 || !image4) return null;
@@ -740,30 +740,32 @@ const Home = () => {
           5. TRUST BADGES ROW (Dynamic from Settings)
       ─────────────────────────────────────────────────────────────────── */}
       {activeTrustBadges.length > 0 && (
-        <section style={sectionStyle('trustBadges')} className="bg-white py-10 sm:py-12 lg:py-14 px-4 sm:px-6 lg:px-8 border-y border-stone-100">
-          <div className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 items-start justify-items-center gap-y-8 gap-x-4 sm:gap-x-6 lg:gap-x-4 text-center">
-            {activeTrustBadges.map((item, index) => {
-              const imageUrl = item.image?.url ? getMediaUrl(item.image.url) : null;
-              return (
-                <div key={item._id || index} className="flex flex-col items-center justify-start text-center group w-full max-w-[160px]">
-                  {imageUrl && (
-                    <div className="h-12 sm:h-14 lg:h-16 w-full flex items-center justify-center mb-3 sm:mb-3.5">
-                      <img
-                        src={imageUrl}
-                        alt={item.title}
-                        className="h-10 sm:h-12 lg:h-14 w-auto max-w-[62px] object-contain transition-transform duration-300 group-hover:scale-105"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
-                  <span className="text-[11px] sm:text-xs lg:text-[13px] font-semibold uppercase tracking-[0.12em] text-[#1a1815] text-center leading-snug">
-                    {item.title}
-                  </span>
-                </div>
-              );
-            })}
+        <section style={sectionStyle('trustBadges')} className="w-full max-w-7xl 2xl:max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+          <div className="py-2 sm:py-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 items-center justify-items-center gap-y-6 gap-x-4 sm:gap-x-6 lg:gap-x-6 text-center">
+              {activeTrustBadges.map((item, index) => {
+                const imageUrl = item.image?.url ? getMediaUrl(item.image.url) : null;
+                return (
+                  <div key={item._id || index} className="flex flex-col items-center justify-center text-center group w-full max-w-[160px]">
+                    {imageUrl && (
+                      <div className="h-11 sm:h-12 lg:h-12 w-full flex items-center justify-center mb-2.5 sm:mb-3">
+                        <img
+                          src={imageUrl}
+                          alt={item.title}
+                          className="h-9 sm:h-10 lg:h-11 w-auto max-w-[56px] object-contain transition-transform duration-300 group-hover:scale-105"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      </div>
+                    )}
+                    <span className="text-[10px] sm:text-[11px] lg:text-[11.5px] font-semibold uppercase tracking-[0.1em] text-[#1a1815] text-center leading-tight">
+                      {item.title}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </section>
       )}

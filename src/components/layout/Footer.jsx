@@ -50,6 +50,14 @@ const Footer = () => {
 
   const { settings, footerSettings } = useStoreSettings();
 
+  const formattedCopyright = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const raw = footerData.copyright || `© ${currentYear} Neirah · Shine your way`;
+    return raw
+      .replace(/\{year\}/gi, currentYear)
+      .replace(/(©|\(C\)|Copyright)\s*\d{4}/gi, `$1 ${currentYear}`);
+  }, [footerData.copyright]);
+
   // Populate footer settings from common StoreSettingsContext (no separate API call)
   useEffect(() => {
     if (footerSettings && Object.keys(footerSettings).length > 0) {
@@ -132,7 +140,13 @@ const Footer = () => {
   return (
     <footer className="w-full font-sans select-none">
       {/* ─── 1. MAIN DARK LUXURY FOOTER SECTION (Matches neirah.in exactly) ───────────── */}
-      <div className="bg-[#0F0D0B] text-[#C8B89E] pt-10 pb-8 px-4 relative overflow-hidden">
+      <div
+        style={{
+          backgroundColor: 'var(--storefront-footer-bg, #0F0D0B)',
+          color: 'var(--storefront-footer-text, #C8B89E)',
+        }}
+        className="pt-10 pb-8 px-4 relative overflow-hidden"
+      >
         {/* Background Stylized Watermark (Matches neirah.in) */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none select-none">
           <img
@@ -396,7 +410,7 @@ const Footer = () => {
 
             {/* Copyright */}
             <div className="text-[13px] sm:text-[14px] text-[#C8B89E] opacity-90 text-center">
-              {footerData.copyright || `© ${currentYear} Neirah · Shine your way`}
+              {formattedCopyright}
             </div>
 
             {/* Payment Gateway Badges (Exact icons matching neirah.in) */}

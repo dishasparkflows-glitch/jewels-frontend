@@ -293,8 +293,9 @@ export default function Shop() {
                 { value: 'price-low', label: 'Price: Low to High' },
                 { value: 'price-high', label: 'Price: High to Low' },
               ]}
-              buttonClassName="h-8 px-2.5 rounded border border-stone-200 bg-white text-xs font-medium text-stone-800 flex items-center gap-2 hover:border-stone-300 focus:outline-none cursor-pointer"
-              menuClassName="z-[40] w-44"
+              size="sm"
+              className="w-44 sm:w-48"
+              menuClassName="z-[40] w-48 sm:w-52 right-0 left-auto"
             />
           </div>
         </div>

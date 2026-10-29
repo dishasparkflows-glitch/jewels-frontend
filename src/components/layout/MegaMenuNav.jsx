@@ -116,26 +116,33 @@ function MenuContents({ category, onNavigate, mobile = false }) {
 
       {/* ─── Right Section: Featured Highlight Cards ─── */}
       {showcaseCards.length > 0 && (
-        <aside aria-label={`${category.name} highlights`} className="flex items-center gap-5 shrink-0 pl-8 border-l border-stone-800/80">
+        <aside
+          aria-label={`${category.name} highlights`}
+          className="flex items-center gap-5 shrink-0 pl-8 border-l border-stone-800/80"
+        >
           {showcaseCards.slice(0, 2).map((card, idx) => (
             <Link
               key={idx}
               to={card.link || categoryLink(category)}
               onClick={onNavigate}
-              className="group/card relative w-[180px] xl:w-[210px] h-[210px] xl:h-[235px] rounded-2xl overflow-hidden border border-white/10 bg-[#23201d] shadow-xl transition-all duration-300 hover:-translate-y-1 block cursor-pointer"
+              className="group/card relative w-[205px] xl:w-[230px] h-[215px] xl:h-[240px] rounded-2xl overflow-hidden border border-white/10 bg-[#181513] shadow-2xl transition-all duration-300 hover:-translate-y-1 block cursor-pointer"
             >
+              {/* Full Box Photo (Zoomed to fill complete box without empty letterbox spaces) */}
               <img
                 src={card.image}
                 alt={card.title}
                 loading="lazy"
-                className="w-full h-full object-cover transition-transform duration-700 group-hover/card:scale-105"
+                className="w-full h-full object-cover object-center transition-transform duration-700 group-hover/card:scale-105"
               />
-              {/* Bottom Dark Gradient & Title */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent flex items-end p-4">
-                <span className="text-xs sm:text-[13px] font-medium text-white tracking-wide leading-snug drop-shadow-sm group-hover/card:text-[#d2b18a] transition-colors">
-                  {card.title}
-                </span>
-              </div>
+
+              {/* Bottom Subtle Gradient & Title */}
+              {card.title && card.title.trim() && (
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent p-3.5 pt-8 flex items-end">
+                  <span className="text-xs sm:text-[13px] font-medium text-white tracking-wide leading-snug drop-shadow-sm group-hover/card:text-[#d2b18a] transition-colors line-clamp-1">
+                    {card.title}
+                  </span>
+                </div>
+              )}
             </Link>
           ))}
         </aside>
@@ -172,7 +179,8 @@ export default function MegaMenuNav({ categories, mobile = false, onNavigate, er
   return (
     <div
       ref={root}
-      className={mobile ? '' : 'relative w-full border-b border-white/10 bg-[#22201e]'}
+      style={mobile ? undefined : { backgroundColor: 'var(--storefront-header-bg, #22201e)' }}
+      className={mobile ? '' : 'relative w-full border-b border-white/10'}
       onMouseLeave={mobile ? undefined : () => setActiveId(null)}
       onBlur={(event) => {
         if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setActiveId(null);

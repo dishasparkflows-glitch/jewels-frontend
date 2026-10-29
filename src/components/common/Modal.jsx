@@ -36,7 +36,8 @@ export default function Modal({ open, onClose, label, children, className = '' }
       aria-label={label}
       onCancel={handleCancel}
       onMouseDown={handleBackdropClick}
-      className={`store-modal m-auto max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] overflow-visible rounded-lg border-0 bg-transparent p-0 shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm ${className}`}
+      style={{ backgroundColor: 'transparent', border: 'none', padding: 0 }}
+      className={`store-modal m-auto max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] overflow-visible !border-0 !bg-transparent !p-0 shadow-none outline-none backdrop:bg-black/60 backdrop:backdrop-blur-sm ${className}`}
     >
       {children}
     </dialog>

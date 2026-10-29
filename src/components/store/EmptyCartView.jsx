@@ -127,7 +127,7 @@ export default function EmptyCartView({ isDrawer = false, onClose }) {
           <Link
             to="/shop"
             onClick={onClose}
-            className="w-full inline-flex items-center justify-center gap-2 bg-[#be8438] hover:bg-[#a6712c] text-white text-xs font-bold uppercase tracking-[0.16em] py-3.5 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+            className="w-full inline-flex items-center justify-center gap-2 btn-theme-primary text-xs font-bold uppercase tracking-[0.16em] py-3.5 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
           >
             <span>EXPLORE JEWELLERY</span>
             <span className="text-sm font-bold">›</span>
@@ -153,7 +153,7 @@ export default function EmptyCartView({ isDrawer = false, onClose }) {
       <div className="mt-8 flex flex-col items-center gap-3.5">
         <Link
           to="/shop"
-          className="inline-flex items-center justify-center gap-2 bg-[#be8438] hover:bg-[#a6712c] text-white text-xs font-bold uppercase tracking-[0.16em] px-8 py-3.5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
+          className="inline-flex items-center justify-center gap-2 btn-theme-primary text-xs font-bold uppercase tracking-[0.16em] px-8 py-3.5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5"
         >
           <span>EXPLORE JEWELLERY</span>
           <span className="text-sm font-bold">›</span>

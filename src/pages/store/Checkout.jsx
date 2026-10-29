@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   HiOutlineArrowRight,
@@ -50,8 +50,43 @@ const emptyAddress = {
 
 const unwrapResponse = (response) => response?.data?.data ?? response?.data;
 
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
+const submitCCAvenueForm = ({ gatewayUrl, accessCode, encRequest }) => {
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = gatewayUrl;
+  form.style.display = 'none';
+
+  const encInput = document.createElement('input');
+  encInput.name = 'encRequest';
+  encInput.value = encRequest;
+  form.appendChild(encInput);
+
+  const accessInput = document.createElement('input');
+  accessInput.name = 'access_code';
+  accessInput.value = accessCode;
+  form.appendChild(accessInput);
+
+  document.body.appendChild(form);
+  form.submit();
+};
+
 export default function Checkout() {
-  const { cart, updateQuantity, subtotal, shipping, tax, total } = useCart();
+  const navigate = useNavigate();
+  const { cart, updateQuantity, clearCart, subtotal, shipping, tax, total } = useCart();
   const { user, isAuthenticated } = useAuth();
   const [form, setForm] = useState(() => ({
     ...emptyAddress,
@@ -62,17 +97,35 @@ export default function Checkout() {
   }));
   const [addresses, setAddresses] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('online');
+  const [paymentProvider, setPaymentProvider] = useState('razorpay');
+  const [paymentConfig, setPaymentConfig] = useState(null);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [codFee, setCodFee] = useState(null);
   const [codLoading, setCodLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [activeStep, setActiveStep] = useState('shipping');
 
   useEffect(() => {
     if (cart && cart.length > 0) {
       trackBeginCheckout(cart, total);
     }
+  }, []);
+
+  useEffect(() => {
+    // Fetch available payment gateways configuration
+    checkoutAPI.getPaymentConfig()
+      .then((response) => {
+        const config = unwrapResponse(response);
+        setPaymentConfig(config);
+        if (config?.defaultProvider) {
+          setPaymentProvider(config.defaultProvider);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load payment configuration:', err);
+      });
   }, []);
 
   useEffect(() => {
@@ -174,9 +227,137 @@ export default function Checkout() {
     if (method === 'cod') loadCodFee();
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    toast.error('The backend does not currently expose an order or payment creation API.');
+
+    if (!form.email || !form.phone || !form.addressLine || !form.city || !form.state || !form.postalCode) {
+      toast.error('Please fill in all required shipping and contact details.');
+      setActiveStep('shipping');
+      return;
+    }
+
+    setSubmitting(true);
+    const toastId = toast.loading('Creating your order...');
+
+    try {
+      const orderPayload = {
+        shippingAddress: {
+          firstName: form.firstName,
+          lastName: form.lastName,
+          fullName: `${form.firstName} ${form.lastName}`.trim(),
+          email: form.email,
+          phone: form.phone,
+          countryCode: form.countryCode || '+91',
+          addressLine: form.addressLine,
+          apartment: form.apartment,
+          city: form.city,
+          state: form.state,
+          postalCode: form.postalCode,
+          country: form.country || 'India',
+        },
+        couponCode: appliedCoupon?.coupon?.code || couponCode.trim() || undefined,
+        paymentMethod,
+        paymentProvider,
+        items: cart.map((item) => ({
+          productId: item.productId || item.id,
+          title: item.title || item.name,
+          price: item.price,
+          quantity: item.quantity,
+          totalItemPrice: (Number(item.price) || 0) * (Number(item.quantity) || 1),
+          image: item.image,
+          category: item.category,
+          selectedMetal: item.selectedMetal,
+          selectedSize: item.selectedSize,
+          selectedAttributes: item.selectedAttributes,
+        })),
+      };
+
+      const response = await checkoutAPI.createOrder(orderPayload);
+      const data = unwrapResponse(response);
+      const order = data?.order;
+      const payment = data?.payment;
+
+      if (!order) {
+        throw new Error('Could not create order.');
+      }
+
+      // If no online payment needed (e.g. pure COD with 0 advance charge)
+      if (!payment || (paymentMethod === 'cod' && codDueNow === 0)) {
+        toast.success('Order placed successfully!', { id: toastId });
+        if (clearCart) clearCart();
+        navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}`);
+        return;
+      }
+
+      // Handle CCAvenue Payment Flow
+      if (payment.provider === 'ccavenue') {
+        toast.loading('Redirecting to CCAvenue secure gateway...', { id: toastId });
+        submitCCAvenueForm({
+          gatewayUrl: payment.gatewayUrl,
+          accessCode: payment.accessCode,
+          encRequest: payment.encRequest,
+        });
+        return;
+      }
+
+      // Handle Razorpay Payment Flow
+      if (payment.provider === 'razorpay') {
+        const isLoaded = await loadRazorpayScript();
+        if (!isLoaded) {
+          toast.error('Unable to load Razorpay checkout SDK. Please verify your connection.', { id: toastId });
+          setSubmitting(false);
+          return;
+        }
+
+        toast.dismiss(toastId);
+
+        const rzp = new window.Razorpay({
+          key: payment.keyId,
+          amount: payment.amount,
+          currency: payment.currency || 'INR',
+          name: 'Neirah Jewels',
+          description: `Order ${order.orderNumber}`,
+          order_id: payment.gatewayOrderId,
+          prefill: {
+            name: `${form.firstName} ${form.lastName}`.trim(),
+            email: form.email,
+            contact: `${form.countryCode || '+91'}${form.phone}`.replace(/[^0-9]/g, ''),
+          },
+          theme: {
+            color: '#bd9462',
+          },
+          handler: async (resp) => {
+            const verifyToast = toast.loading('Confirming payment...');
+            try {
+              await checkoutAPI.verifyRazorpay({
+                orderId: order._id,
+                orderNumber: order.orderNumber,
+                razorpayOrderId: resp.razorpay_order_id,
+                razorpayPaymentId: resp.razorpay_payment_id,
+                razorpaySignature: resp.razorpay_signature,
+              });
+              toast.success('Payment verified successfully!', { id: verifyToast });
+              if (clearCart) clearCart();
+              navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}`);
+            } catch (err) {
+              toast.error(err.response?.data?.message || 'Payment verification failed', { id: verifyToast });
+              navigate(`/order-failed?orderId=${order._id}&orderNumber=${order.orderNumber}&error=verification_failed`);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              toast.error('Payment was cancelled.');
+              setSubmitting(false);
+            },
+          },
+        });
+
+        rzp.open();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Failed to place order. Please try again.', { id: toastId });
+      setSubmitting(false);
+    }
   };
 
   const applySavedAddress = (address) => {
@@ -299,27 +480,100 @@ export default function Checkout() {
                   <p className="mt-0.5 text-xs text-stone-500">Choose how you’d like to pay for your order.</p>
                 </div>
               </div>
-              <div className="space-y-2 sm:ml-[60px]">
-                <label className={`flex cursor-pointer items-center gap-3 rounded-md border p-3.5 transition ${paymentMethod === 'online' ? 'border-[#bd9462] bg-[#fffdf9]' : 'border-stone-200 hover:border-stone-300'}`}>
-                  <input type="radio" name="paymentMethod" value="online" checked={paymentMethod === 'online'} onChange={() => handlePaymentChange('online')} className="h-4 w-4 accent-[#a77e4e]" />
-                  <HiOutlineCreditCard className="h-7 w-7 shrink-0 text-stone-800" />
-                  <span className="min-w-0 flex-1"><span className="block text-xs font-semibold sm:text-sm">Online Payment (Full)</span><span className="mt-1 block text-[10px] leading-4 text-stone-500 sm:text-[11px]">Pay 100% online securely with UPI, Credit/Debit Cards, Net Banking</span></span>
-                  <span className="hidden gap-2 text-[10px] font-bold italic text-stone-700 sm:flex">UPI&nbsp; VISA&nbsp; ●●</span>
-                </label>
-                <label className={`flex cursor-pointer items-center gap-3 rounded-md border p-3.5 transition ${paymentMethod === 'cod' ? 'border-[#bd9462] bg-[#fffdf9]' : 'border-stone-200 hover:border-stone-300'}`}>
-                  <input type="radio" name="paymentMethod" value="cod" checked={paymentMethod === 'cod'} disabled={codLoading} onChange={() => handlePaymentChange('cod')} className="h-4 w-4 accent-[#a77e4e]" />
-                  <HiOutlineTruck className="h-7 w-7 shrink-0 text-stone-800" />
-                  <span className="min-w-0 flex-1"><span className="block text-xs font-semibold sm:text-sm">Cash on Delivery (Partial)</span><span className="mt-1 block text-[10px] leading-4 text-stone-500 sm:text-[11px]">{codLoading ? 'Checking availability…' : codFee ? `Pay ${formatPrice(codDueNow)} advance online to confirm order. Pay remaining ${formatPrice(codRemaining)} upon delivery.` : 'Pay a small advance online to confirm your order. Remaining balance is due on delivery.'}</span></span>
-                  {codFee && <span className="shrink-0 text-right"><span className="block text-[9px] uppercase text-stone-400">Due now</span><span className="text-xs font-semibold">{formatPrice(codDueNow)}</span></span>}
-                </label>
+              <div className="space-y-3 sm:ml-[60px]">
+                {/* Online Payment Option */}
+                <div className={`rounded-md border p-3.5 transition ${paymentMethod === 'online' ? 'border-[#bd9462] bg-[#fffdf9]' : 'border-stone-200 hover:border-stone-300'}`}>
+                  <label className="flex cursor-pointer items-center gap-3">
+                    <input type="radio" name="paymentMethod" value="online" checked={paymentMethod === 'online'} onChange={() => handlePaymentChange('online')} className="h-4 w-4 accent-[#a77e4e]" />
+                    <HiOutlineCreditCard className="h-7 w-7 shrink-0 text-stone-800" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-semibold sm:text-sm">Online Payment (Full)</span>
+                      <span className="mt-1 block text-[10px] leading-4 text-stone-500 sm:text-[11px]">Pay 100% online securely with UPI, Credit/Debit Cards, Net Banking & Wallets</span>
+                    </span>
+                    <span className="hidden gap-2 text-[10px] font-bold italic text-stone-700 sm:flex">UPI&nbsp; VISA&nbsp; ●●</span>
+                  </label>
+
+                  {/* Provider selection when Online Payment is selected */}
+                  {paymentMethod === 'online' && (
+                    <div className="mt-3.5 border-t border-[#f0e6d7] pt-3 pl-7 space-y-2">
+                      <p className="text-[11px] font-medium text-stone-600">Select Payment Gateway:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <label className={`flex items-center gap-2.5 rounded border p-2.5 cursor-pointer text-xs transition ${paymentProvider === 'razorpay' ? 'border-[#bd9462] bg-white font-medium shadow-xs' : 'border-stone-200 bg-stone-50/50'}`}>
+                          <input
+                            type="radio"
+                            name="paymentProvider"
+                            value="razorpay"
+                            checked={paymentProvider === 'razorpay'}
+                            onChange={() => setPaymentProvider('razorpay')}
+                            className="accent-[#a77e4e]"
+                          />
+                          <div>
+                            <span className="block font-semibold text-stone-800">Razorpay</span>
+                            <span className="text-[10px] text-stone-500">Instant UPI, Cards & NetBanking</span>
+                          </div>
+                        </label>
+
+                        <label className={`flex items-center gap-2.5 rounded border p-2.5 cursor-pointer text-xs transition ${paymentProvider === 'ccavenue' ? 'border-[#bd9462] bg-white font-medium shadow-xs' : 'border-stone-200 bg-stone-50/50'}`}>
+                          <input
+                            type="radio"
+                            name="paymentProvider"
+                            value="ccavenue"
+                            checked={paymentProvider === 'ccavenue'}
+                            onChange={() => setPaymentProvider('ccavenue')}
+                            className="accent-[#a77e4e]"
+                          />
+                          <div>
+                            <span className="block font-semibold text-stone-800">CCAvenue</span>
+                            <span className="text-[10px] text-stone-500">Cards, NetBanking & Wallets</span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Cash on Delivery Option */}
+                <div className={`rounded-md border p-3.5 transition ${paymentMethod === 'cod' ? 'border-[#bd9462] bg-[#fffdf9]' : 'border-stone-200 hover:border-stone-300'}`}>
+                  <label className="flex cursor-pointer items-center gap-3">
+                    <input type="radio" name="paymentMethod" value="cod" checked={paymentMethod === 'cod'} disabled={codLoading} onChange={() => handlePaymentChange('cod')} className="h-4 w-4 accent-[#a77e4e]" />
+                    <HiOutlineTruck className="h-7 w-7 shrink-0 text-stone-800" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-semibold sm:text-sm">Cash on Delivery (Partial)</span>
+                      <span className="mt-1 block text-[10px] leading-4 text-stone-500 sm:text-[11px]">
+                        {codLoading ? 'Checking availability…' : codFee ? `Pay ${formatPrice(codDueNow)} advance online to confirm order. Pay remaining ${formatPrice(codRemaining)} upon delivery.` : 'Pay a small advance online to confirm your order. Remaining balance is due on delivery.'}
+                      </span>
+                    </span>
+                    {codFee && <span className="shrink-0 text-right"><span className="block text-[9px] uppercase text-stone-400">Due now</span><span className="text-xs font-semibold">{formatPrice(codDueNow)}</span></span>}
+                  </label>
+
+                  {paymentMethod === 'cod' && codDueNow > 0 && (
+                    <div className="mt-3.5 border-t border-[#f0e6d7] pt-3 pl-7 space-y-2">
+                      <p className="text-[11px] font-medium text-stone-600">Pay advance ₹{codDueNow} using:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <label className={`flex items-center gap-2.5 rounded border p-2 cursor-pointer text-xs transition ${paymentProvider === 'razorpay' ? 'border-[#bd9462] bg-white font-medium' : 'border-stone-200 bg-stone-50/50'}`}>
+                          <input type="radio" name="codPaymentProvider" value="razorpay" checked={paymentProvider === 'razorpay'} onChange={() => setPaymentProvider('razorpay')} className="accent-[#a77e4e]" />
+                          <span>Razorpay</span>
+                        </label>
+                        <label className={`flex items-center gap-2.5 rounded border p-2 cursor-pointer text-xs transition ${paymentProvider === 'ccavenue' ? 'border-[#bd9462] bg-white font-medium' : 'border-stone-200 bg-stone-50/50'}`}>
+                          <input type="radio" name="codPaymentProvider" value="ccavenue" checked={paymentProvider === 'ccavenue'} onChange={() => setPaymentProvider('ccavenue')} className="accent-[#a77e4e]" />
+                          <span>CCAvenue</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
 
             <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:px-10 sm:py-5">
               <p className="flex items-center gap-2 text-[11px] text-stone-500"><HiOutlineLockClosed className="h-4 w-4 shrink-0 text-[#bd9462]" />Your information is secure and encrypted</p>
               <span className="hidden h-px flex-1 bg-stone-200 sm:block" />
-              <button type="submit" className="flex h-[52px] items-center justify-center gap-3 rounded-md bg-[#171613] px-8 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#80603d] sm:min-w-[336px]">
-                {paymentMethod === 'cod' && codFee ? `Pay ${formatPrice(codDueNow)}` : `Pay ${formatPrice(finalTotal)}`} <HiOutlineArrowRight className="h-4 w-4" />
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex h-[52px] items-center justify-center gap-3 rounded-md bg-[#171613] px-8 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#80603d] disabled:opacity-60 disabled:cursor-not-allowed sm:min-w-[336px]"
+              >
+                {submitting ? 'Processing Order...' : paymentMethod === 'cod' && codFee ? `Pay ${formatPrice(codDueNow)} & Confirm` : `Pay ${formatPrice(finalTotal)}`} <HiOutlineArrowRight className="h-4 w-4" />
               </button>
             </div>
           </div>

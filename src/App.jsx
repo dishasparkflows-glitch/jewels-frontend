@@ -21,6 +21,8 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import Profile from './pages/user/Profile';
 import StaticPageView from './pages/store/StaticPageView';
+import OrderSuccess from './pages/store/OrderSuccess';
+import OrderFailed from './pages/store/OrderFailed';
 
 function App() {
   return (
@@ -53,6 +55,8 @@ function App() {
                 <Route path="/product/:slug" element={<ProductDetail />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
+                <Route path="/order-success" element={<OrderSuccess />} />
+                <Route path="/order-failed" element={<OrderFailed />} />
                 <Route
                   path="/wishlist"
                   element={

@@ -87,34 +87,50 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <Modal open={isOpen} onClose={onClose} label="Schedule a virtual appointment" className="w-[min(640px,calc(100vw-2rem))]">
-      <div className="max-h-[calc(100dvh-2rem)] w-full overflow-y-auto rounded-xl bg-white shadow-2xl">
-        {/* Modal Header (Dark Forest Green #1e463a from Screenshot 1) */}
-          <div className="relative bg-[#22201e] px-6 py-6 text-center text-white">
-          <button
-            onClick={onClose}
-            className="absolute top-5 right-5 text-white/70 hover:text-white transition-colors p-1"
-            aria-label="Close modal"
-          >
-            <HiOutlineX className="w-5 h-5" />
-          </button>
-          <h3 className="font-serif text-xl sm:text-2xl font-normal tracking-wide text-white">
-            Virtual Appointment
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      label="Schedule a virtual appointment"
+      className="w-[min(480px,calc(100vw-2rem))] !bg-transparent !p-0 !border-0 !shadow-none"
+    >
+      <div
+        style={{ borderRadius: '24px' }}
+        className="relative w-full max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[24px] bg-white border border-stone-100 shadow-2xl p-6 sm:p-7 text-stone-800"
+      >
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          type="button"
+          className="absolute top-4 right-4 sm:top-5 sm:right-5 p-1 text-stone-400 hover:text-stone-600 rounded-full hover:bg-stone-100 transition-colors cursor-pointer"
+          aria-label="Close modal"
+        >
+          <HiOutlineX className="w-5 h-5" />
+        </button>
+
+        {/* Circular Calendar Badge */}
+        <div className="w-16 h-16 rounded-full bg-[#f8f2eb] flex items-center justify-center mx-auto mb-3.5 transition-transform">
+          <HiOutlineCalendar className="w-7 h-7 text-[#8c6b45] stroke-[1.8]" />
+        </div>
+
+        {/* Header Title & Subtitle */}
+        <div className="text-center">
+          <h3 className="font-serif text-xl sm:text-2xl font-bold text-stone-900 tracking-tight">
+            Book a Virtual Appointment
           </h3>
-          <p className="text-xs text-white/80 mt-1 font-light">
-            Schedule your online consultation
+          <p className="text-xs sm:text-[13px] text-stone-500 font-sans mt-1">
+            Schedule your online consultation with our jewellery experts.
           </p>
         </div>
 
-        {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5 bg-white text-stone-800">
+        {/* Form Fields */}
+        <form onSubmit={handleSubmit} className="mt-5 sm:mt-6 space-y-4">
           {/* Full Name */}
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-bold text-stone-700 tracking-wider uppercase">
-              FULL NAME <span className="text-red-500">*</span>
+            <label className="block text-xs font-semibold text-stone-700">
+              Full Name <span className="text-red-500">*</span>
             </label>
-            <div className="relative flex items-center border border-stone-200 rounded-xl px-3.5 py-2.5 focus-within:border-[#1e463a] focus-within:ring-1 focus-within:ring-[#1e463a]/30 transition-all bg-white">
-              <HiOutlineUser className="w-5 h-5 text-stone-400 mr-2.5 shrink-0" />
+            <div className="relative flex items-center border border-stone-200 rounded-xl px-3.5 h-11 focus-within:border-[#8c6b45] focus-within:ring-2 focus-within:ring-[#8c6b45]/15 transition-all bg-white">
+              <HiOutlineUser className="w-4 h-4 text-stone-400 mr-2.5 shrink-0" />
               <input
                 type="text"
                 placeholder="Enter your full name"
@@ -128,11 +144,11 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
 
           {/* Email Address */}
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-bold text-stone-700 tracking-wider uppercase">
-              EMAIL ADDRESS <span className="text-red-500">*</span>
+            <label className="block text-xs font-semibold text-stone-700">
+              Email Address <span className="text-red-500">*</span>
             </label>
-            <div className="relative flex items-center border border-stone-200 rounded-xl px-3.5 py-2.5 focus-within:border-[#1e463a] focus-within:ring-1 focus-within:ring-[#1e463a]/30 transition-all bg-white">
-              <HiOutlineMail className="w-5 h-5 text-stone-400 mr-2.5 shrink-0" />
+            <div className="relative flex items-center border border-stone-200 rounded-xl px-3.5 h-11 focus-within:border-[#8c6b45] focus-within:ring-2 focus-within:ring-[#8c6b45]/15 transition-all bg-white">
+              <HiOutlineMail className="w-4 h-4 text-stone-400 mr-2.5 shrink-0" />
               <input
                 type="email"
                 placeholder="Enter your email address"
@@ -146,13 +162,13 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
 
           {/* Phone Number */}
           <div className="space-y-1.5">
-            <label className="block text-[11px] font-bold text-stone-700 tracking-wider uppercase">
-              PHONE NUMBER <span className="text-red-500">*</span>
+            <label className="block text-xs font-semibold text-stone-700">
+              Phone Number <span className="text-red-500">*</span>
             </label>
-            <div className="flex items-center border border-stone-200 rounded-xl px-3.5 py-2.5 focus-within:border-[#1e463a] focus-within:ring-1 focus-within:ring-[#1e463a]/30 transition-all bg-white">
-              <div className="flex items-center gap-1.5 pr-3 mr-2 border-r border-stone-200 text-xs text-stone-600 font-medium shrink-0">
-                <span className="text-base leading-none">🇮🇳</span>
-                <span>+91</span>
+            <div className="flex items-center border border-stone-200 rounded-xl px-3.5 h-11 focus-within:border-[#8c6b45] focus-within:ring-2 focus-within:ring-[#8c6b45]/15 transition-all bg-white">
+              <div className="flex items-center gap-1.5 pr-2.5 mr-2.5 border-r border-stone-200 text-xs text-stone-600 font-medium shrink-0">
+                <span className="text-sm leading-none">🇮🇳</span>
+                <span className="font-semibold text-stone-700">IN +91</span>
               </div>
               <input
                 type="tel"
@@ -166,57 +182,64 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
           </div>
 
           {/* Date & Time Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Date */}
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-bold text-stone-700 tracking-wider uppercase">
-                DATE <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-stone-700">
+                Date <span className="text-red-500">*</span>
               </label>
-              <div className="relative flex items-center border border-stone-200 rounded-xl px-3.5 py-2.5 focus-within:border-[#1e463a] focus-within:ring-1 focus-within:ring-[#1e463a]/30 transition-all bg-white">
-                <HiOutlineCalendar className="w-5 h-5 text-stone-400 mr-2 shrink-0" />
+              <div className="relative flex items-center border border-stone-200 rounded-xl px-3.5 h-11 focus-within:border-[#8c6b45] focus-within:ring-2 focus-within:ring-[#8c6b45]/15 transition-all bg-white">
                 <input
                   type="date"
                   min={new Date().toISOString().split('T')[0]}
                   value={formData.appointmentDate}
                   onChange={(e) => setFormData({ ...formData, appointmentDate: e.target.value })}
                   required
-                  className="w-full text-xs sm:text-sm text-stone-800 bg-transparent focus:outline-none"
+                  className="w-full text-xs sm:text-sm text-stone-800 bg-transparent focus:outline-none cursor-pointer"
                 />
               </div>
             </div>
 
             {/* Time */}
             <div className="space-y-1.5">
-              <label className="block text-[11px] font-bold text-stone-700 tracking-wider uppercase">
-                TIME <span className="text-red-500">*</span>
+              <label className="block text-xs font-semibold text-stone-700">
+                Time <span className="text-red-500">*</span>
               </label>
               <Dropdown
                 value={formData.preferredTime}
                 onChange={(val) => setFormData({ ...formData, preferredTime: val })}
                 options={TIME_SLOTS}
                 placeholder="Select Time"
-                prefixIcon={<HiOutlineClock className="w-5 h-5 text-stone-400" />}
-                buttonClassName="w-full h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#1e463a] focus:ring-1 focus:ring-[#1e463a]/30 transition-all flex items-center justify-between cursor-pointer"
+                prefixIcon={<HiOutlineClock className="w-4 h-4 text-stone-400" />}
+                buttonClassName="w-full h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8c6b45] focus:ring-2 focus:ring-[#8c6b45]/15 transition-all flex items-center justify-between cursor-pointer"
                 menuClassName="z-[90]"
               />
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+          <div className="flex items-center gap-3 pt-4 sm:pt-5">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl border border-stone-200 hover:bg-stone-50 text-stone-700 text-xs sm:text-sm font-medium transition-colors"
+              disabled={loading}
+              className="px-6 h-11 rounded-xl border border-stone-200 hover:bg-stone-50 text-stone-700 text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 sm:flex-none px-8 py-2.5 rounded-xl bg-[#739588] hover:bg-[#5f8174] text-white text-xs sm:text-sm font-medium transition-all shadow-sm disabled:opacity-50"
+              className="flex-1 h-11 rounded-xl btn-theme-primary text-xs sm:text-sm font-semibold transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
-              {loading ? 'Scheduling...' : 'Schedule'}
+              {loading ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Scheduling...</span>
+                </>
+              ) : (
+                'Schedule Appointment'
+              )}
             </button>
           </div>
         </form>
