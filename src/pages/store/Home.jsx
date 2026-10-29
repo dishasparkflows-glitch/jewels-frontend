@@ -1,4 +1,5 @@
 import ProductCard from '../../components/product/ProductCard';
+import HomeProductCard from '../../components/product/HomeProductCard';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -638,10 +639,10 @@ const Home = () => {
         {/* Most Loved on Neirah - Gold Products Sub-Section */}
         {(goldProducts.length > 0 || platinumProducts.length > 0) && (
           <div>
-            <div className="text-center mb-6 sm:mb-8">
-              <h3 className="font-serif text-2xl sm:text-3xl text-stone-900 font-normal tracking-wide">
+            <div className="text-center mb-6">
+              <h2 className="text-xl md:text-2xl text-gray-900 leading-tight">
                 Most Loved on Neirah
-              </h3>
+              </h2>
             </div>
 
             <div
@@ -649,20 +650,23 @@ const Home = () => {
               onMouseEnter={() => setIsMostLovedHovered(true)}
               onMouseLeave={() => setIsMostLovedHovered(false)}
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-mandatory scroll-smooth"
+              className="flex gap-3 sm:gap-4 lg:gap-5 overflow-x-auto pb-4 no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-mandatory scroll-smooth"
             >
-              {(goldProducts.length > 0 ? goldProducts : platinumProducts).slice(0, 8).map((product) => (
-                <div key={product.id || product._id} className="product-card-container flex-shrink-0 w-[240px] sm:w-[270px] lg:w-[290px] xl:w-[310px] snap-start">
-                  <ProductCard product={product} />
+              {(goldProducts.length > 0 ? goldProducts : platinumProducts).slice(0, 10).map((product) => (
+                <div
+                  key={product.id || product._id}
+                  className="product-card-container flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(50%-8px)] md:w-[calc(33.333%-11px)] lg:w-[calc(25%-15px)] xl:w-[calc(20%-16px)] snap-start"
+                >
+                  <HomeProductCard product={product} isSilver={false} />
                 </div>
               ))}
             </div>
 
             {/* DISCOVER Button Matching Screenshot */}
-            <div className="text-center mt-8 sm:mt-10">
+            <div className="flex justify-center mt-6 sm:mt-8">
               <Link
                 to="/shop"
-                className="inline-flex items-center justify-center border border-stone-800 text-stone-900 text-[11px] sm:text-xs font-medium tracking-[0.2em] px-10 py-2.5 uppercase hover:bg-stone-900 hover:text-white transition-all duration-300"
+                className="px-12 py-2.5 border border-gray-800 rounded text-[13px] uppercase hover:bg-black hover:text-white transition-all font-medium"
               >
                 DISCOVER
               </Link>
@@ -673,21 +677,34 @@ const Home = () => {
         {/* Silver Jewellery Sub-Section */}
         {silverProducts.length > 0 && (
           <div>
-            <div className="text-center mb-8">
-              <h3 className="font-serif text-2xl sm:text-3xl text-stone-900 font-normal tracking-wide">
+            <div className="text-center mb-6">
+              <h2 className="text-xl md:text-2xl text-gray-900 leading-tight">
                 Silver Jewellery
-              </h3>
+              </h2>
             </div>
 
             <div
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-mandatory"
+              className="flex gap-3 sm:gap-4 lg:gap-5 overflow-x-auto pb-4 no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-mandatory scroll-smooth"
             >
-              {silverProducts.map((product) => (
-                <div key={product.id || product._id} className="flex-shrink-0 w-[240px] sm:w-[270px] lg:w-[290px] xl:w-[310px] snap-start">
-                  <ProductCard product={product} />
+              {silverProducts.slice(0, 10).map((product) => (
+                <div
+                  key={product.id || product._id}
+                  className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(50%-8px)] md:w-[calc(33.333%-11px)] lg:w-[calc(25%-15px)] xl:w-[calc(20%-16px)] snap-start"
+                >
+                  <HomeProductCard product={product} isSilver={true} />
                 </div>
               ))}
+            </div>
+
+            {/* DISCOVER Button Matching Screenshot */}
+            <div className="flex justify-center mt-6 sm:mt-8">
+              <Link
+                to="/silver-collection"
+                className="px-12 py-2.5 border border-gray-800 rounded text-[13px] uppercase hover:bg-black hover:text-white transition-all font-medium"
+              >
+                DISCOVER
+              </Link>
             </div>
           </div>
         )}
@@ -968,11 +985,14 @@ const Home = () => {
         {trendingProducts.length > 0 ? (
           <div
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            className="flex gap-4 sm:gap-6 overflow-x-auto pb-4 no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-mandatory text-left"
+            className="flex gap-3 sm:gap-4 lg:gap-5 overflow-x-auto pb-4 no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-mandatory scroll-smooth"
           >
             {trendingProducts.map((product) => (
-              <div key={product.id || product._id} className="flex-shrink-0 w-[240px] sm:w-[270px] lg:w-[290px] xl:w-[310px] snap-start">
-                <ProductCard product={product} />
+              <div
+                key={product.id || product._id}
+                className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(50%-8px)] md:w-[calc(33.333%-11px)] lg:w-[calc(25%-15px)] xl:w-[calc(20%-16px)] snap-start"
+              >
+                <HomeProductCard product={product} />
               </div>
             ))}
           </div>

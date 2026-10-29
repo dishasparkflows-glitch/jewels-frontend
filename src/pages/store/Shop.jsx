@@ -592,13 +592,13 @@ export default function Shop() {
 
             {/* Products Grid / Skeletons / Empty */}
             {loading ? (
-              <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-x-2 sm:gap-x-4 gap-y-3 sm:gap-y-8">
                 {Array.from({ length: 6 }, (_, index) => (
-                  <div key={index} className="animate-pulse rounded-2xl border border-stone-100 bg-white p-3.5">
-                    <div className="aspect-square rounded-xl bg-stone-100" />
-                    <div className="mt-4 h-3 w-4/5 bg-stone-100 rounded" />
+                  <div key={index} className="animate-pulse rounded-lg sm:rounded-xl border border-gray-100 bg-white p-2 sm:p-3.5">
+                    <div className="aspect-square rounded-md sm:rounded-lg bg-stone-100" />
+                    <div className="mt-3 h-3 w-4/5 bg-stone-100 rounded" />
                     <div className="mt-2 h-3 w-1/2 bg-stone-100 rounded" />
-                    <div className="mt-4 h-4 w-1/3 bg-stone-100 rounded" />
+                    <div className="mt-3 h-4 w-1/3 bg-stone-100 rounded" />
                   </div>
                 ))}
               </div>
@@ -613,7 +613,7 @@ export default function Shop() {
                 </button>
               </div>
             ) : sortedDisplayedProducts.length ? (
-              <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-x-2 sm:gap-x-4 gap-y-3 sm:gap-y-8">
                 {sortedDisplayedProducts.map((product) => (
                   <ProductCard key={product._id || product.id} product={product} />
                 ))}

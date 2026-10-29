@@ -1,28 +1,31 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
-  HiOutlineHeart,
-  HiHeart,
-  HiOutlineX,
-  HiOutlineChevronLeft,
-  HiOutlineChevronRight,
-  HiOutlineShoppingBag,
-} from "react-icons/hi";
+  LuHeart,
+  LuMaximize,
+  LuChevronLeft,
+  LuChevronRight,
+  LuX,
+} from "react-icons/lu";
 import { IoDiamondOutline } from "react-icons/io5";
 import { useWishlist } from "../../contexts/WishlistContext";
-import { useCart } from "../../contexts/CartContext";
-import { useAuth } from "../../contexts/AuthContext";
 import { getImageUrl } from "../../utils/imageUrl";
 import {
   formatProductPrice,
   getProductCardData,
 } from "../../utils/productCard";
 
+function isVideoUrl(url) {
+  if (!url || typeof url !== "string") return false;
+  return /\.(mp4|webm|mov|ogg|m4v)(\?.*)?$/i.test(url);
+}
+
 function ProductImage({ src, name, className = "" }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [src]);
+
   return src && !failed ? (
     <img
       src={getImageUrl(src)}
@@ -33,9 +36,9 @@ function ProductImage({ src, name, className = "" }) {
       className={className}
     />
   ) : (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-stone-300">
-      <IoDiamondOutline className="h-10 w-10" />
-      <span className="text-xs text-stone-400">Image unavailable</span>
+    <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-stone-300">
+      <IoDiamondOutline className="h-8 w-8 text-stone-300" />
+      <span className="text-[10px] sm:text-[11px] text-stone-400">Image unavailable</span>
     </div>
   );
 }
@@ -43,18 +46,21 @@ function ProductImage({ src, name, className = "" }) {
 function ImagePreview({ images, name, onClose }) {
   const dialog = useRef(null);
   const [index, setIndex] = useState(0);
+
   useEffect(() => {
     const focus = document.activeElement;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    dialog.current.showModal();
+    dialog.current?.showModal();
     return () => {
       document.body.style.overflow = overflow;
       focus?.focus();
     };
   }, []);
+
   const move = (step) =>
-    setIndex((previous) => (previous + step + images.length) % images.length);
+    setIndex((prev) => (prev + step + images.length) % images.length);
+
   return createPortal(
     <dialog
       ref={dialog}
@@ -72,47 +78,59 @@ function ImagePreview({ images, name, onClose }) {
           move(event.key === "ArrowLeft" ? -1 : 1);
         }
       }}
-      className="m-auto w-[calc(100%-2rem)] max-w-3xl rounded-2xl bg-white p-4 shadow-2xl backdrop:bg-black/50"
+      className="m-auto w-[calc(100%-2rem)] max-w-2xl rounded-2xl bg-white p-4 sm:p-6 shadow-2xl backdrop:bg-black/60 z-[200]"
     >
       <div className="flex items-start justify-between gap-4">
-        <h2 className="text-sm leading-6 text-stone-700">{name}</h2>
+        <h2 className="text-sm font-medium text-stone-800 line-clamp-1">{name}</h2>
         <button
           type="button"
           aria-label="Close image preview"
           onClick={onClose}
-          className="rounded-full p-2 hover:bg-stone-100"
+          className="rounded-full p-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-800 transition-colors cursor-pointer"
         >
-          <HiOutlineX className="h-5 w-5" />
+          <LuX className="h-5 w-5" />
         </button>
       </div>
-      <div className="relative mt-3 h-[min(65vh,600px)]">
-        <ProductImage
-          src={images[index]}
-          name={`${name} — image ${index + 1}`}
-          className="h-full w-full object-contain"
-        />
+      <div className="relative mt-3 h-[min(60vh,550px)] flex items-center justify-center bg-[#FAF8F5] rounded-xl overflow-hidden">
+        {isVideoUrl(images[index]) ? (
+          <video
+            src={`${getImageUrl(images[index])}#t=0.01`}
+            autoPlay
+            loop
+            muted
+            playsInline
+            controls
+            className="h-full w-full object-contain"
+          />
+        ) : (
+          <ProductImage
+            src={images[index]}
+            name={`${name} — image ${index + 1}`}
+            className="h-full w-full object-contain"
+          />
+        )}
         {images.length > 1 && (
           <>
             <button
               type="button"
               aria-label="Previous image"
               onClick={() => move(-1)}
-              className="absolute left-0 top-1/2 rounded-full border border-stone-200 bg-white p-3"
+              className="absolute left-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full border border-stone-200 bg-white/90 text-stone-700 shadow-md hover:bg-white transition-all cursor-pointer"
             >
-              <HiOutlineChevronLeft />
+              <LuChevronLeft className="h-4 w-4" />
             </button>
             <button
               type="button"
               aria-label="Next image"
               onClick={() => move(1)}
-              className="absolute right-0 top-1/2 rounded-full border border-stone-200 bg-white p-3"
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full border border-stone-200 bg-white/90 text-stone-700 shadow-md hover:bg-white transition-all cursor-pointer"
             >
-              <HiOutlineChevronRight />
+              <LuChevronRight className="h-4 w-4" />
             </button>
           </>
         )}
       </div>
-      <p aria-live="polite" className="mt-2 text-center text-xs text-stone-500">
+      <p aria-live="polite" className="mt-3 text-center text-xs text-stone-500">
         {index + 1} / {images.length}
       </p>
     </dialog>,
@@ -121,20 +139,17 @@ function ImagePreview({ images, name, onClose }) {
 }
 
 export default function ProductCard({ product }) {
+  const navigate = useNavigate();
   const data = getProductCardData(product);
   const { isWishlisted, toggleWishlist, wishlistMap } = useWishlist();
-  const { addToCart } = useCart();
-  const { user } = useAuth();
+
   const [selectedColorName, setSelectedColorName] = useState(null);
-  const [hoveredColorName, setHoveredColorName] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [wishlistBusy, setWishlistBusy] = useState(false);
-  const [addingToCart, setAddingToCart] = useState(false);
 
-  const isGold = product.productType === 'gold';
   const colors = data.colors || [];
   const defaultColor = colors.find((entry) => /yellow/i.test(entry.name)) || colors[0];
-  const activeColorName = hoveredColorName || selectedColorName || defaultColor?.name;
+  const activeColorName = selectedColorName || defaultColor?.name;
   const color =
     colors.find((entry) => entry.name?.toLowerCase() === activeColorName?.toLowerCase()) ||
     colors.find((entry) => entry.name === activeColorName) ||
@@ -142,10 +157,10 @@ export default function ProductCard({ product }) {
     colors[0];
 
   const matchingColorRow = (product.colorImages || []).find((row) => {
-    if (!row || row.status === 'inactive') return false;
+    if (!row || row.status === "inactive") return false;
     const c = row.metalColorId || row.color;
-    const rowName = typeof c === 'object' ? c?.name : (typeof c === 'string' ? c : '');
-    const rowId = typeof c === 'object' ? String(c?._id || c?.id || '') : (typeof c === 'string' ? c : '');
+    const rowName = typeof c === "object" ? c?.name : typeof c === "string" ? c : "";
+    const rowId = typeof c === "object" ? String(c?._id || c?.id || "") : typeof c === "string" ? c : "";
     return (
       (color?.id && rowId && String(color.id) === rowId) ||
       (color?.name && rowName && color.name.toLowerCase() === rowName.toLowerCase())
@@ -153,24 +168,37 @@ export default function ProductCard({ product }) {
   });
 
   const colorRowImages = (matchingColorRow?.images || [])
-    .map((img) => (typeof img === 'string' ? img : img?.url))
+    .map((img) => (typeof img === "string" ? img : img?.url))
     .filter(Boolean);
 
   const cardImages = colorRowImages.length > 0
     ? [...new Set(colorRowImages)]
-    : (color?.image ? [color.image, ...data.images.filter(img => img !== color.image)] : data.images);
+    : color?.image
+      ? [color.image, ...data.images.filter((img) => img !== color.image)]
+      : data.images;
 
   const [imageIndex, setImageIndex] = useState(0);
-  const image = cardImages[imageIndex] || color?.image || data.images[0] || "";
+
+  useEffect(() => {
+    setImageIndex(0);
+  }, [activeColorName]);
+
+  const activeImage = cardImages[imageIndex] || color?.image || data.images[0] || "";
+
+  const isOrnate =
+    Boolean(product.isOrnate) ||
+    String(product?.productType || "").toLowerCase() === "ornate" ||
+    Boolean(product?.representative?.isOrnate);
+
   const isGroup = Boolean(product.isGroup);
-  const slug =
+
+  const rawSlug =
     product.basicInfo?.slug ||
     product.slug ||
     data.slug ||
     product.representative?.basicInfo?.slug ||
-    product.representative?.slug ||
-    (data.name ? data.name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
-  const href = `/product/${encodeURIComponent(slug)}`;
+    product.representative?.slug;
+
   const title =
     (isGroup && product.groupName) ||
     product.basicInfo?.title ||
@@ -178,7 +206,17 @@ export default function ProductCard({ product }) {
     product.name ||
     product.itemName ||
     data?.name ||
-    'Jewellery';
+    "Jewellery";
+
+  const slug =
+    rawSlug ||
+    (title && title !== "Jewellery"
+      ? title.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-")
+      : String(product._id || product.id || data.id));
+
+  const href = isOrnate
+    ? `/silver-collection/${encodeURIComponent(slug)}`
+    : `/product/${encodeURIComponent(slug)}`;
 
   const [localWished, setLocalWished] = useState(() => {
     if (wishlistMap && wishlistMap[data.id] !== undefined) return Boolean(wishlistMap[data.id]);
@@ -195,7 +233,7 @@ export default function ProductCard({ product }) {
   }, [wishlistMap, data.id, product?.inWishlist]);
 
   const wished = localWished !== undefined ? localWished : isWishlisted(data.id);
-  const previewImages = [...new Set([image, ...cardImages, ...data.images].filter(Boolean))];
+  const previewImages = [...new Set([activeImage, ...cardImages, ...data.images].filter(Boolean))];
 
   async function handleWishlist() {
     if (wishlistBusy) return;
@@ -203,13 +241,16 @@ export default function ProductCard({ product }) {
     const nextWished = !wished;
     setLocalWished(nextWished);
     try {
-      await toggleWishlist({
-        ...product,
-        id: data.id,
-        title,
-        price: data.price,
-        image,
-      }, wished);
+      await toggleWishlist(
+        {
+          ...product,
+          id: data.id,
+          title,
+          price: data.price,
+          image: activeImage,
+        },
+        wished,
+      );
     } catch {
       setLocalWished(!nextWished);
     } finally {
@@ -217,124 +258,90 @@ export default function ProductCard({ product }) {
     }
   }
 
-  const handleAddToCart = async (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    if (addingToCart) return;
-    setAddingToCart(true);
-
-    try {
-      const colorEntry = color;
-      const metalColorId = colorEntry?.id || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null;
-
-      let selectedAttributes = product.selectedAttributes ? { ...product.selectedAttributes } : undefined;
-      if (metalColorId) {
-        selectedAttributes = {
-          ...(selectedAttributes || {}),
-          metalColor: metalColorId,
-        };
-      }
-
-      const price = Number(data.price) || 0;
-      const quantity = 1;
-      const totalItemPrice = price * quantity;
-      const addedAt = new Date().toISOString();
-
-      await addToCart(
-        {
-          id: data.id,
-          productId: data.id,
-          userId: user?._id || user?.id || null,
-          title,
-          price,
-          totalItemPrice,
-          addedAt,
-          quantity,
-          originalPrice: data.originalPrice,
-          image,
-          category: product.category || product.categoryIds?.[0]?.name || '',
-          productType: product.productType || '',
-          selectedAttributes,
-          selectedMetal: activeColorName || color?.name || '',
-        },
-        1,
-        {
-          selectedMetal: activeColorName || color?.name || '',
-        }
-      );
-    } catch (err) {
-      console.error('Failed to add to cart from product card:', err);
-    } finally {
-      setAddingToCart(false);
-    }
+  const handleCardClick = () => {
+    sessionStorage.setItem("cameFromProduct", "1");
+    sessionStorage.setItem("shopScrollPos", String(window.scrollY));
+    navigate(href);
   };
 
+  const salePrice =
+    data.salePrice ||
+    product?.pricing?.salePrice ||
+    product?.representative?.pricing?.salePrice ||
+    data.price;
+
+  const mrp =
+    data.mrp ||
+    product?.pricing?.mrp ||
+    product?.representative?.pricing?.mrp ||
+    data.originalPrice;
+
+  const isGold = product.productType === "gold";
+  const hasDiscount = !isGold && mrp && Number(mrp) > Number(salePrice);
+  const discountPercent =
+    product.discount ||
+    (hasDiscount ? Math.round(((Number(mrp) - Number(salePrice)) / Number(mrp)) * 100) : 0);
+
   return (
-    <article
-      className="group relative flex h-full min-w-0 flex-col justify-between bg-white rounded-2xl border border-stone-200/90 p-3 sm:p-3.5 hover:shadow-md hover:border-stone-300/90 transition-all duration-300 cursor-pointer"
+    <div
+      onClick={handleCardClick}
+      className="group cursor-pointer flex flex-col justify-between h-full bg-white p-2 sm:p-3.5 border border-gray-100 hover:shadow-md transition-all rounded-lg sm:rounded-xl"
     >
       <div>
-        <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white flex items-center justify-center">
-          <Link
-            to={href}
-            aria-label={`View ${title}`}
-            className="block h-full w-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b6f4e]"
-          >
-            <ProductImage
-              src={image}
-              name={title}
-              className="h-full w-full object-contain p-2 sm:p-2.5 transition-transform duration-500 motion-safe:group-hover:scale-105"
+        {/* Product Image Area */}
+        <div className="relative aspect-square flex items-center justify-center bg-[#FAF8F5] mb-1.5 sm:mb-3 overflow-hidden group/img rounded-md sm:rounded-lg">
+
+          {isVideoUrl(activeImage) ? (
+            <video
+              src={`${getImageUrl(activeImage)}#t=0.01`}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105 pointer-events-none"
             />
-          </Link>
+          ) : (
+            <ProductImage
+              src={activeImage}
+              name={title}
+              className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
+            />
+          )}
 
           {/* Wishlist Button (Top Right) */}
           <button
             type="button"
             disabled={wishlistBusy}
-            aria-label={`${wished ? "Remove" : "Save"} ${title} ${wished ? "from" : "to"} wishlist`}
-            aria-pressed={wished}
+            aria-label={`${wished ? "Remove from" : "Save to"} wishlist`}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               handleWishlist();
             }}
-            className="absolute right-1.5 top-1.5 z-20 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/90 hover:bg-white text-stone-400 hover:text-stone-700 transition-all duration-200 active:scale-95 disabled:opacity-50 cursor-pointer shadow-2xs border border-stone-100"
+            className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-colors z-20 bg-white/90 backdrop-blur-xs shadow-xs border border-gray-100 hover:bg-white cursor-pointer disabled:opacity-50"
           >
-            {wished ? (
-              <HiHeart className="h-4 w-4 text-[#e11d48] fill-current" />
-            ) : (
-              <HiOutlineHeart className="h-4 w-4 stroke-[1.6]" />
-            )}
+            <LuHeart
+              size={12}
+              fill={wished ? "black" : "none"}
+              className={wished ? "text-black" : "text-gray-400 sm:w-3.5 sm:h-3.5"}
+            />
           </button>
 
-          {/* Quick View / Fullscreen Preview Button (Bottom Left) */}
-          <button
-            type="button"
-            aria-label={`Preview images for ${title}`}
+          {/* Quick View Button (Bottom Left) */}
+          <div
+            className="hidden sm:flex absolute bottom-2 left-2 sm:bottom-3 sm:left-3 w-6 h-6 sm:w-7 sm:h-7 border-gray-200 border items-center justify-center rounded-sm bg-white hover:bg-black hover:text-white text-gray-500 hover:border-black transition-colors z-20 shadow-sm cursor-pointer"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               setPreviewOpen(true);
             }}
-            className="absolute left-1.5 bottom-1.5 z-20 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-md bg-white/90 hover:bg-white text-stone-400 hover:text-stone-700 transition-colors shadow-2xs cursor-pointer border border-stone-100"
-            title="Quick view images"
+            title="Quick view"
           >
-            <svg
-              className="w-3.5 h-3.5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
-            </svg>
-          </button>
+            <LuMaximize size={11} className="sm:w-3 sm:h-3" />
+          </div>
 
-          {/* Carousel Prev/Next Arrows */}
+          {/* Carousel Arrows */}
           {cardImages.length > 1 && (
             <>
               <button
@@ -343,11 +350,11 @@ export default function ProductCard({ product }) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setImageIndex((prev) => (prev - 1 + cardImages.length) % cardImages.length);
+                  setImageIndex((prev) => (prev === 0 ? cardImages.length - 1 : prev - 1));
                 }}
-                className="absolute left-1.5 top-1/2 -translate-y-1/2 z-20 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-white/90 hover:bg-white text-stone-700 shadow-xs border border-stone-200 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                className="flex absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-8 sm:h-8 bg-white/40 backdrop-blur-md border border-white/50 text-gray-800 rounded-full items-center justify-center opacity-0 group-hover/img:opacity-100 transition-all duration-300 hover:bg-white/70 hover:scale-110 z-10 shadow-lg cursor-pointer"
               >
-                <HiOutlineChevronLeft className="w-3.5 h-3.5" />
+                <LuChevronLeft size={14} strokeWidth={2} className="text-gray-800" />
               </button>
               <button
                 type="button"
@@ -355,154 +362,106 @@ export default function ProductCard({ product }) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setImageIndex((prev) => (prev + 1) % cardImages.length);
+                  setImageIndex((prev) => (prev === cardImages.length - 1 ? 0 : prev + 1));
                 }}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 z-20 flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-white/90 hover:bg-white text-stone-700 shadow-xs border border-stone-200 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                className="flex absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 w-6 h-6 sm:w-8 sm:h-8 bg-white/40 backdrop-blur-md border border-white/50 text-gray-800 rounded-full items-center justify-center opacity-0 group-hover/img:opacity-100 transition-all duration-300 hover:bg-white/70 hover:scale-110 z-10 shadow-lg cursor-pointer"
               >
-                <HiOutlineChevronRight className="w-3.5 h-3.5" />
+                <LuChevronRight size={14} strokeWidth={2} className="text-gray-800" />
               </button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 opacity-0 group-hover/img:opacity-100 transition-opacity pointer-events-none">
+                {cardImages.map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`w-1 h-1 rounded-full ${idx === imageIndex ? "bg-black" : "bg-gray-300"}`}
+                  />
+                ))}
+              </div>
             </>
           )}
         </div>
 
-        {/* Product Information (Left-aligned, standard title case, swatches, price) */}
-        <div className="flex flex-col pt-2.5 pb-0.5 text-left items-start w-full">
-          <Link
-            to={href}
-            className="block line-clamp-2 min-h-[34px] sm:min-h-[36px] text-[11.5px] sm:text-[12.5px] font-normal leading-snug text-stone-800 hover:text-[#8b6f4e] transition-colors text-left"
+        {/* Product Title (Centered) */}
+        <div className="text-center px-1">
+          <h3
+            className="text-[11px] sm:text-[13px] text-gray-800 font-medium leading-[1.25] mb-1 min-h-[28px] sm:min-h-[34px] line-clamp-2 text-center"
             title={title}
           >
             {title}
-          </Link>
-
-          {/* Metal Color Swatches (Left-aligned) */}
-          {!!colors.length && (
-            <div
-              role="group"
-              aria-label={`${title} colours`}
-              className="mt-1.5 mb-1 flex min-h-[16px] flex-wrap items-center justify-start gap-1.5"
-            >
-              {colors.slice(0, 5).map((entry) => {
-                const isSelected = Boolean(activeColorName && entry.name?.toLowerCase() === activeColorName.toLowerCase());
-                const bgGradient = entry.colorCodeEnd
-                  ? `linear-gradient(135deg, ${entry.hex}, ${entry.colorCodeEnd})`
-                  : entry.hex
-                    ? `linear-gradient(135deg, ${entry.hex}, ${entry.hex})`
-                    : undefined;
-
-                return (
-                  <button
-                    key={entry.name}
-                    type="button"
-                    title={entry.name}
-                    aria-label={`Preview ${entry.name}`}
-                    aria-pressed={isSelected}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setSelectedColorName(entry.name);
-                      setImageIndex(0);
-                    }}
-                    className="flex h-3.5 w-3.5 sm:h-4 sm:w-4 items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b6f4e] cursor-pointer"
-                  >
-                    {entry.hex ? (
-                      <span
-                        style={{ background: bgGradient || entry.hex }}
-                        className={`block h-3 w-3 sm:h-3.5 sm:w-3.5 rounded-full border transition-all ${
-                          isSelected
-                            ? "ring-1 ring-stone-900 ring-offset-1 scale-105 border-transparent"
-                            : "border-stone-300/80 hover:border-stone-400"
-                        }`}
-                      />
-                    ) : (
-                      <span className="rounded border px-1 text-[9px] border-stone-200">
-                        {entry.name}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-              {colors.length > 5 && (
-                <Link
-                  to={href}
-                  aria-label={`View all ${colors.length} colours`}
-                  className="px-0.5 text-[10px] text-stone-500 hover:text-[#8b6f4e]"
-                >
-                  +{colors.length - 5}
-                </Link>
-              )}
-            </div>
-          )}
+          </h3>
         </div>
       </div>
 
-      {/* Price (Left-aligned at bottom) */}
-      <div className="pt-1 flex items-baseline justify-start gap-1.5 text-left flex-wrap w-full">
-        {(() => {
-          const isSilver =
-            Boolean(data.isSilver) ||
-            String(product?.productType || product?.representative?.productType || '').toLowerCase() === 'silver' ||
-            Boolean(product?.isOrnate || product?.representative?.isOrnate);
+      {/* Bottom Section: Swatches & Price (Centered) */}
+      <div className="text-center">
+        {colors && colors.length > 0 && (
+          <div
+            className="flex justify-center items-center gap-1 sm:gap-1.5 mb-1 sm:mb-1.5 mt-0.5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {colors.slice(0, 5).map((entry) => {
+              const isSelected = Boolean(
+                activeColorName && entry.name?.toLowerCase() === activeColorName.toLowerCase(),
+              );
+              const bg = entry.colorCodeEnd
+                ? `linear-gradient(135deg, ${entry.hex || entry.colorCode}, ${entry.colorCodeEnd})`
+                : entry.hex || entry.colorCode || "#ccc";
 
-          const salePrice =
-            data.salePrice ||
-            product?.pricing?.salePrice ||
-            product?.representative?.pricing?.salePrice ||
-            data.price;
-
-          const mrp =
-            data.mrp ||
-            product?.pricing?.mrp ||
-            product?.representative?.pricing?.mrp ||
-            data.originalPrice;
-
-          const hasDiscount = mrp && Number(mrp) > Number(salePrice);
-
-          if (isSilver) {
-            return (
-              <>
-                <span className="text-xs sm:text-[13.5px] font-bold text-stone-900 tracking-tight">
-                  {formatProductPrice(salePrice) || "Price on request"}
-                </span>
-                {hasDiscount && (
-                  <span className="text-[11px] sm:text-xs text-stone-400 line-through font-normal">
-                    {formatProductPrice(mrp)}
-                  </span>
-                )}
-              </>
-            );
-          }
-
-          if (isGroup && product?.pricing?.minPrice && product?.pricing?.maxPrice && product.pricing.minPrice !== product.pricing.maxPrice) {
-            return (
-              <span className="text-xs sm:text-[13.5px] font-bold text-stone-900 tracking-tight">
-                {formatProductPrice(product.pricing.minPrice)} – {formatProductPrice(product.pricing.maxPrice)}
+              return (
+                <button
+                  key={entry.id || entry.name}
+                  type="button"
+                  title={entry.name}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSelectedColorName(entry.name);
+                    setImageIndex(0);
+                  }}
+                  className={`w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full border transition-all cursor-pointer ${
+                    isSelected ? "ring-1 ring-black scale-110" : "border-gray-200"
+                  }`}
+                  style={{ background: bg }}
+                />
+              );
+            })}
+            {colors.length > 5 && (
+              <span className="text-[10px] text-gray-400 self-center">
+                +{colors.length - 5}
               </span>
-            );
-          }
+            )}
+          </div>
+        )}
 
-          return (
+        <div className="flex flex-wrap items-center justify-center gap-1.5 text-center">
+          {isGroup &&
+          product?.pricing?.minPrice &&
+          product?.pricing?.maxPrice &&
+          product.pricing.minPrice !== product.pricing.maxPrice ? (
+            <p className="text-[11px] sm:text-[14px] text-gray-900 font-bold tracking-tight">
+              {formatProductPrice(product.pricing.minPrice)} – {formatProductPrice(product.pricing.maxPrice)}
+            </p>
+          ) : (
             <>
-              <span className="text-xs sm:text-[13.5px] font-bold text-stone-900 tracking-tight">
-                {formatProductPrice(data.price) || "Price on request"}
-              </span>
-              {data.originalPrice && Number(data.originalPrice) > Number(data.price) && (
-                <span className="text-[11px] sm:text-xs text-stone-400 line-through font-normal">
-                  {formatProductPrice(data.originalPrice)}
-                </span>
+              <p className="text-[11px] sm:text-[14px] text-gray-900 font-bold tracking-tight">
+                {formatProductPrice(salePrice) || "Price on request"}
+              </p>
+              {hasDiscount && (
+                <p className="text-[9px] sm:text-[11px] text-gray-400 line-through font-normal">
+                  {formatProductPrice(mrp)}
+                </p>
               )}
             </>
-          );
-        })()}
+          )}
+        </div>
       </div>
 
       {previewOpen && (
         <ImagePreview
           images={previewImages}
-          name={data.name}
+          name={title}
           onClose={() => setPreviewOpen(false)}
         />
       )}
-    </article>
+    </div>
   );
 }

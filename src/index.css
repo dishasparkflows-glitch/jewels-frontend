@@ -100,23 +100,7 @@
 .store-shell .rounded-2xl { border-radius: 9px; }
 .store-shell .rounded-xl { border-radius: 6px; }
 
-.store-shell article.group {
-  border-color: transparent;
-  border-radius: 0;
-  background: transparent;
-  padding: 0;
-}
 
-.store-shell article.group > div:first-child {
-  border-radius: 0;
-  background: #f3f0eb;
-}
-
-.store-shell article.group > div:first-child img {
-  padding: 1rem;
-}
-
-.store-shell article.group a:hover { color: var(--jewel-accent); }
 .store-shell .btn-primary { background-color: var(--jewel-primary); }
 .store-shell .rounded-3xl { border-radius: var(--jewel-radius); }
 .store-shell .rounded-2xl { border-radius: calc(var(--jewel-radius) * .8); }
