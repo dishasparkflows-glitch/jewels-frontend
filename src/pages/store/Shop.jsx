@@ -2,9 +2,9 @@ import api from '../../api/axios';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { HiOutlineAdjustments, HiOutlineX, HiOutlineTrash } from 'react-icons/hi';
+import { HiOutlineAdjustments, HiOutlineX } from 'react-icons/hi';
 import ProductCard from '../../components/product/ProductCard';
-import FilterGroup from '../../components/product/FilterGroup';
+import FilterSidebar from '../../components/product/FilterSidebar';
 import Dropdown from '../../components/common/Dropdown';
 import LuxuryDivider from '../../components/common/LuxuryDivider';
 import { categoriesAPI, productsAPI } from '../../api/services';
@@ -18,16 +18,8 @@ export default function Shop() {
   const [params, setParams] = useSearchParams();
 
   const [categories, setCategories] = useState([]);
-  const [diamondTypes, setDiamondTypes] = useState([]);
-  const [diamondClarities, setDiamondClarities] = useState([]);
-  const [caratWeights, setCaratWeights] = useState([]);
-  const [collections, setCollections] = useState([]);
-  const [shopForOptions, setShopForOptions] = useState([
-    { value: 'Women', label: 'Women' },
-    { value: 'Men', label: 'Men' },
-    { value: 'Kids', label: 'Kids' },
-    { value: 'Unisex', label: 'Unisex' },
-  ]);
+  const [dynamicFilters, setDynamicFilters] = useState([]);
+  const [loadingFilters, setLoadingFilters] = useState(false);
 
   const [products, setProducts] = useState([]);
   const [pagination, setPagination] = useState({ totalDocs: 0, totalPages: 0 });
@@ -45,7 +37,6 @@ export default function Shop() {
 
   const menuItem = params.get('menuItem') || '';
   const shopFor = params.get('shopFor') || '';
-  const selectedAudiences = shopFor.split(',').filter(Boolean);
   const search = params.get('search') || '';
   const minPrice = params.get('minPrice') || '';
   const maxPrice = params.get('maxPrice') || '';
@@ -53,94 +44,146 @@ export default function Shop() {
   const selectedClarity = params.get('clarity') || '';
   const selectedCarat = params.get('carat') || '';
   const selectedCollection = params.get('collection') || '';
-  const selectedBirthstone = params.get('birthstone') || '';
+  const selectedMetal = params.get('metal') || '';
+  const selectedStockStatus = params.get('stockStatus') || '';
   const sort = params.get('sort') || 'newest';
   const page = Math.max(1, Number(params.get('page')) || 1);
 
-  // 1. Fetch Navigation & Common Filters in parallel (Single common API returning needed value & _id)
+  // 1. Fetch Categories for navigation
   useEffect(() => {
     let current = true;
-
-    Promise.allSettled([
-      categoriesAPI.getNavigation(),
-      api.get('/products/filters'),
-    ]).then(([catsRes, filtersRes]) => {
-      if (!current) return;
-
-      if (catsRes.status === 'fulfilled') {
-        setCategories(getItems(catsRes.value));
+    categoriesAPI
+      .getNavigation()
+      .then((catsRes) => {
+        if (!current) return;
+        setCategories(getItems(catsRes));
         setNavigationError(false);
-      } else {
-        setNavigationError(true);
-      }
-
-      if (filtersRes.status === 'fulfilled') {
-        const filtersData = filtersRes.value?.data?.data;
-        if (Array.isArray(filtersData)) {
-          // If returned as an array of filter groups
-          filtersData.forEach((group) => {
-            if ((group.key === 'diamondType' || group.id === 'diamond-types') && Array.isArray(group.options)) {
-              setDiamondTypes(group.options);
-            }
-            if ((group.key === 'clarity' || group.id === 'diamond-clarities') && Array.isArray(group.options)) {
-              setDiamondClarities(group.options);
-            }
-            if ((group.key === 'carat' || group.id === 'carat-weights') && Array.isArray(group.options)) {
-              setCaratWeights(group.options);
-            }
-            if ((group.key === 'collection' || group.id === 'collections') && Array.isArray(group.options)) {
-              setCollections(group.options);
-            }
-          });
-        } else if (filtersData && typeof filtersData === 'object') {
-          // If returned as an object with arrays
-          if (Array.isArray(filtersData.diamondTypes)) setDiamondTypes(filtersData.diamondTypes);
-          if (Array.isArray(filtersData.diamondClarities)) setDiamondClarities(filtersData.diamondClarities);
-          if (Array.isArray(filtersData.caratWeights)) setCaratWeights(filtersData.caratWeights);
-          if (Array.isArray(filtersData.collections)) setCollections(filtersData.collections);
-        }
-      }
-    }).finally(() => {
-      if (current) setNavigationReady(true);
-    });
+      })
+      .catch(() => {
+        if (current) setNavigationError(true);
+      })
+      .finally(() => {
+        if (current) setNavigationReady(true);
+      });
 
     return () => { current = false; };
   }, [retry]);
 
-  // 2. Fetch Products
+  // 2. Fetch Category-Specific Filters Dynamically
+  useEffect(() => {
+    let current = true;
+    setLoadingFilters(true);
+    const catQuery = categoryId || categoryParam;
+
+    api
+      .get('/filters', { params: catQuery ? { category: catQuery } : {} })
+      .then((res) => {
+        if (!current) return;
+        const data = res.data?.data;
+        const filterList = Array.isArray(data) ? data : (data?.filters || []);
+        setDynamicFilters(filterList);
+
+        // When switching category, prune incompatible filter keys from URL params
+        if (catQuery && filterList.length > 0) {
+          const validKeys = new Set([
+            'category',
+            'menuItem',
+            'search',
+            'sort',
+            'page',
+            'minPrice',
+            'maxPrice',
+            ...filterList.map((f) => f.key),
+          ]);
+          const next = new URLSearchParams(params);
+          let changed = false;
+          for (const key of Array.from(next.keys())) {
+            if (!validKeys.has(key)) {
+              next.delete(key);
+              changed = true;
+            }
+          }
+          if (changed) {
+            setParams(next, { replace: true });
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load category filters:', err);
+      })
+      .finally(() => {
+        if (current) setLoadingFilters(false);
+      });
+
+    return () => { current = false; };
+  }, [categoryParam, categoryId]);
+
+  // 3. Fetch Products with all active filters executed on backend
   useEffect(() => {
     if (!navigationReady) return;
     let current = true;
     setLoading(true);
     setError('');
 
-    const query = { status: 'approved', page, limit: 24, sort, includeFacets: true, includeGroups: true };
-    if (shopFor) query.shopFor = shopFor;
-    if (categoryId) query.category = categoryId;
+    const query = {
+      status: 'approved',
+      page,
+      limit: 24,
+      sort,
+      includeFacets: true,
+      includeGroups: true,
+    };
+    if (categoryId || categoryParam) query.category = categoryId || categoryParam;
     if (menuItem) query.menuItem = menuItem;
+    if (shopFor) query.shopFor = shopFor;
     if (search) query.search = search;
     if (minPrice) query.minPrice = minPrice;
     if (maxPrice) query.maxPrice = maxPrice;
+    if (selectedDiamondType) query.diamondType = selectedDiamondType;
+    if (selectedClarity) query.clarity = selectedClarity;
+    if (selectedCarat) query.carat = selectedCarat;
+    if (selectedCollection) query.collection = selectedCollection;
+    if (selectedMetal) query.metal = selectedMetal;
+    if (selectedStockStatus) query.stockStatus = selectedStockStatus;
 
-    productsAPI.getAll(query).then((response) => {
-      if (current) {
-        setProducts(getItems(response));
-        if (response.data?.facets?.shopFor?.length) {
-          setShopForOptions(response.data.facets.shopFor);
+    productsAPI
+      .getAll(query)
+      .then((response) => {
+        if (current) {
+          setProducts(getItems(response));
+          setPagination(response.data?.pagination || { totalDocs: getItems(response).length, totalPages: 1 });
         }
-        setPagination(response.data?.pagination || { totalDocs: getItems(response).length, totalPages: 1 });
-      }
-    }).catch(() => {
-      if (current) {
-        setError('We could not load the jewellery collection. Please try again.');
-        setProducts([]);
-      }
-    }).finally(() => {
-      if (current) setLoading(false);
-    });
+      })
+      .catch(() => {
+        if (current) {
+          setError('We could not load the jewellery collection. Please try again.');
+          setProducts([]);
+        }
+      })
+      .finally(() => {
+        if (current) setLoading(false);
+      });
 
     return () => { current = false; };
-  }, [navigationReady, categoryId, menuItem, search, minPrice, maxPrice, sort, page, retry, shopFor]);
+  }, [
+    navigationReady,
+    categoryId,
+    categoryParam,
+    menuItem,
+    search,
+    minPrice,
+    maxPrice,
+    sort,
+    page,
+    retry,
+    shopFor,
+    selectedDiamondType,
+    selectedClarity,
+    selectedCarat,
+    selectedCollection,
+    selectedMetal,
+    selectedStockStatus,
+  ]);
 
   function updateFilters(changes) {
     const next = new URLSearchParams(params);
@@ -164,78 +207,67 @@ export default function Shop() {
 
   // Active filters check
   const filtersActive =
-    categoryParam ||
-    menuItem ||
-    search ||
-    minPrice ||
-    maxPrice ||
-    shopFor ||
-    selectedDiamondType ||
-    selectedClarity ||
-    selectedCarat ||
-    selectedCollection ||
-    selectedBirthstone;
-
-  // Client-side attribute refinement for granular master filters
-  const displayedProducts = products.filter((prod) => {
-    const text = `${prod.basicInfo?.title || prod.name || ''} ${prod.basicInfo?.description || ''}`.toLowerCase();
-    if (selectedDiamondType) {
-      const dtLower = selectedDiamondType.toLowerCase();
-      const matchInText = text.includes(dtLower) || (dtLower.includes('lab') && text.includes('lab'));
-      const matchInRows = prod.centerDiamondRows?.some((r) => r.diamondTypeId?.name?.toLowerCase() === dtLower);
-      if (!matchInText && !matchInRows) return false;
-    }
-    if (selectedClarity) {
-      const clarityLower = selectedClarity.toLowerCase();
-      const matchInText = text.includes(clarityLower);
-      const matchInRows = prod.centerDiamondRows?.some((r) => r.diamondClarityId?.name?.toLowerCase() === clarityLower);
-      if (!matchInText && !matchInRows) return false;
-    }
-    if (selectedCarat) {
-      const numMatch = selectedCarat.match(/[\d.]+/);
-      if (numMatch) {
-        const val = parseFloat(numMatch[0]);
-        const caratInProd = prod.pricing?.baseCarat || prod.specifications?.metalWeight;
-        if (caratInProd && Math.abs(caratInProd - val) > 0.3) {
-          // Keep if text matches
-          if (!text.includes(numMatch[0])) return false;
-        }
-      }
-    }
-    if (selectedBirthstone) {
-      if (!text.includes(selectedBirthstone.toLowerCase())) return false;
-    }
-    if (selectedCollection) {
-      if (!text.includes(selectedCollection.toLowerCase())) return false;
-    }
-    return true;
-  });
-
-  const displayCount = (selectedDiamondType || selectedClarity || selectedCarat || selectedCollection || selectedBirthstone)
-    ? displayedProducts.length
-    : (pagination.totalDocs || products.length);
+    !!categoryParam ||
+    !!menuItem ||
+    !!search ||
+    !!minPrice ||
+    !!maxPrice ||
+    !!shopFor ||
+    !!selectedDiamondType ||
+    !!selectedClarity ||
+    !!selectedCarat ||
+    !!selectedCollection ||
+    !!selectedMetal ||
+    !!selectedStockStatus;
 
   // Active chips array
-  const activeChips = [
-    category?.name && { label: category.name, onRemove: () => updateFilters({ category: '', menuItem: '' }) },
-    search && { label: `Search: ${search}`, onRemove: () => updateFilters({ search: '' }) },
-    (minPrice || maxPrice) && {
+  const activeChips = [];
+  if (category?.name) {
+    activeChips.push({
+      label: category.name,
+      onRemove: () => updateFilters({ category: '', menuItem: '' }),
+    });
+  }
+  if (search) {
+    activeChips.push({
+      label: `Search: ${search}`,
+      onRemove: () => updateFilters({ search: '' }),
+    });
+  }
+  if (minPrice || maxPrice) {
+    activeChips.push({
       label: `₹${minPrice || '0'} – ${maxPrice ? `₹${maxPrice}` : 'Any'}`,
       onRemove: () => updateFilters({ minPrice: '', maxPrice: '' }),
-    },
-    ...selectedAudiences.map((aud) => ({
-      label: aud,
-      onRemove: () =>
-        updateFilters({
-          shopFor: selectedAudiences.filter((v) => v !== aud).join(','),
-        }),
-    })),
-    selectedDiamondType && { label: selectedDiamondType, onRemove: () => updateFilters({ diamondType: '' }) },
-    selectedClarity && { label: selectedClarity, onRemove: () => updateFilters({ clarity: '' }) },
-    selectedCarat && { label: selectedCarat, onRemove: () => updateFilters({ carat: '' }) },
-    selectedCollection && { label: selectedCollection, onRemove: () => updateFilters({ collection: '' }) },
-    selectedBirthstone && { label: selectedBirthstone, onRemove: () => updateFilters({ birthstone: '' }) },
-  ].filter(Boolean);
+    });
+  }
+
+  const multiFilterKeys = [
+    'shopFor',
+    'diamondType',
+    'clarity',
+    'carat',
+    'collection',
+    'metal',
+    'stockStatus',
+  ];
+
+  multiFilterKeys.forEach((key) => {
+    const raw = params.get(key) || '';
+    if (!raw) return;
+    const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
+    parts.forEach((val) => {
+      activeChips.push({
+        label: val,
+        onRemove: () => {
+          const nextParts = parts.filter((p) => p !== val);
+          updateFilters({ [key]: nextParts.join(',') });
+        },
+      });
+    });
+  });
+
+  const displayedProducts = products;
+  const displayCount = pagination.totalDocs || products.length;
 
   // 1st display gold products, then silver products (unless explicit price sort)
   const sortedDisplayedProducts = useMemo(() => {
@@ -307,272 +339,25 @@ export default function Shop() {
         {/* ─── Main Grid: Left Filters & Right Products ─── */}
         <div className="grid items-start gap-8 lg:grid-cols-[260px_minmax(0,1fr)] xl:gap-12">
           {/* Left Filter Sidebar */}
-          <aside aria-label="Product filters" className="min-w-0">
-            {/* Header: Filters + CLEAR ALL */}
-            <div className="flex items-center justify-between pb-3 border-b border-stone-200/80">
-              <h2 className="text-xs sm:text-[13px] font-bold uppercase tracking-wider text-stone-900">
-                Filters
-              </h2>
-              {filtersActive && (
-                <button
-                  type="button"
-                  onClick={() => setParams({})}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] text-xs font-medium transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
-                >
-                  <HiOutlineTrash className="w-3.5 h-3.5 text-[#8b6f4e]" />
-                  <span>Clear All</span>
-                </button>
-              )}
-            </div>
-
-            <div id="catalogue-filters" className={`${mobileFilters ? 'block' : 'hidden'} lg:block`}>
-              {/* 1. JEWELLERY TYPES */}
-              <FilterGroup title="Jewellery Types" defaultOpen={!!category}>
-                {navigationError ? (
-                  <button onClick={() => setRetry((v) => v + 1)} className="text-xs text-red-600 underline">
-                    Retry loading
-                  </button>
-                ) : (
-                  categories.map((entry) => {
-                    const isChecked = categoryId === entry._id || categoryParam === entry.slug;
-                    return (
-                      <label key={entry._id} className="flex cursor-pointer items-center justify-between text-xs text-stone-700 hover:text-stone-900 py-1">
-                        <span className="flex items-center gap-2.5">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() =>
-                              updateFilters({
-                                category: isChecked ? '' : (entry.slug || entry._id),
-                                menuItem: '',
-                              })
-                            }
-                            className="h-3.5 w-3.5 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] cursor-pointer"
-                          />
-                          <span>{entry.name}</span>
-                        </span>
-                      </label>
-                    );
-                  })
-                )}
-              </FilterGroup>
-
-              {/* 2. PRICE RANGE */}
-              <FilterGroup title="Price Range" defaultOpen={!!(minPrice || maxPrice)}>
-                <form key={`${minPrice}-${maxPrice}`} onSubmit={applyPrice} className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="space-y-1 text-[11px] text-stone-600">
-                      Min (₹)
-                      <input
-                        name="minPrice"
-                        type="number"
-                        min="0"
-                        step="1"
-                        defaultValue={minPrice}
-                        placeholder="0"
-                        className="w-full rounded border border-stone-300 p-2 text-xs focus:outline-none focus:border-[#8b6f4e]"
-                      />
-                    </label>
-                    <label className="space-y-1 text-[11px] text-stone-600">
-                      Max (₹)
-                      <input
-                        name="maxPrice"
-                        type="number"
-                        min="0"
-                        step="1"
-                        defaultValue={maxPrice}
-                        placeholder="Any"
-                        className="w-full rounded border border-stone-300 p-2 text-xs focus:outline-none focus:border-[#8b6f4e]"
-                      />
-                    </label>
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full rounded border border-stone-300 py-1.5 text-xs font-semibold hover:bg-stone-50 cursor-pointer transition-colors"
-                  >
-                    Apply price
-                  </button>
-                </form>
-              </FilterGroup>
-
-              {/* 3. DIAMOND WEIGHT */}
-              <FilterGroup title="Diamond Weight" defaultOpen={!!selectedCarat}>
-                {caratWeights.length ? (
-                  caratWeights.map((cw) => {
-                    const label = cw.name || cw.weight || cw.range || (typeof cw === 'string' ? cw : '');
-                    if (!label) return null;
-                    const isChecked = selectedCarat === label;
-                    return (
-                      <label key={label} className="flex cursor-pointer items-center justify-between text-xs text-stone-700 hover:text-stone-900 py-1">
-                        <span className="flex items-center gap-2.5">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => updateFilters({ carat: isChecked ? '' : label })}
-                            className="h-3.5 w-3.5 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] cursor-pointer"
-                          />
-                          <span>{label}</span>
-                        </span>
-                      </label>
-                    );
-                  })
-                ) : (
-                  ['0.50 Carat', '0.75 Carat', '1.00 Carat', '1.50 Carat', '2.00 Carat'].map((label) => {
-                    const isChecked = selectedCarat === label;
-                    return (
-                      <label key={label} className="flex cursor-pointer items-center justify-between text-xs text-stone-700 hover:text-stone-900 py-1">
-                        <span className="flex items-center gap-2.5">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => updateFilters({ carat: isChecked ? '' : label })}
-                            className="h-3.5 w-3.5 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] cursor-pointer"
-                          />
-                          <span>{label}</span>
-                        </span>
-                      </label>
-                    );
-                  })
-                )}
-              </FilterGroup>
-
-              {/* 4. DIAMOND TYPE */}
-              <FilterGroup title="Diamond Type" defaultOpen={!!selectedDiamondType}>
-                {(diamondTypes.length ? diamondTypes : [{ name: 'Natural Diamond' }, { name: 'Lab Grown Diamond' }]).map((dt) => {
-                  const label = dt.name || (typeof dt === 'string' ? dt : '');
-                  if (!label) return null;
-                  const isChecked = selectedDiamondType === label;
-                  return (
-                    <label key={label} className="flex cursor-pointer items-center justify-between text-xs text-stone-700 hover:text-stone-900 py-1">
-                      <span className="flex items-center gap-2.5">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => updateFilters({ diamondType: isChecked ? '' : label })}
-                          className="h-3.5 w-3.5 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] cursor-pointer"
-                        />
-                        <span>{label}</span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </FilterGroup>
-
-              {/* 5. COLLECTIONS */}
-              <FilterGroup title="Collections" defaultOpen={!!selectedCollection || !!menuItem}>
-                {(collections.length ? collections : [{ name: 'Solitaire Jewellery' }, { name: 'Eternal Sparkle' }, { name: 'Heart Jewellery' }]).map((coll) => {
-                  const label = coll.name || coll.title || (typeof coll === 'string' ? coll : '');
-                  if (!label) return null;
-                  const isChecked = selectedCollection === label;
-                  return (
-                    <label key={label} className="flex cursor-pointer items-center justify-between text-xs text-stone-700 hover:text-stone-900 py-1">
-                      <span className="flex items-center gap-2.5">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => updateFilters({ collection: isChecked ? '' : label })}
-                          className="h-3.5 w-3.5 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] cursor-pointer"
-                        />
-                        <span>{label}</span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </FilterGroup>
-
-              {/* 6. DIAMOND CLARITIES */}
-              <FilterGroup title="Diamond Clarities" defaultOpen={!!selectedClarity}>
-                {(diamondClarities.length ? diamondClarities : [{ name: 'SI' }, { name: 'VS' }, { name: 'VVS' }, { name: 'FL-IF' }]).map((dc) => {
-                  const label = dc.name || (typeof dc === 'string' ? dc : '');
-                  if (!label) return null;
-                  const isChecked = selectedClarity === label;
-                  return (
-                    <label key={label} className="flex cursor-pointer items-center justify-between text-xs text-stone-700 hover:text-stone-900 py-1">
-                      <span className="flex items-center gap-2.5">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => updateFilters({ clarity: isChecked ? '' : label })}
-                          className="h-3.5 w-3.5 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] cursor-pointer"
-                        />
-                        <span>{label}</span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </FilterGroup>
-
-              {/* 7. BIRTHSTONES (Disabled for now as requested) */}
-              {/*
-              <FilterGroup title="Birthstones" defaultOpen={!!selectedBirthstone}>
-                {birthstones.length ? (
-                  birthstones.map((bs) => {
-                    const label = bs.stoneName ? `${bs.stoneName} (${bs.month})` : (bs.name || '');
-                    const val = bs.stoneName || bs.name || '';
-                    if (!val) return null;
-                    const isChecked = selectedBirthstone === val;
-                    return (
-                      <label key={val} className="flex cursor-pointer items-center justify-between text-xs text-stone-700 hover:text-stone-900 py-1">
-                        <span className="flex items-center gap-2.5">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => updateFilters({ birthstone: isChecked ? '' : val })}
-                            className="h-3.5 w-3.5 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] cursor-pointer"
-                          />
-                          <span>{label}</span>
-                        </span>
-                      </label>
-                    );
-                  })
-                ) : (
-                  ['Aquamarine (March)', 'Diamond (April)', 'Emerald (May)', 'Ruby (July)', 'Sapphire (September)'].map((label) => {
-                    const isChecked = selectedBirthstone === label;
-                    return (
-                      <label key={label} className="flex cursor-pointer items-center justify-between text-xs text-stone-700 hover:text-stone-900 py-1">
-                        <span className="flex items-center gap-2.5">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => updateFilters({ birthstone: isChecked ? '' : label })}
-                            className="h-3.5 w-3.5 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] cursor-pointer"
-                          />
-                          <span>{label}</span>
-                        </span>
-                      </label>
-                    );
-                  })
-                )}
-              </FilterGroup>
-              */}
-
-              {/* 8. GENDER */}
-              <FilterGroup title="Gender" defaultOpen={!!selectedAudiences.length}>
-                {shopForOptions.map((option) => (
-                  <label key={option.value} className="flex cursor-pointer items-center justify-between text-xs text-stone-700 hover:text-stone-900 py-1">
-                    <span className="flex items-center gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={selectedAudiences.includes(option.value)}
-                        onChange={() =>
-                          updateFilters({
-                            shopFor: selectedAudiences.includes(option.value)
-                              ? selectedAudiences.filter((v) => v !== option.value).join(',')
-                              : [...selectedAudiences, option.value].join(','),
-                          })
-                        }
-                        className="h-3.5 w-3.5 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] cursor-pointer"
-                      />
-                      <span>{option.label}</span>
-                    </span>
-                    {typeof option.count === 'number' && (
-                      <span className="text-[11px] text-stone-400">({option.count})</span>
-                    )}
-                  </label>
-                ))}
-              </FilterGroup>
-            </div>
-          </aside>
+          <div className={`${mobileFilters ? 'block' : 'hidden'} lg:block`}>
+            <FilterSidebar
+              filters={dynamicFilters}
+              loading={loadingFilters}
+              params={params}
+              onFilterChange={(key, value, isCategory) => {
+                if (isCategory) {
+                  updateFilters({ category: value, menuItem: '' });
+                } else {
+                  updateFilters({ [key]: value });
+                }
+              }}
+              onPriceChange={(min, max) => updateFilters({ minPrice: min, maxPrice: max })}
+              onClearAll={() => setParams({})}
+              filtersActive={filtersActive}
+              categories={categories}
+              currentCategoryParam={categoryParam}
+            />
+          </div>
 
           {/* Right Product Grid Column */}
           <section aria-label="Jewellery catalogue" aria-busy={loading} className="min-w-0">

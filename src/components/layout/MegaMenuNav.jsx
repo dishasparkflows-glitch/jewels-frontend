@@ -179,7 +179,7 @@ export default function MegaMenuNav({ categories, mobile = false, onNavigate, er
   return (
     <div
       ref={root}
-      style={mobile ? undefined : { backgroundColor: 'var(--storefront-header-bg, #22201e)' }}
+      style={mobile ? undefined : { backgroundColor: 'var(--storefront-header-bg, #201e1b)' }}
       className={mobile ? '' : 'relative w-full border-b border-white/10'}
       onMouseLeave={mobile ? undefined : () => setActiveId(null)}
       onBlur={(event) => {

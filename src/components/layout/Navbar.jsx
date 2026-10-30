@@ -243,11 +243,11 @@ const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full shadow-sm font-sans">
-      {/* ─── Top announcement bar (Neirah Taupe #60574d) ───────────── */}
+      {/* ─── Top announcement bar (Neirah Charcoal) ───────────── */}
       {!isCheckout && (
         <div
           style={{
-            backgroundColor: 'var(--storefront-topbar-bg, #60574d)',
+            backgroundColor: 'var(--storefront-topbar-bg, #201e1b)',
             color: 'var(--storefront-topbar-text, #ffffff)',
           }}
           className="text-[10px] sm:text-xs py-1.5 px-3 sm:px-4 border-b border-black/10"
@@ -302,10 +302,10 @@ const Navbar = () => {
       </div>
       )}
 
-      {/* ─── Main Header / Brand & Search Bar (#22201e) ───────────── */}
+      {/* ─── Main Header / Brand & Search Bar (#201e1b) ───────────── */}
       <div
         style={{
-          backgroundColor: 'var(--storefront-header-bg, #22201e)',
+          backgroundColor: 'var(--storefront-header-bg, #201e1b)',
           color: 'var(--storefront-header-text, #ffffff)',
         }}
         className="px-4 sm:px-6 lg:px-8 border-b border-white/5"
@@ -679,7 +679,7 @@ const Navbar = () => {
 
                   {userDropdownOpen && (
                     <div
-                      style={{ backgroundColor: 'var(--storefront-header-bg, #22201e)' }}
+                      style={{ backgroundColor: 'var(--storefront-header-bg, #201e1b)' }}
                       className="absolute right-0 mt-2 w-52 border border-stone-800 rounded-xl shadow-2xl py-2 z-50 text-xs"
                     >
                       <div className="px-4 py-2 border-b border-stone-800">
@@ -745,7 +745,7 @@ const Navbar = () => {
       {/* ─── Mobile Instant Search Bar ──────────────────────────────── */}
       {mobileSearchOpen && (
         <div
-          style={{ backgroundColor: 'var(--storefront-header-bg, #22201e)' }}
+          style={{ backgroundColor: 'var(--storefront-header-bg, #201e1b)' }}
           className="md:hidden border-b border-stone-800 px-4 py-3 animate-fadeIn"
         >
           <form
@@ -879,7 +879,7 @@ const Navbar = () => {
       {/* ─── Mobile Drawer ───────────────────────────────────────── */}
       {mobileMenuOpen && (
         <div
-          style={{ backgroundColor: 'var(--storefront-header-bg, #22201e)' }}
+          style={{ backgroundColor: 'var(--storefront-header-bg, #201e1b)' }}
           className="lg:hidden border-b border-stone-800 px-4 sm:px-6 py-5 space-y-5 animate-slide-up"
         >
           {/* Mobile Search */}

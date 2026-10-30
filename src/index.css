@@ -56,19 +56,19 @@
 }
 
 :root {
-  --btn-primary-bg: #1f3a2b;
-  --btn-primary-hover: #162b20;
+  --btn-primary-bg: #8b6f4e;
+  --btn-primary-hover: #755c3e;
   --btn-primary-text: #ffffff;
 }
 
 .btn-theme-primary {
-  background-color: var(--btn-primary-bg, #1f3a2b) !important;
+  background-color: var(--btn-primary-bg, #8b6f4e) !important;
   color: var(--btn-primary-text, #ffffff) !important;
   transition: all 0.2s ease-in-out;
 }
 
 .btn-theme-primary:hover {
-  background-color: var(--btn-primary-hover, #162b20) !important;
+  background-color: var(--btn-primary-hover, #755c3e) !important;
 }
 
 /* One visual language for every customer facing route. */

@@ -292,12 +292,12 @@ const Home = () => {
     return () => clearInterval(timer);
   }, [effectiveHeroBanners.length]);
 
-  // ─── 2. FETCH ALL FEATURED SHOWCASES (Celebrate & Gifts in a single API call) ───
+  // ─── 2. FETCH ALL FEATURED SHOWCASES (Celebrate & Gifts via lightweight lookup API) ───
   useEffect(() => {
     const fetchFeatured = async () => {
       try {
-        const res = await featuredAPI.getAll({ status: 'active', limit: 100 });
-        const list = res?.data?.data?.items || res?.data?.data || [];
+        const res = await featuredAPI.getLookup({ status: 'active' });
+        const list = Array.isArray(res?.data?.data) ? res.data.data : (res?.data?.data?.items || []);
         if (Array.isArray(list)) {
           const featuredSelections = themeConfig?.featuredSelections || [];
 

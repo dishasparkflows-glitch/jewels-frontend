@@ -64,7 +64,7 @@ export default function CartDrawer({ open, onClose }) {
             <span>{formatPrice(subtotal)}</span>
           </div>
           <p className="mt-2 text-[11px] text-stone-500">Shipping and taxes are calculated at checkout.</p>
-          <Link to="/cart" onClick={onClose} className={`mt-5 flex w-full items-center justify-center bg-[#201e1b] py-4 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#92704e] ${cart.length ? '' : 'pointer-events-none opacity-40'}`} aria-disabled={!cart.length}>
+          <Link to="/cart" onClick={onClose} className={`btn-theme-primary mt-5 flex w-full items-center justify-center py-4 text-xs font-semibold uppercase tracking-[0.2em] transition ${cart.length ? '' : 'pointer-events-none opacity-40'}`} aria-disabled={!cart.length}>
             Checkout
           </Link>
           <Link to="/cart" onClick={onClose} className="mt-4 block text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[#92704e] underline underline-offset-4">

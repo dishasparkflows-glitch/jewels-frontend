@@ -73,13 +73,13 @@ export function StoreSettingsProvider({ children }) {
   useEffect(() => {
     const root = document.documentElement;
     const colors = settings?.themeColors || {};
-    const btnBg = colors.buttonColor || settings?.buttonColor || theme?.colors?.primary || '#1f3a2b';
-    const btnHover = colors.buttonHoverColor || settings?.buttonHoverColor || '#162b20';
-    const btnText = colors.buttonTextColor || settings?.buttonTextColor || '#ffffff';
+    const btnBg = colors.buttonColor || settings?.buttonColor || theme?.colors?.primary || '#8b6f4e';
+    const btnHover = colors.buttonHoverColor || settings?.buttonHoverColor || '#755c3e';
+    const btnText = colors.buttonTextColor || '#ffffff';
 
-    const topBarBg = colors.topBarBgColor || '#60574d';
+    const topBarBg = colors.topBarBgColor || '#201e1b';
     const topBarText = colors.topBarTextColor || '#ffffff';
-    const headerBg = colors.headerBgColor || '#22201e';
+    const headerBg = colors.headerBgColor || '#201e1b';
     const headerText = colors.headerTextColor || '#ffffff';
     const footerBg = colors.footerBgColor || '#0f0d0b';
     const footerText = colors.footerTextColor || '#c8b89e';
@@ -94,7 +94,7 @@ export function StoreSettingsProvider({ children }) {
     root.style.setProperty('--storefront-header-text', headerText);
     root.style.setProperty('--storefront-footer-bg', footerBg);
     root.style.setProperty('--storefront-footer-text', footerText);
-  }, [settings?.themeColors, settings?.buttonColor, settings?.buttonHoverColor, settings?.buttonTextColor, theme?.colors?.primary]);
+  }, [settings?.themeColors, theme?.colors?.primary]);
   useEffect(() => {
     const title = theme?.seo?.metaTitle;
     const description = theme?.seo?.metaDescription;
@@ -111,9 +111,10 @@ export function StoreSettingsProvider({ children }) {
   }, [theme?.seo?.metaTitle, theme?.seo?.metaDescription]);
   const themeStyle = useMemo(() => {
     const colors = theme?.colors || {};
-    const btnBg = settings?.buttonColor || colors.primary || '#1f3a2b';
-    const btnHover = settings?.buttonHoverColor || '#162b20';
-    const btnText = settings?.buttonTextColor || '#ffffff';
+    const savedButtonColors = settings?.themeColors || {};
+    const btnBg = savedButtonColors.buttonColor || settings?.buttonColor || colors.primary || '#8b6f4e';
+    const btnHover = savedButtonColors.buttonHoverColor || settings?.buttonHoverColor || '#755c3e';
+    const btnText = savedButtonColors.buttonTextColor || settings?.buttonTextColor || '#ffffff';
 
     return {
       '--btn-primary-bg': btnBg,
@@ -129,7 +130,7 @@ export function StoreSettingsProvider({ children }) {
       '--jewel-body-font': `'${theme?.typography?.bodyFont || 'Montserrat'}', system-ui, sans-serif`,
       '--jewel-radius': `${Math.min(32, Math.max(0, Number(theme?.borderRadius) || 0))}px`,
     };
-  }, [theme, settings?.buttonColor, settings?.buttonHoverColor, settings?.buttonTextColor]);
+  }, [theme, settings?.themeColors, settings?.buttonColor, settings?.buttonHoverColor, settings?.buttonTextColor]);
 
   return (
     <StoreSettingsContext.Provider value={{ settings, footerSettings, topAnnouncement, websiteConfig, theme, themeStyle, loading }}>
