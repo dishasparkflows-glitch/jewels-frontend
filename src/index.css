@@ -53,6 +53,25 @@
   ::-webkit-scrollbar-thumb:hover {
     background: #64748b;
   }
+
+  /* Custom Luxury Scrollbar for Dropdowns and Menus */
+  .luxury-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .luxury-scrollbar::-webkit-scrollbar-track {
+    background: #faf7f2;
+    border-radius: 9999px;
+  }
+
+  .luxury-scrollbar::-webkit-scrollbar-thumb {
+    background: #d6cbbf;
+    border-radius: 9999px;
+  }
+
+  .luxury-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #8b6f4e;
+  }
 }
 
 :root {
@@ -293,6 +312,21 @@ dialog.store-modal,
   .animate-announcement-vertical {
     animation: none;
   }
+}
+
+@keyframes scaleUpModal {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scaleUp {
+  animation: scaleUpModal 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Hide scrollbar utility for clean mobile and desktop horizontal sliders */

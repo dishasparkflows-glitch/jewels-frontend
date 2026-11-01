@@ -252,54 +252,67 @@ const Navbar = () => {
           }}
           className="text-[10px] sm:text-xs py-1.5 px-3 sm:px-4 border-b border-black/10"
         >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Left: Virtual Appointment */}
-          <button
-            type="button"
-            onClick={() => setAppointmentModalOpen(true)}
-            className="flex items-center gap-1.5 hover:text-white transition-colors text-white/80 cursor-pointer"
-          >
-            <HiOutlineVideoCamera className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline font-normal">Virtual Appointment</span>
-          </button>
+          <div className="relative max-w-7xl mx-auto flex items-center justify-between min-h-[24px]">
+            {/* Left: Virtual Appointment */}
+            <div className="flex-1 flex items-center justify-start min-w-0 relative z-10">
+              <button
+                type="button"
+                onClick={() => setAppointmentModalOpen(true)}
+                className="flex items-center gap-1.5 hover:text-white transition-colors text-white/80 cursor-pointer shrink-0"
+                title="Book Virtual Appointment"
+              >
+                <HiOutlineVideoCamera className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden sm:inline font-normal">Virtual Appointment</span>
+              </button>
+            </div>
 
-          <div className="min-w-0 flex-1 px-3 text-center font-medium tracking-wide sm:flex-none sm:px-0 h-6 overflow-hidden flex items-center justify-center">
-            {topAnnouncement.isEnabled && topAnnouncement.items?.length ? (() => {
-              const items = topAnnouncement.items;
-              const current = items[announcementIndex % items.length];
-              const isVertical = topAnnouncement.displayDirection === 'vertical';
-              return (
-                <div
-                  key={`${announcementIndex}-${topAnnouncement.displayDirection}`}
-                  className={`truncate ${
-                    isVertical
-                      ? 'animate-announcement-vertical'
-                      : 'animate-announcement-horizontal'
-                  }`}
+            {/* Center: Announcement (guaranteed mathematical center on all devices) */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-7 sm:px-36 md:px-44 lg:px-48">
+              <div className="pointer-events-auto min-w-0 max-w-full font-medium tracking-wide h-6 overflow-hidden flex items-center justify-center text-center">
+                {topAnnouncement.isEnabled && topAnnouncement.items?.length ? (() => {
+                  const items = topAnnouncement.items;
+                  const current = items[announcementIndex % items.length];
+                  const isVertical = topAnnouncement.displayDirection === 'vertical';
+                  return (
+                    <div
+                      key={`${announcementIndex}-${topAnnouncement.displayDirection}`}
+                      className={`truncate text-center ${
+                        isVertical
+                          ? 'animate-announcement-vertical'
+                          : 'animate-announcement-horizontal'
+                      }`}
+                      title={current?.message || ''}
+                    >
+                      {current?.link ? (
+                        <a href={current.link} className="hover:underline">
+                          {current.message}
+                        </a>
+                      ) : (
+                        current?.message
+                      )}
+                    </div>
+                  );
+                })() : (
+                  <span className="truncate">{storeSettings.companyName}</span>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Phone or balanced empty spacer */}
+            <div className="flex-1 flex items-center justify-end min-w-0 relative z-10">
+              {phoneNumber ? (
+                <a
+                  href={`tel:${phoneHref}`}
+                  className="hidden sm:flex items-center gap-1.5 hover:text-white transition-colors text-white/80 shrink-0"
+                  title={`Call ${phoneNumber}`}
                 >
-                  {current?.link ? (
-                    <a href={current.link} className="hover:underline">
-                      {current.message}
-                    </a>
-                  ) : (
-                    current?.message
-                  )}
-                </div>
-              );
-            })() : storeSettings.companyName}
+                  <HiOutlinePhone className="w-3.5 h-3.5 shrink-0" />
+                  <span className="font-normal">{phoneNumber}</span>
+                </a>
+              ) : null}
+            </div>
           </div>
-
-          {phoneNumber && (
-            <a
-              href={`tel:${phoneHref}`}
-              className="hidden sm:flex items-center gap-1.5 hover:text-white transition-colors text-white/80"
-            >
-              <HiOutlinePhone className="w-3.5 h-3.5" />
-              <span className="font-normal">{phoneNumber}</span>
-            </a>
-          )}
         </div>
-      </div>
       )}
 
       {/* ─── Main Header / Brand & Search Bar (#201e1b) ───────────── */}

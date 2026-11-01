@@ -95,6 +95,10 @@ const Profile = () => {
   // Handle outside click for modals
   useEffect(() => {
     const handleOutside = (e) => {
+      // Do not close modal if interaction occurred inside a dropdown listbox or popover
+      if (e.target?.closest?.('[role="listbox"], [role="option"], .luxury-scrollbar')) {
+        return;
+      }
       if (modalRef.current && !modalRef.current.contains(e.target)) {
         setEditProfileOpen(false);
         setAddressModalOpen(false);
@@ -955,9 +959,11 @@ const Profile = () => {
                     onChange={(val) => setAddressForm((prev) => ({ ...prev, state: val }))}
                     options={INDIAN_STATES.map((st) => ({ value: st, label: st }))}
                     placeholder="Select State"
+                    searchable={true}
+                    searchPlaceholder="Search state..."
                     prefixIcon={<HiOutlineMap className="w-4 h-4 text-stone-600" />}
                     buttonClassName="w-full flex items-center justify-between gap-2 pl-3.5 pr-4 py-2.5 rounded-xl border border-[#e5ded5] bg-white text-xs sm:text-sm text-stone-900 hover:border-[#bdae99] focus:outline-none focus:border-[#9e7a46] focus:ring-2 focus:ring-[#9e7a46]/10 transition-all cursor-pointer shadow-2xs"
-                    menuClassName="z-[100] max-h-56 shadow-xl border border-stone-200"
+                    menuClassName="z-[100] shadow-xl border border-stone-200"
                   />
                 </div>
               </div>

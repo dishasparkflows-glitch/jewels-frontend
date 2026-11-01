@@ -453,8 +453,10 @@ export default function Checkout() {
                     onChange={(val) => setForm((prev) => ({ ...prev, state: val }))}
                     options={indianStates.map((st) => ({ value: st, label: st }))}
                     placeholder="State *"
+                    searchable={true}
+                    searchPlaceholder="Search state..."
                     buttonClassName={`${selectClassName} pl-3.5 flex items-center justify-between w-full h-[46px]`}
-                    menuClassName="z-[50] max-h-56"
+                    menuClassName="z-[50]"
                   />
                 </div>
                 <label className="relative sm:col-span-2"><span className="sr-only">PIN code</span><HiOutlineLocationMarker className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="postal-code" inputMode="numeric" placeholder="PIN Code *" value={form.postalCode} onChange={updateField('postalCode')} required /></label>

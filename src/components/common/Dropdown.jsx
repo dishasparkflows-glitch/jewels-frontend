@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useId } from 'react';
-import { HiOutlineChevronDown, HiCheck } from 'react-icons/hi';
+import { useState, useRef, useEffect, useId, useMemo } from 'react';
+import { HiOutlineChevronDown, HiCheck, HiOutlineSearch, HiOutlineX } from 'react-icons/hi';
 
 /**
  * Common Luxury Dropdown Component for Frontend Storefront
@@ -9,6 +9,9 @@ import { HiOutlineChevronDown, HiCheck } from 'react-icons/hi';
  * - Vertical subtle divider (|) before the dropdown chevron
  * - Rounded-2xl popover menu with warm ambient shadow
  * - Selected item highlighted in soft warm champagne tint (#f7efe5) with bronze checkmark (✓)
+ * - Smooth scrollable options list with luxury scrollbar
+ * - Smart auto-flip detecting both viewport and container boundaries (e.g. modals)
+ * - Optional instant search filter for long lists (e.g. states, cities)
  *
  * @param {any} value - Currently selected value
  * @param {Function} onChange - Handler called on selection: (value) => void
@@ -23,6 +26,8 @@ import { HiOutlineChevronDown, HiCheck } from 'react-icons/hi';
  * @param {React.ReactNode} [prefixIcon] - Icon to show at the start of the button
  * @param {boolean} [showChevron=true] - Show sleek dropdown chevron
  * @param {boolean} [showDivider=true] - Show vertical divider before chevron
+ * @param {boolean} [searchable=false] - Whether to show a search filter at the top of the menu
+ * @param {string} [searchPlaceholder='Search...'] - Search input placeholder
  * @param {string} [id] - Input id
  */
 export default function Dropdown({
@@ -39,53 +44,88 @@ export default function Dropdown({
   prefixIcon,
   showChevron = true,
   showDivider = true,
+  searchable = false,
+  searchPlaceholder = 'Search...',
   id,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [dropUp, setDropUp] = useState(direction === 'up');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const containerRef = useRef(null);
   const buttonRef = useRef(null);
   const menuRef = useRef(null);
+  const listRef = useRef(null);
+  const searchInputRef = useRef(null);
   const generatedId = useId();
   const dropdownId = id || generatedId;
 
   // Normalize options into a consistent { value, label, ... } structure
-  const normalizedOptions = options.map((opt) => {
-    if (typeof opt === 'object' && opt !== null) {
+  const normalizedOptions = useMemo(() => {
+    return options.map((opt) => {
+      if (typeof opt === 'object' && opt !== null) {
+        return {
+          value: opt.value !== undefined ? opt.value : opt.id,
+          label: opt.label !== undefined ? opt.label : (opt.name || String(opt.value)),
+          icon: opt.icon,
+          disabled: Boolean(opt.disabled),
+          raw: opt,
+        };
+      }
       return {
-        value: opt.value !== undefined ? opt.value : opt.id,
-        label: opt.label !== undefined ? opt.label : (opt.name || String(opt.value)),
-        icon: opt.icon,
-        disabled: Boolean(opt.disabled),
+        value: opt,
+        label: String(opt),
+        disabled: false,
         raw: opt,
       };
-    }
-    return {
-      value: opt,
-      label: String(opt),
-      disabled: false,
-      raw: opt,
-    };
-  });
+    });
+  }, [options]);
+
+  // Filter options based on search query
+  const filteredOptions = useMemo(() => {
+    if (!searchQuery.trim()) return normalizedOptions;
+    const q = searchQuery.toLowerCase().trim();
+    return normalizedOptions.filter((opt) =>
+      opt.label.toLowerCase().includes(q) || String(opt.value).toLowerCase().includes(q)
+    );
+  }, [normalizedOptions, searchQuery]);
 
   // Find currently selected option
-  const selectedIndex = normalizedOptions.findIndex(
+  const selectedIndex = filteredOptions.findIndex(
     (opt) => String(opt.value) === String(value)
   );
-  const selectedOption = selectedIndex >= 0 ? normalizedOptions[selectedIndex] : null;
+  const selectedOption = normalizedOptions.find(
+    (opt) => String(opt.value) === String(value)
+  );
 
-  // Sync highlightedIndex when dropdown opens
+  // Sync highlightedIndex when dropdown opens or search changes
   useEffect(() => {
     if (isOpen) {
       setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
     } else {
       setHighlightedIndex(-1);
+      setSearchQuery('');
     }
-  }, [isOpen, selectedIndex]);
+  }, [isOpen]);
 
-  // Handle smart auto-flip (open upward if near screen bottom)
+  useEffect(() => {
+    if (isOpen && searchQuery) {
+      setHighlightedIndex(0);
+    }
+  }, [searchQuery, isOpen]);
+
+  // Autofocus search input when opened
+  useEffect(() => {
+    if (isOpen && searchable) {
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, searchable]);
+
+  // Handle smart auto-flip (open upward if near screen bottom or container bottom)
   useEffect(() => {
     if (!isOpen || !buttonRef.current) return;
     if (direction === 'down') {
@@ -98,29 +138,63 @@ export default function Dropdown({
     }
 
     const rect = buttonRef.current.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
+    const spaceBelowWindow = window.innerHeight - rect.bottom;
+    const spaceAboveWindow = rect.top;
     const estimatedMenuHeight = 240;
 
-    if (spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow) {
+    // Check if dropdown is inside a modal, dialog, or form container
+    const modalParent = buttonRef.current.closest('[role="dialog"], .rounded-2xl, .modal, form');
+    if (modalParent) {
+      const parentRect = modalParent.getBoundingClientRect();
+      const parentSpaceBelow = parentRect.bottom - rect.bottom;
+      const parentSpaceAbove = rect.top - parentRect.top;
+
+      if (parentSpaceBelow < estimatedMenuHeight && parentSpaceAbove > parentSpaceBelow) {
+        setDropUp(true);
+        return;
+      }
+    }
+
+    if (spaceBelowWindow < estimatedMenuHeight && spaceAboveWindow > spaceBelowWindow) {
       setDropUp(true);
     } else {
       setDropUp(false);
     }
   }, [isOpen, direction]);
 
-  // Close on outside click
+  // Auto-scroll selected/highlighted option into view
+  useEffect(() => {
+    if (isOpen && listRef.current) {
+      const targetIndex = highlightedIndex >= 0 ? highlightedIndex : selectedIndex;
+      if (targetIndex >= 0) {
+        const optionEls = listRef.current.querySelectorAll('[role="option"]');
+        if (optionEls[targetIndex]) {
+          optionEls[targetIndex].scrollIntoView({ block: 'nearest' });
+        }
+      }
+    }
+  }, [isOpen, highlightedIndex, selectedIndex]);
+
+  // Close on outside click or ancestor scroll
   useEffect(() => {
     const handleOutsideClick = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
+    const handleScroll = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
     if (isOpen) {
       document.addEventListener('mousedown', handleOutsideClick);
+      window.addEventListener('scroll', handleScroll, true);
     }
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
+      window.removeEventListener('scroll', handleScroll, true);
     };
   }, [isOpen]);
 
@@ -135,10 +209,10 @@ export default function Dropdown({
       } else {
         setHighlightedIndex((prev) => {
           let next = prev + 1;
-          while (next < normalizedOptions.length && normalizedOptions[next].disabled) {
+          while (next < filteredOptions.length && filteredOptions[next].disabled) {
             next += 1;
           }
-          return next < normalizedOptions.length ? next : prev;
+          return next < filteredOptions.length ? next : prev;
         });
       }
     } else if (e.key === 'ArrowUp') {
@@ -148,18 +222,19 @@ export default function Dropdown({
       } else {
         setHighlightedIndex((prev) => {
           let next = prev - 1;
-          while (next >= 0 && normalizedOptions[next].disabled) {
+          while (next >= 0 && filteredOptions[next].disabled) {
             next -= 1;
           }
           return next >= 0 ? next : prev;
         });
       }
-    } else if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
+    } else if (e.key === 'Enter') {
       if (!isOpen) {
+        e.preventDefault();
         setIsOpen(true);
-      } else if (highlightedIndex >= 0 && highlightedIndex < normalizedOptions.length) {
-        const opt = normalizedOptions[highlightedIndex];
+      } else if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+        e.preventDefault();
+        const opt = filteredOptions[highlightedIndex];
         if (!opt.disabled) {
           onChange?.(opt.value);
           setIsOpen(false);
@@ -170,7 +245,11 @@ export default function Dropdown({
     }
   };
 
-  const handleSelect = (option) => {
+  const handleSelect = (option, e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
     if (option.disabled) return;
     onChange?.(option.value);
     setIsOpen(false);
@@ -213,7 +292,7 @@ export default function Dropdown({
       className={`relative inline-block w-full text-left ${className}`}
       onKeyDown={handleKeyDown}
     >
-      {/* ─── Trigger Button Matching Screenshot ─── */}
+      {/* ─── Trigger Button ─── */}
       <button
         ref={buttonRef}
         type="button"
@@ -258,23 +337,66 @@ export default function Dropdown({
         </div>
       </button>
 
-      {/* ─── Dropdown Menu Matching Screenshot ─── */}
+      {/* ─── Dropdown Popover Menu ─── */}
       {isOpen && (
         <div
           ref={menuRef}
           role="listbox"
           tabIndex={-1}
-          className={`absolute left-0 right-0 z-[80] bg-white border border-[#efe7dd] rounded-2xl shadow-xl shadow-stone-900/5 p-1.5 overflow-hidden max-h-64 animate-fadeIn scrollbar-thin scrollbar-thumb-stone-200 ${
+          onMouseDown={(e) => e.stopPropagation()}
+          className={`absolute left-0 right-0 z-[80] bg-white border border-[#efe7dd] rounded-2xl shadow-xl shadow-stone-900/10 overflow-hidden animate-fadeIn flex flex-col ${
             dropUp ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
           } ${menuClassName}`}
         >
-          {normalizedOptions.length === 0 ? (
-            <div className="px-4 py-3 text-xs text-stone-400 text-center italic">
-              No options available
+          {/* Optional Search Bar */}
+          {searchable && (
+            <div className="p-2 border-b border-[#efe7dd] bg-[#faf7f3]/70 shrink-0">
+              <div className="relative flex items-center">
+                <HiOutlineSearch className="absolute left-2.5 w-3.5 h-3.5 text-stone-400 pointer-events-none" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={searchPlaceholder}
+                  className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-[#e7ded3] rounded-lg text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/30 transition-all"
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      e.stopPropagation();
+                      setIsOpen(false);
+                    }
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSearchQuery('');
+                      searchInputRef.current?.focus();
+                    }}
+                    className="absolute right-2 text-stone-400 hover:text-stone-600 p-0.5 cursor-pointer"
+                  >
+                    <HiOutlineX className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="space-y-0.5">
-              {normalizedOptions.map((option, idx) => {
+          )}
+
+          {/* Scrollable Options List */}
+          <div
+            ref={listRef}
+            className="overflow-y-auto overflow-x-hidden p-1.5 space-y-0.5 max-h-56 luxury-scrollbar overscroll-contain flex-1 min-h-0"
+          >
+            {filteredOptions.length === 0 ? (
+              <div className="px-4 py-4 text-xs text-stone-400 text-center italic">
+                {searchQuery ? 'No matches found' : 'No options available'}
+              </div>
+            ) : (
+              filteredOptions.map((option, idx) => {
                 const isSelected = String(option.value) === String(value);
                 const isHighlighted = idx === highlightedIndex;
 
@@ -283,9 +405,10 @@ export default function Dropdown({
                     key={String(option.value)}
                     role="option"
                     aria-selected={isSelected}
-                    onClick={() => handleSelect(option)}
+                    onClick={(e) => handleSelect(option, e)}
+                    onMouseDown={(e) => e.stopPropagation()}
                     onMouseEnter={() => setHighlightedIndex(idx)}
-                    className={`relative flex items-center justify-between gap-2.5 cursor-pointer transition-colors duration-150 ${
+                    className={`relative flex items-center justify-between gap-2.5 cursor-pointer transition-colors duration-150 select-none ${
                       sizeClasses.menuItem
                     } ${
                       option.disabled
@@ -310,9 +433,9 @@ export default function Dropdown({
                     )}
                   </div>
                 );
-              })}
-            </div>
-          )}
+              })
+            )}
+          </div>
         </div>
       )}
     </div>
