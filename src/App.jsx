@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import toast, { Toaster, ToastBar } from 'react-hot-toast';
+import { HiOutlineX } from 'react-icons/hi';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
@@ -21,6 +22,7 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
 import Profile from './pages/user/Profile';
 import StaticPageView from './pages/store/StaticPageView';
+import DynamicSlugView from './pages/store/DynamicSlugView';
 import OrderSuccess from './pages/store/OrderSuccess';
 import OrderFailed from './pages/store/OrderFailed';
 
@@ -40,12 +42,37 @@ function App() {
                   background: '#0f172a',
                   color: '#fff',
                   borderRadius: '16px',
-                  padding: '14px 20px',
+                  padding: '10px 14px',
                   fontSize: '13px',
                   border: '1px solid rgba(212, 175, 55, 0.3)',
                 },
               }}
-            />
+            >
+              {(t) => (
+                <ToastBar toast={t}>
+                  {({ icon, message }) => (
+                    <div className="flex items-center gap-2 w-full">
+                      {icon}
+                      <div className="flex-1 text-xs sm:text-[13px] font-medium leading-snug">{message}</div>
+                      {t.type !== 'loading' && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toast.dismiss(t.id);
+                          }}
+                          className="ml-1 p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                          title="Close"
+                          aria-label="Close notification"
+                        >
+                          <HiOutlineX className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </ToastBar>
+              )}
+            </Toaster>
 
             <Routes>
               {/* Storefront Layout with Header and Footer */}
@@ -53,6 +80,7 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/product/:slug" element={<ProductDetail />} />
+                <Route path="/:categorySlug/:slug" element={<ProductDetail />} />
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />
                 <Route path="/order-success" element={<OrderSuccess />} />
@@ -89,7 +117,7 @@ function App() {
                 }
               />
               <Route path="/pages/:slug" element={<StaticPageView />} />
-              <Route path="/:slug" element={<StaticPageView />} />
+              <Route path="/:slug" element={<DynamicSlugView />} />
             </Route>
 
             {/* Catch-all redirect to Home */}

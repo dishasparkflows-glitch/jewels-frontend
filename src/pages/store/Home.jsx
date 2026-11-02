@@ -177,11 +177,19 @@ const Home = () => {
 
         const typeOf = (b) => b.display?.type || b.type || '';
         const contentOf = (b) => b.content || {};
-        const mediaOf = (b) => ({
-          image: b.image?.url || '',
-          video: b.video?.url || '',
-          mediaType: b.mediaType || 'image',
-        });
+        const mediaOf = (b) => {
+          const m = b.media || b.image;
+          const url = m?.url || (typeof m === 'string' ? m : '');
+          const isVid = m?.mediaType === 'video' || b.mediaType === 'video' || (url && /\.(mp4|webm|mov|m4v)(?:[?#]|$)/i.test(url));
+          const mType = isVid ? 'video' : 'image';
+          return {
+            image: !isVid ? url : '',
+            video: isVid ? url : '',
+            mediaUrl: url,
+            mediaType: mType,
+            mobileImage: b.mobileImage?.url || '',
+          };
+        };
 
         // 1. Hero banners
         const heroList = allBanners.filter((b) => typeOf(b) === 'herobanner');
@@ -221,13 +229,13 @@ const Home = () => {
         const customBannerData = allBanners.find(
           (b) => typeOf(b) === 'customizebanner' || b.display?.bannerKey === 'custom_jewellery'
         );
-        if (customBannerData && (customBannerData.image?.url || customBannerData.image)) {
+        if (customBannerData && (customBannerData.media?.url || customBannerData.image?.url || customBannerData.media || customBannerData.image)) {
           setCustomBanner({
             title: contentOf(customBannerData).title && contentOf(customBannerData).title !== 'Customize Banner'
               ? contentOf(customBannerData).title
               : 'Custom Jewellery, Crafted for You',
             subtitle: contentOf(customBannerData).subtitle || 'Bring your vision to life with a one-of-a-kind piece, designed and handcrafted to reflect your unique style.',
-            image: customBannerData.image?.url || (typeof customBannerData.image === 'string' ? customBannerData.image : ''),
+            image: customBannerData.media?.url || customBannerData.image?.url || (typeof (customBannerData.media || customBannerData.image) === 'string' ? (customBannerData.media || customBannerData.image) : ''),
             buttonText: contentOf(customBannerData).buttonText || 'CUSTOMIZE NOW',
             link: customBannerData.link || '/custom',
           });
@@ -237,13 +245,13 @@ const Home = () => {
 
         // 4. Mobile app banner (filtered by display.type: mobileappbanner)
         const mobileBanner = allBanners.find((b) => typeOf(b) === 'mobileappbanner');
-        if (mobileBanner && (mobileBanner.image?.url || mobileBanner.image)) {
+        if (mobileBanner && (mobileBanner.media?.url || mobileBanner.image?.url || mobileBanner.media || mobileBanner.image)) {
           setMobileAppBanner({
             title: contentOf(mobileBanner).title && contentOf(mobileBanner).title !== 'App Banner'
               ? contentOf(mobileBanner).title
               : "Discover NEIRAH's exquisite\njewelry collection anytime.\nanywhere",
             subtitle: contentOf(mobileBanner).subtitle || 'Download the NEIRAH App\ntoday on',
-            image: mobileBanner.image?.url || (typeof mobileBanner.image === 'string' ? mobileBanner.image : ''),
+            image: mobileBanner.media?.url || mobileBanner.image?.url || (typeof (mobileBanner.media || mobileBanner.image) === 'string' ? (mobileBanner.media || mobileBanner.image) : ''),
             link: mobileBanner.link || '',
             appStoreUrl: mobileBanner.appStoreUrl || storeSettings?.appStoreUrl || 'https://www.apple.com/app-store/',
             googlePlayUrl: mobileBanner.googlePlayUrl || storeSettings?.googlePlayUrl || 'https://play.google.com/store',
@@ -254,13 +262,13 @@ const Home = () => {
 
         // 5. Book appointment banner
         const appointmentBanner = allBanners.find((b) => typeOf(b) === 'bookappointbanner');
-        if (appointmentBanner && (appointmentBanner.image?.url || appointmentBanner.image)) {
+        if (appointmentBanner && (appointmentBanner.media?.url || appointmentBanner.image?.url || appointmentBanner.media || appointmentBanner.image)) {
           setBookAppointBanner({
             title: contentOf(appointmentBanner).title && contentOf(appointmentBanner).title !== 'Appointment Banner'
               ? contentOf(appointmentBanner).title
               : 'Book A Virtual Appointment',
             subtitle: contentOf(appointmentBanner).subtitle || 'Book a personalized appointment to explore designs that match your style. Let our experts guide you in finding or creating something truly special.',
-            image: appointmentBanner.image?.url || (typeof appointmentBanner.image === 'string' ? appointmentBanner.image : ''),
+            image: appointmentBanner.media?.url || appointmentBanner.image?.url || (typeof (appointmentBanner.media || appointmentBanner.image) === 'string' ? (appointmentBanner.media || appointmentBanner.image) : ''),
             buttonText: contentOf(appointmentBanner).buttonText || 'SCHEDULE APPOINTMENT',
           });
         } else {
@@ -496,8 +504,11 @@ const Home = () => {
       ─────────────────────────────────────────────────────────────────── */}
       {effectiveHeroBanners.length > 0 && currentHero && (
         <section style={sectionStyle('hero')} className="relative isolate min-h-[280px] sm:min-h-[420px] lg:min-h-[560px] overflow-hidden bg-[#d6bea1] text-[#29231d]">
-          {currentHero.image && <picture><source media="(max-width: 767px)" srcSet={getMediaUrl(currentHero.mobileImage || currentHero.image)} /><img src={getMediaUrl(currentHero.image)} alt="" className="absolute inset-0 h-full w-full object-cover" /></picture>}
-          {currentHero.video && !currentHero.image && <video src={getMediaUrl(currentHero.video)} className="absolute inset-0 h-full w-full object-cover" autoPlay loop muted playsInline />}
+          {currentHero.mediaType === 'video' || (currentHero.video && !currentHero.image) ? (
+            <video src={getMediaUrl(currentHero.video || currentHero.mediaUrl)} className="absolute inset-0 h-full w-full object-cover" autoPlay loop muted playsInline />
+          ) : (
+            currentHero.image && <picture><source media="(max-width: 767px)" srcSet={getMediaUrl(currentHero.mobileImage || currentHero.image)} /><img src={getMediaUrl(currentHero.image)} alt="" className="absolute inset-0 h-full w-full object-cover" /></picture>
+          )}
 
           {/* Carousel Chevrons (only shown when multiple API banners exist) */}
           {effectiveHeroBanners.length > 1 && (

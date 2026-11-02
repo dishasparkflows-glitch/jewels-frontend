@@ -11,9 +11,7 @@ import {
   HiOutlineMap,
   HiOutlineLocationMarker,
   HiOutlinePhone,
-  HiOutlineShieldCheck,
   HiOutlineTag,
-  HiOutlineTruck,
   HiOutlineUser,
 } from 'react-icons/hi';
 import { useCart } from '../../contexts/CartContext';
@@ -96,6 +94,8 @@ export default function Checkout() {
     phone: user?.phone || user?.profile?.phone || '',
   }));
   const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
+  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('online');
   const [paymentProvider, setPaymentProvider] = useState('razorpay');
   const [paymentConfig, setPaymentConfig] = useState(null);
@@ -150,6 +150,9 @@ export default function Checkout() {
         if (!active || !savedAddresses.length) return;
         setAddresses(savedAddresses);
         const preferred = savedAddresses.find((address) => address.isShippingDefault || address.isDefault) || savedAddresses[0];
+        if (preferred) {
+          setSelectedAddressId(String(preferred._id));
+        }
         setForm((current) => ({
           ...current,
           firstName: current.firstName || preferred.firstName || preferred.fullName?.split(/\s+/)[0] || '',
@@ -202,29 +205,73 @@ export default function Checkout() {
     }
   };
 
-  const loadCodFee = useCallback(async () => {
-    setCodLoading(true);
+  const loadCodFee = useCallback(async (silent = false) => {
+    if (!silent) setCodLoading(true);
     try {
       const data = unwrapResponse(await checkoutAPI.calculateCodFee(paymentAmount));
       if (!data?.isAvailable) {
         setCodFee(null);
-        setPaymentMethod('online');
-        toast.error(data?.message || 'Cash on delivery is not available for this order.');
+        if (!silent) {
+          setPaymentMethod('online');
+          toast.error(data?.message || 'Cash on delivery is not available for this order.');
+        }
         return;
       }
       setCodFee(data);
     } catch (error) {
       setCodFee(null);
-      setPaymentMethod('online');
-      toast.error(error.response?.data?.message || 'Could not check cash on delivery availability.');
+      if (!silent) {
+        setPaymentMethod('online');
+        toast.error(error.response?.data?.message || 'Could not check cash on delivery availability.');
+      }
     } finally {
-      setCodLoading(false);
+      if (!silent) setCodLoading(false);
     }
   }, [paymentAmount]);
 
+  // Pre-calculate COD amounts on mount / paymentAmount change
+  useEffect(() => {
+    if (paymentAmount > 0) {
+      loadCodFee(true);
+    }
+  }, [paymentAmount, loadCodFee]);
+
   const handlePaymentChange = (method) => {
     setPaymentMethod(method);
-    if (method === 'cod') loadCodFee();
+    if (method === 'cod' && !codFee) loadCodFee(false);
+  };
+
+  const handleUseLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
+    }
+    toast.loading('Detecting location...', { id: 'loc' });
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const data = await res.json();
+          const addr = data.address || {};
+          setForm((prev) => ({
+            ...prev,
+            addressLine: [addr.road, addr.suburb, addr.neighbourhood].filter(Boolean).join(', ') || prev.addressLine,
+            city: addr.city || addr.town || addr.village || addr.county || prev.city,
+            state: addr.state || prev.state,
+            postalCode: addr.postcode || prev.postalCode,
+          }));
+          setIsAddingNewAddress(true);
+          toast.success('Location updated', { id: 'loc' });
+        } catch {
+          toast.dismiss('loc');
+          toast.error('Could not auto-fill address from location', { id: 'loc' });
+        }
+      },
+      () => {
+        toast.error('Please allow location access to auto-fill address', { id: 'loc' });
+      }
+    );
   };
 
   const handleSubmit = async (event) => {
@@ -423,146 +470,194 @@ export default function Checkout() {
 
             <section className="p-5 sm:px-10 sm:py-6">
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#bd9462] text-sm font-semibold text-white">2</span>
-                  <div>
-                    <h2 className="text-lg font-semibold">Delivery Address</h2>
-                    <p className="mt-0.5 text-xs text-stone-500">Enter your delivery details to receive your order.</p>
-                  </div>
+                <div>
+                  <h2 className="text-lg font-bold text-stone-900">Delivery</h2>
                 </div>
-                <span className="inline-flex items-center gap-1.5 text-xs text-stone-600 sm:mr-1"><HiOutlineLocationMarker className="h-4 w-4 text-[#bd9462]" /> Delivering to {form.country}<span aria-hidden="true">⌄</span></span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleUseLocation}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-stone-200 bg-white text-xs font-medium text-stone-600 hover:bg-stone-50 transition cursor-pointer"
+                  >
+                    <HiOutlineLocationMarker className="h-3.5 w-3.5 text-[#bd9462]" />
+                    <span>Use Location</span>
+                  </button>
+                  {addresses.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingNewAddress(!isAddingNewAddress)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-stone-900 bg-stone-900 text-xs font-semibold text-white hover:bg-stone-800 transition cursor-pointer"
+                    >
+                      {isAddingNewAddress ? 'Cancel' : '+ ADD NEW'}
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {addresses.length > 1 && <label className="mb-4 block sm:ml-[60px]">
-                <span className="mb-1.5 block text-xs font-medium text-stone-600">Use a saved address</span>
-                <select className={selectClassName} defaultValue="" onChange={(event) => { const address = addresses.find((entry) => String(entry._id) === event.target.value); if (address) applySavedAddress(address); }}>
-                  <option value="">Enter a new delivery address</option>
-                  {addresses.map((address) => <option key={address._id} value={address._id}>{address.fullName || address.addressLine}, {address.city}</option>)}
-                </select>
-              </label>}
+              {/* Saved Address Cards (Matching Neirah reference layout) */}
+              {addresses.length > 0 && !isAddingNewAddress ? (
+                <div className="mb-4">
+                  <div className="grid grid-cols-1 gap-3">
+                    {addresses.map((address) => {
+                      const isSelected = selectedAddressId === String(address._id);
+                      const fullName = address.fullName || `${address.firstName || ''} ${address.lastName || ''}`.trim();
+                      const addressLines = [
+                        address.addressLine || address.street,
+                        address.apartment,
+                      ].filter(Boolean).join(', ');
+                      const cityStatePin = [
+                        address.city,
+                        address.state,
+                        address.postalCode || address.pincode,
+                      ].filter(Boolean).join(' ');
 
-              <div className="grid grid-cols-1 gap-3.5 sm:ml-[60px] sm:grid-cols-6">
-                <label className="relative sm:col-span-3"><span className="sr-only">First name</span><HiOutlineUser className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="given-name" placeholder="First Name *" value={form.firstName} onChange={updateField('firstName')} required /></label>
-                <label className="relative sm:col-span-3"><span className="sr-only">Last name</span><HiOutlineUser className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="family-name" placeholder="Last Name *" value={form.lastName} onChange={updateField('lastName')} required /></label>
-                <label className="relative sm:col-span-4"><span className="sr-only">Street address</span><HiOutlineHome className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="address-line1" placeholder="Address *" value={form.addressLine} onChange={updateField('addressLine')} required /></label>
-                <label className="sm:col-span-2"><span className="sr-only">Apartment, suite, etc.</span><input className={inputClassName} autoComplete="address-line2" placeholder="Apartment, suite, etc. (optional)" value={form.apartment} onChange={updateField('apartment')} /></label>
-                <label className="relative sm:col-span-2"><span className="sr-only">City</span><HiOutlineMap className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="address-level2" placeholder="City *" value={form.city} onChange={updateField('city')} required /></label>
-                <div className="relative sm:col-span-2">
-                  <Dropdown
-                    value={form.state}
-                    onChange={(val) => setForm((prev) => ({ ...prev, state: val }))}
-                    options={indianStates.map((st) => ({ value: st, label: st }))}
-                    placeholder="State *"
-                    searchable={true}
-                    searchPlaceholder="Search state..."
-                    buttonClassName={`${selectClassName} pl-3.5 flex items-center justify-between w-full h-[46px]`}
-                    menuClassName="z-[50]"
-                  />
+                      return (
+                        <div
+                          key={address._id}
+                          onClick={() => {
+                            setSelectedAddressId(String(address._id));
+                            applySavedAddress(address);
+                          }}
+                          className={`relative rounded-xl border p-4.5 transition cursor-pointer max-w-md ${
+                            isSelected
+                              ? 'border-2 border-stone-800 bg-white shadow-xs'
+                              : 'border border-stone-200 bg-white hover:border-stone-300'
+                          }`}
+                        >
+                          <div className="space-y-1 text-xs text-stone-600">
+                            <p className="font-bold text-sm text-stone-900 capitalize">{fullName}</p>
+                            <p className="leading-relaxed">{addressLines}</p>
+                            <p>{cityStatePin}</p>
+                            <p>{address.country || 'India'}</p>
+                            <p className="pt-2 font-medium text-stone-800">
+                              Ph: {address.phone || form.phone}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <label className="relative sm:col-span-2"><span className="sr-only">PIN code</span><HiOutlineLocationMarker className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="postal-code" inputMode="numeric" placeholder="PIN Code *" value={form.postalCode} onChange={updateField('postalCode')} required /></label>
-                <div className="flex gap-3 sm:col-span-6">
-                  <div className="w-[125px] shrink-0">
-                    <CountryCodeSelect
-                      value={form.countryCode}
-                      onChange={(code) => setForm((prev) => ({ ...prev, countryCode: code }))}
-                      className="h-12 w-full"
-                      buttonClassName="flex h-12 w-full items-center justify-between rounded-md border border-[#e6e0d8] bg-white px-3 text-sm text-stone-900 transition hover:bg-stone-50 focus:border-[#a77e4e] focus:ring-2 focus:ring-[#a77e4e]/10 outline-none cursor-pointer"
+              ) : (
+                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-6">
+                  <label className="relative sm:col-span-3"><span className="sr-only">First name</span><HiOutlineUser className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="given-name" placeholder="First Name *" value={form.firstName} onChange={updateField('firstName')} required /></label>
+                  <label className="relative sm:col-span-3"><span className="sr-only">Last name</span><HiOutlineUser className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="family-name" placeholder="Last Name *" value={form.lastName} onChange={updateField('lastName')} required /></label>
+                  <label className="relative sm:col-span-4"><span className="sr-only">Street address</span><HiOutlineHome className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="address-line1" placeholder="Address *" value={form.addressLine} onChange={updateField('addressLine')} required /></label>
+                  <label className="sm:col-span-2"><span className="sr-only">Apartment, suite, etc.</span><input className={inputClassName} autoComplete="address-line2" placeholder="Apartment, suite, etc. (optional)" value={form.apartment} onChange={updateField('apartment')} /></label>
+                  <label className="relative sm:col-span-2"><span className="sr-only">City</span><HiOutlineMap className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="address-level2" placeholder="City *" value={form.city} onChange={updateField('city')} required /></label>
+                  <div className="relative sm:col-span-2">
+                    <Dropdown
+                      value={form.state}
+                      onChange={(val) => setForm((prev) => ({ ...prev, state: val }))}
+                      options={indianStates.map((st) => ({ value: st, label: st }))}
+                      placeholder="State *"
+                      searchable={true}
+                      searchPlaceholder="Search state..."
+                      buttonClassName={`${selectClassName} pl-3.5 flex items-center justify-between w-full h-[46px]`}
+                      menuClassName="z-[50]"
                     />
                   </div>
-                  <label className="relative flex-1"><span className="sr-only">Mobile number</span><HiOutlinePhone className={iconClassName} /><input className={`${inputClassName} pl-11`} type="tel" inputMode="tel" autoComplete="tel-national" placeholder="Mobile Number *" value={form.phone} onChange={updateField('phone')} required /></label>
+                  <label className="relative sm:col-span-2"><span className="sr-only">PIN code</span><HiOutlineLocationMarker className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="postal-code" inputMode="numeric" placeholder="PIN Code *" value={form.postalCode} onChange={updateField('postalCode')} required /></label>
+                  <div className="flex gap-3 sm:col-span-6">
+                    <div className="w-[125px] shrink-0">
+                      <CountryCodeSelect
+                        value={form.countryCode}
+                        onChange={(code) => setForm((prev) => ({ ...prev, countryCode: code }))}
+                        className="h-12 w-full"
+                        buttonClassName="flex h-12 w-full items-center justify-between rounded-md border border-[#e6e0d8] bg-white px-3 text-sm text-stone-900 transition hover:bg-stone-50 focus:border-[#a77e4e] focus:ring-2 focus:ring-[#a77e4e]/10 outline-none cursor-pointer"
+                      />
+                    </div>
+                    <label className="relative flex-1"><span className="sr-only">Mobile number</span><HiOutlinePhone className={iconClassName} /><input className={`${inputClassName} pl-11`} type="tel" inputMode="tel" autoComplete="tel-national" placeholder="Mobile Number *" value={form.phone} onChange={updateField('phone')} required /></label>
+                  </div>
                 </div>
-              </div>
+              )}
             </section>
 
             <section className="p-5 sm:px-10 sm:py-6">
-              <div className="mb-4 flex items-center gap-4">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#bd9462] text-sm font-semibold text-white">3</span>
-                <div>
-                  <h2 className="text-lg font-semibold">Payment Method</h2>
-                  <p className="mt-0.5 text-xs text-stone-500">Choose how you’d like to pay for your order.</p>
-                </div>
+              <div className="mb-4">
+                <h2 className="text-lg font-bold text-stone-900">Payment Method</h2>
+                <p className="mt-0.5 text-xs text-stone-500">Choose how you’d like to pay for your order.</p>
               </div>
-              <div className="space-y-3 sm:ml-[60px]">
-                {/* Online Payment Option */}
-                <div className={`rounded-md border p-3.5 transition ${paymentMethod === 'online' ? 'border-[#bd9462] bg-[#fffdf9]' : 'border-stone-200 hover:border-stone-300'}`}>
-                  <label className="flex cursor-pointer items-center gap-3">
-                    <input type="radio" name="paymentMethod" value="online" checked={paymentMethod === 'online'} onChange={() => handlePaymentChange('online')} className="h-4 w-4 accent-[#a77e4e]" />
-                    <HiOutlineCreditCard className="h-7 w-7 shrink-0 text-stone-800" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-xs font-semibold sm:text-sm">Online Payment (Full)</span>
-                      <span className="mt-1 block text-[10px] leading-4 text-stone-500 sm:text-[11px]">Pay 100% online securely with UPI, Credit/Debit Cards, Net Banking & Wallets</span>
-                    </span>
-                    <span className="hidden gap-2 text-[10px] font-bold italic text-stone-700 sm:flex">UPI&nbsp; VISA&nbsp; ●●</span>
-                  </label>
 
-                  {/* Provider selection when Online Payment is selected */}
-                  {paymentMethod === 'online' && (
-                    <div className="mt-3.5 border-t border-[#f0e6d7] pt-3 pl-7 space-y-2">
-                      <p className="text-[11px] font-medium text-stone-600">Select Payment Gateway:</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <label className={`flex items-center gap-2.5 rounded border p-2.5 cursor-pointer text-xs transition ${paymentProvider === 'razorpay' ? 'border-[#bd9462] bg-white font-medium shadow-xs' : 'border-stone-200 bg-stone-50/50'}`}>
-                          <input
-                            type="radio"
-                            name="paymentProvider"
-                            value="razorpay"
-                            checked={paymentProvider === 'razorpay'}
-                            onChange={() => setPaymentProvider('razorpay')}
-                            className="accent-[#a77e4e]"
-                          />
-                          <div>
-                            <span className="block font-semibold text-stone-800">Razorpay</span>
-                            <span className="text-[10px] text-stone-500">Instant UPI, Cards & NetBanking</span>
-                          </div>
-                        </label>
-
-                        <label className={`flex items-center gap-2.5 rounded border p-2.5 cursor-pointer text-xs transition ${paymentProvider === 'ccavenue' ? 'border-[#bd9462] bg-white font-medium shadow-xs' : 'border-stone-200 bg-stone-50/50'}`}>
-                          <input
-                            type="radio"
-                            name="paymentProvider"
-                            value="ccavenue"
-                            checked={paymentProvider === 'ccavenue'}
-                            onChange={() => setPaymentProvider('ccavenue')}
-                            className="accent-[#a77e4e]"
-                          />
-                          <div>
-                            <span className="block font-semibold text-stone-800">CCAvenue</span>
-                            <span className="text-[10px] text-stone-500">Cards, NetBanking & Wallets</span>
-                          </div>
-                        </label>
+              <div className="space-y-3">
+                {/* 1. Online Payment (Full) Card - Matching Neirah reference */}
+                <div
+                  onClick={() => handlePaymentChange('online')}
+                  className={`rounded-xl border p-4 transition cursor-pointer ${
+                    paymentMethod === 'online'
+                      ? 'border-2 border-stone-900 bg-white shadow-xs'
+                      : 'border border-stone-200 bg-white hover:border-stone-300'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <label className="flex items-start gap-3 cursor-pointer flex-1">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="online"
+                        checked={paymentMethod === 'online'}
+                        onChange={() => handlePaymentChange('online')}
+                        className="mt-0.5 h-4 w-4 accent-stone-900 cursor-pointer"
+                      />
+                      <div>
+                        <span className="block text-xs font-bold text-stone-900 sm:text-sm">
+                          Online Payment (Full)
+                        </span>
+                        <span className="mt-1 block text-[11px] text-stone-500 leading-snug">
+                          Pay 100% online securely with UPI, Credit/Debit Cards, Net Banking
+                        </span>
                       </div>
+                    </label>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-bold text-stone-900 sm:text-sm">
+                        {formatPrice(finalTotal)}
+                      </span>
                     </div>
-                  )}
+                  </div>
                 </div>
 
-                {/* Cash on Delivery Option */}
-                <div className={`rounded-md border p-3.5 transition ${paymentMethod === 'cod' ? 'border-[#bd9462] bg-[#fffdf9]' : 'border-stone-200 hover:border-stone-300'}`}>
-                  <label className="flex cursor-pointer items-center gap-3">
-                    <input type="radio" name="paymentMethod" value="cod" checked={paymentMethod === 'cod'} disabled={codLoading} onChange={() => handlePaymentChange('cod')} className="h-4 w-4 accent-[#a77e4e]" />
-                    <HiOutlineTruck className="h-7 w-7 shrink-0 text-stone-800" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-xs font-semibold sm:text-sm">Cash on Delivery (Partial)</span>
-                      <span className="mt-1 block text-[10px] leading-4 text-stone-500 sm:text-[11px]">
-                        {codLoading ? 'Checking availability…' : codFee ? `Pay ${formatPrice(codDueNow)} advance online to confirm order. Pay remaining ${formatPrice(codRemaining)} upon delivery.` : 'Pay a small advance online to confirm your order. Remaining balance is due on delivery.'}
-                      </span>
-                    </span>
-                    {codFee && <span className="shrink-0 text-right"><span className="block text-[9px] uppercase text-stone-400">Due now</span><span className="text-xs font-semibold">{formatPrice(codDueNow)}</span></span>}
-                  </label>
-
-                  {paymentMethod === 'cod' && codDueNow > 0 && (
-                    <div className="mt-3.5 border-t border-[#f0e6d7] pt-3 pl-7 space-y-2">
-                      <p className="text-[11px] font-medium text-stone-600">Pay advance ₹{codDueNow} using:</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <label className={`flex items-center gap-2.5 rounded border p-2 cursor-pointer text-xs transition ${paymentProvider === 'razorpay' ? 'border-[#bd9462] bg-white font-medium' : 'border-stone-200 bg-stone-50/50'}`}>
-                          <input type="radio" name="codPaymentProvider" value="razorpay" checked={paymentProvider === 'razorpay'} onChange={() => setPaymentProvider('razorpay')} className="accent-[#a77e4e]" />
-                          <span>Razorpay</span>
-                        </label>
-                        <label className={`flex items-center gap-2.5 rounded border p-2 cursor-pointer text-xs transition ${paymentProvider === 'ccavenue' ? 'border-[#bd9462] bg-white font-medium' : 'border-stone-200 bg-stone-50/50'}`}>
-                          <input type="radio" name="codPaymentProvider" value="ccavenue" checked={paymentProvider === 'ccavenue'} onChange={() => setPaymentProvider('ccavenue')} className="accent-[#a77e4e]" />
-                          <span>CCAvenue</span>
-                        </label>
+                {/* 2. Cash on Delivery (Partial) Card - Matching Neirah reference */}
+                <div
+                  onClick={() => handlePaymentChange('cod')}
+                  className={`rounded-xl border p-4 transition cursor-pointer ${
+                    paymentMethod === 'cod'
+                      ? 'border-2 border-stone-900 bg-white shadow-xs'
+                      : 'border border-stone-200 bg-white hover:border-stone-300'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <label className="flex items-start gap-3 cursor-pointer flex-1">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="cod"
+                        checked={paymentMethod === 'cod'}
+                        disabled={codLoading}
+                        onChange={() => handlePaymentChange('cod')}
+                        className="mt-0.5 h-4 w-4 accent-stone-900 cursor-pointer"
+                      />
+                      <div>
+                        <span className="block text-xs font-bold text-stone-900 sm:text-sm">
+                          Cash on Delivery (Partial)
+                        </span>
+                        <div className="mt-1 space-y-0.5 text-[11px] text-stone-500 leading-snug">
+                          <p>Pay {formatPrice(codDueNow)} advance online to confirm order.</p>
+                          <p>Pay remaining {formatPrice(codRemaining)} upon delivery.</p>
+                          <p className="text-[10px] text-stone-400">
+                            Your advance is part of the order total. No extra COD fee.
+                          </p>
+                        </div>
                       </div>
+                    </label>
+                    <div className="text-right shrink-0">
+                      <span className="block text-[9.5px] uppercase font-bold tracking-wider text-stone-400">
+                        DUE NOW
+                      </span>
+                      <span className="text-xs font-bold text-stone-900 sm:text-sm">
+                        {formatPrice(codDueNow)}
+                      </span>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </section>
@@ -608,7 +703,28 @@ export default function Checkout() {
                         <p className="mt-1 text-[10px] text-stone-500">{[cleanMetal, cleanSize && `Size: ${cleanSize}`].filter(Boolean).join('　|　')}</p>
                       ) : null;
                     })()}
-                    <label className="mt-2 inline-flex items-center gap-1.5 rounded border border-stone-200 px-2 py-1 text-[10px] text-stone-700"><span>Qty:</span><select className="bg-transparent font-medium outline-none" aria-label={`Quantity for ${item.name || item.title}`} value={item.quantity} onChange={(event) => updateQuantity(item.id, Number(event.target.value))}>{Array.from({ length: 10 }, (_, index) => index + 1).map((quantity) => <option key={quantity} value={quantity}>{quantity}</option>)}</select></label>
+                    <div className="mt-2 inline-flex items-center rounded-md border border-stone-200 bg-[#fbfaf8] text-stone-800">
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(item.id, (item.quantity || 1) - 1)}
+                        disabled={(item.quantity || 1) <= 1}
+                        className="flex h-6 w-6 items-center justify-center text-xs font-semibold text-stone-600 transition hover:bg-stone-200/60 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-30"
+                        aria-label={`Decrease quantity of ${item.name || item.title}`}
+                      >
+                        −
+                      </button>
+                      <span className="min-w-[26px] px-1 text-center text-[11px] font-bold text-stone-900">
+                        {item.quantity || 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1)}
+                        className="flex h-6 w-6 items-center justify-center text-xs font-semibold text-stone-600 transition hover:bg-stone-200/60 hover:text-stone-900"
+                        aria-label={`Increase quantity of ${item.name || item.title}`}
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                 </article>;
               })}
@@ -637,21 +753,7 @@ export default function Checkout() {
               <div><h3 className="text-lg font-semibold">Total</h3><p className="mt-0.5 text-[10px] text-stone-500">Inclusive of all taxes</p></div>
               <div className="text-right"><span className="block text-[9px] uppercase text-stone-500">INR</span><span className="font-serif text-2xl font-semibold">{formatPrice(finalTotal)}</span></div>
             </div>
-
-            <div className="mt-5 grid grid-cols-4 divide-x divide-[#e9dfd3] rounded-lg border border-[#f0e6d7] bg-[#fcf8f1] py-4 text-center">
-              {[
-                { icon: HiOutlineTruck, label: 'Free Shipping' },
-                { icon: HiOutlineShieldCheck, label: 'Secure Payments' },
-                { icon: HiOutlineCheck, label: 'Easy Returns' },
-                { icon: HiOutlineTag, label: 'Certified Jewellery' },
-              ].map(({ icon: Icon, label }) => <div key={label} className="flex flex-col items-center gap-1.5 px-1 text-[9px] leading-3 text-stone-700"><Icon className="h-6 w-6 text-[#80603d]" /><span>{label}</span></div>)}
-            </div>
-
-            <a href="tel:+919726237723" className="mt-4 flex items-center gap-3 rounded-lg bg-[#f7efea] p-4 transition hover:bg-[#f1e4dc]">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#ead7c7] text-[#bd9462]"><HiOutlinePhone className="h-5 w-5" /></span>
-              <span className="flex-1"><span className="block text-sm font-semibold">Need Help?</span><span className="mt-0.5 block text-[10px] text-stone-500">Our team is here to assist you</span></span>
-              <HiOutlineArrowRight className="h-4 w-4 text-stone-700" />
-            </a>
+
           </aside>
         </form>
       </div>

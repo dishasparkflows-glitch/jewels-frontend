@@ -163,6 +163,7 @@ export const productsAPI = {
   getHomeProducts: (params) => getOnce('/products/home', { params }),
   getHomeStorefront: (params) => getOnce('/products/home', { params }),
   getById: (id) => getOnce(`/products/${id}`),
+  getBySku: (code) => getOnce(`/products/sku/${encodeURIComponent(code)}`),
 };
 
 // ─── Reviews ──────────────────────────────────────

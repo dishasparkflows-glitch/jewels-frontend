@@ -10,12 +10,12 @@ const safeLink = (value, fallback) => (/^(https?:\/\/|\/(?!\/))/i.test(value || 
 
 function MenuContents({ category, onNavigate, mobile = false }) {
   const sections = (category.menuSections || []).filter((section) => section.menuItems?.length);
-  const banners = (category.promoBanners || []).filter((banner) => banner.image?.url || (typeof banner.image === 'string' && banner.image));
+  const banners = (category.promoBanners || []).filter((banner) => banner.media?.url || banner.image?.url || (typeof (banner.media || banner.image) === 'string' && (banner.media || banner.image)));
 
   const showcaseCards = banners.map((b) => ({
     title: b.title || category.name,
     link: safeLink(b.link, categoryLink(category)),
-    image: getImageUrl(b.image?.url || b.image),
+    image: getImageUrl(b.media?.url || b.image?.url || b.media || b.image),
   })).filter((c) => c.image);
 
   if (mobile) {

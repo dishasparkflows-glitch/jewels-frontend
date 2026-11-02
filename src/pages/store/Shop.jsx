@@ -13,7 +13,7 @@ const slugify = (value = '') => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').
 const aliases = { necklaces: 'pendant', bracelets: 'bangles-bracelets' };
 const getItems = (response) => Array.isArray(response?.data?.data) ? response.data.data : response?.data?.data?.items || [];
 
-export default function Shop() {
+export default function Shop({ defaultCategory = '' }) {
   useStoreSettings();
   const [params, setParams] = useSearchParams();
 
@@ -31,7 +31,7 @@ export default function Shop() {
   const [retry, setRetry] = useState(0);
 
   // URL Params
-  const categoryParam = params.get('category') || '';
+  const categoryParam = params.get('category') || defaultCategory || '';
   const category = categories.find((entry) => entry._id === categoryParam || slugify(entry.slug || entry.name) === (aliases[categoryParam] || categoryParam));
   const categoryId = category?._id || (/^[a-f0-9]{24}$/i.test(categoryParam) ? categoryParam : '');
 

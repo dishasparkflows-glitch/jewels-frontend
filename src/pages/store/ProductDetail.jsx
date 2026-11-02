@@ -5,9 +5,6 @@ import {
   HiHeart,
   HiOutlineShare,
   HiOutlineX,
-  HiOutlineShieldCheck,
-  HiOutlineTruck,
-  HiOutlineInformationCircle,
   HiOutlineEye,
   HiOutlineExternalLink,
   HiChevronUp,
@@ -19,6 +16,9 @@ import {
   HiOutlineArrowsExpand,
   HiOutlineTag,
   HiOutlineDuplicate,
+  HiOutlinePrinter,
+  HiOutlineRefresh,
+  HiOutlineDocumentText,
 } from 'react-icons/hi';
 import {
   FaWhatsapp,
@@ -177,6 +177,82 @@ function ZoomableProductImage({ image, alt, index, onOpenLightbox }) {
   );
 }
 
+/**
+ * Renders product description and care/specification content formatted with clean bullet lists
+ * matching luxury typography (exact match to Neirah design).
+ */
+function FormattedContent({ content }) {
+  if (!content || typeof content !== 'string') return null;
+
+  const rawLines = content.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (rawLines.length === 0) return null;
+
+  const renderInline = (str) => {
+    const parts = [];
+    const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|<u>[^<]+<\/u>)/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(str)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(str.substring(lastIndex, match.index));
+      }
+      const token = match[0];
+      if (token.startsWith('**') && token.endsWith('**')) {
+        parts.push(<strong key={match.index} className="font-semibold text-stone-900">{token.slice(2, -2)}</strong>);
+      } else if (token.startsWith('*') && token.endsWith('*')) {
+        parts.push(<em key={match.index} className="italic text-stone-800">{token.slice(1, -1)}</em>);
+      } else if (token.startsWith('<u>') && token.endsWith('</u>')) {
+        parts.push(<u key={match.index} className="underline">{token.slice(3, -4)}</u>);
+      }
+      lastIndex = match.index + token.length;
+    }
+
+    if (lastIndex < str.length) {
+      parts.push(str.substring(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : str;
+  };
+
+  const elements = [];
+  let currentList = [];
+
+  const flushList = () => {
+    if (currentList.length > 0) {
+      elements.push(
+        <ul key={`ul-${elements.length}`} className="space-y-2 text-stone-700 text-xs sm:text-[13px] leading-relaxed my-0.5">
+          {currentList.map((item, idx) => (
+            <li key={idx} className="flex items-start gap-2.5">
+              <span className="text-stone-700 select-none text-[13px] leading-relaxed shrink-0">•</span>
+              <span className="flex-1">{renderInline(item)}</span>
+            </li>
+          ))}
+        </ul>
+      );
+      currentList = [];
+    }
+  };
+
+  rawLines.forEach((line) => {
+    const bulletMatch = line.match(/^[•\-\*]\s*(.+)$/);
+    if (bulletMatch) {
+      currentList.push(bulletMatch[1]);
+    } else {
+      flushList();
+      elements.push(
+        <p key={`p-${elements.length}`} className="text-stone-700 text-xs sm:text-[13px] leading-relaxed">
+          {renderInline(line)}
+        </p>
+      );
+    }
+  });
+
+  flushList();
+
+  return <div className="space-y-2">{elements}</div>;
+}
+
 export default function ProductDetail() {
   const { id, slug } = useParams();
   const identifier = slug || id;
@@ -240,6 +316,8 @@ export default function ProductDetail() {
   const [isLightboxFullscreen, setIsLightboxFullscreen] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const thumbnailContainerRef = useRef(null);
+  const lightboxStageRef = useRef(null);
+  const lastLightboxWheelTimeRef = useRef(0);
 
   const openLightboxAtIndex = (idx) => {
     setLightboxIndex(idx);
@@ -256,12 +334,168 @@ export default function ProductDetail() {
 
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [showCertificateModal, setShowCertificateModal] = useState(false);
+  const [certZoom, setCertZoom] = useState(1);
+  const [certPan, setCertPan] = useState({ x: 0, y: 0 });
+  const [certRotation, setCertRotation] = useState(0);
+  const [isCertDragging, setIsCertDragging] = useState(false);
+  const [isCertFullscreen, setIsCertFullscreen] = useState(false);
+  const certDragStartRef = useRef({ x: 0, y: 0 });
+  const certCanvasRef = useRef(null);
+
+  // Prevent background product page scroll & attach non-passive wheel zoom
+  useEffect(() => {
+    if (!showCertificateModal) return;
+
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    const container = certCanvasRef.current;
+    const handleNativeWheel = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const delta = e.deltaY < 0 ? 0.15 : -0.15;
+      setCertZoom((prev) => {
+        const next = Math.max(0.5, Math.min(4, +(prev + delta).toFixed(2)));
+        if (next <= 1) setCertPan({ x: 0, y: 0 });
+        return next;
+      });
+    };
+
+    if (container) {
+      container.addEventListener('wheel', handleNativeWheel, { passive: false });
+    }
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        closeCertificateModal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+      if (container) {
+        container.removeEventListener('wheel', handleNativeWheel);
+      }
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showCertificateModal]);
+
+  // Lock background scroll for gallery image lightbox as well
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [lightboxIndex]);
+
   const { settings: storeSettings } = useStoreSettings();
 
   const certificateUrl =
     product?.certificateImage?.url ||
     storeSettings?.certificateImage?.url ||
     'https://pub-82427c7fd20e4acaa4bdb3b933c0a3bf.r2.dev/certificates/certificate-1792672361210-d82f.png';
+
+  const isCertPdf = Boolean(certificateUrl && /\.pdf($|\?)/i.test(certificateUrl));
+
+  const openCertificateModal = () => {
+    setCertZoom(1);
+    setCertPan({ x: 0, y: 0 });
+    setCertRotation(0);
+    setIsCertFullscreen(false);
+    setShowCertificateModal(true);
+  };
+
+  const closeCertificateModal = () => {
+    setShowCertificateModal(false);
+    setCertZoom(1);
+    setCertPan({ x: 0, y: 0 });
+    setCertRotation(0);
+    setIsCertFullscreen(false);
+  };
+
+  const handleCertMouseDown = (e) => {
+    if (certZoom <= 1 && certRotation === 0) return;
+    setIsCertDragging(true);
+    certDragStartRef.current = {
+      x: e.clientX - certPan.x,
+      y: e.clientY - certPan.y,
+    };
+  };
+
+  const handleCertMouseMove = (e) => {
+    if (!isCertDragging) return;
+    const maxPan = (certZoom - 1) * 450 + 150;
+    const newX = Math.max(-maxPan, Math.min(maxPan, e.clientX - certDragStartRef.current.x));
+    const newY = Math.max(-maxPan, Math.min(maxPan, e.clientY - certDragStartRef.current.y));
+    setCertPan({ x: newX, y: newY });
+  };
+
+  const handleCertMouseUp = () => {
+    setIsCertDragging(false);
+  };
+
+  const handleCertDoubleClick = () => {
+    if (certZoom > 1 || certRotation !== 0) {
+      setCertZoom(1);
+      setCertPan({ x: 0, y: 0 });
+    } else {
+      setCertZoom(1.75);
+    }
+  };
+
+  const handleCertRotate = () => {
+    setCertRotation((prev) => (prev + 90) % 360);
+  };
+
+  const handleCertZoomIn = () => {
+    setCertZoom((prev) => Math.min(4, +(prev + 0.25).toFixed(2)));
+  };
+
+  const handleCertZoomOut = () => {
+    setCertZoom((prev) => {
+      const next = Math.max(0.5, +(prev - 0.25).toFixed(2));
+      if (next <= 1) setCertPan({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  const handleCertReset = () => {
+    setCertZoom(1);
+    setCertPan({ x: 0, y: 0 });
+    setCertRotation(0);
+  };
+
+  const handlePrintCertificate = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${product?.basicInfo?.title || 'Jewellery Certificate'}</title>
+            <style>
+              body { margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #fff; }
+              img { max-width: 95vw; max-height: 95vh; object-fit: contain; }
+            </style>
+          </head>
+          <body>
+            <img src="${certificateUrl}" onload="window.print();window.close();" />
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
 
   // Mobile Gallery Carousel State & Handlers
   const mobileGalleryRef = useRef(null);
@@ -356,13 +590,16 @@ export default function ProductDetail() {
       product.metalColorIds.forEach((c) => {
         if (!c) return;
         const name = typeof c === 'object' ? c.name : c;
-        if (name) {
+        if (name && typeof name === 'string' && !/^[a-f0-9]{24}$/i.test(name)) {
           const existing = cMap.get(name) || {};
           cMap.set(name, {
+            id: c._id || c.id || existing.id || '',
             name,
             code: c.code || existing.code || '',
-            colorCode: c.colorCode || existing.colorCode || '',
+            colorCode: c.colorCode || c.hex || existing.colorCode || '',
             colorCodeEnd: c.colorCodeEnd || existing.colorCodeEnd || '',
+            hex: c.hex || existing.hex || '',
+            variantIcon: c.variantIcon?.url || (typeof c.variantIcon === 'string' ? c.variantIcon : '') || existing.variantIcon || '',
           });
         }
       });
@@ -370,15 +607,37 @@ export default function ProductDetail() {
 
     if (Array.isArray(product?.colorImages)) {
       product.colorImages.forEach((ci) => {
+        if (!ci || ci.status === 'inactive') return;
         const cObj = ci.metalColorId;
-        const cName = referenceName(cObj) || ci.colorName || ci.name || '';
-        if (cName) {
+        let cName = '';
+        let cMeta = typeof cObj === 'object' ? cObj : null;
+        if (cMeta?.name) {
+          cName = cMeta.name;
+        } else if (typeof cObj === 'string') {
+          const found = Array.isArray(product?.metalColorIds)
+            ? product.metalColorIds.find((m) => String(m?._id || m) === cObj)
+            : null;
+          if (found && typeof found === 'object' && found.name) {
+            cName = found.name;
+            cMeta = found;
+          } else if (!/^[a-f0-9]{24}$/i.test(cObj)) {
+            cName = cObj;
+          }
+        }
+        if (!cName) {
+          cName = ci.colorName || ci.name || '';
+        }
+
+        if (cName && typeof cName === 'string' && !/^[a-f0-9]{24}$/i.test(cName)) {
           const existing = cMap.get(cName) || {};
           cMap.set(cName, {
+            id: cMeta?._id || cMeta?.id || (typeof cObj === 'string' ? cObj : '') || existing.id || '',
             name: cName,
-            code: cObj?.code || existing.code || '',
-            colorCode: cObj?.colorCode || existing.colorCode || '',
-            colorCodeEnd: cObj?.colorCodeEnd || existing.colorCodeEnd || '',
+            code: cMeta?.code || existing.code || '',
+            colorCode: cMeta?.colorCode || cMeta?.hex || existing.colorCode || '',
+            colorCodeEnd: cMeta?.colorCodeEnd || existing.colorCodeEnd || '',
+            hex: cMeta?.hex || existing.hex || '',
+            variantIcon: ci.variantIcon?.url || (typeof ci.variantIcon === 'string' ? ci.variantIcon : '') || cMeta?.variantIcon?.url || existing.variantIcon || '',
           });
         }
       });
@@ -405,19 +664,26 @@ export default function ProductDetail() {
 
   // Auto-initialize options on product load
   useEffect(() => {
-    if (!product || !isGold) return;
+    if (!product) return;
+
+    if (colors.length && (!selectedColor || !colors.some((c) => c.name.toLowerCase() === selectedColor.toLowerCase()))) {
+      const defaultC = isGold
+        ? (colors.find((c) => c.name.toLowerCase().includes('yellow')) ||
+           colors.find((c) => c.name.toLowerCase().includes('rose')) ||
+           colors[0])
+        : colors[0];
+      if (defaultC?.name) {
+        setSelectedColor(defaultC.name);
+      }
+    }
+
+    if (!isGold) return;
+
     if (purities.length && !selectedPurity) {
       const defaultP = purities.find((p) => p.includes('9K') || p.includes('9KT')) ||
                        purities.find((p) => p.includes('14')) ||
                        purities[0];
       setSelectedPurity(defaultP);
-    }
-    if (colors.length && !selectedColor) {
-      // Default to Yellow Gold if available to match Neirah default, or Rose Gold
-      const defaultC = colors.find((c) => c.name.toLowerCase().includes('yellow')) ||
-                       colors.find((c) => c.name.toLowerCase().includes('rose')) ||
-                       colors[0];
-      setSelectedColor(defaultC.name);
     }
     if (carats.length && !selectedCarat) {
       setSelectedCarat(carats[0]);
@@ -564,11 +830,11 @@ export default function ProductDetail() {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         closeLightbox();
-      } else if (e.key === 'ArrowLeft') {
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         setLightboxIndex((prev) => (prev > 0 ? prev - 1 : galleryImages.length - 1));
         setLightboxZoom(1);
         setLightboxPan({ x: 0, y: 0 });
-      } else if (e.key === 'ArrowRight') {
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         setLightboxIndex((prev) => (prev + 1) % galleryImages.length);
         setLightboxZoom(1);
         setLightboxPan({ x: 0, y: 0 });
@@ -578,6 +844,54 @@ export default function ProductDetail() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [lightboxIndex, galleryImages.length]);
+
+  // Mouse wheel scroll up/down on lightbox to switch images
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    const stageEl = lightboxStageRef.current;
+    if (!stageEl) return;
+
+    const handleWheel = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!galleryImages || galleryImages.length <= 1) return;
+
+      const now = Date.now();
+      // 250ms throttle so smooth trackpads or mouse wheels advance one image per flick
+      if (now - lastLightboxWheelTimeRef.current < 250) {
+        return;
+      }
+
+      if (Math.abs(e.deltaY) < 15) return;
+
+      if (e.deltaY > 0) {
+        // Scroll down -> next image
+        setLightboxIndex((prev) => (prev + 1) % galleryImages.length);
+      } else if (e.deltaY < 0) {
+        // Scroll up -> previous image
+        setLightboxIndex((prev) => (prev > 0 ? prev - 1 : galleryImages.length - 1));
+      }
+
+      setLightboxZoom(1);
+      setLightboxPan({ x: 0, y: 0 });
+      lastLightboxWheelTimeRef.current = now;
+    };
+
+    stageEl.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      stageEl.removeEventListener('wheel', handleWheel);
+    };
+  }, [lightboxIndex, galleryImages]);
+
+  // Keep active thumbnail visible in vertical strip when switching images
+  useEffect(() => {
+    if (lightboxIndex !== null && thumbnailContainerRef.current) {
+      const activeThumb = thumbnailContainerRef.current.children[lightboxIndex];
+      if (activeThumb?.scrollIntoView) {
+        activeThumb.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }, [lightboxIndex]);
 
   const handleLightboxMouseDown = (e) => {
     if (lightboxZoom <= 1) return;
@@ -647,7 +961,7 @@ export default function ProductDetail() {
           grad = 'linear-gradient(135deg, #E5E7EB 0%, #D1D5DB 100%)';
         }
       }
-      return { name: cName, gradient: grad };
+      return { name: cName, gradient: grad, variantIcon: c.variantIcon };
     });
   }, [colors, product]);
 
@@ -843,7 +1157,7 @@ export default function ProductDetail() {
         setProduct(null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        const res = await productsAPI.getById(identifier);
+        const res = await productsAPI.getBySku(identifier).catch(() => productsAPI.getById(identifier));
         const prodData = res.data?.data || res.data;
         if (prodData) {
           setProduct(prodData);
@@ -1077,23 +1391,16 @@ export default function ProductDetail() {
     );
   }
 
-  const specificationRows = isGold
-    ? [
-        ['Metal', metalDisplayName || product.specifications?.metalName || 'Gold'],
-        ['Diamond Type', diamondType],
-        ['Diamond Color · Clarity', selectedQuality || '—'],
-        ['Center Diamond Weight', selectedCarat ? `${selectedCarat} ct` : (breakdown?.centerCarat ? `${breakdown.centerCarat} ct` : '—')],
-        ['Gross Weight', breakdown?.metalWeight ? `${breakdown.metalWeight} g` : (product.specifications?.metalWeight ? `${product.specifications.metalWeight} g` : '—')],
-        ['Net Weight', breakdown?.metalWeight ? `${breakdown.metalWeight} g` : '—'],
-        ['Size', selectedSize || (sizes.length > 0 ? 'Standard' : null)],
-      ].filter(([, value]) => value !== undefined && value !== null && value !== '')
-    : [
-        ['Metal', product.specifications?.metalName || '925 Sterling Silver'],
-        ['Gross Weight', product.specifications?.metalWeight ? `${product.specifications.metalWeight} g` : (product.ornate?.grossWeight ? `${product.ornate.grossWeight} g` : null)],
-        ['Net Weight', product.specifications?.metalWeight ? `${product.specifications.metalWeight} g` : (product.ornate?.netWeight ? `${product.ornate.netWeight} g` : null)],
-        ['Purity', product.specifications?.purity || (product.ornate?.purity ? `${product.ornate.purity}` : '92.5')],
-        ['Size', selectedSize || null],
-      ].filter(([, value]) => value !== undefined && value !== null && value !== '');
+  const rawSpecs = product?.productSpecifications || product?.specifications?.productSpecifications;
+  const specificationRows = Array.isArray(rawSpecs) && rawSpecs.length > 0
+    ? rawSpecs
+        .filter((s) => s && (s.key || s.name || s.label) && s.value !== undefined && s.value !== null && String(s.value).trim() !== '')
+        .map((s) => [String(s.key || s.name || s.label).trim(), String(s.value).trim()])
+    : rawSpecs && typeof rawSpecs === 'object' && !Array.isArray(rawSpecs)
+    ? Object.entries(rawSpecs)
+        .filter(([k, v]) => k && v !== undefined && v !== null && String(v).trim() !== '')
+        .map(([k, v]) => [String(k).trim(), String(v).trim()])
+    : [];
 
   return (
     <div className="bg-white text-stone-900 min-h-screen pb-24 lg:pb-12">
@@ -1586,6 +1893,74 @@ export default function ProductDetail() {
                 </>
               )}
 
+              {/* Standalone Color Selector (For products with distinct color variants / swatches) */}
+              {(!isGold || metalSwatches.length === 0) && colors.length > 0 && (
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-1 text-xs sm:text-[13px] text-stone-700">
+                    <span>Color:</span>
+                    <span className="font-bold text-stone-900 capitalize">{selectedColor || colors[0]?.name}</span>
+                  </div>
+
+                  <div className="flex items-center gap-3.5 sm:gap-4 flex-wrap">
+                    {colors.map((c) => {
+                      const isSel = selectedColor?.toLowerCase() === c.name?.toLowerCase();
+                      const bg = c.colorCode && c.colorCodeEnd
+                        ? `linear-gradient(135deg, ${c.colorCode} 0%, ${c.colorCodeEnd} 100%)`
+                        : (c.colorCode || c.hex || '#e5e7eb');
+
+                      return (
+                        <button
+                          key={c.name}
+                          type="button"
+                          onClick={() => {
+                            setSelectedColor(c.name);
+                          }}
+                          className="flex flex-col items-center gap-1.5 cursor-pointer group focus:outline-none"
+                          title={c.name}
+                          aria-label={`Select color ${c.name}`}
+                        >
+                          {/* Circular Swatch with active dark ring & white gap matching screenshot */}
+                          <div
+                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full transition-all flex items-center justify-center p-0.5 relative ${
+                              isSel
+                                ? 'ring-2 ring-stone-900 ring-offset-2 scale-105 shadow-sm'
+                                : 'ring-1 ring-stone-200/90 hover:ring-stone-400 group-hover:scale-105 opacity-90 hover:opacity-100'
+                            }`}
+                          >
+                            <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center border border-stone-200 bg-white">
+                              {c.variantIcon ? (
+                                <img
+                                  src={c.variantIcon}
+                                  alt={c.name}
+                                  className="w-full h-full object-cover rounded-full"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  className="w-full h-full rounded-full"
+                                  style={{ background: bg }}
+                                />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Color label underneath swatch */}
+                          <span
+                            className={`text-[11px] sm:text-xs font-semibold capitalize tracking-tight transition-colors ${
+                              isSel ? 'text-stone-900 font-bold' : 'text-stone-600 group-hover:text-stone-900'
+                            }`}
+                          >
+                            {c.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* 5. Size Selection (If Applicable) */}
               {sizes.length > 0 && (
                 <div className="space-y-1.5">
@@ -1660,48 +2035,72 @@ export default function ProductDetail() {
               </h3>
 
               <div className="pt-4 flex flex-col md:flex-row items-center md:items-stretch gap-4 md:gap-6 divide-y md:divide-y-0 md:divide-x divide-[#e8dfd5]">
-                {/* Left side: Trust Badges */}
-                <div className="flex-1 w-full grid grid-cols-2 gap-y-5 gap-x-4 sm:gap-x-6">
+                {/* Left side: Trust Badges (Matches Reference Design) */}
+                <div className="flex-1 w-full grid grid-cols-3 gap-y-6 gap-x-2 sm:gap-x-4">
                   {/* Badge 1: Global Online Jeweller */}
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-white border border-stone-200/90 flex items-center justify-center text-stone-700 shrink-0 shadow-2xs">
-                      <svg className="w-4 h-4 text-stone-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                        <circle cx="12" cy="9" r="6" />
-                        <path d="M8.5 14.5L6 21l6-3.5 6 3.5-2.5-6.5" />
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 rounded-full border border-[#ebdccb] bg-white flex items-center justify-center text-[#144b44] shrink-0 shadow-2xs">
+                      <svg className="w-5 h-5 text-[#144b44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="8" r="5" />
+                        <path d="M8.5 12.5L7 21l5-2.5L17 21l-1.5-8.5" />
                       </svg>
                     </div>
-                    <span className="text-[11px] font-medium text-stone-700 leading-tight">
-                      Global Online Jeweller
+                    <span className="text-[11px] sm:text-xs text-stone-700 leading-tight mt-2 font-normal">
+                      Global Online<br />Jeweller
                     </span>
                   </div>
 
                   {/* Badge 2: BIS Hallmark */}
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-white border border-stone-200/90 flex items-center justify-center text-stone-700 shrink-0 shadow-2xs">
-                      <HiOutlineInformationCircle className="w-4.5 h-4.5 text-stone-700" />
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 rounded-full border border-[#ebdccb] bg-white flex items-center justify-center text-[#144b44] shrink-0 shadow-2xs">
+                      <svg className="w-5 h-5 text-[#144b44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="9" />
+                        <line x1="12" y1="16" x2="12" y2="12" />
+                        <line x1="12" y1="8" x2="12.01" y2="8" />
+                      </svg>
                     </div>
-                    <span className="text-[11px] font-medium text-stone-700 leading-tight">
+                    <span className="text-[11px] sm:text-xs text-stone-700 leading-tight mt-2 font-normal">
                       BIS Hallmark
                     </span>
                   </div>
 
-                  {/* Badge 3: Neirah Certified */}
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-white border border-stone-200/90 flex items-center justify-center text-stone-700 shrink-0 shadow-2xs">
-                      <HiOutlineShieldCheck className="w-4.5 h-4.5 text-stone-700" />
+                  {/* Badge 3: Rated 4.7/5 Globally */}
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 rounded-full border border-[#ebdccb] bg-white flex items-center justify-center shrink-0 shadow-2xs">
+                      <span className="text-[13px] font-semibold text-[#144b44] tracking-tight flex items-center gap-0.5 font-sans">
+                        4.7 <span className="text-[10px]">★</span>
+                      </span>
                     </div>
-                    <span className="text-[11px] font-medium text-stone-700 leading-tight">
-                      Neirah Certified
+                    <span className="text-[11px] sm:text-xs text-stone-700 leading-tight mt-2 font-normal">
+                      Rated 4.7/5<br />Globally
                     </span>
                   </div>
 
-                  {/* Badge 4: Free Secure Shipping */}
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-white border border-stone-200/90 flex items-center justify-center text-stone-700 shrink-0 shadow-2xs">
-                      <HiOutlineTruck className="w-4.5 h-4.5 text-stone-700" />
+                  {/* Badge 4: Neirah Certified */}
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 rounded-full border border-[#ebdccb] bg-white flex items-center justify-center text-[#144b44] shrink-0 shadow-2xs">
+                      <svg className="w-5 h-5 text-[#144b44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <path d="m9 12 2 2 4-4" />
+                      </svg>
                     </div>
-                    <span className="text-[11px] font-medium text-stone-700 leading-tight">
-                      Free Secure Shipping
+                    <span className="text-[11px] sm:text-xs text-stone-700 leading-tight mt-2 font-normal">
+                      Neirah<br />Certified
+                    </span>
+                  </div>
+
+                  {/* Badge 5: Free Secure Shipping */}
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 rounded-full border border-[#ebdccb] bg-white flex items-center justify-center text-[#144b44] shrink-0 shadow-2xs">
+                      <svg className="w-5 h-5 text-[#144b44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="1" y="3" width="15" height="13" rx="1" />
+                        <polygon points="16 8 20 8 23 11 23 16 16 16 8" />
+                        <circle cx="5.5" cy="18.5" r="2.5" />
+                        <circle cx="18.5" cy="18.5" r="2.5" />
+                      </svg>
+                    </div>
+                    <span className="text-[11px] sm:text-xs text-stone-700 leading-tight mt-2 font-normal">
+                      Free Secure<br />Shipping
                     </span>
                   </div>
                 </div>
@@ -1710,7 +2109,7 @@ export default function ProductDetail() {
                 {isGold && (
                   <div className="w-full md:w-[150px] shrink-0 pt-4 md:pt-0 md:pl-6 flex flex-col items-center justify-center">
                   <div
-                    onClick={() => setShowCertificateModal(true)}
+                    onClick={openCertificateModal}
                     className="border border-stone-200 bg-white p-1.5 rounded shadow-xs hover:shadow-md transition-all cursor-pointer group max-w-[130px]"
                     title="Click to view full certificate"
                   >
@@ -1722,7 +2121,7 @@ export default function ProductDetail() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setShowCertificateModal(true)}
+                    onClick={openCertificateModal}
                     className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-stone-800 hover:text-[#92704E] transition-colors cursor-pointer"
                   >
                     <HiOutlineEye className="w-3.5 h-3.5 text-stone-600" />
@@ -1754,46 +2153,43 @@ export default function ProductDetail() {
                   </span>
                 </button>
                 {openAccordions.desc && (
-                  <div className="px-5 pb-5 pt-0 text-stone-600 text-xs sm:text-[12.5px] leading-relaxed animate-fadeIn space-y-2">
-                    <p>
-                      {product.basicInfo?.description ||
+                  <div className="px-5 pb-5 pt-0 animate-fadeIn">
+                    <FormattedContent
+                      content={
+                        product.basicInfo?.description ||
                         product.description ||
-                        'Crafted with fine craftsmanship and certified diamonds, this exquisite piece is designed for everyday elegance.'}
-                    </p>
-                    {Array.isArray(product.descriptionSections) &&
-                      product.descriptionSections.map((sec, i) => (
-                        <div key={i} className="pt-1">
-                          <strong className="text-stone-900 font-medium">{sec.header}: </strong>
-                          <span className="text-stone-600">{sec.description}</span>
-                        </div>
-                      ))}
+                        'Crafted with fine craftsmanship and certified diamonds, this exquisite piece is designed for everyday elegance.'
+                      }
+                    />
                   </div>
                 )}
               </div>
 
               {/* Accordion 2: Specification */}
-              <div>
-                <button
-                  type="button"
-                  onClick={() => toggleAccordion('specs')}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
-                >
-                  <span className="text-xs sm:text-[13px] font-medium text-stone-900 tracking-normal">Specification</span>
-                  <span className="text-stone-500 text-sm font-light select-none">
-                    {openAccordions.specs ? '−' : '+'}
-                  </span>
-                </button>
-                {openAccordions.specs && (
-                  <div className="px-5 pb-5 pt-0 text-xs animate-fadeIn space-y-1.5">
-                    {specificationRows.map(([label, value]) => (
-                      <div key={label} className="flex justify-between items-center py-1.5 border-b border-stone-100 last:border-b-0">
-                        <span className="text-stone-500 font-normal">{label}</span>
-                        <span className="font-medium text-stone-900">{value}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              {specificationRows.length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => toggleAccordion('specs')}
+                    className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
+                  >
+                    <span className="text-xs sm:text-[13px] font-medium text-stone-900 tracking-normal">Specification</span>
+                    <span className="text-stone-500 text-sm font-light select-none">
+                      {openAccordions.specs ? '−' : '+'}
+                    </span>
+                  </button>
+                  {openAccordions.specs && (
+                    <div className="px-5 pb-5 pt-0 text-xs sm:text-[13px] animate-fadeIn space-y-1.5">
+                      {specificationRows.map(([label, value]) => (
+                        <div key={label} className="flex justify-between items-center py-2 border-b border-stone-100 last:border-b-0 gap-4">
+                          <span className="font-bold text-stone-900">{label}</span>
+                          <span className="font-normal text-stone-700 text-right">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Accordion 3: PRICE BREAK UP (Only for Gold items) */}
               {isGold && (
@@ -1917,6 +2313,44 @@ export default function ProductDetail() {
               </div>
               )}
 
+              {/* Dynamic Accordions: Care & Specs Sections (e.g. How to Care, Key Benefits, How to Maintain) */}
+              {Array.isArray(product.descriptionSections || product.careSections) &&
+                (product.descriptionSections || product.careSections)
+                  .filter(
+                    (sec) =>
+                      sec &&
+                      sec.showOnProductPage !== false &&
+                      sec.isVisible !== false &&
+                      (sec.header || sec.description)
+                  )
+                  .map((sec, i) => {
+                    const accKey = `care_${sec._id || i}`;
+                    const isOpen = Boolean(openAccordions[accKey]);
+                    const title = sec.header || 'Information';
+
+                    return (
+                      <div key={sec._id || i}>
+                        <button
+                          type="button"
+                          onClick={() => toggleAccordion(accKey)}
+                          className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
+                        >
+                          <span className="text-xs sm:text-[13px] font-medium text-stone-900 tracking-normal">
+                            {title}
+                          </span>
+                          <span className="text-stone-500 text-sm font-light select-none">
+                            {isOpen ? '−' : '+'}
+                          </span>
+                        </button>
+                        {isOpen && (
+                          <div className="px-5 pb-5 pt-0 animate-fadeIn">
+                            <FormattedContent content={sec.description} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
               {/* Accordion 4: Manufacturer & Origin */}
               <div>
                 <button
@@ -1930,14 +2364,14 @@ export default function ProductDetail() {
                   </span>
                 </button>
                 {openAccordions.origin && (
-                  <div className="px-5 pb-5 pt-0 text-xs animate-fadeIn space-y-1.5">
-                    <div className="flex justify-between items-center py-1.5 border-b border-stone-100">
-                      <span className="text-stone-500 font-normal">Manufacturer:</span>
-                      <span className="font-medium text-stone-900">Neirah E-Retail India Pvt. Ltd.</span>
+                  <div className="px-5 pb-5 pt-0 text-xs sm:text-[13px] animate-fadeIn space-y-1.5">
+                    <div className="flex justify-between items-center py-2 border-b border-stone-100">
+                      <span className="font-bold text-stone-900">Manufacturer:</span>
+                      <span className="font-normal text-stone-700">Neirah E-Retail India Pvt. Ltd.</span>
                     </div>
-                    <div className="flex justify-between items-center py-1.5">
-                      <span className="text-stone-500 font-normal">Country of Origin:</span>
-                      <span className="font-medium text-stone-900">India</span>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="font-bold text-stone-900">Country of Origin:</span>
+                      <span className="font-normal text-stone-700">India</span>
                     </div>
                   </div>
                 )}
@@ -2037,7 +2471,7 @@ export default function ProductDetail() {
             className={`bg-white shadow-2xl relative flex flex-col md:flex-row overflow-hidden transition-all duration-300 ${
               isLightboxFullscreen
                 ? 'w-full h-full rounded-none'
-                : 'w-full max-w-[960px] h-[88vh] max-h-[700px] rounded-2xl sm:rounded-3xl border border-stone-150'
+                : 'w-full max-w-[820px] h-[75vh] max-h-[600px] rounded-2xl border border-stone-200/80'
             }`}
             onClick={(e) => e.stopPropagation()}
           >
@@ -2045,28 +2479,28 @@ export default function ProductDetail() {
             <button
               type="button"
               onClick={closeLightbox}
-              className="absolute top-3.5 right-3.5 z-30 p-2 rounded-full bg-white/90 hover:bg-white text-stone-500 hover:text-stone-900 shadow-sm border border-stone-200/60 transition-colors cursor-pointer"
+              className="absolute top-2.5 right-2.5 z-30 p-1.5 rounded-full bg-white/90 hover:bg-white text-stone-500 hover:text-stone-900 shadow-sm border border-stone-200/60 transition-colors cursor-pointer"
               aria-label="Close image viewer"
             >
-              <HiOutlineX className="w-5 h-5" />
+              <HiOutlineX className="w-4 h-4" />
             </button>
 
             {/* ─── COLUMN 1: Vertical Thumbnail Strip (Left) ─── */}
-            <div className="hidden md:flex w-24 sm:w-28 shrink-0 flex-col items-center py-4 px-2 border-r border-stone-150 bg-[#FAFAFA]/80 select-none">
+            <div className="hidden md:flex w-16 sm:w-20 shrink-0 flex-col items-center py-3 px-1.5 border-r border-stone-150 bg-[#FAFAFA]/80 select-none">
               <button
                 type="button"
                 onClick={() => {
                   thumbnailContainerRef.current?.scrollBy({ top: -120, behavior: 'smooth' });
                 }}
-                className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-200/50 transition-colors cursor-pointer mb-2"
+                className="p-1 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-200/50 transition-colors cursor-pointer mb-1.5"
                 aria-label="Scroll thumbnails up"
               >
-                <HiChevronUp className="w-5 h-5" />
+                <HiChevronUp className="w-4 h-4" />
               </button>
 
               <div
                 ref={thumbnailContainerRef}
-                className="flex-1 w-full overflow-y-auto no-scrollbar space-y-2.5 px-1 py-1"
+                className="flex-1 w-full overflow-y-auto no-scrollbar space-y-2 px-0.5 py-0.5"
               >
                 {galleryImages.map((img, idx) => {
                   const isActive = idx === lightboxIndex;
@@ -2076,7 +2510,7 @@ export default function ProductDetail() {
                       key={`thumb-${img}-${idx}`}
                       type="button"
                       onClick={() => openLightboxAtIndex(idx)}
-                      className={`w-full aspect-square rounded-xl overflow-hidden p-1 bg-white cursor-pointer transition-all flex items-center justify-center relative ${
+                      className={`w-full aspect-square rounded-lg overflow-hidden p-0.5 bg-white cursor-pointer transition-all flex items-center justify-center relative ${
                         isActive
                           ? 'border-2 border-[#D4A373] ring-2 ring-[#D4A373]/20 shadow-xs scale-102'
                           : 'border border-stone-200/80 hover:border-stone-300 opacity-75 hover:opacity-100'
@@ -2084,7 +2518,7 @@ export default function ProductDetail() {
                     >
                       {isVid ? (
                         <div className="w-full h-full flex flex-col items-center justify-center bg-stone-50 text-[#C59B65]">
-                          <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                             <path d="M8 5v14l11-7z" />
                           </svg>
                         </div>
@@ -2105,19 +2539,19 @@ export default function ProductDetail() {
                 onClick={() => {
                   thumbnailContainerRef.current?.scrollBy({ top: 120, behavior: 'smooth' });
                 }}
-                className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-200/50 transition-colors cursor-pointer mt-2"
+                className="p-1 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-200/50 transition-colors cursor-pointer mt-1.5"
                 aria-label="Scroll thumbnails down"
               >
-                <HiChevronDown className="w-5 h-5" />
+                <HiChevronDown className="w-4 h-4" />
               </button>
             </div>
 
             {/* ─── COLUMN 2: Main Image Canvas Stage (Center) ─── */}
-            <div className="flex-1 relative flex items-center justify-center bg-[#FDFBF7] overflow-hidden select-none min-h-[350px]">
+            <div className="flex-1 relative flex items-center justify-center bg-[#FDFBF7] overflow-hidden select-none min-h-[260px]">
               {/* TOP: Metal Color Swatches (Only displayed if dynamic metal colors exist) */}
               {modalColorsToRender && modalColorsToRender.length > 0 && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full border border-stone-200/80 shadow-md">
-                  <div className="flex items-center gap-2">
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full border border-stone-200/80 shadow-xs">
+                  <div className="flex items-center gap-1.5">
                     {modalColorsToRender.map((c) => {
                       const isSelected = selectedColor?.toLowerCase() === c.name?.toLowerCase();
                       return (
@@ -2130,14 +2564,25 @@ export default function ProductDetail() {
                             setLightboxZoom(1);
                             setLightboxPan({ x: 0, y: 0 });
                           }}
-                          className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full transition-all cursor-pointer shadow-inner relative flex items-center justify-center border border-black/10 ${
+                          className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all cursor-pointer shadow-inner relative flex items-center justify-center overflow-hidden border border-black/10 bg-white ${
                             isSelected
-                              ? 'ring-2 ring-stone-900 ring-offset-2 scale-110'
+                              ? 'ring-2 ring-stone-900 ring-offset-1 scale-110'
                               : 'hover:scale-105 opacity-80 hover:opacity-100'
                           }`}
-                          style={{ background: c.gradient }}
+                          style={c.variantIcon ? undefined : { background: c.gradient }}
                           title={c.name}
-                        />
+                        >
+                          {c.variantIcon ? (
+                            <img
+                              src={c.variantIcon}
+                              alt={c.name}
+                              className="w-full h-full object-cover rounded-full"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : null}
+                        </button>
                       );
                     })}
                   </div>
@@ -2153,10 +2598,10 @@ export default function ProductDetail() {
                     setLightboxZoom(1);
                     setLightboxPan({ x: 0, y: 0 });
                   }}
-                  className="absolute left-3 sm:left-4 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white shadow-md border border-stone-200/70 flex items-center justify-center text-stone-700 hover:text-black cursor-pointer transition-all hover:scale-105 active:scale-95"
+                  className="absolute left-2.5 sm:left-3 z-20 w-8 h-8 rounded-full bg-white/95 hover:bg-white shadow-xs border border-stone-200/70 flex items-center justify-center text-stone-700 hover:text-black cursor-pointer transition-all hover:scale-105 active:scale-95"
                   aria-label="Previous image"
                 >
-                  <HiChevronLeft className="w-5 h-5" />
+                  <HiChevronLeft className="w-4 h-4" />
                 </button>
               )}
 
@@ -2169,16 +2614,18 @@ export default function ProductDetail() {
                     setLightboxZoom(1);
                     setLightboxPan({ x: 0, y: 0 });
                   }}
-                  className="absolute right-3 sm:right-4 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/95 hover:bg-white shadow-md border border-stone-200/70 flex items-center justify-center text-stone-700 hover:text-black cursor-pointer transition-all hover:scale-105 active:scale-95"
+                  className="absolute right-2.5 sm:right-3 z-20 w-8 h-8 rounded-full bg-white/95 hover:bg-white shadow-xs border border-stone-200/70 flex items-center justify-center text-stone-700 hover:text-black cursor-pointer transition-all hover:scale-105 active:scale-95"
                   aria-label="Next image"
                 >
-                  <HiChevronRight className="w-5 h-5" />
+                  <HiChevronRight className="w-4 h-4" />
                 </button>
               )}
 
-              {/* Active Image / Video Stage with Zoom & Pan */}
+              {/* Active Image / Video Stage with Zoom & Pan & Mouse Wheel Scroll Navigation */}
               <div
-                className={`w-full h-full flex items-center justify-center p-4 sm:p-8 pt-16 ${
+                ref={lightboxStageRef}
+                title="Scroll up / down to switch between images"
+                className={`w-full h-full flex items-center justify-center p-3 sm:p-5 pt-12 pb-12 select-none ${
                   lightboxZoom > 1 ? (isLightboxDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'
                 }`}
                 onMouseDown={handleLightboxMouseDown}
@@ -2216,7 +2663,7 @@ export default function ProductDetail() {
 
               {/* Floating Bottom Pill Toolbar (Zoom Controls) */}
               {!isVideoMedia(galleryImages[lightboxIndex]) && (
-                <div className="absolute bottom-4 sm:bottom-5 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md px-4 py-1.5 sm:py-2 rounded-full shadow-lg border border-stone-200/80 flex items-center gap-3 text-stone-700 select-none">
+                <div className="absolute bottom-3 sm:bottom-3.5 left-1/2 -translate-x-1/2 z-20 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full shadow-md border border-stone-200/80 flex items-center gap-2 text-stone-700 select-none text-xs">
                   <button
                     type="button"
                     onClick={() => setLightboxZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))}
@@ -2224,7 +2671,7 @@ export default function ProductDetail() {
                     title="Zoom in"
                     aria-label="Zoom in"
                   >
-                    <HiOutlinePlus className="w-4 h-4" />
+                    <HiOutlinePlus className="w-3.5 h-3.5" />
                   </button>
 
                   <button
@@ -2233,7 +2680,7 @@ export default function ProductDetail() {
                       setLightboxZoom(1);
                       setLightboxPan({ x: 0, y: 0 });
                     }}
-                    className="text-xs font-semibold tracking-wider text-stone-800 min-w-[42px] text-center hover:text-[#92704E] cursor-pointer"
+                    className="text-[11px] font-semibold tracking-wider text-stone-800 min-w-[36px] text-center hover:text-[#92704E] cursor-pointer"
                     title="Click to reset zoom"
                   >
                     {Math.round(lightboxZoom * 100)}%
@@ -2252,10 +2699,10 @@ export default function ProductDetail() {
                     title="Zoom out"
                     aria-label="Zoom out"
                   >
-                    <HiOutlineMinus className="w-4 h-4" />
+                    <HiOutlineMinus className="w-3.5 h-3.5" />
                   </button>
 
-                  <div className="h-3.5 w-px bg-stone-300" />
+                  <div className="h-3 w-px bg-stone-300" />
 
                   <button
                     type="button"
@@ -2264,8 +2711,14 @@ export default function ProductDetail() {
                     title={isLightboxFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
                     aria-label="Toggle fullscreen"
                   >
-                    <HiOutlineArrowsExpand className="w-4 h-4" />
+                    <HiOutlineArrowsExpand className="w-3.5 h-3.5" />
                   </button>
+
+                  <div className="h-3 w-px bg-stone-300" />
+
+                  <span className="text-[10px] text-stone-500 font-mono px-0.5" title="Image count (Scroll up / down to navigate)">
+                    {lightboxIndex + 1}/{galleryImages.length}
+                  </span>
                 </div>
               )}
             </div>
@@ -2358,58 +2811,164 @@ export default function ProductDetail() {
         </div>
       )}
 
-      {/* ─── Certificate Preview Lightbox Modal ─── */}
+      {/* ─── Luxury Authenticity & Grading Certificate Viewer Modal ─── */}
       {showCertificateModal && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
-          onClick={() => setShowCertificateModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 backdrop-blur-md animate-fadeIn overscroll-contain"
+          onClick={closeCertificateModal}
+          onWheel={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
         >
           <div
-            className="relative bg-white rounded-2xl max-w-2xl w-full p-4 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+            className={`relative bg-[#1c1917] text-white rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 border border-stone-700/60 ${
+              isCertFullscreen
+                ? 'w-full h-full rounded-none'
+                : 'w-full max-w-4xl lg:max-w-5xl h-[88vh] max-h-[820px]'
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-stone-200">
-              <div>
-                <h3 className="text-base sm:text-lg font-bold text-stone-900 font-serif">
-                  Authenticity &amp; Grading Certificate
-                </h3>
-                <p className="text-xs text-stone-500">
-                  {product.basicInfo?.title || 'Fine Jewellery Certificate'} • {product.basicInfo?.sku || 'Certified'}
-                </p>
+            {/* Top Toolbar */}
+            <div className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 border-b border-white/10 bg-[#161412] shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0 pr-3">
+                <div className="w-8 h-8 rounded-lg bg-[#92704E]/25 border border-[#92704E]/40 flex items-center justify-center text-[#d4af37] shrink-0">
+                  <HiOutlineDocumentText className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xs sm:text-sm font-bold text-white tracking-wide truncate font-serif">
+                    Authenticity &amp; Grading Certificate
+                  </h3>
+                  <p className="text-[11px] text-stone-400 truncate">
+                    {product.basicInfo?.title || 'Fine Jewellery'} • {product.basicInfo?.sku || 'Certificate'}
+                  </p>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowCertificateModal(false)}
-                className="p-1.5 rounded-full hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
-                aria-label="Close certificate modal"
-              >
-                <HiOutlineX className="w-5 h-5" />
-              </button>
+
+              {/* PDF Toolbar Controls */}
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                {!isCertPdf && (
+                  <>
+                    {/* Zoom Out */}
+                    <button
+                      type="button"
+                      onClick={handleCertZoomOut}
+                      className="p-1.5 rounded-lg text-stone-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                      title="Zoom Out (−)"
+                      aria-label="Zoom Out"
+                    >
+                      <HiOutlineMinus className="w-4 h-4" />
+                    </button>
+
+                    {/* Zoom % / Reset */}
+                    <button
+                      type="button"
+                      onClick={handleCertReset}
+                      className="px-2 py-1 text-xs font-semibold font-mono rounded bg-white/10 hover:bg-white/20 text-stone-200 transition-colors min-w-[50px] text-center cursor-pointer"
+                      title="Click to reset zoom (100%)"
+                    >
+                      {Math.round(certZoom * 100)}%
+                    </button>
+
+                    {/* Zoom In */}
+                    <button
+                      type="button"
+                      onClick={handleCertZoomIn}
+                      className="p-1.5 rounded-lg text-stone-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                      title="Zoom In (+)"
+                      aria-label="Zoom In"
+                    >
+                      <HiOutlinePlus className="w-4 h-4" />
+                    </button>
+
+                    {/* Rotate */}
+                    <button
+                      type="button"
+                      onClick={handleCertRotate}
+                      className="p-1.5 rounded-lg text-stone-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                      title="Rotate 90°"
+                      aria-label="Rotate 90 degrees"
+                    >
+                      <HiOutlineRefresh className="w-4 h-4" />
+                    </button>
+
+                    <div className="h-5 w-px bg-white/15 mx-0.5 sm:mx-1" />
+                  </>
+                )}
+
+
+                {/* Open Original */}
+                <a
+                  href={certificateUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#92704E] hover:bg-[#7e5f40] text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
+                  title="Open Original Document"
+                >
+                  <span>Open Original</span>
+                  <HiOutlineExternalLink className="w-3.5 h-3.5" />
+                </a>
+
+
+                {/* Close Button */}
+                <button
+                  type="button"
+                  onClick={closeCertificateModal}
+                  className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-white/15 transition-colors cursor-pointer ml-1"
+                  aria-label="Close certificate modal"
+                >
+                  <HiOutlineX className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <div className="bg-stone-50 rounded-xl p-2 sm:p-4 border border-stone-200/80 flex items-center justify-center">
-              <img
-                src={certificateUrl}
-                alt="Jewellery Certificate"
-                className="max-h-[60vh] w-auto object-contain rounded shadow-md"
-              />
+            {/* Document Stage / Canvas */}
+            <div
+              ref={certCanvasRef}
+              className={`flex-1 relative overflow-hidden bg-[#24211e] flex items-center justify-center p-3 sm:p-6 select-none overscroll-contain ${
+                certZoom > 1 ? (isCertDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'
+              }`}
+              onMouseDown={handleCertMouseDown}
+              onMouseMove={handleCertMouseMove}
+              onMouseUp={handleCertMouseUp}
+              onMouseLeave={handleCertMouseUp}
+              onDoubleClick={handleCertDoubleClick}
+            >
+              {isCertPdf ? (
+                <iframe
+                  src={certificateUrl}
+                  title="Certificate PDF Preview"
+                  className="w-full h-full rounded-xl border border-white/10 shadow-2xl bg-white"
+                />
+              ) : (
+                <div
+                  style={{
+                    transform: `translate(${certPan.x}px, ${certPan.y}px) scale(${certZoom}) rotate(${certRotation}deg)`,
+                    transition: isCertDragging ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)',
+                  }}
+                  className="max-w-full max-h-full flex items-center justify-center origin-center"
+                >
+                  <img
+                    src={certificateUrl}
+                    alt="Jewellery Certificate"
+                    draggable={false}
+                    className="max-h-[70vh] sm:max-h-[74vh] max-w-[92vw] sm:max-w-[85vw] object-contain rounded-lg shadow-2xl bg-white ring-1 ring-black/10"
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-              <span className="text-[11px] text-stone-500 text-center sm:text-left">
+            {/* Bottom Footer Info */}
+            <div className="px-4 sm:px-6 py-2.5 bg-[#161412] border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-stone-400">
+              <span className="flex items-center gap-1.5 text-stone-300">
+                <span className="text-[#d4af37]">✓</span>
                 100% Certified Natural &amp; Lab Grown Diamonds • BIS Hallmarked Gold
               </span>
-              <a
-                href={certificateUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#92704E] hover:bg-[#7e5f40] text-white text-xs font-semibold rounded-lg shadow-sm transition-colors shrink-0"
-              >
-                <span>Open Original</span>
-                <HiOutlineExternalLink className="w-3.5 h-3.5" />
-              </a>
+              <span className="text-stone-500 hidden sm:inline">
+                Scroll to zoom • Drag to pan • Double-click to zoom in/out
+              </span>
             </div>
           </div>
         </div>
