@@ -25,6 +25,7 @@ export const CartProvider = ({ children }) => {
       if (!Array.isArray(parsed)) return [];
       return parsed.map((item) => ({
         ...item,
+        category: (item.category && !/^[0-9a-fA-F]{24}$/.test(String(item.category).trim())) ? item.category : '',
         selectedMetal: resolveMetalName(item.selectedMetal),
         selectedSize: cleanAttribute(item.selectedSize),
       }));
@@ -48,7 +49,7 @@ export const CartProvider = ({ children }) => {
 
   // Calculate local fallback totals if needed
   const calculateTotals = useCallback((items) => {
-    const totalItems = items.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+    const totalItems = items.length;
     const subtotal = items.reduce(
       (sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1),
       0
@@ -89,10 +90,11 @@ export const CartProvider = ({ children }) => {
             price: i.price,
             originalPrice: i.originalPrice,
             image: i.image?.url || i.image || '',
-            category: i.category,
+            category: (i.category && !/^[0-9a-fA-F]{24}$/.test(String(i.category).trim())) ? i.category : '',
             quantity: i.quantity,
-            selectedMetal: resolveMetalName(i.selectedMetal, i.product),
+            selectedMetal: resolveMetalName(i.selectedMetal, i.productId),
             selectedSize: cleanAttribute(i.selectedSize),
+            selectedAttributes: i.selectedAttributes || undefined,
           };
         });
         setCart(formattedItems);
@@ -294,7 +296,7 @@ export const CartProvider = ({ children }) => {
           image: i.image?.url || i.image || '',
           category: i.category,
           quantity: i.quantity,
-          selectedMetal: resolveMetalName(i.selectedMetal, i.product),
+          selectedMetal: resolveMetalName(i.selectedMetal, i.productId),
           selectedSize: cleanAttribute(i.selectedSize),
         }));
         setCart(formattedItems);
@@ -408,7 +410,7 @@ export const CartProvider = ({ children }) => {
   };
 
   const totalItems =
-    cartTotals.totalItems || cart.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+    cartTotals.totalItems || cart.length;
   const subtotal =
     cartTotals.subtotal ||
     cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);

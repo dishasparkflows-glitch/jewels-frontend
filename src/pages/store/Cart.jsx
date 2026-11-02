@@ -45,7 +45,7 @@ const Cart = () => {
             Review Bag
           </span>
           <h1 className="font-serif text-3xl sm:text-4xl font-normal text-[#26221e] mt-1">
-            Shopping Bag ({cart.reduce((s, i) => s + i.quantity, 0)})
+            Shopping Bag ({cart.length})
           </h1>
         </div>
         <Link
@@ -60,37 +60,88 @@ const Cart = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-10 items-start">
         {/* Cart Item List */}
         <div className="lg:col-span-2 space-y-4">
-          {cart.map((item) => (
+          {cart.map((item) => {
+            const attrs = item.selectedAttributes || {};
+            const diamondType = attrs.diamondType || '';
+            const metalPurity = attrs.metalPurity || '';
+            const metalColor = attrs.metalColor || resolveMetalName(item.selectedMetal) || '';
+            const metalDisplay = [metalPurity, metalColor].filter(Boolean).join(' ') || resolveMetalName(item.selectedMetal);
+            const diamondShape = attrs.diamondShape || '';
+            const diamondColor = attrs.diamondColor || '';
+            const diamondClarity = attrs.diamondClarity || '';
+            const clarityDisplay = [diamondColor, diamondClarity].filter(Boolean).join(' ');
+            const caratWeight = attrs.caratWeight != null ? attrs.caratWeight : null;
+            const sizeDisplay = cleanAttribute(attrs.size || item.selectedSize);
+
+            let centerSummary = '';
+            if (diamondType || caratWeight || clarityDisplay) {
+              const parts = [];
+              if (caratWeight) parts.push(`${caratWeight} CT`);
+              if (clarityDisplay) parts.push(`Clarity: ${clarityDisplay}`);
+              const detailsStr = parts.length > 0 ? ` (${parts.join(', ')})` : '';
+              centerSummary = `Center: ${diamondType || 'Diamond'}${detailsStr}`;
+            }
+
+            const targetIdentifier = item.slug || item.productId || item.id || (item.name ? item.name.toLowerCase().trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') : '');
+            const productLink = `/product/${encodeURIComponent(targetIdentifier)}`;
+
+            return (
             <div
               key={`${item.id}-${item.selectedMetal}`}
               className="bg-white rounded-2xl border border-stone-200 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5 shadow-sm"
             >
-              <img
-                src={item.image && !isOrnateImage(item.image) ? item.image : getPrimaryProductImage(item)}
-                alt={item.name}
-                className="w-full sm:w-28 h-48 sm:h-28 rounded-xl object-cover object-center bg-[#f4f0eb] flex-shrink-0"
-              />
+              <Link to={productLink} className="w-full sm:w-28 h-48 sm:h-28 rounded-xl overflow-hidden bg-[#f4f0eb] flex-shrink-0 block hover:opacity-95 transition-opacity" title={`View ${item.name}`}>
+                <img
+                  src={item.image && !isOrnateImage(item.image) ? item.image : getPrimaryProductImage(item)}
+                  alt={item.name}
+                  className="w-full h-full object-cover object-center"
+                />
+              </Link>
 
               <div className="flex-1 space-y-1">
+                {diamondType && (
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#b83b3b]">{diamondType}</p>
+                )}
+                {item.category && !/^[0-9a-fA-F]{24}$/.test(String(item.category).trim()) && (
                   <span className="text-[11px] uppercase tracking-wider text-[#9b7951] font-semibold">
-                  {item.category}
-                </span>
+                    {item.category}
+                  </span>
+                )}
                 <Link
-                  to={`/product/${encodeURIComponent(item.slug || (item.name ? item.name.toLowerCase().trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') : ''))}`}
+                  to={productLink}
                   className="block font-serif text-lg font-medium text-[#2c2722] hover:text-[#8b6b47] transition-colors"
                 >
                   {item.name}
                 </Link>
-                {resolveMetalName(item.selectedMetal) && (
-                  <p className="text-xs text-stone-500">
-                    Metal: <span className="text-stone-700">{resolveMetalName(item.selectedMetal)}</span>
-                  </p>
+
+                {/* Attributes 2-Column Grid */}
+                {(metalDisplay || metalColor || clarityDisplay || caratWeight != null || diamondShape || sizeDisplay) && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-stone-600 pt-1">
+                    {metalDisplay && (
+                      <p><span className="text-[11px] font-semibold uppercase text-stone-500">Metal:</span> <span className="text-stone-800 font-medium">{metalDisplay}</span></p>
+                    )}
+                    {metalColor && (
+                      <p><span className="text-[11px] font-semibold uppercase text-stone-500">Color:</span> <span className="text-stone-800 font-medium">{metalColor}</span></p>
+                    )}
+                    {clarityDisplay && (
+                      <p><span className="text-[11px] font-semibold uppercase text-stone-500">Clarity:</span> <span className="text-stone-800 font-medium">{clarityDisplay}</span></p>
+                    )}
+                    {caratWeight != null && (
+                      <p><span className="text-[11px] font-semibold uppercase text-stone-500">Carat:</span> <span className="text-stone-800 font-medium">{caratWeight}</span></p>
+                    )}
+                    {diamondShape && (
+                      <p><span className="text-[11px] font-semibold uppercase text-stone-500">Shape:</span> <span className="text-stone-800 font-medium">{diamondShape}</span></p>
+                    )}
+                    {sizeDisplay && (
+                      <p><span className="text-[11px] font-semibold uppercase text-stone-500">Size:</span> <span className="text-stone-800 font-medium">{sizeDisplay}</span></p>
+                    )}
+                  </div>
                 )}
-                {cleanAttribute(item.selectedSize) && (
-                  <p className="text-xs text-stone-500">
-                    Size: <span className="text-stone-700">{cleanAttribute(item.selectedSize)}</span>
-                  </p>
+
+                {centerSummary && (
+                  <p className="text-xs text-stone-400 italic pt-0.5">{centerSummary}</p>
                 )}
+
                 <p className="text-sm font-semibold text-[#2c2722] pt-1">
                   {formatPrice(item.price)}
                 </p>
@@ -123,7 +174,8 @@ const Cart = () => {
                 </button>
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
 
         {/* Order Summary & Checkout Card */}

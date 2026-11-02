@@ -692,7 +692,9 @@ export default function Checkout() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="line-clamp-2 text-[11px] font-semibold uppercase leading-[1.4] text-stone-900">{item.name || item.title}</p>
-                        {item.category && <span className="mt-1 inline-block rounded bg-[#f4eee5] px-1.5 py-0.5 text-[8px] uppercase tracking-wide text-[#80603d]">{item.category}</span>}
+                        {item.category && !/^[0-9a-fA-F]{24}$/.test(String(item.category).trim()) && (
+                          <span className="mt-1 inline-block rounded bg-[#f4eee5] px-1.5 py-0.5 text-[8px] uppercase tracking-wide text-[#80603d]">{item.category}</span>
+                        )}
                       </div>
                       <span className="shrink-0 text-xs font-semibold">{formatPrice(Number(item.price) * Number(item.quantity || 1))}</span>
                     </div>
