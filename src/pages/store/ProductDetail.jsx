@@ -263,13 +263,7 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [mostLikedProducts, setMostLikedProducts] = useState([]);
   const [sizes, setSizes] = useState([]);
-  const [coupons, setCoupons] = useState([
-    {
-      _id: 'default-firstorder',
-      coupon: { code: 'FIRSTORDER', description: 'Valid on your first fine jewelry purchase' },
-      discount: { type: 'Percentage', value: 10, minimumOrderAmount: 0 }
-    }
-  ]);
+  const [coupons, setCoupons] = useState([]);
   const [offersOpen, setOffersOpen] = useState(true);
   const [copiedCode, setCopiedCode] = useState(null);
 
@@ -278,12 +272,11 @@ export default function ProductDetail() {
       .getLookup()
       .then(({ data }) => {
         const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-        const active = list.filter((c) => c.status === 'active' || !c.status);
-        if (active.length > 0) {
-          setCoupons(active);
-        }
+        setCoupons(list);
       })
-      .catch(() => {});
+      .catch(() => {
+        setCoupons([]);
+      });
   }, []);
 
   const handleCopyCoupon = (code) => {
@@ -499,6 +492,7 @@ export default function ProductDetail() {
   // Accordion active sections (multiple can be open simultaneously)
   const [openAccordions, setOpenAccordions] = useState({
     desc: false,
+    specs: false,
     price: false,
     origin: false,
   });
@@ -506,6 +500,23 @@ export default function ProductDetail() {
   const toggleAccordion = (key) => {
     setOpenAccordions((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+
+  // Product specifications key-value pairs (Admin Step 4: Care & Specs)
+  const productSpecs = useMemo(() => {
+    const list = [];
+    if (Array.isArray(product?.productSpecifications)) {
+      product.productSpecifications.forEach((spec) => {
+        if (spec && (spec.key?.trim() || spec.value?.trim())) {
+          list.push({
+            key: spec.key?.trim() || '',
+            value: spec.value?.trim() || '',
+            id: spec._id || spec.id,
+          });
+        }
+      });
+    }
+    return list;
+  }, [product?.productSpecifications]);
 
 
   // Determine whether this product is Case 1 (Center Diamond Driven) or Case 2 (Side Diamond Driven)
@@ -1605,7 +1616,8 @@ export default function ProductDetail() {
             {/* ══════════════════════════════════════════════════════════
                 AVAILABLE OFFERS (Luxury Ticket & Celestial Sparkle)
             ═══════════════════════════════════════════════════════════ */}
-            <div className="relative overflow-hidden rounded-2xl border border-[#E8DEC9] bg-gradient-to-br from-[#FCFAF6] via-[#FDFCF9] to-[#F7F2E8] p-3.5 sm:p-4 shadow-[0_2px_14px_rgba(139,111,78,0.06)] transition-all">
+            {coupons && coupons.length > 0 && (
+              <div className="relative overflow-hidden rounded-2xl border border-[#E8DEC9] bg-gradient-to-br from-[#FCFAF6] via-[#FDFCF9] to-[#F7F2E8] p-3.5 sm:p-4 shadow-[0_2px_14px_rgba(139,111,78,0.06)] transition-all">
               {/* Celestial 8-Point Diamond Starburst Watermark (Matches Neirah Screenshot) */}
               <svg
                 className="absolute -top-3 -right-3 w-20 h-20 text-[#C19B65]/35 pointer-events-none select-none"
@@ -1742,6 +1754,7 @@ export default function ProductDetail() {
                 </div>
               )}
             </div>
+            )}
 
             {/* ══════════════════════════════════════════════════════════
                 VARIANT SELECTORS (Gold Jewelry Only; Silver has no diamond/metal variants)
@@ -2124,6 +2137,44 @@ export default function ProductDetail() {
                   </div>
                 )}
               </div>
+
+              {/* Accordion: Product Specifications */}
+              {productSpecs.length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => toggleAccordion('specs')}
+                    className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
+                  >
+                    <span className="text-xs sm:text-[13px] font-medium text-stone-900 tracking-normal">
+                      Product Specifications
+                    </span>
+                    <span className="text-stone-500 text-sm font-light select-none">
+                      {openAccordions.specs ? '−' : '+'}
+                    </span>
+                  </button>
+                  {openAccordions.specs && (
+                    <div className="px-5 pb-5 pt-0 animate-fadeIn">
+                      <div className="border border-stone-200/90 rounded bg-[#FAF8F5]/40 p-3.5 sm:p-4">
+                        <div className={`grid gap-2.5 ${productSpecs.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
+                          {productSpecs.map((spec, idx) => (
+                            <div
+                              key={spec.id || idx}
+                              className="flex items-center justify-between px-3.5 py-2.5 bg-white border border-stone-200/80 rounded shadow-2xs text-xs"
+                            >
+                              <span className="font-medium text-stone-500 capitalize">{spec.key}</span>
+                              <div className="flex items-center gap-1.5 font-semibold text-stone-900 text-right">
+                                <span className="text-stone-400 font-normal">:</span>
+                                <span>{spec.value}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Accordion 2: PRICE BREAK UP (Only for Gold items) */}
               {isGold && (
