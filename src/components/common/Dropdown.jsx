@@ -142,8 +142,8 @@ export default function Dropdown({
     const spaceAboveWindow = rect.top;
     const estimatedMenuHeight = 240;
 
-    // Check if dropdown is inside a modal, dialog, or form container
-    const modalParent = buttonRef.current.closest('[role="dialog"], .rounded-2xl, .modal, form');
+    // Check if dropdown is inside a modal or dialog container
+    const modalParent = buttonRef.current.closest('[role="dialog"], [aria-modal="true"], .modal');
     if (modalParent) {
       const parentRect = modalParent.getBoundingClientRect();
       const parentSpaceBelow = parentRect.bottom - rect.bottom;

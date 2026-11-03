@@ -544,11 +544,11 @@ export default function ProductDetail() {
 
     raw.forEach((v) => {
       const p = referenceName(v.metalPurity || v.metalPurityId) || v.purity || '';
-      if (p) pSet.add(p);
+      if (p && !/^[a-f0-9]{24}$/i.test(p)) pSet.add(p);
 
       const cObj = v.metalColorId;
       const cName = referenceName(cObj) || v.color || '';
-      if (cName) {
+      if (cName && !/^[a-f0-9]{24}$/i.test(cName)) {
         const existing = cMap.get(cName) || {};
         cMap.set(cName, {
           name: cName,
@@ -574,7 +574,7 @@ export default function ProductDetail() {
     if (Array.isArray(product?.metalPurityIds)) {
       product.metalPurityIds.forEach((p) => {
         const name = typeof p === 'object' ? p.name : p;
-        if (name) pSet.add(name);
+        if (name && typeof name === 'string' && !/^[a-f0-9]{24}$/i.test(name)) pSet.add(name);
       });
     }
 
@@ -681,81 +681,139 @@ export default function ProductDetail() {
   }, [product, isGold, purities, colors, carats, qualities, selectedPurity, selectedColor, selectedCarat, selectedQuality]);
 
   // Swatches for the combined Metal (Purity + Color) selector matching Neirah standard
-  const metalSwatches = useMemo(() => {
-    if (!isGold || !purities.length || !colors.length) {
-      return [];
+  const { metalSwatches, purityGroups } = useMemo(() => {
+    if (!isGold || !purities.length) {
+      return { metalSwatches: [], purityGroups: [] };
     }
+
+    // Standard gold color palette order: White Gold, Rose Gold, Yellow Gold
+    const standardGoldColors = [
+      { name: 'White Gold', aliases: ['white gold', 'white'], colorCode: '#f1f5f9', colorCodeEnd: '#cbd5e1' },
+      { name: 'Rose Gold', aliases: ['rose gold', 'rose', 'pink'], colorCode: '#e89f8f', colorCodeEnd: '#cb7768' },
+      { name: 'Yellow Gold', aliases: ['yellow gold', 'yellow'], colorCode: '#f5d77f', colorCodeEnd: '#d4b85b' },
+    ];
+
+    // Filter to standard colors actually configured in product (or fallback to all 3)
+    const availableColorNames = (colors || [])
+      .map((c) => (c.name || '').toLowerCase().trim())
+      .filter((n) => n && !/^[a-f0-9]{24}$/i.test(n));
+
+    const activeColorDefs = standardGoldColors.filter((def) =>
+      availableColorNames.some((ac) => def.aliases.some((alias) => ac.includes(alias)))
+    );
+    const colorsToUse = activeColorDefs.length > 0 ? activeColorDefs : standardGoldColors;
 
     // Standard purities order: 9K, 10K, 14K, 18K
     const purityOrder = [
-      { key: '9K', full: '9KT Gold', aliases: ['9KT Gold', '9KT', '9K'] },
-      { key: '10K', full: '10KT Gold', aliases: ['10KT Gold', '10KT', '10K'] },
-      { key: '14K', full: '14KT Gold', aliases: ['14KT Gold', '14KT', '14K'] },
-      { key: '18K', full: '18KT Gold', aliases: ['18KT Gold', '18KT', '18K'] },
+      { key: '9K', full: '9KT Gold', aliases: ['9kt gold', '9kt', '9k'] },
+      { key: '10K', full: '10KT Gold', aliases: ['10kt gold', '10kt', '10k'] },
+      { key: '14K', full: '14KT Gold', aliases: ['14kt gold', '14kt', '14k'] },
+      { key: '18K', full: '18KT Gold', aliases: ['18kt gold', '18kt', '18k'] },
     ];
 
     // Filter to purities actually configured in this product
     const activePurityDefs = purityOrder.filter((pDef) =>
-      purities.some((p) => pDef.aliases.some((a) => p.toLowerCase().includes(a.toLowerCase())))
+      purities.some((p) => pDef.aliases.some((a) => String(p).toLowerCase().includes(a)))
     );
 
     // Any non-standard configured purities (e.g. 22K, 24K)
     const extraPurities = purities.filter(
-      (p) => !purityOrder.some((pDef) => pDef.aliases.some((a) => p.toLowerCase().includes(a.toLowerCase())))
+      (p) => !/^[a-f0-9]{24}$/i.test(String(p)) && !purityOrder.some((pDef) => pDef.aliases.some((a) => String(p).toLowerCase().includes(a)))
     );
 
-    const swatches = [];
+    const listToRender = activePurityDefs.length > 0 ? activePurityDefs : purityOrder;
+    const groups = [];
 
-    activePurityDefs.forEach((pDef) => {
+    listToRender.forEach((pDef) => {
       const matchedPurity = purities.find((p) =>
-        pDef.aliases.some((a) => p.toLowerCase().includes(a.toLowerCase()))
+        pDef.aliases.some((a) => String(p).toLowerCase().includes(a))
       ) || pDef.full;
 
-      colors.forEach((cObj) => {
-        const colorName = cObj.name;
-        swatches.push({
-          id: `${pDef.key}-${colorName}`,
+      const groupSwatches = colorsToUse.map((def) => {
+        const matchedObj = (colors || []).find((c) => {
+          const name = (c.name || '').toLowerCase().trim();
+          return def.aliases.some((alias) => name.includes(alias));
+        });
+        const colorCode = matchedObj?.colorCode || matchedObj?.hex || def.colorCode;
+        const colorCodeEnd = matchedObj?.colorCodeEnd || def.colorCodeEnd;
+
+        return {
+          id: `${pDef.key}-${def.name}`,
           label: pDef.key,
           purity: matchedPurity,
-          color: colorName,
-          colorCode: cObj?.colorCode || '',
-          colorCodeEnd: cObj?.colorCodeEnd || '',
+          color: def.name,
+          colorCode,
+          colorCodeEnd,
           type: 'gold',
-        });
+        };
       });
+
+      if (groupSwatches.length > 0) {
+        groups.push({
+          key: pDef.key,
+          label: pDef.key,
+          purity: matchedPurity,
+          swatches: groupSwatches,
+        });
+      }
     });
 
     extraPurities.forEach((extraP) => {
-      const label = extraP.replace(/[^0-9a-zA-Z]/g, '').slice(0, 4) || extraP;
-      colors.forEach((cObj) => {
-        const colorName = cObj.name;
-        swatches.push({
-          id: `${label}-${colorName}`,
+      const label = String(extraP).replace(/[^0-9a-zA-Z]/g, '').slice(0, 4) || extraP;
+      const groupSwatches = colorsToUse.map((def) => {
+        const matchedObj = (colors || []).find((c) => {
+          const name = (c.name || '').toLowerCase().trim();
+          return def.aliases.some((alias) => name.includes(alias));
+        });
+        const colorCode = matchedObj?.colorCode || matchedObj?.hex || def.colorCode;
+        const colorCodeEnd = matchedObj?.colorCodeEnd || def.colorCodeEnd;
+
+        return {
+          id: `${label}-${def.name}`,
           label,
           purity: extraP,
-          color: colorName,
-          colorCode: cObj?.colorCode || '',
-          colorCodeEnd: cObj?.colorCodeEnd || '',
+          color: def.name,
+          colorCode,
+          colorCodeEnd,
           type: 'gold',
-        });
+        };
       });
+
+      if (groupSwatches.length > 0) {
+        groups.push({
+          key: label,
+          label,
+          purity: extraP,
+          swatches: groupSwatches,
+        });
+      }
     });
 
     // Only include silver if the product actually has silver purity configured (no static silver)
     const actualSilverPurity = purities.find((p) =>
-      p.toLowerCase().includes('silver') || p.toLowerCase().includes('925')
+      String(p).toLowerCase().includes('silver') || String(p).toLowerCase().includes('925')
     );
     if (actualSilverPurity) {
-      swatches.push({
+      const silverSwatch = {
         id: 'SS-Silver',
         label: 'SS',
         purity: actualSilverPurity,
         color: 'Silver',
+        colorCode: '#e2e8f0',
+        colorCodeEnd: '#cbd5e1',
         type: 'silver',
+      };
+      groups.push({
+        key: 'SS',
+        label: 'SS',
+        purity: actualSilverPurity,
+        swatches: [silverSwatch],
       });
     }
 
-    return swatches;
+    const swatches = groups.flatMap((g) => g.swatches);
+
+    return { metalSwatches: swatches, purityGroups: groups };
   }, [purities, colors, isGold]);
 
   const isSwatchSelected = useCallback((swatch) => {
@@ -763,8 +821,8 @@ export default function ProductDetail() {
     const curColor = (selectedColor || '').toLowerCase();
 
     const matchP = curPurity.includes(swatch.label.toLowerCase()) ||
-                   (swatch.purity && curPurity.includes(swatch.purity.toLowerCase()));
-    const matchC = curColor === swatch.color.toLowerCase();
+                   (swatch.purity && (curPurity.includes(swatch.purity.toLowerCase()) || swatch.purity.toLowerCase().includes(curPurity)));
+    const matchC = curColor.includes(swatch.color.toLowerCase()) || swatch.color.toLowerCase().includes(curColor);
 
     return Boolean(matchP && matchC);
   }, [selectedPurity, selectedColor]);
@@ -980,9 +1038,12 @@ export default function ProductDetail() {
       const cla = referenceName(v.diamondClarity || v.diamondClarityId) || v.diamondClarity || '';
       const q = [col, cla].filter(Boolean).join(' · ');
 
-      const matchP = !selectedPurity || p === selectedPurity;
+      const matchP = !selectedPurity || p === selectedPurity ||
+        (p && selectedPurity && (p.toLowerCase().includes(selectedPurity.toLowerCase()) || selectedPurity.toLowerCase().includes(p.toLowerCase())));
       // Allow matching if variant has no explicit metalColorId (purity rates apply across colors)
-      const matchC = !selectedColor || !c || c.toLowerCase() === selectedColor.toLowerCase();
+      const matchC = !selectedColor || !c ||
+        c.toLowerCase() === selectedColor.toLowerCase() ||
+        (c && selectedColor && (c.toLowerCase().includes(selectedColor.toLowerCase()) || selectedColor.toLowerCase().includes(c.toLowerCase())));
       const matchCt = !selectedCarat || ct === Number(selectedCarat);
       const matchQ = !selectedQuality || q === selectedQuality;
 
@@ -1893,34 +1954,43 @@ export default function ProductDetail() {
                       </label>
 
                       <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
-                        {metalSwatches.map((swatch) => {
-                          const isSel = isSwatchSelected(swatch);
-                          const bg = swatch.colorCode && swatch.colorCodeEnd
-                            ? `linear-gradient(135deg, ${swatch.colorCode} 0%, ${swatch.colorCodeEnd} 100%)`
-                            : (swatch.colorCode || swatch.colorCodeEnd || '#f1f5f9');
+                        {purityGroups.map((group, gIdx) => (
+                          <div key={group.key} className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              {group.swatches.map((swatch) => {
+                                const isSel = isSwatchSelected(swatch);
+                                const bg = swatch.colorCode && swatch.colorCodeEnd
+                                  ? `linear-gradient(135deg, ${swatch.colorCode} 0%, ${swatch.colorCodeEnd} 100%)`
+                                  : (swatch.colorCode || swatch.colorCodeEnd || '#f1f5f9');
 
-                          return (
-                            <button
-                              key={swatch.id}
-                              type="button"
-                              onClick={() => handleSelectMetalSwatch(swatch)}
-                              className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-[9px] sm:text-[10px] tracking-tight transition-all cursor-pointer shadow-2xs ${
-                                isSel
-                                  ? 'ring-2 ring-stone-900 ring-offset-2 scale-105 z-10'
-                                  : 'hover:scale-105 active:scale-95 opacity-90 hover:opacity-100'
-                              }`}
-                              style={{
-                                background: bg,
-                                border: '1px solid rgba(0, 0, 0, 0.12)',
-                                color: '#334155',
-                              }}
-                              title={`${swatch.label} ${swatch.color}`}
-                              aria-label={`${swatch.label} ${swatch.color}`}
-                            >
-                              {swatch.label}
-                            </button>
-                          );
-                        })}
+                                return (
+                                  <button
+                                    key={swatch.id}
+                                    type="button"
+                                    onClick={() => handleSelectMetalSwatch(swatch)}
+                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-[9px] sm:text-[10px] tracking-tight transition-all cursor-pointer shadow-2xs ${
+                                      isSel
+                                        ? 'ring-2 ring-stone-900 ring-offset-2 scale-105 z-10'
+                                        : 'hover:scale-105 active:scale-95 opacity-90 hover:opacity-100'
+                                    }`}
+                                    style={{
+                                      background: bg,
+                                      border: '1px solid rgba(0, 0, 0, 0.12)',
+                                      color: '#334155',
+                                    }}
+                                    title={`${swatch.label} ${swatch.color}`}
+                                    aria-label={`${swatch.label} ${swatch.color}`}
+                                  >
+                                    {swatch.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {gIdx < purityGroups.length - 1 && (
+                              <span className="w-px h-5 bg-stone-200 mx-0.5 shrink-0" aria-hidden="true" />
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -1933,6 +2003,7 @@ export default function ProductDetail() {
                       </label>
                       <Dropdown
                         id="carat-select"
+                        direction="down"
                         value={selectedCarat}
                         onChange={(val) => setSelectedCarat(Number(val))}
                         options={carats.map((ct) => ({ value: ct, label: `${ct} CT` }))}
@@ -2032,6 +2103,7 @@ export default function ProductDetail() {
                   </div>
                   <Dropdown
                     id="product-size"
+                    direction="down"
                     value={selectedSize}
                     onChange={(val) => setSelectedSize(val)}
                     options={sortedSizes.map((size) => ({
