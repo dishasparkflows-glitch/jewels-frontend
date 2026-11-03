@@ -38,6 +38,11 @@ import { trackProductView } from '../../config/firebase';
 import { useLiveViewers } from '../../hooks/useLiveViewers';
 import Dropdown from '../../components/common/Dropdown';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
+import {
+  calculateSizeAdjustedMetalWeight,
+  sortSizesNumerically,
+  getCategorySizeLabel,
+} from '../../utils/sizePriceCalculator';
 
 const referenceName = (value) => (value && typeof value === 'object' ? value.name || '' : (typeof value === 'string' ? value : ''));
 
@@ -630,13 +635,6 @@ export default function ProductDetail() {
       });
     }
 
-    // Default fallback to 3 core luxury colors if none configured (only for gold/non-silver products)
-    if (cMap.size === 0 && product?.productType !== 'silver' && !product?.isOrnate) {
-      cMap.set('Rose Gold', { name: 'Rose Gold', code: '' });
-      cMap.set('Yellow Gold', { name: 'Yellow Gold', code: '' });
-      cMap.set('White Gold', { name: 'White Gold', code: '' });
-    }
-
     return {
       purities: Array.from(pSet),
       colors: Array.from(cMap.values()),
@@ -683,22 +681,9 @@ export default function ProductDetail() {
   }, [product, isGold, purities, colors, carats, qualities, selectedPurity, selectedColor, selectedCarat, selectedQuality]);
 
   // Swatches for the combined Metal (Purity + Color) selector matching Neirah standard
-  // Swatches for the combined Metal (Purity + Color) selector
   const metalSwatches = useMemo(() => {
-    if (!isGold) {
+    if (!isGold || !purities.length || !colors.length) {
       return [];
-    }
-
-    // Standard gold color palette order: White Gold, Rose Gold, Yellow Gold
-    const colorOrder = ['White Gold', 'Rose Gold', 'Yellow Gold'];
-
-    // Map existing colors in product if available
-    const availableColorNames = colors.map((c) => c.name);
-    const activeColors = colorOrder.filter((co) =>
-      availableColorNames.length === 0 || availableColorNames.some((ac) => ac.toLowerCase() === co.toLowerCase())
-    );
-    if (!activeColors.length) {
-      activeColors.push('White Gold', 'Rose Gold', 'Yellow Gold');
     }
 
     // Standard purities order: 9K, 10K, 14K, 18K
@@ -711,23 +696,43 @@ export default function ProductDetail() {
 
     // Filter to purities actually configured in this product
     const activePurityDefs = purityOrder.filter((pDef) =>
-      purities.length === 0 || purities.some((p) => pDef.aliases.some((a) => p.toLowerCase().includes(a.toLowerCase())))
+      purities.some((p) => pDef.aliases.some((a) => p.toLowerCase().includes(a.toLowerCase())))
     );
-    const listToRender = activePurityDefs.length > 0 ? activePurityDefs : purityOrder;
+
+    // Any non-standard configured purities (e.g. 22K, 24K)
+    const extraPurities = purities.filter(
+      (p) => !purityOrder.some((pDef) => pDef.aliases.some((a) => p.toLowerCase().includes(a.toLowerCase())))
+    );
 
     const swatches = [];
 
-    listToRender.forEach((pDef) => {
+    activePurityDefs.forEach((pDef) => {
       const matchedPurity = purities.find((p) =>
         pDef.aliases.some((a) => p.toLowerCase().includes(a.toLowerCase()))
       ) || pDef.full;
 
-      activeColors.forEach((colorName) => {
-        const cObj = colors.find((c) => c.name?.toLowerCase() === colorName.toLowerCase());
+      colors.forEach((cObj) => {
+        const colorName = cObj.name;
         swatches.push({
           id: `${pDef.key}-${colorName}`,
           label: pDef.key,
           purity: matchedPurity,
+          color: colorName,
+          colorCode: cObj?.colorCode || '',
+          colorCodeEnd: cObj?.colorCodeEnd || '',
+          type: 'gold',
+        });
+      });
+    });
+
+    extraPurities.forEach((extraP) => {
+      const label = extraP.replace(/[^0-9a-zA-Z]/g, '').slice(0, 4) || extraP;
+      colors.forEach((cObj) => {
+        const colorName = cObj.name;
+        swatches.push({
+          id: `${label}-${colorName}`,
+          label,
+          purity: extraP,
           color: colorName,
           colorCode: cObj?.colorCode || '',
           colorCodeEnd: cObj?.colorCodeEnd || '',
@@ -751,7 +756,7 @@ export default function ProductDetail() {
     }
 
     return swatches;
-  }, [product, purities, colors, isGold]);
+  }, [purities, colors, isGold]);
 
   const isSwatchSelected = useCallback((swatch) => {
     const curPurity = (selectedPurity || '').toLowerCase();
@@ -1013,16 +1018,93 @@ export default function ProductDetail() {
   }, [product, selectedPurity, selectedColor, selectedCarat, selectedQuality, isCenterDriven]);
 
   // isGold and isSilver are declared above
-  const currentPrice = [selectedVariant?.price, product?.pricing?.salePrice]
-    .find((value) => Number(value) > 0);
+  // Derive base metal weight before size adjustment
+  const rawBaseMetalWeight = useMemo(() => {
+    return Number(
+      selectedVariant?.metalWeight ||
+      selectedVariant?.weight ||
+      product?.specifications?.metalWeight ||
+      product?.ornate?.metalWeight ||
+      0
+    );
+  }, [selectedVariant, product?.specifications?.metalWeight, product?.ornate?.metalWeight]);
+
+  // Numerically sorted sizes (e.g. 4 -> 4.5 -> 5 -> 5.5 -> 6 -> 10)
+  const sortedSizes = useMemo(() => {
+    return sortSizesNumerically(sizes);
+  }, [sizes]);
+
+  // Category-specific size label (Size (US) for rings, Size otherwise)
+  const sizeLabel = useMemo(() => {
+    return getCategorySizeLabel(product?.categoryIds || categoryName);
+  }, [product?.categoryIds, categoryName]);
+
+  // Size-adjusted metal weight dynamically computed from category steps
+  const sizeAdjustedMetalWeight = useMemo(() => {
+    return calculateSizeAdjustedMetalWeight({
+      baseMetalWeight: rawBaseMetalWeight,
+      selectedSize,
+      sizeList: sortedSizes,
+      category: product?.categoryIds || categoryName,
+    });
+  }, [rawBaseMetalWeight, selectedSize, sortedSizes, product?.categoryIds, categoryName]);
+
+  // Base price of variant before size adjustment
+  const rawBaseVariantPrice = Number(
+    selectedVariant?.price ||
+    product?.pricing?.salePrice ||
+    product?.pricing?.calculatedPrice ||
+    0
+  );
+
+  // Dynamic price recalculated from size-adjusted metal weight
+  const currentPrice = useMemo(() => {
+    if (!rawBaseVariantPrice || rawBaseVariantPrice <= 0) return 0;
+    if (
+      !isGold ||
+      !rawBaseMetalWeight ||
+      rawBaseMetalWeight <= 0 ||
+      !sizeAdjustedMetalWeight ||
+      sizeAdjustedMetalWeight === rawBaseMetalWeight
+    ) {
+      return rawBaseVariantPrice;
+    }
+
+    const gstPct = Number(product?.pricing?.gstPercentage ?? 3) / 100;
+    const baseSubtotal = rawBaseVariantPrice / (1 + gstPct);
+
+    const certCharge = Number(selectedVariant?.certificateCharge || product?.pricing?.certificateCharge || 0);
+    const labCharge = Number(
+      selectedVariant?.labourCharge ||
+      selectedVariant?.computedMakingCharge ||
+      product?.pricing?.baseLabourCharge ||
+      0
+    );
+    const diaCost = Number(selectedVariant?.diamondCost || selectedVariant?.centerDiamondCost || 0);
+
+    const baseMetalCost = Math.max(0, baseSubtotal - (diaCost + labCharge + certCharge));
+    const goldRate = (selectedVariant?.metalRate && Number(selectedVariant.metalRate) > 0)
+      ? Number(selectedVariant.metalRate)
+      : (rawBaseMetalWeight > 0 ? (baseMetalCost / rawBaseMetalWeight) : 0);
+
+    const adjustedMetalCost = sizeAdjustedMetalWeight * goldRate;
+    const weightMultiplier = rawBaseMetalWeight > 0 ? (sizeAdjustedMetalWeight / rawBaseMetalWeight) : 1;
+    const adjustedLabour = labCharge * weightMultiplier;
+
+    const newSubtotal = adjustedMetalCost + diaCost + adjustedLabour + certCharge;
+    const newGst = newSubtotal * gstPct;
+    return Math.round(newSubtotal + newGst);
+  }, [rawBaseVariantPrice, isGold, rawBaseMetalWeight, sizeAdjustedMetalWeight, product?.pricing, selectedVariant]);
+
   const mrpPrice = [product?.pricing?.mrp].find((value) => Number(value) > 0) ?? currentPrice;
+
   // Itemized Transparent Price Breakdown (Matches Screenshot)
   const breakdown = useMemo(() => {
     if (!isGold) return null;
     const v = selectedVariant || {};
     const finalPrice = Number(
-      v.price ||
       currentPrice ||
+      v.price ||
       product?.pricing?.salePrice ||
       product?.pricing?.calculatedPrice ||
       product?.pricing?.ornatePrice ||
@@ -1034,43 +1116,23 @@ export default function ProductDetail() {
     const gstPct = Number(product?.pricing?.gstPercentage || 3) / 100;
     const computedSubtotal = Math.round((finalPrice / (1 + gstPct)) * 100) / 100;
 
-    const certificateCharge = Number(v.certificateCharge || product?.pricing?.certificateCharge || 1000);
+    const certificateCharge = Number(v.certificateCharge || product?.pricing?.certificateCharge || 0);
 
-    let labourCharge = Number(
+    const baseLabourCharge = Number(
       v.labourCharge ||
       v.computedMakingCharge ||
       product?.pricing?.baseLabourCharge ||
       product?.ornate?.labourAmt ||
       0
     );
-    if (!labourCharge || labourCharge <= 0) {
-      labourCharge = Math.round((computedSubtotal - certificateCharge) * 0.09);
-    }
 
-    const purityName = (selectedPurity || v.purity || '').toUpperCase();
-    let defaultMetalRate = 5587.5; // default 9KT matching screenshot
-    if (purityName.includes('14K') || purityName.includes('14KT')) defaultMetalRate = 6850;
-    else if (purityName.includes('18K') || purityName.includes('18KT')) defaultMetalRate = 8450;
-    else if (purityName.includes('22K') || purityName.includes('22KT')) defaultMetalRate = 9800;
-    else if (purityName.includes('SILVER') || purityName.includes('925')) defaultMetalRate = 95;
+    const metalRate = Number(v.metalRate || product?.pricing?.metalRate || 0);
+    const metalWeight = sizeAdjustedMetalWeight > 0 ? sizeAdjustedMetalWeight : rawBaseMetalWeight;
+    const weightMultiplier = rawBaseMetalWeight > 0 ? (metalWeight / rawBaseMetalWeight) : 1;
+    const labourCharge = Math.round(baseLabourCharge * weightMultiplier * 100) / 100;
 
-    const metalRate = Number(v.metalRate || product?.pricing?.metalRate || defaultMetalRate);
-
-    let metalWeight = Number(
-      v.metalWeight ||
-      v.weight ||
-      product?.specifications?.metalWeight ||
-      product?.ornate?.metalWeight ||
-      0
-    );
-
-    let metalCost = Number(v.metalCost || product?.ornate?.goldAmt || 0);
-    if (!metalCost && metalWeight && metalRate) {
-      metalCost = Math.round(metalWeight * metalRate * 100) / 100;
-    }
-
-    const diamondQuality = selectedQuality || (v.diamondColor && v.diamondClarity ? `${referenceName(v.diamondColor)} / ${referenceName(v.diamondClarity)}` : 'F-G / VS');
-    let diamondCarat = Number(
+    const diamondQuality = selectedQuality || (v.diamondColor && v.diamondClarity ? `${referenceName(v.diamondColor)} / ${referenceName(v.diamondClarity)}` : '');
+    const diamondCarat = Number(
       v.centerDiamondWeight ||
       v.caratWeight ||
       selectedCarat ||
@@ -1078,42 +1140,27 @@ export default function ProductDetail() {
       0
     );
 
-    let diamondCost = Number(v.diamondCost || v.centerDiamondCost || product?.ornate?.diamondAmt || 0);
+    const diamondCost = Number(v.diamondCost || v.centerDiamondCost || product?.ornate?.diamondAmt || 0);
 
-    const remainingForMaterial = Math.max(0, computedSubtotal - certificateCharge - labourCharge);
-    if (!metalCost || !diamondCost) {
-      if (isGold || !product?.productType || product?.productType === 'gold') {
-        if (!metalCost) {
-          metalCost = Math.round(remainingForMaterial * 0.35 * 100) / 100;
-        }
-        if (!diamondCost) {
-          diamondCost = Math.round((remainingForMaterial - metalCost) * 100) / 100;
-        }
-      } else {
-        metalCost = remainingForMaterial;
-        diamondCost = 0;
-      }
-    }
+    const baseMetalCost = Math.max(0, computedSubtotal - (diamondCost + labourCharge + certificateCharge));
+    const effectiveMetalRate = metalRate > 0 ? metalRate : (rawBaseMetalWeight > 0 ? (baseMetalCost / rawBaseMetalWeight) : 0);
 
-    if (!metalWeight && metalRate > 0 && metalCost > 0) {
-      metalWeight = Math.round((metalCost / metalRate) * 1000) / 1000;
-    }
-
-    if (!diamondCarat && diamondCost > 0) {
-      diamondCarat = Math.round((diamondCost / 19000) * 100) / 100;
+    let metalCost = Number(v.metalCost || product?.ornate?.goldAmt || 0);
+    if (!metalCost || (sizeAdjustedMetalWeight && sizeAdjustedMetalWeight !== rawBaseMetalWeight)) {
+      metalCost = Math.round(metalWeight * effectiveMetalRate * 100) / 100;
     }
 
     const calculatedSubtotal = Math.round((metalCost + diamondCost + labourCharge + certificateCharge) * 100) / 100;
-    const finalSubtotal = calculatedSubtotal;
+    const finalSubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : computedSubtotal;
     const finalGst = Math.round((finalSubtotal * gstPct) * 100) / 100;
     const finalGrandTotal = Math.round((finalSubtotal + finalGst) * 100) / 100;
 
     return {
-      metalName: metalDisplayName || '9KT Yellow Gold',
-      metalRate,
+      metalName: metalDisplayName || selectedPurity || '',
+      metalRate: effectiveMetalRate,
       metalWeight,
       metalCost,
-      diamondLabel: `Diamond (${diamondQuality})`,
+      diamondLabel: diamondQuality ? `Diamond (${diamondQuality})` : 'Diamond',
       diamondCarat,
       diamondCost,
       labourCharge,
@@ -1122,15 +1169,41 @@ export default function ProductDetail() {
       gstAmount: finalGst,
       finalPrice: finalGrandTotal,
     };
-  }, [selectedVariant, currentPrice, product, selectedPurity, selectedColor, selectedCarat, selectedQuality, isGold, metalDisplayName]);
+  }, [
+    isGold,
+    selectedVariant,
+    currentPrice,
+    product,
+    selectedPurity,
+    selectedQuality,
+    selectedCarat,
+    rawBaseMetalWeight,
+    sizeAdjustedMetalWeight,
+    metalDisplayName,
+  ]);
 
 
 
-  // Derive available sizes directly from product data without extra API calls
+  // Derive available sizes directly from product data without extra API calls and default to size 7
   useEffect(() => {
     const prodSizes = product?.sizes || [];
-    setSizes(Array.isArray(prodSizes) ? prodSizes : []);
-    setSelectedSize('');
+    const validSizes = Array.isArray(prodSizes) ? prodSizes : [];
+    setSizes(validSizes);
+
+    if (validSizes.length > 0) {
+      const sorted = sortSizesNumerically(validSizes);
+      // Default to Size 7 (e.g. "7", "7 In", "7 Inch", "7.0")
+      const matchedSeven = sorted.find((s) => {
+        const name = String(s.name || s);
+        const match = name.match(/(\d+(?:\.\d+)?)/);
+        const num = match ? parseFloat(match[1]) : parseFloat(name);
+        return num === 7;
+      });
+      const defaultOption = matchedSeven || sorted[0];
+      setSelectedSize(String(defaultOption._id || defaultOption.id || defaultOption.name || defaultOption));
+    } else {
+      setSelectedSize('');
+    }
   }, [product]);
 
   // Fetch product data
@@ -1234,6 +1307,11 @@ export default function ProductDetail() {
     const addedAt = new Date().toISOString();
     const isGold = (product.productType === 'gold');
 
+    const selectedSizeObj = sortedSizes.find(
+      (s) => String(s._id || s.id || s.name || s) === String(selectedSize)
+    );
+    const resolvedSizeName = selectedSizeObj ? selectedSizeObj.name : (selectedSize || '');
+
     let selectedAttributes = null;
     if (isGold) {
       const attrs = {
@@ -1244,7 +1322,7 @@ export default function ProductDetail() {
         diamondClarity: selectedVariant?.diamondClarityId?._id || selectedVariant?.diamondClarityId || null,
         diamondColor: selectedVariant?.diamondColorId?._id || selectedVariant?.diamondColorId || null,
         caratWeight: Number(selectedVariant?.caratWeight || selectedCarat || 0) || null,
-        size: selectedSize || null,
+        size: resolvedSizeName || null,
       };
       const validEntries = Object.entries(attrs).filter(([, val]) => val !== null && val !== undefined && val !== '');
       if (validEntries.length > 0) {
@@ -1266,13 +1344,13 @@ export default function ProductDetail() {
       category: categoryName,
       productType: product.productType,
       selectedMetal: selectedMetalStr,
-      selectedSize: selectedSize || '',
+      selectedSize: resolvedSizeName || '',
       selectedAttributes,
     };
 
     addToCart(cartItem, 1, {
       selectedMetal: selectedMetalStr,
-      selectedSize,
+      selectedSize: resolvedSizeName,
       selectedAttributes,
     });
 
@@ -1673,7 +1751,8 @@ export default function ProductDetail() {
               {offersOpen && (
                 <div className="mt-3 space-y-2.5">
                   {coupons.map((c, idx) => {
-                    const code = c.coupon?.code || 'FIRSTORDER';
+                    const code = c.coupon?.code || c.code || '';
+                    if (!code) return null;
                     const isPercentage = c.discount?.type === 'Percentage';
                     const discountVal = Number(c.discount?.value || 0);
                     const discountText = isPercentage
@@ -1935,10 +2014,12 @@ export default function ProductDetail() {
               )}
 
               {/* 5. Size Selection (If Applicable) */}
-              {sizes.length > 0 && (
+              {sortedSizes.length > 0 && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="product-size" className="block text-[11px] font-bold text-stone-800">Size</label>
+                    <label htmlFor="product-size" className="block text-[11px] font-bold text-stone-800">
+                      {sizeLabel}
+                    </label>
                     {hasCategorySizeChart && (
                       <button
                         type="button"
@@ -1953,7 +2034,10 @@ export default function ProductDetail() {
                     id="product-size"
                     value={selectedSize}
                     onChange={(val) => setSelectedSize(val)}
-                    options={sizes.map((size) => ({ value: size.name, label: size.name }))}
+                    options={sortedSizes.map((size) => ({
+                      value: String(size._id || size.id || size.name || size),
+                      label: size.name || String(size),
+                    }))}
                     placeholder="Choose a size"
                     buttonClassName="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8f6d43] flex items-center justify-between cursor-pointer"
                     menuClassName="z-[50]"
@@ -2002,17 +2086,17 @@ export default function ProductDetail() {
             {/* ══════════════════════════════════════════════════════════
                 THE NEIRAH DIFFERENCE (Matches Reference Screenshot)
             ═══════════════════════════════════════════════════════════ */}
-            <div className="rounded-2xl border border-[#ede3d4] bg-[#FAF8F5] p-5 sm:p-6 mb-6">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-stone-900 pb-3.5 border-b border-[#e8dfd5] font-sans">
+            <div className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 mb-6 shadow-2xs">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-stone-900 pb-3.5 border-b border-stone-200 font-sans">
                 THE NEIRAH DIFFERENCE
               </h3>
 
-              <div className="pt-4 flex flex-col md:flex-row items-center md:items-stretch gap-4 md:gap-6 divide-y md:divide-y-0 md:divide-x divide-[#e8dfd5]">
+              <div className="pt-4 flex flex-col md:flex-row items-center md:items-stretch gap-4 md:gap-6 divide-y md:divide-y-0 md:divide-x divide-stone-200">
                 {/* Left side: Trust Badges (Matches Reference Design) */}
                 <div className="flex-1 w-full grid grid-cols-3 gap-y-6 gap-x-2 sm:gap-x-4">
                   {/* Badge 1: Global Online Jeweller */}
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-12 h-12 rounded-full border border-[#ebdccb] bg-white flex items-center justify-center text-[#144b44] shrink-0 shadow-2xs">
+                    <div className="w-12 h-12 rounded-full border border-stone-200 bg-stone-50 flex items-center justify-center text-[#144b44] shrink-0 shadow-2xs">
                       <svg className="w-5 h-5 text-[#144b44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="8" r="5" />
                         <path d="M8.5 12.5L7 21l5-2.5L17 21l-1.5-8.5" />
@@ -2025,7 +2109,7 @@ export default function ProductDetail() {
 
                   {/* Badge 2: BIS Hallmark */}
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-12 h-12 rounded-full border border-[#ebdccb] bg-white flex items-center justify-center text-[#144b44] shrink-0 shadow-2xs">
+                    <div className="w-12 h-12 rounded-full border border-stone-200 bg-stone-50 flex items-center justify-center text-[#144b44] shrink-0 shadow-2xs">
                       <svg className="w-5 h-5 text-[#144b44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="9" />
                         <line x1="12" y1="16" x2="12" y2="12" />
@@ -2039,7 +2123,7 @@ export default function ProductDetail() {
 
                   {/* Badge 3: Rated 4.7/5 Globally */}
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-12 h-12 rounded-full border border-[#ebdccb] bg-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <div className="w-12 h-12 rounded-full border border-stone-200 bg-stone-50 flex items-center justify-center shrink-0 shadow-2xs">
                       <span className="text-[13px] font-semibold text-[#144b44] tracking-tight flex items-center gap-0.5 font-sans">
                         4.7 <span className="text-[10px]">★</span>
                       </span>
@@ -2051,7 +2135,7 @@ export default function ProductDetail() {
 
                   {/* Badge 4: Neirah Certified */}
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-12 h-12 rounded-full border border-[#ebdccb] bg-white flex items-center justify-center text-[#144b44] shrink-0 shadow-2xs">
+                    <div className="w-12 h-12 rounded-full border border-stone-200 bg-stone-50 flex items-center justify-center text-[#144b44] shrink-0 shadow-2xs">
                       <svg className="w-5 h-5 text-[#144b44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                         <path d="m9 12 2 2 4-4" />
@@ -2064,7 +2148,7 @@ export default function ProductDetail() {
 
                   {/* Badge 5: Free Secure Shipping */}
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-12 h-12 rounded-full border border-[#ebdccb] bg-white flex items-center justify-center text-[#144b44] shrink-0 shadow-2xs">
+                    <div className="w-12 h-12 rounded-full border border-stone-200 bg-stone-50 flex items-center justify-center text-[#144b44] shrink-0 shadow-2xs">
                       <svg className="w-5 h-5 text-[#144b44]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="1" y="3" width="15" height="13" rx="1" />
                         <polygon points="16 8 20 8 23 11 23 16 16 16 8" />
@@ -2107,26 +2191,23 @@ export default function ProductDetail() {
 
             {/* ══════════════════════════════════════════════════════════
                 ACCORDIONS: PRODUCT DESCRIPTION, SPECIFICATION, PRICE BREAK UP & ORIGIN
-            ═══════════════════════════════════════════════════════════ */}
-            {/* ══════════════════════════════════════════════════════════
-                ACCORDIONS: PRODUCT DESCRIPTION, SPECIFICATION, PRICE BREAK UP & ORIGIN
                 (Matches live website boxed layout and text colors)
             ═══════════════════════════════════════════════════════════ */}
-            <div className="border border-stone-200 divide-y divide-stone-200 bg-white rounded-none sm:rounded-sm overflow-hidden text-xs">
+            <div className="border border-[#EFE8DD] divide-y divide-[#EFE8DD] rounded-none sm:rounded-sm overflow-hidden text-xs bg-white">
               {/* Accordion 1: Product Description */}
               <div>
                 <button
                   type="button"
                   onClick={() => toggleAccordion('desc')}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
+                  className="w-full flex items-center justify-between px-5 py-3.5 sm:py-4 text-left cursor-pointer transition-colors bg-[#FAF7F2] hover:bg-[#F5EFE6]"
                 >
                   <span className="text-xs sm:text-[13px] font-medium text-stone-900 tracking-normal">Product Description</span>
-                  <span className="text-stone-500 text-sm font-light select-none">
+                  <span className="text-stone-600 text-lg sm:text-xl font-light select-none leading-none flex items-center justify-center w-6 h-6">
                     {openAccordions.desc ? '−' : '+'}
                   </span>
                 </button>
                 {openAccordions.desc && (
-                  <div className="px-5 pb-5 pt-0 animate-fadeIn">
+                  <div className="px-5 pb-5 pt-3 bg-white border-t border-[#EFE8DD] animate-fadeIn">
                     <FormattedContent
                       content={
                         product.basicInfo?.description ||
@@ -2144,23 +2225,23 @@ export default function ProductDetail() {
                   <button
                     type="button"
                     onClick={() => toggleAccordion('specs')}
-                    className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
+                    className="w-full flex items-center justify-between px-5 py-3.5 sm:py-4 text-left cursor-pointer transition-colors bg-[#FAF7F2] hover:bg-[#F5EFE6]"
                   >
                     <span className="text-xs sm:text-[13px] font-medium text-stone-900 tracking-normal">
                       Product Specifications
                     </span>
-                    <span className="text-stone-500 text-sm font-light select-none">
+                    <span className="text-stone-600 text-lg sm:text-xl font-light select-none leading-none flex items-center justify-center w-6 h-6">
                       {openAccordions.specs ? '−' : '+'}
                     </span>
                   </button>
                   {openAccordions.specs && (
-                    <div className="px-5 pb-5 pt-0 animate-fadeIn">
-                      <div className="border border-stone-200/90 rounded bg-[#FAF8F5]/40 p-3.5 sm:p-4">
+                    <div className="px-5 pb-5 pt-3 bg-white border-t border-[#EFE8DD] animate-fadeIn">
+                      <div className="border border-stone-200 rounded bg-stone-50/50 p-3.5 sm:p-4">
                         <div className={`grid gap-2.5 ${productSpecs.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
                           {productSpecs.map((spec, idx) => (
                             <div
                               key={spec.id || idx}
-                              className="flex items-center justify-between px-3.5 py-2.5 bg-white border border-stone-200/80 rounded shadow-2xs text-xs"
+                              className="flex items-center justify-between px-3.5 py-2.5 bg-white border border-stone-200 rounded shadow-2xs text-xs"
                             >
                               <span className="font-medium text-stone-500 capitalize">{spec.key}</span>
                               <div className="flex items-center gap-1.5 font-semibold text-stone-900 text-right">
@@ -2182,17 +2263,17 @@ export default function ProductDetail() {
                   <button
                     type="button"
                     onClick={() => toggleAccordion('price')}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
-                >
-                  <span className="text-[11.5px] sm:text-xs font-semibold tracking-wider uppercase text-stone-900">
-                    PRICE BREAK UP
-                  </span>
-                  <span className="text-stone-500 text-sm font-light select-none">
-                    {openAccordions.price ? '−' : '+'}
-                  </span>
-                </button>
-                {openAccordions.price && breakdown && (
-                  <div className="px-5 pb-5 pt-1 text-xs animate-fadeIn">
+                    className="w-full flex items-center justify-between px-5 py-3.5 sm:py-4 text-left cursor-pointer transition-colors bg-[#FAF7F2] hover:bg-[#F5EFE6]"
+                  >
+                    <span className="text-[11.5px] sm:text-xs font-semibold tracking-wider uppercase text-stone-900">
+                      PRICE BREAK UP
+                    </span>
+                    <span className="text-stone-600 text-lg sm:text-xl font-light select-none leading-none flex items-center justify-center w-6 h-6">
+                      {openAccordions.price ? '−' : '+'}
+                    </span>
+                  </button>
+                  {openAccordions.price && breakdown && (
+                    <div className="px-5 pb-5 pt-3 bg-white border-t border-[#EFE8DD] text-xs animate-fadeIn">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
@@ -2285,11 +2366,11 @@ export default function ProductDetail() {
                     </div>
 
                     {/* Variation in Weight Notice Card */}
-                    <div className="mt-4 p-3 rounded border border-[#F0E6D8] bg-[#FAF8F5] flex items-center gap-2.5">
-                      <svg className="w-3.5 h-3.5 text-[#C59B65] shrink-0 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="1.6">
+                    <div className="mt-4 p-3 rounded border border-stone-200 bg-stone-50 flex items-center gap-2.5">
+                      <svg className="w-3.5 h-3.5 text-stone-600 shrink-0 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="1.6">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
                       </svg>
-                      <p className="text-[11px] text-[#8C6D4F] leading-snug">
+                      <p className="text-[11px] text-stone-700 leading-snug">
                         The final invoice amount will be adjusted in case of variation in weight.
                       </p>
                     </div>
@@ -2318,17 +2399,17 @@ export default function ProductDetail() {
                         <button
                           type="button"
                           onClick={() => toggleAccordion(accKey)}
-                          className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
+                          className="w-full flex items-center justify-between px-5 py-3.5 sm:py-4 text-left cursor-pointer transition-colors bg-[#FAF7F2] hover:bg-[#F5EFE6]"
                         >
                           <span className="text-xs sm:text-[13px] font-medium text-stone-900 tracking-normal">
                             {title}
                           </span>
-                          <span className="text-stone-500 text-sm font-light select-none">
+                          <span className="text-stone-600 text-lg sm:text-xl font-light select-none leading-none flex items-center justify-center w-6 h-6">
                             {isOpen ? '−' : '+'}
                           </span>
                         </button>
                         {isOpen && (
-                          <div className="px-5 pb-5 pt-0 animate-fadeIn">
+                          <div className="px-5 pb-5 pt-3 bg-white border-t border-[#EFE8DD] animate-fadeIn">
                             <FormattedContent content={sec.description} />
                           </div>
                         )}
@@ -2341,16 +2422,16 @@ export default function ProductDetail() {
                 <button
                   type="button"
                   onClick={() => toggleAccordion('origin')}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
+                  className="w-full flex items-center justify-between px-5 py-3.5 sm:py-4 text-left cursor-pointer transition-colors bg-[#FAF7F2] hover:bg-[#F5EFE6]"
                 >
                   <span className="text-xs sm:text-[13px] font-medium text-stone-900 tracking-normal">Manufacturer &amp; Origin</span>
-                  <span className="text-stone-500 text-sm font-light select-none">
+                  <span className="text-stone-600 text-lg sm:text-xl font-light select-none leading-none flex items-center justify-center w-6 h-6">
                     {openAccordions.origin ? '−' : '+'}
                   </span>
                 </button>
                 {openAccordions.origin && (
-                  <div className="px-5 pb-5 pt-0 text-xs sm:text-[13px] animate-fadeIn space-y-1.5">
-                    <div className="flex justify-between items-center py-2 border-b border-stone-100">
+                  <div className="px-5 pb-5 pt-3 bg-white border-t border-[#EFE8DD] text-xs sm:text-[13px] animate-fadeIn space-y-1.5">
+                    <div className="flex justify-between items-center py-2 border-b border-[#EFE8DD]">
                       <span className="font-bold text-stone-900">Manufacturer:</span>
                       <span className="font-normal text-stone-700">Neirah E-Retail India Pvt. Ltd.</span>
                     </div>

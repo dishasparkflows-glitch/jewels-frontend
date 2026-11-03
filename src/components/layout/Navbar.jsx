@@ -6,7 +6,7 @@ import { useWishlist } from '../../contexts/WishlistContext';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import MegaMenuNav from './MegaMenuNav';
 import { getOnce } from '../../api/axios';
-import { productsAPI } from '../../api/services';
+import { productsAPI, featuredAPI } from '../../api/services';
 import { formatProductPrice } from '../../utils/productCard';
 import { getImageUrl } from '../../utils/imageUrl';
 import {
@@ -39,6 +39,7 @@ const Navbar = () => {
   const { totalItems, cartDrawerOpen, setCartDrawerOpen } = useCart();
   const { wishlistCount } = useWishlist();
   const [categories, setCategories] = useState([]);
+  const [collections, setCollections] = useState([]);
   const [navigationError, setNavigationError] = useState(false);
   const [navigationRevision, setNavigationRevision] = useState(0);
   const { settings: storeSettings, theme: themeConfig, topAnnouncement: contextTopAnnouncement } = useStoreSettings();
@@ -106,15 +107,30 @@ const Navbar = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Curated collections for the collections tab
-  const CURATED_COLLECTIONS = useMemo(() => [
-    { id: 'solitaires', name: 'Solitaire Rings', query: 'Solitaire' },
-    { id: 'halo', name: 'Halo Collection', query: 'Halo' },
-    { id: 'bridal', name: 'Bridal Heritage', query: 'Bridal' },
-    { id: 'earrings', name: 'Diamond Earrings', query: 'Earrings' },
-    { id: 'daily', name: 'Everyday Luxury', query: 'Daily' },
-    { id: 'festive', name: 'Festive Sparkle', query: 'Festive' },
-  ], []);
+  useEffect(() => {
+    let active = true;
+    featuredAPI
+      .getLookup()
+      .then((res) => {
+        if (!active) return;
+        const items = res.data?.data || res.data || [];
+        if (Array.isArray(items)) {
+          setCollections(
+            items.map((item) => ({
+              id: item._id,
+              name: item.name,
+              query: item.name,
+            }))
+          );
+        }
+      })
+      .catch(() => {
+        if (active) setCollections([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const matchedCategories = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -131,15 +147,14 @@ const Navbar = () => {
 
   const matchedCollections = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return CURATED_COLLECTIONS;
-    const direct = CURATED_COLLECTIONS.filter((col) => col.name.toLowerCase().includes(q));
-    if (direct.length > 0) return direct;
-    return CURATED_COLLECTIONS.slice(0, 4);
-  }, [searchQuery, CURATED_COLLECTIONS]);
+    if (!Array.isArray(collections) || !collections.length) return [];
+    if (!q) return collections.slice(0, 6);
+    return collections.filter((col) => (col.name || '').toLowerCase().includes(q));
+  }, [searchQuery, collections]);
 
   const productCount = searchTotal || searchResults.length;
-  const categoryCount = matchedCategories.length > 0 ? matchedCategories.length : Math.min(categories.length || 6, 6);
-  const collectionCount = matchedCollections.length > 0 ? matchedCollections.length : 4;
+  const categoryCount = matchedCategories.length;
+  const collectionCount = matchedCollections.length;
   const allCount = productCount;
   const displayedProducts = searchResults.slice(0, 6);
 

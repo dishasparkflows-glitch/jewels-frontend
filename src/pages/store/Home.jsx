@@ -18,29 +18,6 @@ import {
 import InstagramEmbed from '../../components/common/InstagramEmbed';
 import LuxuryDivider from '../../components/common/LuxuryDivider';
 
-const DEFAULT_INSTAGRAM_POSTS = [
-  {
-    _id: 'default-insta-1',
-    url: 'https://www.instagram.com/p/DeTf9dWIewJ/',
-    title: 'Neirah Launch',
-  },
-  {
-    _id: 'default-insta-2',
-    url: 'https://www.instagram.com/p/DXYuCgeApvk/',
-    title: 'Neirah Jewellery Collection',
-  },
-  {
-    _id: 'default-insta-3',
-    url: 'https://www.instagram.com/p/DePpbOfM5TJ/',
-    title: 'Royal Diamond Atelier',
-  },
-  {
-    _id: 'default-insta-4',
-    url: 'https://www.instagram.com/p/DaKA3qsjxrS/',
-    title: 'Sparkle in Every Detail',
-  },
-];
-
 // Helper to normalize media URL from Cloudflare R2 / S3 / API or relative paths
 const getMediaUrl = (url) => {
   if (!url) return '';
@@ -58,41 +35,6 @@ const getMediaUrl = (url) => {
   );
   return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
 };
-
-const DEFAULT_REVIEWS = [
-  {
-    id: 'def-1',
-    clientName: 'Keval Patel',
-    rating: 5,
-    title: 'Stylish Bracelet with a Unique Design',
-    comment: 'I really like the combination of black beads and silver detailing on this bracelet. The design looks elegant yet masculine, making it a great accessory for everyday we...',
-    image: '',
-  },
-  {
-    id: 'def-2',
-    clientName: 'Richa Jha',
-    rating: 5,
-    title: 'Elegant Movement and Detail',
-    comment: 'The drop style creates a graceful look that can complement evening and festive outfits.',
-    image: '',
-  },
-  {
-    id: 'def-3',
-    clientName: 'Siddhraj Rathod',
-    rating: 5,
-    title: 'A Unique Traditional Design',
-    comment: 'The combination of Rudraksha beads and silver detailing gives this bracelet a distinctive traditional look.',
-    image: '',
-  },
-  {
-    id: 'def-4',
-    clientName: 'Aditi',
-    rating: 5,
-    title: 'Small Details, Beautiful Style',
-    comment: 'The stud design is simple and elegant. A lovely style for anyone who appreciates understated jewellery.',
-    image: '',
-  },
-];
 
 const Home = () => {
   const { settings: storeSettings, theme: themeConfig } = useStoreSettings();
@@ -134,13 +76,11 @@ const Home = () => {
   const [reviews, setReviews] = useState([]);
 
   const displayReviews = useMemo(() => {
-    if (!reviews || reviews.length === 0) return DEFAULT_REVIEWS;
-    if (reviews.length >= 4) return reviews.slice(0, 4);
-    const needed = 4 - reviews.length;
-    return [...reviews, ...DEFAULT_REVIEWS.slice(0, needed)];
+    if (!Array.isArray(reviews)) return [];
+    return reviews.slice(0, 4);
   }, [reviews]);
 
-  const [instagramPosts, setInstagramPosts] = useState(DEFAULT_INSTAGRAM_POSTS);
+  const [instagramPosts, setInstagramPosts] = useState([]);
   const [storeCategories, setStoreCategories] = useState([]);
 
   const effectiveHeroBanners = heroBanners;
@@ -1134,67 +1074,69 @@ const Home = () => {
       {/* ─────────────────────────────────────────────────────────────────
           11. WHAT OUR CLIENTS ARE SAYING (Dynamic from /api/reviews)
       ─────────────────────────────────────────────────────────────────── */}
-      <section style={sectionStyle('reviews')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
-        <div className="text-center mb-10 sm:mb-12">
-          <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
-            What Customers are Saying
-          </h2>
-          <LuxuryDivider className="mt-2.5 sm:mt-3" />
-        </div>
+      {displayReviews.length > 0 && (
+        <section style={sectionStyle('reviews')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+          <div className="text-center mb-10 sm:mb-12">
+            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
+              What Customers are Saying
+            </h2>
+            <LuxuryDivider className="mt-2.5 sm:mt-3" />
+          </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {displayReviews.map((rev, idx) => (
-            <div
-              key={rev.id || idx}
-              className="bg-white rounded-2xl border border-stone-200/90 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col"
-            >
-              {/* Top Area: Image or Warm Champagne Container with Quote Icon */}
-              <div className="h-44 sm:h-48 bg-[#f5efe6] relative overflow-hidden flex items-center justify-center shrink-0">
-                {rev.image ? (
-                  <img
-                    src={rev.image}
-                    alt={rev.title || rev.clientName}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-white shadow-2xs flex items-center justify-center text-[#8b6f4e] text-lg font-serif">
-                    “
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {displayReviews.map((rev, idx) => (
+              <div
+                key={rev.id || idx}
+                className="bg-white rounded-2xl border border-stone-200/90 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col"
+              >
+                {/* Top Area: Image or Warm Champagne Container with Quote Icon */}
+                <div className="h-44 sm:h-48 bg-[#f5efe6] relative overflow-hidden flex items-center justify-center shrink-0">
+                  {rev.image ? (
+                    <img
+                      src={rev.image}
+                      alt={rev.title || rev.clientName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-white shadow-2xs flex items-center justify-center text-[#8b6f4e] text-lg font-serif">
+                      “
+                    </div>
+                  )}
+                </div>
+
+                {/* Content Area */}
+                <div className="p-5 sm:p-6 flex flex-col flex-1 text-center justify-between">
+                  {/* 5 Stars */}
+                  <div className="flex items-center justify-center gap-1 text-amber-400 mb-2.5">
+                    {Array.from({ length: Number(rev.rating) || 5 }).map((_, i) => (
+                      <HiStar key={i} className="w-4 h-4 fill-current" />
+                    ))}
                   </div>
-                )}
-              </div>
 
-              {/* Content Area */}
-              <div className="p-5 sm:p-6 flex flex-col flex-1 text-center justify-between">
-                {/* 5 Stars */}
-                <div className="flex items-center justify-center gap-1 text-amber-400 mb-2.5">
-                  {Array.from({ length: Number(rev.rating) || 5 }).map((_, i) => (
-                    <HiStar key={i} className="w-4 h-4 fill-current" />
-                  ))}
-                </div>
+                  {/* Review Headline / Title */}
+                  {rev.title && (
+                    <h3 className="font-bold text-stone-900 text-sm sm:text-[14px] leading-snug mb-2 line-clamp-2">
+                      {rev.title}
+                    </h3>
+                  )}
 
-                {/* Review Headline / Title */}
-                {rev.title && (
-                  <h3 className="font-bold text-stone-900 text-sm sm:text-[14px] leading-snug mb-2 line-clamp-2">
-                    {rev.title}
-                  </h3>
-                )}
+                  {/* Review Comment / Testimonial Text */}
+                  <p className="text-xs sm:text-[13px] text-stone-600 leading-relaxed mb-4 flex-1 line-clamp-3">
+                    {rev.comment}
+                  </p>
 
-                {/* Review Comment / Testimonial Text */}
-                <p className="text-xs sm:text-[13px] text-stone-600 leading-relaxed mb-4 flex-1 line-clamp-3">
-                  {rev.comment}
-                </p>
-
-                {/* Client Name */}
-                <div className="mt-auto pt-1">
-                  <span className="font-bold text-xs sm:text-[13px] text-stone-900 tracking-wide block">
-                    {rev.clientName}
-                  </span>
+                  {/* Client Name */}
+                  <div className="mt-auto pt-1">
+                    <span className="font-bold text-xs sm:text-[13px] text-stone-900 tracking-wide block">
+                      {rev.clientName}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ─────────────────────────────────────────────────────────────────
           12. FOLLOW US ON INSTAGRAM (Matches neirah.in)
