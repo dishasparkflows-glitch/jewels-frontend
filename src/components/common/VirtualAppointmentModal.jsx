@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { appointmentsAPI } from '../../api/services';
 import { toast } from 'react-hot-toast';
 import {
@@ -11,26 +11,81 @@ import {
 import Modal from './Modal';
 import Dropdown from './Dropdown';
 import DatePicker from './DatePicker';
+import PhoneInput from './PhoneInput';
 
 /* eslint-disable react/prop-types */
+// ------------------------------- 10:00 AM to 06:00 PM time slots ----------------------------
 const TIME_SLOTS = [
-  '10:00 AM - 11:00 AM',
-  '11:30 AM - 12:30 PM',
-  '02:00 PM - 03:00 PM',
-  '03:30 PM - 04:30 PM',
-  '05:00 PM - 06:00 PM',
-  '06:30 PM - 07:30 PM',
+  '10:00 AM',
+  '11:00 AM',
+  '12:00 PM',
+  '01:00 PM',
+  '02:00 PM',
+  '03:00 PM',
+  '04:00 PM',
+  '05:00 PM',
+  '06:00 PM',
 ];
+
+/**
+ * Parse time from a slot string like "01:00 PM" (or "10:00 AM - 11:00 AM") into 24-hour { hour, minute }.
+ */
+const parseSlotStartTime = (slot) => {
+  if (!slot) return null;
+  const match = slot.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!match) return null;
+  let hour = parseInt(match[1], 10);
+  const minute = parseInt(match[2], 10);
+  const period = match[3].toUpperCase();
+  if (period === 'PM' && hour !== 12) hour += 12;
+  if (period === 'AM' && hour === 12) hour = 0;
+  return { hour, minute };
+};
+
+/**
+ * Helper to get local date as YYYY-MM-DD
+ */
+const getLocalDateString = (d = new Date()) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 const VirtualAppointmentModal = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
+  const [countryCode, setCountryCode] = useState('+91');
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phoneNumber: '',
-    appointmentDate: new Date().toISOString().split('T')[0],
+    appointmentDate: getLocalDateString(),
     preferredTime: '',
   });
+
+  // Filter out time slots that have already passed when the selected date is today
+  const availableTimeSlots = useMemo(() => {
+    const now = new Date();
+    const todayStr = getLocalDateString(now);
+    // If selected date is in the past, no slots available
+    if (formData.appointmentDate < todayStr) return [];
+    // If the selected date is in the future, show all slots
+    if (formData.appointmentDate > todayStr) return TIME_SLOTS;
+
+    // For today, filter out slots whose time has already passed
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    return TIME_SLOTS.filter((slot) => {
+      const start = parseSlotStartTime(slot);
+      if (!start) return false;
+      return start.hour > currentHour || (start.hour === currentHour && start.minute > currentMinute);
+    });
+  }, [formData.appointmentDate]);
+
+  // If the currently selected time is no longer available in the slot list, clear it
+  useEffect(() => {
+    if (formData.preferredTime && !availableTimeSlots.includes(formData.preferredTime)) {
+      setFormData((prev) => ({ ...prev, preferredTime: '' }));
+    }
+  }, [availableTimeSlots, formData.preferredTime]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,13 +107,13 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
 
     try {
       setLoading(true);
-      const rawPhone = formData.phoneNumber.trim().replace(/^\+91\s*/, '');
+      const rawPhone = formData.phoneNumber.trim().replace(/^\+\d+\s*/, '');
       const payload = {
         customer: {
           name: formData.fullName.trim(),
           email: formData.email.trim(),
           phone: {
-            countryCode: '91',
+            countryCode: countryCode.replace('+', ''),
             number: rawPhone,
           },
         },
@@ -76,7 +131,7 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
         fullName: '',
         email: '',
         phoneNumber: '',
-        appointmentDate: new Date().toISOString().split('T')[0],
+        appointmentDate: getLocalDateString(),
         preferredTime: '',
       });
     } catch (err) {
@@ -165,20 +220,15 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
             <label className="block text-[11px] font-medium text-stone-700">
               Phone Number <span className="text-red-500">*</span>
             </label>
-            <div className="flex items-center border border-stone-200 rounded-lg px-2.5 h-9 focus-within:border-[#8c6b45] focus-within:ring-2 focus-within:ring-[#8c6b45]/15 transition-all bg-white">
-              <div className="flex items-center gap-1 pr-2 mr-2 border-r border-stone-200 text-xs text-stone-600 font-medium shrink-0">
-                <span className="text-xs leading-none">🇮🇳</span>
-                <span className="text-[11px] font-semibold text-stone-700">IN +91</span>
-              </div>
-              <input
-                type="tel"
-                placeholder="98765 43210"
-                value={formData.phoneNumber}
-                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                required
-                className="w-full text-xs text-stone-800 placeholder-stone-400 bg-transparent focus:outline-none"
-              />
-            </div>
+            <PhoneInput
+              value={formData.phoneNumber}
+              onChange={(val) => setFormData({ ...formData, phoneNumber: val })}
+              countryCode={countryCode}
+              onCountryCodeChange={setCountryCode}
+              placeholder="98765 43210"
+              required
+              size="sm"
+            />
           </div>
 
           {/* Date & Time Grid */}
@@ -190,7 +240,7 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
               </label>
               <DatePicker
                 value={formData.appointmentDate}
-                onChange={(dateStr) => setFormData({ ...formData, appointmentDate: dateStr })}
+                onChange={(dateStr) => setFormData((prev) => ({ ...prev, appointmentDate: dateStr }))}
                 minDate={new Date()}
                 placeholder="Select Date"
                 size="sm"
@@ -207,7 +257,7 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
               <Dropdown
                 value={formData.preferredTime}
                 onChange={(val) => setFormData({ ...formData, preferredTime: val })}
-                options={TIME_SLOTS}
+                options={availableTimeSlots}
                 placeholder="Select Time"
                 size="sm"
                 prefixIcon={<HiOutlineClock className="w-3.5 h-3.5 text-stone-400" />}

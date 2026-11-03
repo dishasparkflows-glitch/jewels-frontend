@@ -9,6 +9,7 @@ export default function CountryCodeSelect({
   onChange,
   defaultCountry = 'in',
   disabled = false,
+  size = 'md',
   className = '',
   buttonClassName = '',
   menuClassName = '',
@@ -182,12 +183,12 @@ export default function CountryCodeSelect({
           'flex h-full items-center gap-1.5 px-2.5 text-stone-800 transition hover:bg-stone-50 border-r border-[#e9dfd3] outline-none cursor-pointer select-none'
         }
       >
-        {renderFlag(currentCountry.iso2, currentCountry.name)}
-        <span className="text-xs font-semibold tracking-wide text-stone-800 sm:text-sm">
+        {renderFlag(currentCountry.iso2, currentCountry.name, size)}
+        <span className={`${size === 'sm' ? 'text-xs' : 'text-xs sm:text-sm'} font-semibold tracking-wide text-stone-800`}>
           {currentCountry.dialCode}
         </span>
         <HiChevronDown
-          className={`h-3.5 w-3.5 text-stone-400 transition-transform duration-200 ${
+          className={`h-3 w-3 text-stone-400 transition-transform duration-200 ${
             isOpen ? 'rotate-180 text-[#92704e]' : ''
           }`}
         />
@@ -197,7 +198,7 @@ export default function CountryCodeSelect({
       {isOpen && (
         <div
           role="listbox"
-          className={`absolute left-0 top-full z-50 mt-1.5 w-72 sm:w-80 rounded-xl border border-stone-200 bg-white shadow-2xl overflow-hidden transition-all duration-150 animate-in fade-in zoom-in-95 ${menuClassName}`}
+          className={`absolute left-0 top-full z-[100] mt-1.5 w-72 sm:w-80 rounded-xl border border-stone-200 bg-white shadow-2xl overflow-hidden transition-all duration-150 animate-in fade-in zoom-in-95 ${menuClassName}`}
         >
           {/* Search Bar Header */}
           <div className="sticky top-0 z-10 border-b border-stone-100 bg-stone-50/90 p-2.5 backdrop-blur-xs">

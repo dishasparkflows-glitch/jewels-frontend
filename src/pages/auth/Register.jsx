@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
-  HiOutlineDeviceMobile,
   HiOutlineEye,
   HiOutlineEyeOff,
   HiOutlineLockClosed,
@@ -14,7 +13,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { getImageUrl } from '../../utils/imageUrl';
 import Modal from '../../components/common/Modal';
-import CountryCodeSelect from '../../components/common/CountryCodeSelect';
+import PhoneInput from '../../components/common/PhoneInput';
 
 const Register = () => {
   const { register, loginWithGoogle } = useAuth();
@@ -25,6 +24,7 @@ const Register = () => {
   const [countryCode, setCountryCode] = useState('+91');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
   const googleButtonRef = useRef(null);
@@ -66,6 +66,7 @@ const Register = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setErrorMessage('');
     const nameParts = form.fullName.trim().split(/\s+/).filter(Boolean);
     if (!nameParts.length) {
       toast.error('Please enter your full name');
@@ -75,16 +76,22 @@ const Register = () => {
     setLoading(true);
     try {
       await register({
-        firstName: nameParts[0],
-        lastName: nameParts.slice(1).join(' ') || 'Customer',
-        email: form.email.trim(),
-        phone: `${countryCode} ${form.phone.trim()}`,
-        password: form.password,
+        profile: {
+          firstName: nameParts[0],
+          lastName: nameParts.slice(1).join(' ') || 'Customer',
+          phone: `${countryCode} ${form.phone.trim()}`,
+        },
+        auth: {
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+        },
       });
       toast.success('Welcome to Neirah Jewellers!', { icon: '✨' });
       navigate(destination, { replace: true });
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      const msg = error.response?.data?.message || 'Registration failed';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -210,6 +217,12 @@ const Register = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3">
+            {errorMessage && (
+              <div className="rounded-xl border border-red-200 bg-red-50/90 px-3.5 py-2.5 text-xs text-red-700 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                <span className="flex-1 font-medium">{errorMessage}</span>
+              </div>
+            )}
             <label className="sr-only" htmlFor="register-full-name">Full name</label>
             <div className="relative">
               <HiOutlineUser className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
@@ -240,27 +253,16 @@ const Register = () => {
               />
             </div>
 
-            <label className="sr-only" htmlFor="register-phone">Mobile number</label>
-            <div className="flex h-11 w-full items-center rounded-xl border border-stone-200 bg-white transition focus-within:border-[#8c6b45] focus-within:ring-2 focus-within:ring-[#8c6b45]/15">
-              <HiOutlineDeviceMobile className="ml-3.5 h-4 w-4 shrink-0 text-stone-400" />
-              <CountryCodeSelect
-                value={countryCode}
-                onChange={setCountryCode}
-                className="h-full shrink-0"
-                buttonClassName="flex h-full items-center gap-1.5 px-2 text-stone-800 transition hover:bg-stone-50 border-r border-stone-200 outline-none cursor-pointer select-none"
-              />
-              <input
-                id="register-phone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel-national"
-                value={form.phone}
-                onChange={updateField('phone')}
-                placeholder="Mobile Number"
-                className="min-w-0 flex-1 bg-transparent px-3 text-sm text-stone-800 outline-none placeholder:text-stone-400"
-                required
-              />
-            </div>
+            <PhoneInput
+              id="register-phone"
+              value={form.phone}
+              onChange={(val) => updateField('phone')({ target: { value: val } })}
+              countryCode={countryCode}
+              onCountryCodeChange={setCountryCode}
+              placeholder="Mobile Number"
+              required
+              size="md"
+            />
 
             <label className="sr-only" htmlFor="register-password">Password</label>
             <div className="relative">

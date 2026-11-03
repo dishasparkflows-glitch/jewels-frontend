@@ -17,6 +17,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
   const googleButtonRef = useRef(null);
@@ -119,11 +120,14 @@ const Login = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
+    setErrorMessage('');
     try {
       const data = await login(identifier.trim(), password);
       finishLogin(data.user);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Authentication failed');
+      const msg = error.response?.data?.message || 'Invalid email/mobile number or password';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -193,6 +197,12 @@ const Login = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3">
+            {errorMessage && (
+              <div className="rounded-xl border border-red-200 bg-red-50/90 px-3.5 py-2.5 text-xs text-red-700 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                <span className="flex-1 font-medium">{errorMessage}</span>
+              </div>
+            )}
             <label className="sr-only" htmlFor="login-identifier">Mobile number or email</label>
             <div className="relative">
               <HiOutlineMail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />

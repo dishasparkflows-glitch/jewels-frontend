@@ -10,7 +10,6 @@ import {
   HiOutlineMail,
   HiOutlineMap,
   HiOutlineLocationMarker,
-  HiOutlinePhone,
   HiOutlineTag,
   HiOutlineUser,
 } from 'react-icons/hi';
@@ -21,7 +20,7 @@ import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages
 import { trackBeginCheckout } from '../../config/firebase';
 import { resolveMetalName, cleanAttribute } from '../../utils/metalColors';
 import Dropdown from '../../components/common/Dropdown';
-import CountryCodeSelect from '../../components/common/CountryCodeSelect';
+import PhoneInput from '../../components/common/PhoneInput';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
 
 const inputClassName = 'h-12 w-full rounded-md border border-[#e6e0d8] bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#a77e4e] focus:ring-2 focus:ring-[#a77e4e]/10';
@@ -149,20 +148,22 @@ export default function Checkout() {
         const savedAddresses = Array.isArray(data) ? data : data?.items || [];
         if (!active || !savedAddresses.length) return;
         setAddresses(savedAddresses);
-        const preferred = savedAddresses.find((address) => address.isShippingDefault || address.isDefault) || savedAddresses[0];
+        const preferred = savedAddresses.find((address) => address.defaults?.isShippingDefault || address.defaults?.isDefault || address.isShippingDefault || address.isDefault) || savedAddresses[0];
         if (preferred) {
           setSelectedAddressId(String(preferred._id));
         }
+        const pAddr = preferred?.address || preferred || {};
         setForm((current) => ({
           ...current,
-          firstName: current.firstName || preferred.firstName || preferred.fullName?.split(/\s+/)[0] || '',
-          lastName: current.lastName || preferred.lastName || preferred.fullName?.split(/\s+/).slice(1).join(' ') || '',
-          addressLine: current.addressLine || preferred.addressLine || preferred.street || '',
-          city: current.city || preferred.city || '',
-          state: current.state || preferred.state || '',
-          postalCode: current.postalCode || preferred.pincode || preferred.postalCode || '',
-          phone: current.phone || preferred.phone || '',
-          country: current.country || preferred.country || 'India',
+          firstName: current.firstName || preferred?.firstName || preferred?.fullName?.split(/\s+/)[0] || '',
+          lastName: current.lastName || preferred?.lastName || preferred?.fullName?.split(/\s+/).slice(1).join(' ') || '',
+          addressLine: current.addressLine || pAddr.addressLine || pAddr.street || '',
+          apartment: current.apartment || pAddr.street || '',
+          city: current.city || pAddr.city || '',
+          state: current.state || pAddr.state || '',
+          postalCode: current.postalCode || pAddr.pincode || pAddr.postalCode || '',
+          phone: current.phone || pAddr.phone || '',
+          country: current.country || pAddr.country || 'India',
         }));
       })
       .catch(() => {
@@ -408,16 +409,19 @@ export default function Checkout() {
   };
 
   const applySavedAddress = (address) => {
-    const [firstName = '', ...lastNameParts] = (address.fullName || '').trim().split(/\s+/);
+    const addr = address.address || address;
+    const [firstName = '', ...lastNameParts] = (address.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`).trim().split(/\s+/);
     setForm((current) => ({
       ...current,
       firstName: address.firstName || firstName,
       lastName: address.lastName || lastNameParts.join(' '),
-      addressLine: address.addressLine || address.street || '',
-      city: address.city || '',
-      state: address.state || '',
-      postalCode: address.pincode || address.postalCode || '',
-      phone: address.phone || current.phone,
+      addressLine: addr.addressLine || addr.street || '',
+      apartment: addr.street || '',
+      city: addr.city || '',
+      state: addr.state || '',
+      postalCode: addr.pincode || addr.postalCode || '',
+      phone: addr.phone || current.phone,
+      country: addr.country || current.country || 'India',
     }));
   };
 
@@ -498,25 +502,26 @@ export default function Checkout() {
               {addresses.length > 0 && !isAddingNewAddress ? (
                 <div className="mb-4">
                   <div className="grid grid-cols-1 gap-3">
-                    {addresses.map((address) => {
-                      const isSelected = selectedAddressId === String(address._id);
-                      const fullName = address.fullName || `${address.firstName || ''} ${address.lastName || ''}`.trim();
+                    {addresses.map((addressItem) => {
+                      const isSelected = selectedAddressId === String(addressItem._id);
+                      const addr = addressItem.address || addressItem;
+                      const fullName = addressItem.fullName || `${addressItem.firstName || user?.firstName || ''} ${addressItem.lastName || user?.lastName || ''}`.trim() || 'Saved Address';
                       const addressLines = [
-                        address.addressLine || address.street,
-                        address.apartment,
+                        addr.addressLine,
+                        addr.street,
                       ].filter(Boolean).join(', ');
                       const cityStatePin = [
-                        address.city,
-                        address.state,
-                        address.postalCode || address.pincode,
+                        addr.city,
+                        addr.state,
+                        addr.pincode || addr.postalCode,
                       ].filter(Boolean).join(' ');
 
                       return (
                         <div
-                          key={address._id}
+                          key={addressItem._id}
                           onClick={() => {
-                            setSelectedAddressId(String(address._id));
-                            applySavedAddress(address);
+                            setSelectedAddressId(String(addressItem._id));
+                            applySavedAddress(addressItem);
                           }}
                           className={`relative rounded-xl border p-4.5 transition cursor-pointer max-w-md ${
                             isSelected
@@ -528,9 +533,9 @@ export default function Checkout() {
                             <p className="font-bold text-sm text-stone-900 capitalize">{fullName}</p>
                             <p className="leading-relaxed">{addressLines}</p>
                             <p>{cityStatePin}</p>
-                            <p>{address.country || 'India'}</p>
+                            <p>{addr.country || 'India'}</p>
                             <p className="pt-2 font-medium text-stone-800">
-                              Ph: {address.phone || form.phone}
+                              Ph: {addr.phone || form.phone}
                             </p>
                           </div>
                         </div>
@@ -559,15 +564,16 @@ export default function Checkout() {
                   </div>
                   <label className="relative sm:col-span-2"><span className="sr-only">PIN code</span><HiOutlineLocationMarker className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="postal-code" inputMode="numeric" placeholder="PIN Code *" value={form.postalCode} onChange={updateField('postalCode')} required /></label>
                   <div className="flex gap-3 sm:col-span-6">
-                    <div className="w-[125px] shrink-0">
-                      <CountryCodeSelect
-                        value={form.countryCode}
-                        onChange={(code) => setForm((prev) => ({ ...prev, countryCode: code }))}
-                        className="h-12 w-full"
-                        buttonClassName="flex h-12 w-full items-center justify-between rounded-md border border-[#e6e0d8] bg-white px-3 text-sm text-stone-900 transition hover:bg-stone-50 focus:border-[#a77e4e] focus:ring-2 focus:ring-[#a77e4e]/10 outline-none cursor-pointer"
-                      />
-                    </div>
-                    <label className="relative flex-1"><span className="sr-only">Mobile number</span><HiOutlinePhone className={iconClassName} /><input className={`${inputClassName} pl-11`} type="tel" inputMode="tel" autoComplete="tel-national" placeholder="Mobile Number *" value={form.phone} onChange={updateField('phone')} required /></label>
+                    <PhoneInput
+                      value={form.phone}
+                      onChange={(val) => setForm((prev) => ({ ...prev, phone: val }))}
+                      countryCode={form.countryCode}
+                      onCountryCodeChange={(code) => setForm((prev) => ({ ...prev, countryCode: code }))}
+                      placeholder="Mobile Number *"
+                      required
+                      size="lg"
+                      variant="profile"
+                    />
                   </div>
                 </div>
               )}
@@ -755,7 +761,7 @@ export default function Checkout() {
               <div><h3 className="text-lg font-semibold">Total</h3><p className="mt-0.5 text-[10px] text-stone-500">Inclusive of all taxes</p></div>
               <div className="text-right"><span className="block text-[9px] uppercase text-stone-500">INR</span><span className="font-serif text-2xl font-semibold">{formatPrice(finalTotal)}</span></div>
             </div>
-
+
           </aside>
         </form>
       </div>

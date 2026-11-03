@@ -129,7 +129,7 @@ export default function HomeProductCard({ product, isSilver: isSilverProp }) {
               type="button"
               disabled={addingToCart}
               onClick={handleAddToCart}
-              className="w-full bg-[#1A1815] hover:bg-[#C8923C] text-white py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-75"
+              className="w-full btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-75"
             >
               {addingToCart ? (
                 <>

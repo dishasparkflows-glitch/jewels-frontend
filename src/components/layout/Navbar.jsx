@@ -250,9 +250,9 @@ const Navbar = () => {
             backgroundColor: 'var(--storefront-topbar-bg, #201e1b)',
             color: 'var(--storefront-topbar-text, #ffffff)',
           }}
-          className="text-[10px] sm:text-xs py-1.5 px-3 sm:px-4 border-b border-black/10"
+          className="text-[10px] sm:text-xs py-1.5 px-4 sm:px-6 lg:px-8 border-b border-black/10"
         >
-          <div className="relative max-w-7xl mx-auto flex items-center justify-between min-h-[24px]">
+          <div className="relative max-w-7xl 2xl:max-w-[1536px] mx-auto flex items-center justify-between min-h-[24px]">
             {/* Left: Virtual Appointment */}
             <div className="flex-1 flex items-center justify-start min-w-0 relative z-10">
               <button
@@ -323,7 +323,7 @@ const Navbar = () => {
         }}
         className="px-4 sm:px-6 lg:px-8 border-b border-white/5"
       >
-        <div className={`max-w-7xl mx-auto flex items-center justify-between gap-3 sm:gap-6 ${isCheckout ? 'h-14 sm:h-16' : 'h-14 sm:h-16 lg:h-[68px]'}`}>
+        <div className={`max-w-7xl 2xl:max-w-[1536px] mx-auto flex items-center justify-between gap-3 sm:gap-6 ${isCheckout ? 'h-14 sm:h-16' : 'h-14 sm:h-16 lg:h-[68px]'}`}>
           {/* Mobile hamburger */}
           <div className="order-last flex items-center lg:order-none lg:hidden">
             <button
@@ -364,7 +364,7 @@ const Navbar = () => {
           </Link>
 
           {/* ─── Compact Luxury Search Bar ─── */}
-          <div ref={searchContainerRef} className="flex-1 max-w-sm lg:max-w-md mx-3 sm:mx-6 lg:mx-8 hidden md:block relative z-40">
+          <div ref={searchContainerRef} className="flex-1 max-w-sm lg:max-w-md xl:max-w-lg mx-auto hidden md:block relative z-40">
             <form
               onSubmit={handleSearch}
               className="relative flex items-center w-full h-9 sm:h-9.5 rounded-full bg-white border border-stone-200/90 shadow-2xs hover:border-[#8b6f4e]/60 focus-within:border-[#8b6f4e] focus-within:ring-2 focus-within:ring-[#8b6f4e]/20 transition-all duration-300"

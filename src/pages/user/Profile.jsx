@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { usersAPI, addressesAPI } from '../../api/services';
 import { toast } from 'react-hot-toast';
 import Dropdown from '../../components/common/Dropdown';
+import PhoneInput from '../../components/common/PhoneInput';
 import {
   HiOutlineUser,
   HiOutlineCube,
@@ -39,6 +41,7 @@ const Profile = () => {
     firstName: '',
     lastName: '',
     phone: '',
+    countryCode: '+91',
     location: '',
     bio: '',
   });
@@ -55,6 +58,7 @@ const Profile = () => {
     state: 'Gujarat',
     pincode: '382006',
     phone: '',
+    countryCode: '+91',
     isDefault: false,
   });
 
@@ -66,11 +70,11 @@ const Profile = () => {
   useEffect(() => {
     if (user) {
       setProfileForm({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        phone: user.phone || '',
-        location: user.location || '',
-        bio: user.bio || '',
+        firstName: user.firstName || user.profile?.firstName || '',
+        lastName: user.lastName || user.profile?.lastName || '',
+        phone: user.phone || user.profile?.phone || '',
+        location: user.location || user.profile?.location || '',
+        bio: user.bio || user.profile?.bio || '',
       });
     }
   }, [user]);
@@ -120,11 +124,11 @@ const Profile = () => {
 
   // Current effective addresses from dedicated addresses table
   const billingAddress = useMemo(() => {
-    return addresses.find((a) => a.isBillingDefault) || addresses.find((a) => a.isDefault) || addresses[0] || {};
+    return addresses.find((a) => a.defaults?.isBillingDefault || a.isBillingDefault) || addresses.find((a) => a.defaults?.isDefault || a.isDefault) || addresses[0] || {};
   }, [addresses]);
 
   const shippingAddress = useMemo(() => {
-    return addresses.find((a) => a.isShippingDefault) || addresses.find((a) => a.isDefault) || addresses[0] || {};
+    return addresses.find((a) => a.defaults?.isShippingDefault || a.isShippingDefault) || addresses.find((a) => a.defaults?.isDefault || a.isDefault) || addresses[0] || {};
   }, [addresses]);
 
   const additionalAddresses = useMemo(() => {
@@ -161,48 +165,34 @@ const Profile = () => {
   const openAddressModal = (type, addr = null) => {
     setAddressModalType(type);
 
-    if (type === 'billing' && billingAddress?._id) {
-      setSelectedAddressId(billingAddress._id);
+    const target = type === 'billing' ? billingAddress : type === 'shipping' ? shippingAddress : addr;
+    const aData = target?.address || target || {};
+    const aDefs = target?.defaults || target || {};
+
+    if (target?._id) {
+      setSelectedAddressId(target._id);
       setAddressForm({
-        fullName: billingAddress.fullName || userFullName,
-        addressLine: billingAddress.addressLine || '',
-        city: billingAddress.city || 'Gandhinagar',
-        state: billingAddress.state || 'Gujarat',
-        pincode: billingAddress.pincode || '382006',
-        phone: billingAddress.phone || user?.phone || '',
-        isDefault: Boolean(billingAddress.isDefault || billingAddress.isBillingDefault),
-      });
-    } else if (type === 'shipping' && shippingAddress?._id) {
-      setSelectedAddressId(shippingAddress._id);
-      setAddressForm({
-        fullName: shippingAddress.fullName || userFullName,
-        addressLine: shippingAddress.addressLine || '',
-        city: shippingAddress.city || 'Gandhinagar',
-        state: shippingAddress.state || 'Gujarat',
-        pincode: shippingAddress.pincode || '382006',
-        phone: shippingAddress.phone || user?.phone || '',
-        isDefault: Boolean(shippingAddress.isDefault || shippingAddress.isShippingDefault),
-      });
-    } else if (type === 'edit-additional' && addr) {
-      setSelectedAddressId(addr._id);
-      setAddressForm({
-        fullName: addr.fullName || userFullName,
-        addressLine: addr.addressLine || '',
-        city: addr.city || 'Gandhinagar',
-        state: addr.state || 'Gujarat',
-        pincode: addr.pincode || '382006',
-        phone: addr.phone || user?.phone || '',
-        isDefault: Boolean(addr.isDefault),
+        type: aData.type || 'home',
+        phone: aData.phone || user?.phone || '',
+        addressLine: aData.addressLine || '',
+        street: aData.street || '',
+        city: aData.city || 'Gandhinagar',
+        state: aData.state || 'Gujarat',
+        pincode: aData.pincode || '382006',
+        country: aData.country || 'India',
+        isDefault: Boolean(aDefs.isDefault || aDefs.isShippingDefault || aDefs.isBillingDefault),
       });
     } else {
       setSelectedAddressId(null);
       setAddressForm({
-        fullName: userFullName,
+        type: 'home',
+        phone: user?.phone || '',
         addressLine: '',
+        street: '',
         city: 'Gandhinagar',
         state: 'Gujarat',
         pincode: '382006',
-        phone: user?.phone || '',
+        country: 'India',
         isDefault: false,
       });
     }
@@ -262,46 +252,30 @@ const Profile = () => {
     e.preventDefault();
     try {
       setSaving(true);
+      const isShipping = addressModalType === 'shipping' || Boolean(addressForm.isDefault);
+      const isBilling = addressModalType === 'billing';
+
       const payload = {
-        fullName: addressForm.fullName,
-        addressLine: addressForm.addressLine,
-        city: addressForm.city,
-        state: addressForm.state,
-        pincode: addressForm.pincode,
-        phone: addressForm.phone,
-        isDefault: Boolean(addressForm.isDefault),
+        address: {
+          type: addressForm.type || 'home',
+          phone: addressForm.phone,
+          addressLine: addressForm.addressLine,
+          street: addressForm.street || '',
+          city: addressForm.city,
+          state: addressForm.state,
+          pincode: addressForm.pincode,
+          country: addressForm.country || 'India',
+        },
+        defaults: {
+          isDefault: Boolean(addressForm.isDefault),
+          isBillingDefault: Boolean(isBilling),
+          isShippingDefault: Boolean(isShipping),
+        },
       };
 
-      if (addressModalType === 'billing') {
-        payload.isBillingDefault = true;
-        if (addressForm.isDefault) {
-          payload.isDefault = true;
-          payload.isShippingDefault = true;
-        }
-        if (selectedAddressId) {
-          await addressesAPI.update(selectedAddressId, payload);
-        } else {
-          await addressesAPI.create(payload);
-        }
-      } else if (addressModalType === 'shipping') {
-        payload.isShippingDefault = true;
-        payload.isDefault = true;
-        if (selectedAddressId) {
-          await addressesAPI.update(selectedAddressId, payload);
-        } else {
-          await addressesAPI.create(payload);
-        }
-      } else if (addressModalType === 'edit-additional' && selectedAddressId) {
-        if (addressForm.isDefault) {
-          payload.isDefault = true;
-          payload.isShippingDefault = true;
-        }
+      if (selectedAddressId) {
         await addressesAPI.update(selectedAddressId, payload);
       } else {
-        if (addressForm.isDefault) {
-          payload.isDefault = true;
-          payload.isShippingDefault = true;
-        }
         await addressesAPI.create(payload);
       }
 
@@ -440,70 +414,73 @@ const Profile = () => {
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 lg:gap-6">
                       
                       {/* 1. Avatar + Name & Email */}
-                      <div className="flex items-center gap-4 min-w-[200px]">
-                        <div className="w-14 h-14 rounded-full bg-[#f4ebe1] text-[#8b6f4e] font-serif text-2xl font-medium flex items-center justify-center shrink-0 border border-[#e8dfd5]">
+                      <div className="flex items-center gap-3.5 shrink-0 min-w-0">
+                        <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-[#f4ebe1] text-[#8b6f4e] font-serif text-xl sm:text-2xl font-medium flex items-center justify-center shrink-0 border border-[#e8dfd5]">
                           {(userFullName?.[0] || user?.firstName?.[0] || user?.name?.[0] || 'D').toUpperCase()}
                         </div>
                         <div className="space-y-0.5 min-w-0">
-                          <h2 className="text-lg sm:text-xl font-medium text-stone-900 leading-tight truncate">
+                          <h2 className="text-base sm:text-lg font-medium text-stone-900 leading-tight whitespace-nowrap" title={userFullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim()}>
                             {userFullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Disha Customer'}
                           </h2>
-                          <p className="text-xs text-stone-500 font-normal truncate">
+                          <p className="text-xs text-stone-500 font-normal truncate max-w-[180px]" title={user?.email}>
                             {user?.email || '—'}
                           </p>
                         </div>
                       </div>
 
                       {/* Divider */}
-                      <div className="hidden lg:block h-10 w-px bg-stone-200 self-center" />
+                      <div className="hidden lg:block h-10 w-px bg-stone-200 shrink-0 self-center" />
 
                       {/* 2. Phone */}
-                      <div className="flex items-center gap-3.5 min-w-[170px]">
-                        <div className="w-10 h-10 rounded-full bg-[#eff6ff] text-[#3b82f6] flex items-center justify-center shrink-0">
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-[#eff6ff] text-[#3b82f6] flex items-center justify-center shrink-0">
                           <HiOutlinePhone className="w-4 h-4" />
                         </div>
                         <div className="leading-tight">
                           <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
                             PHONE
                           </span>
-                          <span className="text-xs sm:text-sm text-stone-900 font-medium">
+                          <span className="text-xs sm:text-sm text-stone-900 font-medium whitespace-nowrap">
                             {user?.phone ? (user.phone.startsWith('+') ? user.phone : `+91 ${user.phone}`) : '—'}
                           </span>
                         </div>
                       </div>
 
                       {/* Divider */}
-                      <div className="hidden lg:block h-10 w-px bg-stone-200 self-center" />
+                      <div className="hidden lg:block h-10 w-px bg-stone-200 shrink-0 self-center" />
 
                       {/* 3. Location */}
-                      <div className="flex items-center gap-3.5 min-w-[180px]">
-                        <div className="w-10 h-10 rounded-full bg-[#ecfdf5] text-[#10b981] flex items-center justify-center shrink-0">
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-[#ecfdf5] text-[#10b981] flex items-center justify-center shrink-0">
                           <HiOutlineLocationMarker className="w-4 h-4" />
                         </div>
                         <div className="leading-tight">
                           <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
                             LOCATION
                           </span>
-                          <span className="text-xs sm:text-sm text-stone-900 font-medium">
-                            {user?.location || '—'}
+                          <span className="text-xs sm:text-sm text-stone-900 font-medium whitespace-nowrap" title={user?.location || user?.profile?.location}>
+                            {user?.location || user?.profile?.location || '—'}
                           </span>
                         </div>
                       </div>
 
                       {/* Divider */}
-                      <div className="hidden lg:block h-10 w-px bg-stone-200 self-center" />
+                      <div className="hidden lg:block h-10 w-px bg-stone-200 shrink-0 self-center" />
 
                       {/* 4. Bio */}
-                      <div className="flex items-center gap-3.5 min-w-[140px]">
-                        <div className="w-10 h-10 rounded-full bg-[#f5f3ff] text-[#8b5cf6] flex items-center justify-center shrink-0">
+                      <div className="flex items-center gap-3 flex-1 min-w-[180px]">
+                        <div className="w-9 h-9 rounded-full bg-[#f5f3ff] text-[#8b5cf6] flex items-center justify-center shrink-0">
                           <HiOutlineDocumentText className="w-4 h-4" />
                         </div>
-                        <div className="leading-tight">
+                        <div className="leading-tight min-w-0 flex-1">
                           <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
                             BIO
                           </span>
-                          <span className="text-xs sm:text-sm text-stone-900 font-medium truncate max-w-[160px]">
-                            {user?.bio || '—'}
+                          <span
+                            className="text-xs sm:text-sm text-stone-900 font-medium block break-words"
+                            title={user?.bio || user?.profile?.bio || ''}
+                          >
+                            {user?.bio || user?.profile?.bio || '—'}
                           </span>
                         </div>
                       </div>
@@ -607,14 +584,14 @@ const Profile = () => {
                           <HiOutlinePencilAlt className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <p className="font-normal text-stone-900">{billingAddress.fullName || userFullName || 'Disha Customer'}</p>
-                      <p className="text-stone-600 leading-relaxed">{billingAddress.addressLine || 'No address set'}</p>
-                      {billingAddress.city && (
+                      <p className="font-normal text-stone-900">{userFullName || 'Disha Customer'}</p>
+                      <p className="text-stone-600 leading-relaxed">{(billingAddress.address || billingAddress).addressLine || 'No address set'}</p>
+                      {(billingAddress.address || billingAddress).city && (
                         <p className="text-stone-600">
-                          {billingAddress.city}, {billingAddress.state} {billingAddress.pincode}
+                          {(billingAddress.address || billingAddress).city}, {(billingAddress.address || billingAddress).state} {(billingAddress.address || billingAddress).pincode}
                         </p>
                       )}
-                      {billingAddress.phone && <p className="text-stone-600 pt-1">{billingAddress.phone}</p>}
+                      {(billingAddress.address || billingAddress).phone && <p className="text-stone-600 pt-1">{(billingAddress.address || billingAddress).phone}</p>}
                     </div>
 
                     {/* Default Shipping Address */}
@@ -631,14 +608,14 @@ const Profile = () => {
                           <HiOutlinePencilAlt className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <p className="font-normal text-stone-900">{shippingAddress.fullName || userFullName || 'Disha Customer'}</p>
-                      <p className="text-stone-600 leading-relaxed">{shippingAddress.addressLine || 'No address set'}</p>
-                      {shippingAddress.city && (
+                      <p className="font-normal text-stone-900">{userFullName || 'Disha Customer'}</p>
+                      <p className="text-stone-600 leading-relaxed">{(shippingAddress.address || shippingAddress).addressLine || 'No address set'}</p>
+                      {(shippingAddress.address || shippingAddress).city && (
                         <p className="text-stone-600">
-                          {shippingAddress.city}, {shippingAddress.state} {shippingAddress.pincode}
+                          {(shippingAddress.address || shippingAddress).city}, {(shippingAddress.address || shippingAddress).state} {(shippingAddress.address || shippingAddress).pincode}
                         </p>
                       )}
-                      {shippingAddress.phone && <p className="text-stone-600 pt-1">{shippingAddress.phone}</p>}
+                      {(shippingAddress.address || shippingAddress).phone && <p className="text-stone-600 pt-1">{(shippingAddress.address || shippingAddress).phone}</p>}
                     </div>
                   </div>
                 </div>
@@ -663,37 +640,40 @@ const Profile = () => {
                       <p className="text-xs text-stone-500 py-4">No additional addresses saved yet.</p>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {additionalAddresses.map((addr, idx) => (
-                          <div
-                            key={addr._id || idx}
-                            className="border border-stone-200 rounded-xl p-4 space-y-2 text-xs sm:text-sm text-stone-700 bg-white"
-                          >
-                            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
-                              {addr.addressType ? addr.addressType.toUpperCase() : `ADDRESS ${idx + 1}`}
-                            </span>
-                            <p className="font-normal text-stone-900">{addr.fullName || userFullName}</p>
-                            <p className="text-stone-600 text-xs leading-relaxed">{addr.addressLine}</p>
-                            <p className="text-stone-600 text-xs">
-                              {addr.city}, {addr.state} {addr.pincode}
-                            </p>
-                            <p className="text-stone-600 text-xs pt-1">{addr.phone}</p>
+                        {additionalAddresses.map((addrItem, idx) => {
+                          const addr = addrItem.address || addrItem;
+                          return (
+                            <div
+                              key={addrItem._id || idx}
+                              className="border border-stone-200 rounded-xl p-4 space-y-2 text-xs sm:text-sm text-stone-700 bg-white"
+                            >
+                              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
+                                {addr.type ? addr.type.toUpperCase() : `ADDRESS ${idx + 1}`}
+                              </span>
+                              <p className="font-normal text-stone-900">{userFullName}</p>
+                              <p className="text-stone-600 text-xs leading-relaxed">{addr.addressLine}</p>
+                              <p className="text-stone-600 text-xs">
+                                {addr.city}, {addr.state} {addr.pincode}
+                              </p>
+                              <p className="text-stone-600 text-xs pt-1">{addr.phone}</p>
 
-                            <div className="flex items-center gap-4 pt-3 border-t border-stone-100 text-xs">
-                              <button
-                                onClick={() => openAddressModal('edit-additional', addr)}
-                                className="text-stone-600 hover:text-black hover:underline"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteAddress(addr._id)}
-                                className="text-red-500 hover:text-red-700 hover:underline"
-                              >
-                                Delete
-                              </button>
+                              <div className="flex items-center gap-4 pt-3 border-t border-stone-100 text-xs">
+                                <button
+                                  onClick={() => openAddressModal('edit-additional', addrItem)}
+                                  className="text-stone-600 hover:text-black hover:underline"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteAddress(addrItem._id)}
+                                  className="text-red-500 hover:text-red-700 hover:underline"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -723,12 +703,12 @@ const Profile = () => {
                   You have no pending orders. Explore our exquisite jewelry collections and certified solitaires.
                 </p>
                 <div className="pt-2">
-                  <a
-                    href="/shop"
-                    className="inline-block bg-black hover:bg-stone-800 text-white text-xs uppercase tracking-wider px-6 py-2.5 rounded"
+                  <Link
+                    to="/shop"
+                    className="inline-block btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-xs font-semibold uppercase tracking-wider px-6 py-2.5 rounded-lg shadow-sm hover:shadow transition-all"
                   >
                     Shop Collection
-                  </a>
+                  </Link>
                 </div>
               </div>
             )}
@@ -779,7 +759,7 @@ const Profile = () => {
                     value={profileForm.firstName}
                     onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
                     required
-                    className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-stone-800 text-stone-900"
+                    className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 text-stone-900"
                   />
                 </div>
                 <div className="space-y-1">
@@ -791,7 +771,7 @@ const Profile = () => {
                     value={profileForm.lastName}
                     onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
                     required
-                    className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-stone-800 text-stone-900"
+                    className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 text-stone-900"
                   />
                 </div>
               </div>
@@ -800,12 +780,13 @@ const Profile = () => {
                 <label className="font-bold text-stone-700 uppercase tracking-wider text-[10px]">
                   Phone Number
                 </label>
-                <input
-                  type="text"
+                <PhoneInput
                   value={profileForm.phone}
-                  onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                  onChange={(val) => setProfileForm({ ...profileForm, phone: val })}
+                  countryCode={profileForm.countryCode}
+                  onCountryCodeChange={(code) => setProfileForm({ ...profileForm, countryCode: code })}
                   placeholder="Enter phone number"
-                  className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-stone-800 text-stone-900"
+                  size="md"
                 />
               </div>
 
@@ -818,7 +799,7 @@ const Profile = () => {
                   value={profileForm.location}
                   onChange={(e) => setProfileForm({ ...profileForm, location: e.target.value })}
                   placeholder="e.g. Gandhinagar, Gujarat"
-                  className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-stone-800 text-stone-900"
+                  className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 text-stone-900"
                 />
               </div>
 
@@ -831,7 +812,7 @@ const Profile = () => {
                   value={profileForm.bio}
                   onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
                   placeholder="Tell us about your jewellery preferences..."
-                  className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-stone-800 text-stone-900"
+                  className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 text-stone-900"
                 />
               </div>
 
@@ -846,7 +827,7 @@ const Profile = () => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2 bg-black hover:bg-stone-800 text-white rounded-lg font-medium disabled:opacity-50"
+                  className="px-6 py-2 btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white rounded-lg font-medium shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {saving ? 'Saving...' : 'Save Profile'}
                 </button>
@@ -895,38 +876,59 @@ const Profile = () => {
                 </button>
               </div>
 
-              {/* Full Name */}
+              {/* Address Type */}
               <div>
                 <label className="block text-xs font-semibold text-stone-800 mb-1.5">
-                  Full Name <span className="text-red-500">*</span>
+                  Address Type
                 </label>
-                <div className="relative flex items-center rounded-xl border border-[#e5ded5] hover:border-[#bdae99] focus-within:border-[#9e7a46] focus-within:ring-2 focus-within:ring-[#9e7a46]/10 transition-all bg-white shadow-2xs">
-                  <HiOutlineUser className="w-4 h-4 text-stone-600 ml-3.5 shrink-0" />
-                  <input
-                    type="text"
-                    value={addressForm.fullName}
-                    onChange={(e) => setAddressForm({ ...addressForm, fullName: e.target.value })}
-                    required
-                    placeholder="Full Name"
-                    className="w-full pl-3 pr-4 py-2.5 text-xs sm:text-sm text-stone-900 bg-transparent focus:outline-none placeholder:text-stone-400"
-                  />
+                <div className="flex gap-2">
+                  {['home', 'office', 'other'].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setAddressForm({ ...addressForm, type: t })}
+                      className={`px-3.5 py-1.5 text-xs font-medium rounded-lg border capitalize transition-all cursor-pointer ${
+                        (addressForm.type || 'home') === t
+                          ? 'bg-[#8b6f4e] text-white border-[#8b6f4e]'
+                          : 'bg-white text-stone-700 border-stone-200 hover:border-stone-300'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               {/* Street Address */}
               <div>
                 <label className="block text-xs font-semibold text-stone-800 mb-1.5">
-                  Street Address <span className="text-red-500">*</span>
+                  Address Line <span className="text-red-500">*</span>
                 </label>
                 <div className="relative flex items-start rounded-xl border border-[#e5ded5] hover:border-[#bdae99] focus-within:border-[#9e7a46] focus-within:ring-2 focus-within:ring-[#9e7a46]/10 transition-all bg-white shadow-2xs">
                   <HiOutlineHome className="w-4 h-4 text-stone-600 ml-3.5 mt-3 shrink-0" />
                   <textarea
-                    rows={3}
+                    rows={2}
                     value={addressForm.addressLine}
                     onChange={(e) => setAddressForm({ ...addressForm, addressLine: e.target.value })}
                     required
-                    placeholder="Flat/House no., Street, Area"
+                    placeholder="Flat/House no., Building, Area"
                     className="w-full pl-3 pr-4 py-2.5 text-xs sm:text-sm text-stone-900 bg-transparent focus:outline-none placeholder:text-stone-400 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Street / Landmark */}
+              <div>
+                <label className="block text-xs font-semibold text-stone-800 mb-1.5">
+                  Street / Landmark <span className="text-stone-400 font-normal">(Optional)</span>
+                </label>
+                <div className="relative flex items-center rounded-xl border border-[#e5ded5] hover:border-[#bdae99] focus-within:border-[#9e7a46] focus-within:ring-2 focus-within:ring-[#9e7a46]/10 transition-all bg-white shadow-2xs">
+                  <input
+                    type="text"
+                    value={addressForm.street || ''}
+                    onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
+                    placeholder="Street, landmark, suite, etc."
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-sm text-stone-900 bg-transparent focus:outline-none placeholder:text-stone-400"
                   />
                 </div>
               </div>
@@ -991,17 +993,16 @@ const Profile = () => {
                   <label className="block text-xs font-semibold text-stone-800 mb-1.5">
                     Phone Number <span className="text-red-500">*</span>
                   </label>
-                  <div className="relative flex items-center rounded-xl border border-[#e5ded5] hover:border-[#bdae99] focus-within:border-[#9e7a46] focus-within:ring-2 focus-within:ring-[#9e7a46]/10 transition-all bg-white shadow-2xs">
-                    <HiOutlinePhone className="w-4 h-4 text-stone-600 ml-3.5 shrink-0" />
-                    <input
-                      type="tel"
-                      value={addressForm.phone}
-                      onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
-                      required
-                      placeholder="+91 9825032534"
-                      className="w-full pl-3 pr-4 py-2.5 text-xs sm:text-sm text-stone-900 bg-transparent focus:outline-none placeholder:text-stone-400"
-                    />
-                  </div>
+                  <PhoneInput
+                    value={addressForm.phone}
+                    onChange={(val) => setAddressForm({ ...addressForm, phone: val })}
+                    countryCode={addressForm.countryCode}
+                    onCountryCodeChange={(code) => setAddressForm({ ...addressForm, countryCode: code })}
+                    placeholder="9825032534"
+                    required
+                    size="lg"
+                    variant="profile"
+                  />
                 </div>
               </div>
 
@@ -1032,7 +1033,7 @@ const Profile = () => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2.5 rounded-xl bg-[#9e7a46] hover:bg-[#8a6836] text-white text-xs sm:text-sm font-medium transition shadow-sm disabled:opacity-50 cursor-pointer"
+                  className="px-6 py-2.5 rounded-xl btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-xs sm:text-sm font-medium transition shadow-sm disabled:opacity-50 cursor-pointer"
                 >
                   {saving ? 'Saving...' : 'Save Address'}
                 </button>

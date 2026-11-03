@@ -232,7 +232,7 @@ export default function MegaMenuNav({ categories, mobile = false, onNavigate, er
         </nav>
       ) : (
         <>
-          <nav aria-label="Product categories" className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-8 px-4 sm:px-6 lg:px-8 xl:gap-x-12">
+          <nav aria-label="Product categories" className="mx-auto flex max-w-7xl 2xl:max-w-[1536px] flex-wrap items-center justify-center gap-x-8 px-4 sm:px-6 lg:px-8 xl:gap-x-12">
             {categories.map((category) => (
               <div
                 key={category._id}

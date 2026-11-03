@@ -276,7 +276,7 @@ export default function WishlistProductCard({ item, onRemove }) {
             type="button"
             disabled={addingToCart}
             onClick={handleAddToCart}
-            className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-[#201e1b] hover:bg-[#8b6f4e] text-white text-[11px] sm:text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 shadow-2xs hover:shadow-sm active:scale-98 cursor-pointer disabled:opacity-60"
+            className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-[11px] sm:text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 shadow-2xs hover:shadow-sm active:scale-98 cursor-pointer disabled:opacity-60"
           >
             {addingToCart ? (
               <span>ADDING…</span>

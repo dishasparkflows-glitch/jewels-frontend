@@ -122,6 +122,8 @@ const Home = () => {
   const [collectionBanners, setCollectionBanners] = useState([]);
 
   const [giftItems, setGiftItems] = useState([]);
+  const giftsScrollRef = useRef(null);
+  const [isGiftsHovered, setIsGiftsHovered] = useState(false);
 
   const [mobileAppBanner, setMobileAppBanner] = useState(null);
 
@@ -352,7 +354,8 @@ const Home = () => {
     const el = celebrateScrollRef.current;
     if (!el) return;
     const card = el.querySelector('.celebrate-card');
-    const gap = window.innerWidth >= 640 ? 24 : 16;
+    const width = window.innerWidth;
+    const gap = width >= 1280 ? 20 : width >= 1024 ? 18 : width >= 768 ? 16 : width >= 480 ? 12 : 10;
     const scrollAmount = card ? card.offsetWidth + gap : el.clientWidth * 0.5;
     el.scrollBy({
       left: direction === 'next' ? scrollAmount : -scrollAmount,
@@ -369,11 +372,13 @@ const Home = () => {
       timer = setInterval(() => {
         const el = celebrateScrollRef.current;
         if (!el) return;
+        if (el.scrollWidth <= el.clientWidth + 10) return;
         if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 15) {
           el.scrollTo({ left: 0, behavior: 'smooth' });
         } else {
           const card = el.querySelector('.celebrate-card');
-          const gap = window.innerWidth >= 640 ? 24 : 16;
+          const width = window.innerWidth;
+          const gap = width >= 1280 ? 20 : width >= 1024 ? 18 : width >= 768 ? 16 : width >= 480 ? 12 : 10;
           const scrollAmount = card ? card.offsetWidth + gap : el.clientWidth * 0.5;
           el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
         }
@@ -386,6 +391,48 @@ const Home = () => {
 
     return () => clearInterval(timer);
   }, [effectiveCategoryItems.length, isCelebrateHovered]);
+
+  const scrollGifts = useCallback((direction) => {
+    const el = giftsScrollRef.current;
+    if (!el) return;
+    const card = el.querySelector('.gifts-card');
+    const width = window.innerWidth;
+    const gap = width >= 1280 ? 20 : width >= 1024 ? 18 : width >= 768 ? 16 : width >= 480 ? 12 : 10;
+    const scrollAmount = card ? card.offsetWidth + gap : el.clientWidth * 0.5;
+    el.scrollBy({
+      left: direction === 'next' ? scrollAmount : -scrollAmount,
+      behavior: 'smooth',
+    });
+  }, []);
+
+  // Auto scroll for Gifts That Say It All
+  useEffect(() => {
+    if (giftItems.length <= 1) return;
+    let timer;
+
+    const startTimer = () => {
+      timer = setInterval(() => {
+        const el = giftsScrollRef.current;
+        if (!el) return;
+        if (el.scrollWidth <= el.clientWidth + 10) return;
+        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 15) {
+          el.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+          const card = el.querySelector('.gifts-card');
+          const width = window.innerWidth;
+          const gap = width >= 1280 ? 20 : width >= 1024 ? 18 : width >= 768 ? 16 : width >= 480 ? 12 : 10;
+          const scrollAmount = card ? card.offsetWidth + gap : el.clientWidth * 0.5;
+          el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+      }, 3500);
+    };
+
+    if (!isGiftsHovered) {
+      startTimer();
+    }
+
+    return () => clearInterval(timer);
+  }, [giftItems.length, isGiftsHovered]);
 
   // ─── 3. FETCH PRODUCTS FOR HOME (/api/products/home) ─────────────────
   useEffect(() => {
@@ -536,7 +583,7 @@ const Home = () => {
           2. CELEBRATE WITH NEIRAH (Dynamic from /api/featured?placement=Celebrate)
       ─────────────────────────────────────────────────────────────────── */}
       {effectiveCategoryItems.length > 0 && (
-        <section style={sectionStyle('categories')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <section style={sectionStyle('categories')} className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
           <div className="text-center mb-6 sm:mb-8">
             <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
               Celebrate With Neirah
@@ -544,16 +591,35 @@ const Home = () => {
             <LuxuryDivider className="mt-2.5 sm:mt-3" />
           </div>
 
-          {effectiveCategoryItems.length <= 4 ? (
+          <div
+            className="relative group/celebrate px-1 w-full mx-auto"
+            onMouseEnter={() => setIsCelebrateHovered(true)}
+            onMouseLeave={() => setIsCelebrateHovered(false)}
+          >
+            {/* Left Chevron Button */}
+            <button
+              type="button"
+              onClick={() => scrollCelebrate('prev')}
+              aria-label="Previous categories"
+              className={`absolute -left-2 sm:-left-3 lg:-left-5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer ${
+                effectiveCategoryItems.length <= 4 ? 'lg:hidden' : ''
+              }`}
+            >
+              <HiOutlineChevronLeft className="h-5 w-5" />
+            </button>
+
+            {/* Scrollable Container */}
             <div
-              className="grid grid-cols-2 lg:grid-cols-4 w-full gap-4 sm:gap-6"
+              ref={celebrateScrollRef}
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              className="flex items-center overflow-x-auto scroll-smooth snap-x snap-mandatory py-2 [&::-webkit-scrollbar]:hidden w-full gap-[10px] sm:gap-[12px] md:gap-[16px] lg:gap-[18px] xl:gap-[20px] 2xl:gap-[20px]"
             >
               {effectiveCategoryItems.map((item) => (
                 <Link
                   key={item._id}
                   to={item.link}
-                  style={{ borderRadius: '22px' }}
-                  className="group relative overflow-hidden aspect-[3/4] w-full min-w-0 bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col justify-end cursor-pointer isolate"
+                  style={{ borderRadius: '22px', aspectRatio: '4 / 5' }}
+                  className="celebrate-card group relative overflow-hidden aspect-[4/5] w-[calc((100%-12px)/2.2)] sm:w-[calc((100%-18px)/2.5)] md:w-[calc((100%-40px)/3.5)] lg:w-[calc((100%-54px)/4)] xl:w-[calc((100%-60px)/4)] 2xl:w-[calc((100%-60px)/4)] min-w-0 bg-stone-100 border border-stone-200/80 shadow-xs hover:shadow-xl transition-all duration-500 shrink-0 snap-start flex flex-col justify-end cursor-pointer isolate"
                 >
                   {item.image && (
                     <img
@@ -567,7 +633,7 @@ const Home = () => {
                     style={{ borderBottomLeftRadius: '22px', borderBottomRightRadius: '22px' }}
                     className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/20 to-transparent transition-opacity duration-500 group-hover:from-black/85 pointer-events-none"
                   />
-                  <div className="relative z-10 p-4 sm:p-5 text-left">
+                  <div className="relative z-10 p-3.5 sm:p-5 text-left">
                     <span className="text-sm sm:text-base font-medium text-white tracking-wide block drop-shadow-sm truncate">
                       {item.name}
                     </span>
@@ -575,67 +641,19 @@ const Home = () => {
                 </Link>
               ))}
             </div>
-          ) : (
-            <div
-              className="relative group/celebrate px-1"
-              onMouseEnter={() => setIsCelebrateHovered(true)}
-              onMouseLeave={() => setIsCelebrateHovered(false)}
+
+            {/* Right Chevron Button */}
+            <button
+              type="button"
+              onClick={() => scrollCelebrate('next')}
+              aria-label="Next categories"
+              className={`absolute -right-2 sm:-right-3 lg:-right-5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer ${
+                effectiveCategoryItems.length <= 4 ? 'lg:hidden' : ''
+              }`}
             >
-              {/* Left Chevron Button */}
-              <button
-                type="button"
-                onClick={() => scrollCelebrate('prev')}
-                aria-label="Previous categories"
-                className="absolute -left-2 sm:-left-3 lg:-left-5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer"
-              >
-                <HiOutlineChevronLeft className="h-5 w-5" />
-              </button>
-
-              {/* Scrollable Container */}
-              <div
-                ref={celebrateScrollRef}
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                className="flex items-center overflow-x-auto scroll-smooth snap-x snap-mandatory py-2 [&::-webkit-scrollbar]:hidden w-full gap-4 sm:gap-6"
-              >
-                {effectiveCategoryItems.map((item) => (
-                  <Link
-                    key={item._id}
-                    to={item.link}
-                    style={{ borderRadius: '22px' }}
-                    className="celebrate-card group relative overflow-hidden aspect-[3/4] w-[calc(50%-8px)] sm:w-[calc(50%-12px)] lg:w-[calc(25%-18px)] min-w-0 bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 shrink-0 snap-start flex flex-col justify-end cursor-pointer isolate"
-                  >
-                    {item.image && (
-                      <img
-                        src={getMediaUrl(item.image)}
-                        alt={item.name}
-                        style={{ borderRadius: '22px' }}
-                        className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
-                      />
-                    )}
-                    <div
-                      style={{ borderBottomLeftRadius: '22px', borderBottomRightRadius: '22px' }}
-                      className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/20 to-transparent transition-opacity duration-500 group-hover:from-black/85 pointer-events-none"
-                    />
-                    <div className="relative z-10 p-4 sm:p-5 text-left">
-                      <span className="text-sm sm:text-base font-medium text-white tracking-wide block drop-shadow-sm truncate">
-                        {item.name}
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-
-              {/* Right Chevron Button */}
-              <button
-                type="button"
-                onClick={() => scrollCelebrate('next')}
-                aria-label="Next categories"
-                className="absolute -right-2 sm:-right-3 lg:-right-5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer"
-              >
-                <HiOutlineChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-          )}
+              <HiOutlineChevronRight className="h-5 w-5" />
+            </button>
+          </div>
         </section>
       )}
 
@@ -721,26 +739,28 @@ const Home = () => {
           4. CURATED COLLECTION BANNERS (Dynamic Bento Grid from /api/banners)
       ─────────────────────────────────────────────────────────────────── */}
       {effectiveCollectionBanners.length > 0 && (
-        <section style={sectionStyle('collections')} className="w-full max-w-7xl 2xl:max-w-[1320px] mx-auto space-y-8 px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <section style={sectionStyle('collections')} className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto space-y-8 px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           {effectiveCollectionBanners.map((collection) => {
             const [image1, image2, image3, image4] = collection.images || [];
             if (!image1 || !image2 || !image3 || !image4) return null;
             const tileClass = 'group relative block overflow-hidden rounded-2xl sm:rounded-[22px] bg-stone-100 shadow-2xs hover:shadow-md transition-shadow duration-300';
             const tileImageClass = 'h-full w-full object-cover rounded-2xl sm:rounded-[22px] transition-transform duration-700 group-hover:scale-[1.02]';
             return (
-              <div key={collection.id} className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-5">
+              <div key={collection.id} className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5" style={{ aspectRatio: '2 / 1' }}>
+                {/* Left column: 2 squares on top + 1 wide (2:1) on bottom */}
+                <div className="grid grid-cols-2 grid-rows-[1fr_auto] gap-4 lg:gap-5 h-full">
                   <Link to={image1.link} className={`${tileClass} aspect-square`} aria-label={`${collection.title} image 1`}>
                     <img src={getMediaUrl(image1.url)} alt={image1.categoryName || `${collection.title} 1`} loading="lazy" className={tileImageClass} />
                   </Link>
                   <Link to={image2.link} className={`${tileClass} aspect-square`} aria-label={`${collection.title} image 2`}>
                     <img src={getMediaUrl(image2.url)} alt={image2.categoryName || `${collection.title} 2`} loading="lazy" className={tileImageClass} />
                   </Link>
-                  <Link to={image3.link} className={`${tileClass} aspect-[2/1] sm:col-span-2`} aria-label={`${collection.title} image 3`}>
+                  <Link to={image3.link} className={`${tileClass} col-span-2 aspect-[2/1]`} aria-label={`${collection.title} image 3`}>
                     <img src={getMediaUrl(image3.url)} alt={image3.categoryName || `${collection.title} 3`} loading="lazy" className={tileImageClass} />
                   </Link>
                 </div>
-                <Link to={image4.link} className={`${tileClass} aspect-square lg:aspect-auto lg:min-h-full`} aria-label={`${collection.title} image 4`}>
+                {/* Right column: single tall image filling full height */}
+                <Link to={image4.link} className={`${tileClass} h-full`} aria-label={`${collection.title} image 4`}>
                   <img src={getMediaUrl(image4.url)} alt={image4.categoryName || `${collection.title} 4`} loading="lazy" className={tileImageClass} />
                 </Link>
               </div>
@@ -866,7 +886,7 @@ const Home = () => {
           7. GIFTS SECTION (Dynamic from /api/featured?placement=Gifts)
       ─────────────────────────────────────────────────────────────────── */}
       {giftItems.length > 0 && (
-        <section style={sectionStyle('gifts')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <section style={sectionStyle('gifts')} className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
           <div className="text-center mb-6 sm:mb-8">
             <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
               Gifts That Say It All
@@ -875,34 +895,67 @@ const Home = () => {
           </div>
 
           <div
-            className="grid grid-cols-2 lg:grid-cols-4 w-full gap-4 sm:gap-6"
+            className="relative group/gifts px-1 w-full mx-auto"
+            onMouseEnter={() => setIsGiftsHovered(true)}
+            onMouseLeave={() => setIsGiftsHovered(false)}
           >
-            {giftItems.map((gift) => (
-              <Link
-                key={gift._id}
-                to={gift.link}
-                style={{ borderRadius: '22px' }}
-                className="group relative overflow-hidden aspect-[3/4] w-full min-w-0 bg-stone-100 border border-stone-200/80 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col justify-end cursor-pointer isolate"
-              >
-                {gift.image && (
-                  <img
-                    src={getMediaUrl(gift.image)}
-                    alt={gift.name}
-                    style={{ borderRadius: '22px' }}
-                    className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
+            {/* Left Chevron Button */}
+            <button
+              type="button"
+              onClick={() => scrollGifts('prev')}
+              aria-label="Previous gifts"
+              className={`absolute -left-2 sm:-left-3 lg:-left-5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer ${
+                giftItems.length <= 4 ? 'lg:hidden' : ''
+              }`}
+            >
+              <HiOutlineChevronLeft className="h-5 w-5" />
+            </button>
+
+            {/* Scrollable Container */}
+            <div
+              ref={giftsScrollRef}
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              className="flex items-center overflow-x-auto scroll-smooth snap-x snap-mandatory py-2 [&::-webkit-scrollbar]:hidden w-full gap-[10px] sm:gap-[12px] md:gap-[16px] lg:gap-[18px] xl:gap-[20px] 2xl:gap-[20px]"
+            >
+              {giftItems.map((gift) => (
+                <Link
+                  key={gift._id}
+                  to={gift.link}
+                  style={{ borderRadius: '22px', aspectRatio: '4 / 5' }}
+                  className="gifts-card group relative overflow-hidden aspect-[4/5] w-[calc((100%-12px)/2.2)] sm:w-[calc((100%-18px)/2.5)] md:w-[calc((100%-40px)/3.5)] lg:w-[calc((100%-54px)/4)] xl:w-[calc((100%-60px)/4)] 2xl:w-[calc((100%-60px)/4)] min-w-0 bg-stone-100 border border-stone-200/80 shadow-xs hover:shadow-xl transition-all duration-500 shrink-0 snap-start flex flex-col justify-end cursor-pointer isolate"
+                >
+                  {gift.image && (
+                    <img
+                      src={getMediaUrl(gift.image)}
+                      alt={gift.name}
+                      style={{ borderRadius: '22px' }}
+                      className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-110"
+                    />
+                  )}
+                  <div
+                    style={{ borderBottomLeftRadius: '22px', borderBottomRightRadius: '22px' }}
+                    className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/20 to-transparent transition-opacity duration-500 group-hover:from-black/85 pointer-events-none"
                   />
-                )}
-                <div
-                  style={{ borderBottomLeftRadius: '22px', borderBottomRightRadius: '22px' }}
-                  className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/75 via-black/20 to-transparent transition-opacity duration-500 group-hover:from-black/85 pointer-events-none"
-                />
-                <div className="relative z-10 p-4 sm:p-5 text-left">
-                  <span className="text-sm sm:text-base font-medium text-white tracking-wide block drop-shadow-sm truncate">
-                    {gift.name}
-                  </span>
-                </div>
-              </Link>
-            ))}
+                  <div className="relative z-10 p-3.5 sm:p-5 text-left">
+                    <span className="text-sm sm:text-base font-medium text-white tracking-wide block drop-shadow-sm truncate">
+                      {gift.name}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Right Chevron Button */}
+            <button
+              type="button"
+              onClick={() => scrollGifts('next')}
+              aria-label="Next gifts"
+              className={`absolute -right-2 sm:-right-3 lg:-right-5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer ${
+                giftItems.length <= 4 ? 'lg:hidden' : ''
+              }`}
+            >
+              <HiOutlineChevronRight className="h-5 w-5" />
+            </button>
           </div>
         </section>
       )}

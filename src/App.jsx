@@ -36,8 +36,13 @@ function App() {
           <WishlistProvider>
             <Toaster
               position="top-right"
+              containerStyle={{
+                top: 20,
+                right: 20,
+                zIndex: 99999999,
+              }}
               toastOptions={{
-                duration: 3000,
+                duration: 4000,
                 style: {
                   background: '#0f172a',
                   color: '#fff',
@@ -45,6 +50,7 @@ function App() {
                   padding: '10px 14px',
                   fontSize: '13px',
                   border: '1px solid rgba(212, 175, 55, 0.3)',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
                 },
               }}
             >
