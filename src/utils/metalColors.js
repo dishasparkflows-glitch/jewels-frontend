@@ -1,9 +1,3 @@
-export const MASTER_METAL_COLORS = {
-  '6ac90ab42c5692d9e254a047': 'Yellow Gold',
-  '6ac90ab42c5692d9e254a048': 'White Gold',
-  '6ac90ab42c5692d9e254a049': 'Rose Gold',
-};
-
 export const isRawObjectId = (val) =>
   typeof val === 'string' && /^[a-f0-9]{24}$/i.test(val.trim());
 
@@ -15,11 +9,6 @@ export const resolveMetalName = (metal, fallbackProduct = null) => {
   if (!metal && !fallbackProduct) return '';
 
   const str = String(typeof metal === 'string' ? metal : metal?.name || '').trim();
-
-  // If it's a known ObjectId mapped in MASTER_METAL_COLORS
-  if (MASTER_METAL_COLORS[str]) {
-    return MASTER_METAL_COLORS[str];
-  }
 
   // If it's already a human readable string (not raw ObjectId)
   if (str && !isRawObjectId(str)) {
@@ -36,12 +25,10 @@ export const resolveMetalName = (metal, fallbackProduct = null) => {
     }
   }
 
-  // Check fallbackProduct first metalColorId
-  const firstId = fallbackProduct?.metalColorIds?.[0]
-    ? String(fallbackProduct.metalColorIds[0]._id || fallbackProduct.metalColorIds[0])
-    : '';
-  if (firstId && MASTER_METAL_COLORS[firstId]) {
-    return MASTER_METAL_COLORS[firstId];
+  // Check fallbackProduct first metal color
+  const firstColor = fallbackProduct?.metalColors?.[0] || fallbackProduct?.metalColorIds?.[0];
+  if (firstColor && typeof firstColor === 'object' && firstColor.name && !isRawObjectId(firstColor.name)) {
+    return firstColor.name;
   }
 
   // Suppress any raw ObjectId

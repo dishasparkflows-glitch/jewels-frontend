@@ -562,24 +562,26 @@ export default function ProductDetail() {
       });
     }
 
-    if (Array.isArray(product?.metalColorIds)) {
-      product.metalColorIds.forEach((c) => {
-        if (!c) return;
-        const name = typeof c === 'object' ? c.name : c;
-        if (name && typeof name === 'string' && !/^[a-f0-9]{24}$/i.test(name)) {
-          const existing = cMap.get(name) || {};
-          cMap.set(name, {
-            id: c._id || c.id || existing.id || '',
-            name,
-            code: c.code || existing.code || '',
-            colorCode: c.colorCode || c.hex || existing.colorCode || '',
-            colorCodeEnd: c.colorCodeEnd || existing.colorCodeEnd || '',
-            hex: c.hex || existing.hex || '',
-            variantIcon: c.variantIcon?.url || (typeof c.variantIcon === 'string' ? c.variantIcon : '') || existing.variantIcon || '',
-          });
-        }
-      });
-    }
+    const sourceColors = Array.isArray(product?.metalColors) && product.metalColors.length > 0
+      ? product.metalColors
+      : (Array.isArray(product?.metalColorIds) ? product.metalColorIds : []);
+
+    sourceColors.forEach((c) => {
+      if (!c) return;
+      const name = typeof c === 'object' ? c.name : c;
+      if (name && typeof name === 'string' && !/^[a-f0-9]{24}$/i.test(name)) {
+        const existing = cMap.get(name) || {};
+        cMap.set(name, {
+          id: c.id || c._id || existing.id || '',
+          name,
+          code: c.code || existing.code || '',
+          colorCode: c.colorCode || c.hex || existing.colorCode || '',
+          colorCodeEnd: c.colorCodeEnd || existing.colorCodeEnd || '',
+          hex: c.hex || existing.hex || '',
+          variantIcon: c.variantIcon?.url || (typeof c.variantIcon === 'string' ? c.variantIcon : '') || existing.variantIcon || '',
+        });
+      }
+    });
 
     if (Array.isArray(product?.colorImages)) {
       product.colorImages.forEach((ci) => {
@@ -590,9 +592,7 @@ export default function ProductDetail() {
         if (cMeta?.name) {
           cName = cMeta.name;
         } else if (typeof cObj === 'string') {
-          const found = Array.isArray(product?.metalColorIds)
-            ? product.metalColorIds.find((m) => String(m?._id || m) === cObj)
-            : null;
+          const found = sourceColors.find((m) => String(m?.id || m?._id || m) === cObj);
           if (found && typeof found === 'object' && found.name) {
             cName = found.name;
             cMeta = found;
@@ -1227,7 +1227,7 @@ export default function ProductDetail() {
     if (isGold) {
       const attrs = {
         metalPurity: selectedVariant?.metalPurityId?._id || selectedVariant?.metalPurityId || product.metalPurityIds?.[0]?._id || product.metalPurityIds?.[0] || null,
-        metalColor: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null,
+        metalColor: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId?.id || selectedVariant?.metalColorId || product.metalColors?.[0]?.id || product.metalColors?.[0]?._id || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null,
         diamondType: selectedVariant?.diamondTypeId?._id || selectedVariant?.diamondTypeId || null,
         diamondShape: selectedVariant?.diamondShapeId?._id || selectedVariant?.diamondShapeId || null,
         diamondClarity: selectedVariant?.diamondClarityId?._id || selectedVariant?.diamondClarityId || null,

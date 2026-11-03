@@ -27,17 +27,7 @@ export const getValidProductImages = (product) => {
 
   const valid = [];
 
-  // 1. Direct product.images array
-  if (Array.isArray(product.images)) {
-    product.images.forEach((img) => {
-      const url = typeof img === 'string' ? img : img?.url;
-      if (url && typeof url === 'string' && url.trim() && !isOrnateImage(img)) {
-        valid.push(url.trim());
-      }
-    });
-  }
-
-  // 2. Product media is stored per color in colorImages.
+  // Product media is stored per color in colorImages.
   if (Array.isArray(product.colorImages)) {
     product.colorImages.forEach((c) => {
       if (Array.isArray(c?.images)) {
@@ -53,16 +43,7 @@ export const getValidProductImages = (product) => {
     });
   }
 
-  // 3. Ornate images fallback
-  if (valid.length === 0 && Array.isArray(product.representative?.ornate?.ornateImages)) {
-    product.representative.ornate.ornateImages.forEach((img) => {
-      const url = typeof img === 'string' ? img : img?.url;
-      if (url && typeof url === 'string' && url.trim()) {
-        valid.push(url.trim());
-      }
-    });
-  }
-
+  // 2. Ornate images fallback
   if (valid.length === 0 && Array.isArray(product.ornate?.ornateImages)) {
     product.ornate.ornateImages.forEach((img) => {
       const url = typeof img === 'string' ? img : img?.url;
