@@ -50,6 +50,10 @@ const Footer = () => {
 
   const { settings, footerSettings } = useStoreSettings();
 
+  const playStoreUrl = String(settings?.businessDetails?.playStoreUrl || '').trim();
+  const appStoreUrl = String(settings?.businessDetails?.appStoreUrl || '').trim();
+  const hasAppDownload = Boolean(playStoreUrl || appStoreUrl);
+
   const formattedCopyright = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const raw = footerData.copyright || `© ${currentYear} Neirah · Shine your way`;
@@ -60,41 +64,29 @@ const Footer = () => {
 
   // Populate footer settings from common StoreSettingsContext (no separate API call)
   useEffect(() => {
-    if (footerSettings && Object.keys(footerSettings).length > 0) {
-      setFooterData((prev) => ({
-        ...prev,
-        phone: footerSettings.phone || footerSettings.mobile || prev.phone,
-        email: footerSettings.email || prev.email,
-        address: footerSettings.address || prev.address,
-        copyright: footerSettings.copyright || prev.copyright,
-        socialLinks: Array.isArray(footerSettings.socialLinks) && footerSettings.socialLinks.length > 0 ? footerSettings.socialLinks : prev.socialLinks,
-      }));
-    }
-  }, [footerSettings]);
+    setFooterData((prev) => ({
+      ...prev,
+      phone: settings?.businessDetails?.mobileNumber || prev.phone,
+      email: settings?.businessDetails?.emailAddress || prev.email,
+      address: settings?.businessDetails?.storeAddress || prev.address,
+      copyright: footerSettings?.copyright || prev.copyright,
+      socialLinks: Array.isArray(footerSettings?.socialLinks) && footerSettings?.socialLinks.length > 0 ? footerSettings?.socialLinks : prev.socialLinks,
+    }));
+  }, [footerSettings, settings]);
 
-  // Compute active dynamic social media links from settings (falling back to footerSettings or brand defaults)
+  // Compute active dynamic social media links from settings / footerSettings (only from API)
   const activeSocialLinks = useMemo(() => {
     const sm = settings?.socialMedia;
-    const defaults = {
-      instagram: 'https://www.instagram.com/neirah.officials?igsh=MWRrcDE3YnlhaTd6eg%3D%3D&utm_source=qr',
-      facebook: 'https://www.facebook.com/share/1Cosh9cg8h/?mibextid=wwXIfr',
-    };
-
     const list = [];
     SOCIAL_PLATFORMS.forEach((platform) => {
       let url = sm?.[platform.key]?.trim?.() || (typeof sm?.[platform.key] === 'string' ? sm[platform.key].trim() : '');
 
-      // Check footerSettings.socialLinks array as secondary fallback
+      // Check footerSettings.socialLinks array
       if (!url && Array.isArray(footerSettings?.socialLinks)) {
         const match = footerSettings.socialLinks.find(
           (s) => s.platform?.toLowerCase() === platform.key.toLowerCase()
         );
         if (match?.url) url = match.url.trim();
-      }
-
-      // Initial brand default if not loaded or set
-      if (!url && !sm && defaults[platform.key]) {
-        url = defaults[platform.key];
       }
 
       if (url) {
@@ -135,8 +127,6 @@ const Footer = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const currentYear = new Date().getFullYear();
-
   return (
     <footer className="w-full font-sans select-none">
       {/* ─── 1. MAIN DARK LUXURY FOOTER SECTION (Matches neirah.in exactly) ───────────── */}
@@ -157,8 +147,8 @@ const Footer = () => {
         </div>
 
         <div className="max-w-[1320px] mx-auto px-4 md:px-8 relative z-10">
-          {/* 5-Column Grid exactly matching neirah.in */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-8 mb-16">
+          {/* Grid matching active content */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${hasAppDownload ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-8 lg:gap-8 mb-16`}>
             {/* Column 1: NEIRAH */}
             <div>
               <h4 className="text-[16px] md:text-[17px] font-bold tracking-[0.1em] mb-6 uppercase text-[#F3EAD8]">
@@ -353,48 +343,54 @@ const Footer = () => {
               )}
             </div>
 
-            {/* Column 5: DOWNLOAD OUR MOBILE APP (Exact buttons matching neirah.in) */}
-            <div>
-              <h4 className="text-[16px] md:text-[17px] font-bold tracking-[0.1em] mb-6 uppercase text-[#F3EAD8]">
-                DOWNLOAD OUR MOBILE APP
-              </h4>
-              <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-3">
-                {/* Google Play */}
-                <a
-                  href="https://play.google.com/store"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-3.5 py-2.5 bg-black border border-gray-600 hover:border-gray-400 rounded-lg transition-all text-left cursor-pointer shrink-0"
-                >
-                  <svg className="w-6 h-6 shrink-0" viewBox="0 0 512 512">
-                    <path fill="#410593" d="M92.1 40.7L276.8 225.5 92.1 410.3c-4.4-4.8-7.1-11.2-7.1-18.4V60.1c0-7.2 2.7-13.6 7.1-19.4z" />
-                    <path fill="#00e5ff" d="M366.1 176.2L120.2 34.2c-7.9-4.5-17.3-4.3-24.9.4l181.5 181.5 89.3-40z" />
-                    <path fill="#ff1053" d="M95.3 477.4c7.6 4.7 17 .4 24.9-4.1l245.9-142-89.3-39.9L95.3 477.4z" />
-                    <path fill="#ffc200" d="M428.4 235.1l-62.3-36-79.3 56.9 79.3 56.9 62.3-36c11.6-6.7 18.6-18.8 18.6-32s-7-25.2-18.6-31.8z" />
-                  </svg>
-                  <div className="flex flex-col">
-                    <span className="text-[9px] text-gray-300 font-medium uppercase leading-tight">GET IT ON</span>
-                    <span className="text-[14px] text-white font-bold leading-tight">Google Play</span>
-                  </div>
-                </a>
+            {/* Column 5: DOWNLOAD OUR MOBILE APP (Only displayed if provided by API without fallbacks) */}
+            {hasAppDownload && (
+              <div>
+                <h4 className="text-[16px] md:text-[17px] font-bold tracking-[0.1em] mb-6 uppercase text-[#F3EAD8]">
+                  DOWNLOAD OUR MOBILE APP
+                </h4>
+                <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-3">
+                  {/* Google Play */}
+                  {playStoreUrl && (
+                    <a
+                      href={playStoreUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 px-3.5 py-2.5 bg-black border border-gray-600 hover:border-gray-400 rounded-lg transition-all text-left cursor-pointer shrink-0"
+                    >
+                      <svg className="w-6 h-6 shrink-0" viewBox="0 0 512 512">
+                        <path fill="#410593" d="M92.1 40.7L276.8 225.5 92.1 410.3c-4.4-4.8-7.1-11.2-7.1-18.4V60.1c0-7.2 2.7-13.6 7.1-19.4z" />
+                        <path fill="#00e5ff" d="M366.1 176.2L120.2 34.2c-7.9-4.5-17.3-4.3-24.9.4l181.5 181.5 89.3-40z" />
+                        <path fill="#ff1053" d="M95.3 477.4c7.6 4.7 17 .4 24.9-4.1l245.9-142-89.3-39.9L95.3 477.4z" />
+                        <path fill="#ffc200" d="M428.4 235.1l-62.3-36-79.3 56.9 79.3 56.9 62.3-36c11.6-6.7 18.6-18.8 18.6-32s-7-25.2-18.6-31.8z" />
+                      </svg>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-gray-300 font-medium uppercase leading-tight">GET IT ON</span>
+                        <span className="text-[14px] text-white font-bold leading-tight">Google Play</span>
+                      </div>
+                    </a>
+                  )}
 
-                {/* App Store */}
-                <a
-                  href="https://www.apple.com/app-store/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 px-3.5 py-2.5 bg-black border border-gray-600 hover:border-gray-400 rounded-lg transition-all text-left cursor-pointer shrink-0"
-                >
-                  <svg className="w-6 h-6 fill-current text-white shrink-0" viewBox="0 0 384 512">
-                    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 52.3-13.7 69.5-34.3z" />
-                  </svg>
-                  <div className="flex flex-col">
-                    <span className="text-[9px] text-gray-300 font-medium uppercase leading-tight">DOWNLOAD ON THE</span>
-                    <span className="text-[14px] text-white font-bold leading-tight">App Store</span>
-                  </div>
-                </a>
+                  {/* App Store */}
+                  {appStoreUrl && (
+                    <a
+                      href={appStoreUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 px-3.5 py-2.5 bg-black border border-gray-600 hover:border-gray-400 rounded-lg transition-all text-left cursor-pointer shrink-0"
+                    >
+                      <svg className="w-6 h-6 fill-current text-white shrink-0" viewBox="0 0 384 512">
+                        <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 52.3-13.7 69.5-34.3z" />
+                      </svg>
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-gray-300 font-medium uppercase leading-tight">DOWNLOAD ON THE</span>
+                        <span className="text-[14px] text-white font-bold leading-tight">App Store</span>
+                      </div>
+                    </a>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Bottom Dark Strip: Brand Logo, Copyright & Payment Badges (Matches neirah.in) */}

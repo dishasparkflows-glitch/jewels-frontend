@@ -16,7 +16,6 @@ import {
   HiOutlineArrowsExpand,
   HiOutlineTag,
   HiOutlineDuplicate,
-  HiOutlinePrinter,
   HiOutlineRefresh,
   HiOutlineDocumentText,
 } from 'react-icons/hi';
@@ -475,28 +474,6 @@ export default function ProductDetail() {
     setCertRotation(0);
   };
 
-  const handlePrintCertificate = () => {
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>${product?.basicInfo?.title || 'Jewellery Certificate'}</title>
-            <style>
-              body { margin: 0; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #fff; }
-              img { max-width: 95vw; max-height: 95vh; object-fit: contain; }
-            </style>
-          </head>
-          <body>
-            <img src="${certificateUrl}" onload="window.print();window.close();" />
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-    }
-  };
-
   // Mobile Gallery Carousel State & Handlers
   const mobileGalleryRef = useRef(null);
   const [activeMobileSlide, setActiveMobileSlide] = useState(0);
@@ -522,7 +499,6 @@ export default function ProductDetail() {
   // Accordion active sections (multiple can be open simultaneously)
   const [openAccordions, setOpenAccordions] = useState({
     desc: false,
-    specs: false,
     price: false,
     origin: false,
   });
@@ -660,7 +636,7 @@ export default function ProductDetail() {
   }, [product]);
 
   const isSilver = (product?.productType === 'silver') || Boolean(product?.isOrnate);
-  const isGold = !isSilver && ((product?.productType === 'gold') || !product?.productType || /gold/i.test(product?.basicInfo?.title || product?.title || ''));
+  const isGold = !isSilver && ((product?.productType === 'gold') || !product?.productType || /gold/i.test(product?.basicInfo?.title || ''));
 
   // Auto-initialize options on product load
   useEffect(() => {
@@ -785,7 +761,7 @@ export default function ProductDetail() {
   // Active metal display title (e.g. "9KT Yellow Gold")
   const metalDisplayName = useMemo(() => {
     if (!isGold) {
-      return product?.specifications?.metalName || '925 Sterling Silver';
+      return '925 Sterling Silver';
     }
     const pStr = (selectedPurity || '').replace(/ Gold/i, '').trim();
     const cStr = (selectedColor || '').trim();
@@ -793,8 +769,8 @@ export default function ProductDetail() {
     if (pStr && cStr) {
       return `${pStr} ${cStr}`;
     }
-    return pStr || cStr || product?.specifications?.metalName || 'Gold';
-  }, [selectedPurity, selectedColor, product, isGold]);
+    return pStr || cStr || 'Gold';
+  }, [selectedPurity, selectedColor, isGold]);
 
   // Extract clean studio gallery images for the current selected metal color
   const galleryImages = useMemo(() => {
@@ -1073,8 +1049,6 @@ export default function ProductDetail() {
       v.metalWeight ||
       v.weight ||
       product?.specifications?.metalWeight ||
-      product?.specifications?.grossWeight ||
-      product?.specifications?.netWeight ||
       product?.ornate?.metalWeight ||
       0
     );
@@ -1089,7 +1063,6 @@ export default function ProductDetail() {
       v.centerDiamondWeight ||
       v.caratWeight ||
       selectedCarat ||
-      product?.specifications?.diamondWeight ||
       product?.ornate?.carat ||
       0
     );
@@ -1144,7 +1117,7 @@ export default function ProductDetail() {
 
   // Derive available sizes directly from product data without extra API calls
   useEffect(() => {
-    const prodSizes = product?.sizes || product?.availableSizes || [];
+    const prodSizes = product?.sizes || [];
     setSizes(Array.isArray(prodSizes) ? prodSizes : []);
     setSelectedSize('');
   }, [product]);
@@ -1172,9 +1145,8 @@ export default function ProductDetail() {
 
           const activeSlug =
             prodData.basicInfo?.slug ||
-            prodData.slug ||
-            (prodData.basicInfo?.title || prodData.title || prodData.name
-              ? String(prodData.basicInfo?.title || prodData.title || prodData.name)
+            (prodData.basicInfo?.title
+              ? String(prodData.basicInfo.title)
                   .toLowerCase()
                   .trim()
                   .replace(/[^\w\s-]/g, '')
@@ -1355,8 +1327,7 @@ export default function ProductDetail() {
               ? product.inWishlist
               : isWishlisted(product._id) ||
                 isWishlisted(product.id) ||
-                isWishlisted(product.basicInfo?.slug) ||
-                isWishlisted(product.slug))
+                isWishlisted(product.basicInfo?.slug))
         );
 
   const handleToggleWishlist = async () => {
@@ -1390,17 +1361,6 @@ export default function ProductDetail() {
       </div>
     );
   }
-
-  const rawSpecs = product?.productSpecifications || product?.specifications?.productSpecifications;
-  const specificationRows = Array.isArray(rawSpecs) && rawSpecs.length > 0
-    ? rawSpecs
-        .filter((s) => s && (s.key || s.name || s.label) && s.value !== undefined && s.value !== null && String(s.value).trim() !== '')
-        .map((s) => [String(s.key || s.name || s.label).trim(), String(s.value).trim()])
-    : rawSpecs && typeof rawSpecs === 'object' && !Array.isArray(rawSpecs)
-    ? Object.entries(rawSpecs)
-        .filter(([k, v]) => k && v !== undefined && v !== null && String(v).trim() !== '')
-        .map(([k, v]) => [String(k).trim(), String(v).trim()])
-    : [];
 
   return (
     <div className="bg-white text-stone-900 min-h-screen pb-24 lg:pb-12">
@@ -1519,7 +1479,7 @@ export default function ProductDetail() {
             {/* Title & Brand */}
             <div className="space-y-1">
               <h1 className="text-xl sm:text-2xl text-gray-900 mb-2 font-medium leading-tight tracking-[0.02em] font-poppins">
-                {product.basicInfo?.title || product?.title || ''}
+                {product.basicInfo?.title || ''}
               </h1>
             </div>
 
@@ -2165,33 +2125,7 @@ export default function ProductDetail() {
                 )}
               </div>
 
-              {/* Accordion 2: Specification */}
-              {specificationRows.length > 0 && (
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => toggleAccordion('specs')}
-                    className="w-full flex items-center justify-between px-5 py-4 text-left cursor-pointer transition-colors hover:bg-stone-50/50"
-                  >
-                    <span className="text-xs sm:text-[13px] font-medium text-stone-900 tracking-normal">Specification</span>
-                    <span className="text-stone-500 text-sm font-light select-none">
-                      {openAccordions.specs ? '−' : '+'}
-                    </span>
-                  </button>
-                  {openAccordions.specs && (
-                    <div className="px-5 pb-5 pt-0 text-xs sm:text-[13px] animate-fadeIn space-y-1.5">
-                      {specificationRows.map(([label, value]) => (
-                        <div key={label} className="flex justify-between items-center py-2 border-b border-stone-100 last:border-b-0 gap-4">
-                          <span className="font-bold text-stone-900">{label}</span>
-                          <span className="font-normal text-stone-700 text-right">{value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Accordion 3: PRICE BREAK UP (Only for Gold items) */}
+              {/* Accordion 2: PRICE BREAK UP (Only for Gold items) */}
               {isGold && (
                 <div>
                   <button
@@ -2402,9 +2336,8 @@ export default function ProductDetail() {
                       onClick={() => {
                         const targetSlug =
                           item.basicInfo?.slug ||
-                          item.slug ||
-                          (item.basicInfo?.title || item.title || item.name
-                            ? String(item.basicInfo?.title || item.title || item.name)
+                          (item.basicInfo?.title
+                            ? String(item.basicInfo.title)
                                 .toLowerCase()
                                 .trim()
                                 .replace(/[^\w\s-]/g, '')
@@ -3107,7 +3040,7 @@ export default function ProductDetail() {
               <div className="grid grid-cols-5 gap-2 text-center">
                 {/* WhatsApp */}
                 <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent((product?.name ? product.name + '\n' : '') + window.location.href)}`}
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent((product?.basicInfo?.title ? product.basicInfo.title + '\n' : '') + window.location.href)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-emerald-50 text-stone-600 hover:text-emerald-600 transition-colors group cursor-pointer"

@@ -41,14 +41,11 @@ export default function WishlistProductCard({ item, onRemove }) {
 
   const name =
     activeProduct.basicInfo?.title ||
-    activeProduct.title ||
-    activeProduct.name ||
     cardData.name ||
     'Jewellery';
 
   const slug =
     activeProduct.basicInfo?.slug ||
-    activeProduct.slug ||
     cardData.slug ||
     (name ? name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
 
@@ -69,10 +66,7 @@ export default function WishlistProductCard({ item, onRemove }) {
     (typeof item.image === 'object' ? getImageUrl(item.image?.url) : getImageUrl(item.image)) ||
     '/featured/ring.jpg';
 
-  const price = cardData.price || activeProduct.pricing?.salePrice || activeProduct.price;
-  const minPrice = activeProduct.pricing?.minPrice;
-  const maxPrice = activeProduct.pricing?.maxPrice;
-  const hasRange = minPrice && maxPrice && minPrice !== maxPrice;
+  const price = cardData.price || activeProduct.pricing?.salePrice || activeProduct.pricing?.calculatedPrice || activeProduct.pricing?.mrp;
 
   const [addingToCart, setAddingToCart] = useState(false);
 

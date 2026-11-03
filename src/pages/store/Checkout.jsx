@@ -5,13 +5,19 @@ import {
   HiOutlineArrowRight,
   HiOutlineCheck,
   HiOutlineCreditCard,
+  HiOutlineCube,
   HiOutlineHome,
   HiOutlineLockClosed,
   HiOutlineMail,
-  HiOutlineMap,
   HiOutlineLocationMarker,
+  HiOutlineOfficeBuilding,
+  HiOutlineShoppingBag,
   HiOutlineTag,
+  HiOutlineTruck,
   HiOutlineUser,
+  HiOutlineX,
+  HiX,
+  HiSparkles,
 } from 'react-icons/hi';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,12 +29,11 @@ import Dropdown from '../../components/common/Dropdown';
 import PhoneInput from '../../components/common/PhoneInput';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
 
-const inputClassName = 'h-12 w-full rounded-md border border-[#e6e0d8] bg-white px-3.5 text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#a77e4e] focus:ring-2 focus:ring-[#a77e4e]/10';
-const fieldClassName = 'relative block';
-const iconClassName = 'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8b7b69]';
-const selectClassName = `${inputClassName} appearance-none pr-9`;
 const indianStates = [
-  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi', 'Jammu and Kashmir', 'Ladakh',
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
+  'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+  'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi', 'Jammu and Kashmir', 'Ladakh',
 ];
 
 const emptyAddress = {
@@ -87,22 +92,20 @@ export default function Checkout() {
   const { user, isAuthenticated } = useAuth();
   const [form, setForm] = useState(() => ({
     ...emptyAddress,
-    email: user?.email || user?.auth?.email || '',
-    firstName: user?.firstName || user?.profile?.firstName || '',
-    lastName: user?.lastName || user?.profile?.lastName || '',
-    phone: user?.phone || user?.profile?.phone || '',
+    email: user?.auth?.email || '',
+    firstName: user?.profile?.firstName || '',
+    lastName: user?.profile?.lastName || '',
+    phone: user?.profile?.phone || '',
   }));
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('online');
   const [paymentProvider, setPaymentProvider] = useState('razorpay');
-  const [paymentConfig, setPaymentConfig] = useState(null);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [codFee, setCodFee] = useState(null);
-  const [codLoading, setCodLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [activeStep, setActiveStep] = useState('shipping');
 
@@ -113,11 +116,9 @@ export default function Checkout() {
   }, []);
 
   useEffect(() => {
-    // Fetch available payment gateways configuration
     checkoutAPI.getPaymentConfig()
       .then((response) => {
         const config = unwrapResponse(response);
-        setPaymentConfig(config);
         if (config?.defaultProvider) {
           setPaymentProvider(config.defaultProvider);
         }
@@ -131,10 +132,10 @@ export default function Checkout() {
     if (user) {
       setForm((current) => ({
         ...current,
-        email: current.email || user.email || user.auth?.email || '',
-        firstName: current.firstName || user.firstName || user.profile?.firstName || '',
-        lastName: current.lastName || user.lastName || user.profile?.lastName || '',
-        phone: current.phone || user.phone || user.profile?.phone || '',
+        email: current.email || user.auth?.email || '',
+        firstName: current.firstName || user.profile?.firstName || '',
+        lastName: current.lastName || user.profile?.lastName || '',
+        phone: current.phone || user.profile?.phone || '',
       }));
     }
   }, [user]);
@@ -185,7 +186,7 @@ export default function Checkout() {
   };
 
   const handleApplyCoupon = async (event) => {
-    event.preventDefault();
+    if (event?.preventDefault) event.preventDefault();
     const code = couponCode.trim();
     if (!code) {
       toast.error('Enter a coupon code first.');
@@ -207,7 +208,6 @@ export default function Checkout() {
   };
 
   const loadCodFee = useCallback(async (silent = false) => {
-    if (!silent) setCodLoading(true);
     try {
       const data = unwrapResponse(await checkoutAPI.calculateCodFee(paymentAmount));
       if (!data?.isAvailable) {
@@ -225,12 +225,9 @@ export default function Checkout() {
         setPaymentMethod('online');
         toast.error(error.response?.data?.message || 'Could not check cash on delivery availability.');
       }
-    } finally {
-      if (!silent) setCodLoading(false);
     }
   }, [paymentAmount]);
 
-  // Pre-calculate COD amounts on mount / paymentAmount change
   useEffect(() => {
     if (paymentAmount > 0) {
       loadCodFee(true);
@@ -329,7 +326,6 @@ export default function Checkout() {
         throw new Error('Could not create order.');
       }
 
-      // If no online payment needed (e.g. pure COD with 0 advance charge)
       if (!payment || (paymentMethod === 'cod' && codDueNow === 0)) {
         toast.success('Order placed successfully!', { id: toastId });
         if (clearCart) clearCart();
@@ -337,7 +333,6 @@ export default function Checkout() {
         return;
       }
 
-      // Handle CCAvenue Payment Flow
       if (payment.provider === 'ccavenue') {
         toast.loading('Redirecting to CCAvenue secure gateway...', { id: toastId });
         submitCCAvenueForm({
@@ -348,7 +343,6 @@ export default function Checkout() {
         return;
       }
 
-      // Handle Razorpay Payment Flow
       if (payment.provider === 'razorpay') {
         const isLoaded = await loadRazorpayScript();
         if (!isLoaded) {
@@ -372,7 +366,7 @@ export default function Checkout() {
             contact: `${form.countryCode || '+91'}${form.phone}`.replace(/[^0-9]/g, ''),
           },
           theme: {
-            color: '#bd9462',
+            color: '#8c6536',
           },
           handler: async (resp) => {
             const verifyToast = toast.loading('Confirming payment...');
@@ -410,7 +404,7 @@ export default function Checkout() {
 
   const applySavedAddress = (address) => {
     const addr = address.address || address;
-    const [firstName = '', ...lastNameParts] = (address.fullName || `${user?.firstName || ''} ${user?.lastName || ''}`).trim().split(/\s+/);
+    const [firstName = '', ...lastNameParts] = (address.fullName || `${user?.profile?.firstName || ''} ${user?.profile?.lastName || ''}`).trim().split(/\s+/);
     setForm((current) => ({
       ...current,
       firstName: address.firstName || firstName,
@@ -427,64 +421,116 @@ export default function Checkout() {
 
   if (!cart.length) {
     return (
-      <main className="mx-auto flex min-h-[55vh] max-w-2xl flex-col items-center justify-center px-4 py-20 text-center">
-        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#f8f5f0] text-[#92704e]"><HiOutlineLockClosed className="h-7 w-7" /></div>
+      <main className="mx-auto flex min-h-[55vh] max-w-2xl flex-col items-center justify-center px-4 py-20 text-center font-sans">
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#f8f5f0] text-[#8c6536]">
+          <HiOutlineLockClosed className="h-7 w-7" />
+        </div>
         <h1 className="font-serif text-3xl font-normal text-stone-900">Your bag is empty</h1>
-        <p className="mt-3 max-w-sm text-sm leading-6 text-stone-500">Add something beautiful to your bag before continuing to checkout.</p>
-        <Link to="/shop" className="mt-7 inline-flex h-12 items-center justify-center bg-stone-900 px-8 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#92704e]">Continue shopping</Link>
+        <p className="mt-3 max-w-sm text-sm leading-6 text-stone-500">
+          Add something beautiful to your bag before continuing to checkout.
+        </p>
+        <Link
+          to="/shop"
+          className="mt-7 inline-flex h-12 items-center justify-center rounded-xl bg-stone-900 px-8 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#8c6536]"
+        >
+          Continue shopping
+        </Link>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#faf8f5] text-stone-900">
-      <div className="mx-auto max-w-[1440px] px-4 pb-12 pt-5 sm:px-6 lg:px-8">
-        <nav aria-label="Checkout progress" className="mx-auto mb-5 flex max-w-[820px] items-center justify-center sm:mb-7">
+    <main className="min-h-screen bg-[#faf8f5] text-stone-900 font-sans">
+      <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
+        {/* Stepper Progress */}
+        <nav aria-label="Checkout progress" className="mx-auto mb-8 flex max-w-lg items-center justify-between">
           {[
             { id: 'shipping', label: 'Shipping', number: 1 },
             { id: 'payment', label: 'Payment', number: 2 },
             { id: 'review', label: 'Review', number: 3 },
           ].map((step, index, steps) => (
             <div key={step.id} className="flex flex-1 items-center last:flex-none">
-              <button type="button" onClick={() => setActiveStep(step.id)} aria-current={activeStep === step.id ? 'step' : undefined} className="flex items-center gap-2 whitespace-nowrap text-xs sm:gap-3">
-                <span className={`flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold ${activeStep === step.id || steps.findIndex((entry) => entry.id === activeStep) > index ? 'border-[#956b3a] bg-[#956b3a] text-white' : 'border-stone-300 bg-white text-stone-500'}`}>{steps.findIndex((entry) => entry.id === activeStep) > index ? <HiOutlineCheck className="h-4 w-4" /> : step.number}</span>
-                <span className={activeStep === step.id ? 'font-semibold text-stone-900' : 'text-stone-500'}>{step.label}</span>
+              <button
+                type="button"
+                onClick={() => setActiveStep(step.id)}
+                aria-current={activeStep === step.id ? 'step' : undefined}
+                className="flex items-center gap-2.5 whitespace-nowrap text-xs cursor-pointer"
+              >
+                <span
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
+                    activeStep === step.id || (step.number === 1 && activeStep === 'shipping')
+                      ? 'bg-[#8c6536] text-white'
+                      : steps.findIndex((entry) => entry.id === activeStep) >= index
+                      ? 'bg-[#8c6536] text-white'
+                      : 'border border-stone-300 bg-white text-stone-400'
+                  }`}
+                >
+                  {steps.findIndex((entry) => entry.id === activeStep) > index ? (
+                    <HiOutlineCheck className="h-4 w-4" />
+                  ) : (
+                    step.number
+                  )}
+                </span>
+                <span
+                  className={`text-xs ${
+                    activeStep === step.id ? 'font-bold text-stone-900' : 'font-medium text-stone-500'
+                  }`}
+                >
+                  {step.label}
+                </span>
               </button>
-              {index < steps.length - 1 && <span className="mx-3 h-px flex-1 bg-[#d9c6aa] sm:mx-6" />}
+              {index < steps.length - 1 && (
+                <span className="mx-4 h-px flex-1 bg-[#ebd9c8]" />
+              )}
             </div>
           ))}
         </nav>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(360px,0.95fr)] xl:gap-5">
-          <div className="divide-y divide-stone-200 overflow-hidden rounded-lg border border-stone-200 bg-white shadow-[0_8px_30px_rgba(48,37,27,0.03)]">
-            <section className="p-5 sm:px-10 sm:py-6">
-              <div className="mb-4 flex items-center gap-4">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#bd9462] text-sm font-semibold text-white">1</span>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(360px,1fr)] xl:gap-8">
+          {/* Left Column: Form Card */}
+          <div className="rounded-2xl border border-stone-200/90 bg-white p-6 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-7">
+            {/* 1. Contact Information */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-3.5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fbf5ee] border border-[#ebd9c8] text-[#8c6536]">
+                  <HiOutlineUser className="h-4 w-4" />
+                </span>
                 <div>
-                  <h1 className="text-lg font-semibold">Contact Information</h1>
-                  <p className="mt-0.5 text-xs text-stone-500">We’ll use this email to send order updates.</p>
+                  <h2 className="text-base font-bold text-stone-900">Contact Information</h2>
+                  <p className="text-xs text-stone-500">We&apos;ll use this email to send order updates.</p>
                 </div>
               </div>
-              <label className={`${fieldClassName} sm:ml-[60px]`}>
-                <span className="sr-only">Email address</span>
-                <HiOutlineMail className={iconClassName} />
-                <input className={`${inputClassName} pl-11`} type="email" autoComplete="email" placeholder="Email Address *" value={form.email} onChange={updateField('email')} required />
-              </label>
+              <div className="relative">
+                <HiOutlineMail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                <input
+                  type="email"
+                  autoComplete="email"
+                  placeholder="Email Address *"
+                  value={form.email}
+                  onChange={updateField('email')}
+                  required
+                  className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                />
+              </div>
             </section>
 
-            <section className="p-5 sm:px-10 sm:py-6">
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-stone-900">Delivery</h2>
+            {/* 2. Delivery */}
+            <section className="space-y-4 pt-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3.5">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fbf5ee] border border-[#ebd9c8] text-[#8c6536]">
+                    <HiOutlineTruck className="h-4 w-4" />
+                  </span>
+                  <h2 className="text-base font-bold text-stone-900">Delivery</h2>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={handleUseLocation}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-stone-200 bg-white text-xs font-medium text-stone-600 hover:bg-stone-50 transition cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#ebd9c8] bg-[#fdfbf9] text-xs font-medium text-[#8c6536] hover:bg-[#fbf5ee] transition cursor-pointer"
                   >
-                    <HiOutlineLocationMarker className="h-3.5 w-3.5 text-[#bd9462]" />
-                    <span>Use Location</span>
+                    <HiOutlineLocationMarker className="h-3.5 w-3.5 text-[#8c6536]" />
+                    <span>Use Current Location</span>
                   </button>
                   {addresses.length > 0 && (
                     <button
@@ -492,78 +538,136 @@ export default function Checkout() {
                       onClick={() => setIsAddingNewAddress(!isAddingNewAddress)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-stone-900 bg-stone-900 text-xs font-semibold text-white hover:bg-stone-800 transition cursor-pointer"
                     >
-                      {isAddingNewAddress ? 'Cancel' : '+ ADD NEW'}
+                      {isAddingNewAddress ? 'Saved Addresses' : '+ Add New'}
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Saved Address Cards (Matching Neirah reference layout) */}
+              {/* Saved Address Cards or Address Inputs */}
               {addresses.length > 0 && !isAddingNewAddress ? (
-                <div className="mb-4">
-                  <div className="grid grid-cols-1 gap-3">
-                    {addresses.map((addressItem) => {
-                      const isSelected = selectedAddressId === String(addressItem._id);
-                      const addr = addressItem.address || addressItem;
-                      const fullName = addressItem.fullName || `${addressItem.firstName || user?.firstName || ''} ${addressItem.lastName || user?.lastName || ''}`.trim() || 'Saved Address';
-                      const addressLines = [
-                        addr.addressLine,
-                        addr.street,
-                      ].filter(Boolean).join(', ');
-                      const cityStatePin = [
-                        addr.city,
-                        addr.state,
-                        addr.pincode || addr.postalCode,
-                      ].filter(Boolean).join(' ');
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {addresses.map((addressItem) => {
+                    const isSelected = selectedAddressId === String(addressItem._id);
+                    const addr = addressItem.address || addressItem;
+                    const fullName = addressItem.fullName || `${addressItem.firstName || user?.profile?.firstName || ''} ${addressItem.lastName || user?.profile?.lastName || ''}`.trim() || 'Saved Address';
+                    const addressLines = [addr.addressLine, addr.street].filter(Boolean).join(', ');
+                    const cityStatePin = [addr.city, addr.state, addr.pincode || addr.postalCode].filter(Boolean).join(' ');
 
-                      return (
-                        <div
-                          key={addressItem._id}
-                          onClick={() => {
-                            setSelectedAddressId(String(addressItem._id));
-                            applySavedAddress(addressItem);
-                          }}
-                          className={`relative rounded-xl border p-4.5 transition cursor-pointer max-w-md ${
-                            isSelected
-                              ? 'border-2 border-stone-800 bg-white shadow-xs'
-                              : 'border border-stone-200 bg-white hover:border-stone-300'
-                          }`}
-                        >
+                    return (
+                      <div
+                        key={addressItem._id}
+                        onClick={() => {
+                          setSelectedAddressId(String(addressItem._id));
+                          applySavedAddress(addressItem);
+                        }}
+                        className={`relative rounded-xl p-4 transition cursor-pointer border ${
+                          isSelected
+                            ? 'border-2 border-[#8c6536] bg-[#faf6f0]'
+                            : 'border-stone-200 bg-white hover:border-stone-300'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
                           <div className="space-y-1 text-xs text-stone-600">
                             <p className="font-bold text-sm text-stone-900 capitalize">{fullName}</p>
-                            <p className="leading-relaxed">{addressLines}</p>
+                            <p className="leading-relaxed line-clamp-2">{addressLines}</p>
                             <p>{cityStatePin}</p>
-                            <p>{addr.country || 'India'}</p>
-                            <p className="pt-2 font-medium text-stone-800">
-                              Ph: {addr.phone || form.phone}
-                            </p>
+                            <p className="pt-1 font-medium text-stone-800">Ph: {addr.phone || form.phone}</p>
+                          </div>
+                          <div className={`mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                            isSelected ? 'border-[#8c6536]' : 'border-stone-300'
+                          }`}>
+                            {isSelected && <span className="h-2 w-2 rounded-full bg-[#8c6536]" />}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-6">
-                  <label className="relative sm:col-span-3"><span className="sr-only">First name</span><HiOutlineUser className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="given-name" placeholder="First Name *" value={form.firstName} onChange={updateField('firstName')} required /></label>
-                  <label className="relative sm:col-span-3"><span className="sr-only">Last name</span><HiOutlineUser className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="family-name" placeholder="Last Name *" value={form.lastName} onChange={updateField('lastName')} required /></label>
-                  <label className="relative sm:col-span-4"><span className="sr-only">Street address</span><HiOutlineHome className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="address-line1" placeholder="Address *" value={form.addressLine} onChange={updateField('addressLine')} required /></label>
-                  <label className="sm:col-span-2"><span className="sr-only">Apartment, suite, etc.</span><input className={inputClassName} autoComplete="address-line2" placeholder="Apartment, suite, etc. (optional)" value={form.apartment} onChange={updateField('apartment')} /></label>
-                  <label className="relative sm:col-span-2"><span className="sr-only">City</span><HiOutlineMap className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="address-level2" placeholder="City *" value={form.city} onChange={updateField('city')} required /></label>
-                  <div className="relative sm:col-span-2">
-                    <Dropdown
-                      value={form.state}
-                      onChange={(val) => setForm((prev) => ({ ...prev, state: val }))}
-                      options={indianStates.map((st) => ({ value: st, label: st }))}
-                      placeholder="State *"
-                      searchable={true}
-                      searchPlaceholder="Search state..."
-                      buttonClassName={`${selectClassName} pl-3.5 flex items-center justify-between w-full h-[46px]`}
-                      menuClassName="z-[50]"
+                <div className="space-y-3 pt-1">
+                  {/* Row 1: First Name & Last Name */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="relative">
+                      <HiOutlineUser className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                      <input
+                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                        autoComplete="given-name"
+                        placeholder="First Name *"
+                        value={form.firstName}
+                        onChange={updateField('firstName')}
+                        required
+                      />
+                    </div>
+                    <div className="relative">
+                      <HiOutlineUser className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                      <input
+                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                        autoComplete="family-name"
+                        placeholder="Last Name *"
+                        value={form.lastName}
+                        onChange={updateField('lastName')}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 2: Address line */}
+                  <div className="relative">
+                    <HiOutlineHome className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                    <input
+                      className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                      autoComplete="address-line1"
+                      placeholder="Address (House no, Street, Landmark) *"
+                      value={form.addressLine}
+                      onChange={updateField('addressLine')}
+                      required
                     />
                   </div>
-                  <label className="relative sm:col-span-2"><span className="sr-only">PIN code</span><HiOutlineLocationMarker className={iconClassName} /><input className={`${inputClassName} pl-11`} autoComplete="postal-code" inputMode="numeric" placeholder="PIN Code *" value={form.postalCode} onChange={updateField('postalCode')} required /></label>
-                  <div className="flex gap-3 sm:col-span-6">
+
+                  {/* Row 3: City, State, PIN code */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="relative">
+                      <HiOutlineOfficeBuilding className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                      <input
+                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                        autoComplete="address-level2"
+                        placeholder="City *"
+                        value={form.city}
+                        onChange={updateField('city')}
+                        required
+                      />
+                    </div>
+
+                    <div className="relative">
+                      <Dropdown
+                        value={form.state}
+                        onChange={(val) => setForm((prev) => ({ ...prev, state: val }))}
+                        options={indianStates.map((st) => ({ value: st, label: st }))}
+                        placeholder="State *"
+                        searchable={true}
+                        searchPlaceholder="Search state..."
+                        buttonClassName="h-11 w-full rounded-xl border border-stone-200 bg-white px-3.5 text-xs sm:text-sm text-stone-900 outline-none transition hover:border-stone-300 flex items-center justify-between"
+                        menuClassName="z-[50]"
+                      />
+                    </div>
+
+                    <div className="relative">
+                      <HiOutlineLocationMarker className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                      <input
+                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                        autoComplete="postal-code"
+                        inputMode="numeric"
+                        placeholder="PIN Code *"
+                        value={form.postalCode}
+                        onChange={updateField('postalCode')}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 4: Phone */}
+                  <div>
                     <PhoneInput
                       value={form.phone}
                       onChange={(val) => setForm((prev) => ({ ...prev, phone: val }))}
@@ -571,49 +675,56 @@ export default function Checkout() {
                       onCountryCodeChange={(code) => setForm((prev) => ({ ...prev, countryCode: code }))}
                       placeholder="Mobile Number *"
                       required
-                      size="lg"
-                      variant="profile"
+                      size="md"
+                      variant="default"
+                      className="rounded-xl border border-stone-200"
                     />
                   </div>
                 </div>
               )}
             </section>
 
-            <section className="p-5 sm:px-10 sm:py-6">
-              <div className="mb-4">
-                <h2 className="text-lg font-bold text-stone-900">Payment Method</h2>
-                <p className="mt-0.5 text-xs text-stone-500">Choose how you’d like to pay for your order.</p>
+            {/* 3. Payment Method */}
+            <section className="space-y-4 pt-2">
+              <div className="flex items-center gap-3.5">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fbf5ee] border border-[#ebd9c8] text-[#8c6536]">
+                  <HiOutlineCreditCard className="h-4 w-4" />
+                </span>
+                <div>
+                  <h2 className="text-base font-bold text-stone-900">Payment Method</h2>
+                  <p className="text-xs text-stone-500">Choose how you&apos;d like to pay for your order.</p>
+                </div>
               </div>
 
-              <div className="space-y-3">
-                {/* 1. Online Payment (Full) Card - Matching Neirah reference */}
+              <div className="space-y-3 pt-1">
+                {/* Online Payment (Full) */}
                 <div
                   onClick={() => handlePaymentChange('online')}
-                  className={`rounded-xl border p-4 transition cursor-pointer ${
+                  className={`rounded-xl p-4 sm:p-4.5 transition cursor-pointer border ${
                     paymentMethod === 'online'
-                      ? 'border-2 border-stone-900 bg-white shadow-xs'
-                      : 'border border-stone-200 bg-white hover:border-stone-300'
+                      ? 'border-2 border-[#8c6536] bg-[#faf6f0]'
+                      : 'border-stone-200 bg-white hover:border-stone-300'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <label className="flex items-start gap-3 cursor-pointer flex-1">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value="online"
-                        checked={paymentMethod === 'online'}
-                        onChange={() => handlePaymentChange('online')}
-                        className="mt-0.5 h-4 w-4 accent-stone-900 cursor-pointer"
-                      />
+                  <div className="flex items-start justify-between gap-3 sm:gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 border-[#8c6536]">
+                        {paymentMethod === 'online' ? (
+                          <span className="h-2 w-2 rounded-full bg-[#8c6536]" />
+                        ) : null}
+                      </div>
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[#f0e8dc] text-[#8c6536]">
+                        <HiOutlineCreditCard className="h-3.5 w-3.5" />
+                      </span>
                       <div>
                         <span className="block text-xs font-bold text-stone-900 sm:text-sm">
                           Online Payment (Full)
                         </span>
-                        <span className="mt-1 block text-[11px] text-stone-500 leading-snug">
-                          Pay 100% online securely with UPI, Credit/Debit Cards, Net Banking
+                        <span className="mt-0.5 block text-[11px] sm:text-xs text-stone-500 leading-snug">
+                          Pay 100% securely with UPI, Credit/Debit Cards, Net Banking
                         </span>
                       </div>
-                    </label>
+                    </div>
                     <div className="text-right shrink-0">
                       <span className="text-xs font-bold text-stone-900 sm:text-sm">
                         {formatPrice(finalTotal)}
@@ -622,31 +733,30 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                {/* 2. Cash on Delivery (Partial) Card - Matching Neirah reference */}
+                {/* Cash on Delivery (Partial) */}
                 <div
                   onClick={() => handlePaymentChange('cod')}
-                  className={`rounded-xl border p-4 transition cursor-pointer ${
+                  className={`rounded-xl p-4 sm:p-4.5 transition cursor-pointer border ${
                     paymentMethod === 'cod'
-                      ? 'border-2 border-stone-900 bg-white shadow-xs'
-                      : 'border border-stone-200 bg-white hover:border-stone-300'
+                      ? 'border-2 border-[#8c6536] bg-[#faf6f0]'
+                      : 'border-stone-200 bg-white hover:border-stone-300'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <label className="flex items-start gap-3 cursor-pointer flex-1">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value="cod"
-                        checked={paymentMethod === 'cod'}
-                        disabled={codLoading}
-                        onChange={() => handlePaymentChange('cod')}
-                        className="mt-0.5 h-4 w-4 accent-stone-900 cursor-pointer"
-                      />
+                  <div className="flex items-start justify-between gap-3 sm:gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 border-stone-300">
+                        {paymentMethod === 'cod' ? (
+                          <span className="h-2 w-2 rounded-full bg-[#8c6536]" />
+                        ) : null}
+                      </div>
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[#f0e8dc] text-[#8c6536]">
+                        <HiOutlineCube className="h-3.5 w-3.5" />
+                      </span>
                       <div>
                         <span className="block text-xs font-bold text-stone-900 sm:text-sm">
                           Cash on Delivery (Partial)
                         </span>
-                        <div className="mt-1 space-y-0.5 text-[11px] text-stone-500 leading-snug">
+                        <div className="mt-1 space-y-0.5 text-[11px] sm:text-xs text-stone-500 leading-snug">
                           <p>Pay {formatPrice(codDueNow)} advance online to confirm order.</p>
                           <p>Pay remaining {formatPrice(codRemaining)} upon delivery.</p>
                           <p className="text-[10px] text-stone-400">
@@ -654,12 +764,12 @@ export default function Checkout() {
                           </p>
                         </div>
                       </div>
-                    </label>
+                    </div>
                     <div className="text-right shrink-0">
-                      <span className="block text-[9.5px] uppercase font-bold tracking-wider text-stone-400">
-                        DUE NOW
+                      <span className="inline-block rounded bg-[#fbf5ee] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#8c6536]">
+                        Due Now
                       </span>
-                      <span className="text-xs font-bold text-stone-900 sm:text-sm">
+                      <span className="block mt-1 text-xs font-bold text-stone-900 sm:text-sm">
                         {formatPrice(codDueNow)}
                       </span>
                     </div>
@@ -668,100 +778,235 @@ export default function Checkout() {
               </div>
             </section>
 
-            <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:px-10 sm:py-5">
-              <p className="flex items-center gap-2 text-[11px] text-stone-500"><HiOutlineLockClosed className="h-4 w-4 shrink-0 text-[#bd9462]" />Your information is secure and encrypted</p>
-              <span className="hidden h-px flex-1 bg-stone-200 sm:block" />
+            {/* Bottom Row / Submit */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4 border-t border-stone-100">
+              <p className="flex items-center gap-1.5 text-xs text-stone-500">
+                <HiOutlineLockClosed className="h-4 w-4 shrink-0 text-[#8c6536]" />
+                <span>Your information is secure and encrypted</span>
+              </p>
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex h-[52px] items-center justify-center gap-3 rounded-md bg-[#171613] px-8 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#80603d] disabled:opacity-60 disabled:cursor-not-allowed sm:min-w-[336px]"
+                className="inline-flex h-12 items-center justify-center gap-2.5 rounded-xl bg-[#181614] px-8 text-xs sm:text-sm font-medium text-white transition hover:bg-[#2c2723] disabled:opacity-60 disabled:cursor-not-allowed shadow-xs cursor-pointer"
               >
-                {submitting ? 'Processing Order...' : paymentMethod === 'cod' && codFee ? `Pay ${formatPrice(codDueNow)} & Confirm` : `Pay ${formatPrice(finalTotal)}`} <HiOutlineArrowRight className="h-4 w-4" />
+                <span>
+                  {submitting
+                    ? 'Processing Order...'
+                    : paymentMethod === 'cod' && codFee
+                    ? `Pay ${formatPrice(codDueNow)} & Confirm`
+                    : `Pay ${formatPrice(finalTotal)}`}
+                </span>
+                <HiOutlineArrowRight className="h-4 w-4" />
               </button>
             </div>
           </div>
 
-          <aside className="rounded-lg border border-stone-200 bg-white p-5 shadow-[0_8px_30px_rgba(48,37,27,0.03)] sm:p-7 lg:sticky lg:top-6">
-            <div className="mb-5 flex items-center justify-between border-b border-stone-100 pb-4">
-              <h2 className="text-lg font-semibold">Order Summary</h2>
-              <span className="text-xs font-medium">{totalQuantity} {totalQuantity === 1 ? 'Item' : 'Items'}</span>
+          {/* Right Column: Order Summary Card */}
+          <aside className="rounded-2xl border border-stone-200/90 bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-6 lg:sticky lg:top-24">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-stone-100">
+              <div className="flex items-center gap-2.5">
+                <span className="text-[#8c6536]">
+                  <HiOutlineShoppingBag className="h-5 w-5" />
+                </span>
+                <h2 className="text-base font-bold text-stone-900">Order Summary</h2>
+              </div>
+              <span className="text-xs font-medium text-stone-500">
+                {totalQuantity} {totalQuantity === 1 ? 'Item' : 'Items'}
+              </span>
             </div>
 
-            <div className="max-h-[330px] space-y-4 overflow-y-auto pb-4">
+            {/* Items List */}
+            <div className="max-h-[340px] space-y-4 overflow-y-auto pr-1">
               {cart.map((item) => {
                 const image = item.image && !isOrnateImage(item.image) ? item.image : getPrimaryProductImage(item);
-                return <article key={`${item.id}-${item.selectedMetal || ''}-${item.selectedSize || ''}`} className="flex gap-3">
-                  <div className="relative h-[76px] w-[76px] shrink-0 overflow-hidden rounded-lg border border-stone-100 bg-[#f8f6f3] p-1.5">
-                    {image && <img src={image} alt={item.name || item.title || 'Jewellery item'} className="h-full w-full object-contain" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="line-clamp-2 text-[11px] font-semibold uppercase leading-[1.4] text-stone-900">{item.name || item.title}</p>
-                        {item.category && !/^[0-9a-fA-F]{24}$/.test(String(item.category).trim()) && (
-                          <span className="mt-1 inline-block rounded bg-[#f4eee5] px-1.5 py-0.5 text-[8px] uppercase tracking-wide text-[#80603d]">{item.category}</span>
-                        )}
+                const cleanMetal = resolveMetalName(item.selectedMetal);
+                const cleanSize = cleanAttribute(item.selectedSize);
+                return (
+                  <article
+                    key={`${item.id}-${item.selectedMetal || ''}-${item.selectedSize || ''}`}
+                    className="flex gap-3.5"
+                  >
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-stone-100 bg-[#f7f3ee] p-1.5 flex items-center justify-center">
+                      {image && (
+                        <img
+                          src={image}
+                          alt={item.name || item.title || 'Jewellery item'}
+                          className="h-full w-full object-contain"
+                        />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="line-clamp-2 text-xs font-semibold uppercase leading-snug text-stone-900">
+                            {item.name || item.title}
+                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <span className="rounded-full bg-[#fbf5ee] px-2 py-0.5 text-[9px] font-medium text-[#8c6536]">
+                              Premium
+                            </span>
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-xs font-bold text-stone-900">
+                          {formatPrice(Number(item.price) * Number(item.quantity || 1))}
+                        </span>
                       </div>
-                      <span className="shrink-0 text-xs font-semibold">{formatPrice(Number(item.price) * Number(item.quantity || 1))}</span>
+                      {(cleanMetal || cleanSize) && (
+                        <p className="mt-1 text-[11px] text-stone-500">
+                          {[cleanMetal, cleanSize && `Size: ${cleanSize}`].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
+                      <div className="mt-2 inline-flex items-center rounded-lg border border-stone-200 bg-white">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.id, (item.quantity || 1) - 1)}
+                          disabled={(item.quantity || 1) <= 1}
+                          className="flex h-6 w-6 items-center justify-center text-xs font-semibold text-stone-600 transition hover:bg-stone-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                          aria-label={`Decrease quantity of ${item.name || item.title}`}
+                        >
+                          −
+                        </button>
+                        <span className="min-w-[24px] px-1 text-center text-xs font-bold text-stone-900">
+                          {item.quantity || 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1)}
+                          className="flex h-6 w-6 items-center justify-center text-xs font-semibold text-stone-600 transition hover:bg-stone-100"
+                          aria-label={`Increase quantity of ${item.name || item.title}`}
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
-                    {(() => {
-                      const cleanMetal = resolveMetalName(item.selectedMetal);
-                      const cleanSize = cleanAttribute(item.selectedSize);
-                      return (cleanMetal || cleanSize) ? (
-                        <p className="mt-1 text-[10px] text-stone-500">{[cleanMetal, cleanSize && `Size: ${cleanSize}`].filter(Boolean).join('　|　')}</p>
-                      ) : null;
-                    })()}
-                    <div className="mt-2 inline-flex items-center rounded-md border border-stone-200 bg-[#fbfaf8] text-stone-800">
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.id, (item.quantity || 1) - 1)}
-                        disabled={(item.quantity || 1) <= 1}
-                        className="flex h-6 w-6 items-center justify-center text-xs font-semibold text-stone-600 transition hover:bg-stone-200/60 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-30"
-                        aria-label={`Decrease quantity of ${item.name || item.title}`}
-                      >
-                        −
-                      </button>
-                      <span className="min-w-[26px] px-1 text-center text-[11px] font-bold text-stone-900">
-                        {item.quantity || 1}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1)}
-                        className="flex h-6 w-6 items-center justify-center text-xs font-semibold text-stone-600 transition hover:bg-stone-200/60 hover:text-stone-900"
-                        aria-label={`Increase quantity of ${item.name || item.title}`}
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </article>;
+                  </article>
+                );
               })}
             </div>
 
-            <div className="border-y border-stone-100 py-4">
-              <form onSubmit={handleApplyCoupon}>
-                <label className="mb-2 flex items-center gap-2 text-sm font-semibold"><HiOutlineTag className="h-4 w-4 text-[#bd9462]" />Apply Coupon Code</label>
-                <div className="flex overflow-hidden rounded-md border border-stone-200">
-                  <input className="min-w-0 flex-1 px-3 py-3 text-xs outline-none placeholder:text-stone-400 focus:ring-1 focus:ring-inset focus:ring-[#bd9462]" value={couponCode} onChange={(event) => setCouponCode(event.target.value)} placeholder="Enter coupon code or gift card" aria-label="Coupon code or gift card" />
-                  <button type="submit" disabled={couponLoading} className="min-w-[78px] bg-[#f4eadb] px-4 text-[10px] font-semibold uppercase tracking-wide text-[#80603d] transition hover:bg-[#ead9c2] disabled:opacity-60">{couponLoading ? '…' : appliedCoupon ? 'Applied' : 'Apply'}</button>
+            {/* Coupon Code */}
+            <div className="border-t border-stone-100 pt-4">
+              {appliedCoupon ? (
+                <div className="rounded-xl border border-emerald-200/90 bg-gradient-to-br from-[#f2f9f4] via-[#f7fbf8] to-[#edf7f1] p-3.5 shadow-[0_2px_12px_rgba(16,185,129,0.06)] transition-all">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 shadow-2xs">
+                        <HiSparkles className="h-4.5 w-4.5 text-emerald-600 animate-pulse" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-emerald-300 bg-white px-2.5 py-0.5 font-mono text-xs font-bold tracking-wider text-emerald-800 shadow-2xs">
+                            <HiOutlineTag className="h-3.5 w-3.5 text-emerald-600" />
+                            {appliedCoupon.coupon?.code || couponCode}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100/90 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                            <HiOutlineCheck className="h-3 w-3 stroke-[3]" /> Applied
+                          </span>
+                        </div>
+                        <p className="text-xs font-medium text-emerald-900 leading-snug">
+                          Yay! You save <span className="font-bold text-emerald-950 underline decoration-emerald-300 decoration-2 underline-offset-2">{formatPrice(discountAmount)}</span> on this order!
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAppliedCoupon(null);
+                        setCouponCode('');
+                        toast.success('Coupon removed');
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-2.5 py-1 text-xs font-semibold text-stone-600 shadow-2xs transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 cursor-pointer shrink-0"
+                      title="Remove coupon"
+                      aria-label="Remove coupon"
+                    >
+                      <span>Remove</span>
+                      <span className="flex h-4 w-4 items-center justify-center rounded-full bg-stone-100 text-stone-500 transition-colors">
+                        <HiX className="h-2.5 w-2.5" />
+                      </span>
+                    </button>
+                  </div>
                 </div>
-                {appliedCoupon && <p className="mt-2 text-[11px] text-emerald-700">{appliedCoupon.coupon?.code || couponCode} applied · You saved {formatPrice(discountAmount)} <button type="button" onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="ml-1 underline">Remove</button></p>}
-              </form>
+              ) : (
+                <div>
+                  <label className="mb-2 flex items-center gap-1.5 text-xs font-bold text-stone-900">
+                    <HiOutlineTag className="h-4 w-4 text-[#8c6536]" />
+                    <span>Apply Coupon Code</span>
+                  </label>
+                  <div className="flex">
+                    <input
+                      className="h-10 min-w-0 flex-1 rounded-l-xl border border-r-0 border-stone-200 bg-white px-3.5 text-xs text-stone-800 placeholder:text-stone-400 outline-none focus:border-[#8c6536] transition"
+                      value={couponCode}
+                      onChange={(event) => setCouponCode(event.target.value)}
+                      placeholder="Enter coupon code or gift card"
+                      aria-label="Coupon code or gift card"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleApplyCoupon(e);
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading || !couponCode.trim()}
+                      className="h-10 rounded-r-xl border border-l-0 border-[#ebd9c8] bg-[#f0e3d2] px-5 text-xs font-semibold text-[#704d23] transition hover:bg-[#e6d5c0] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      {couponLoading ? 'Verifying...' : 'Apply'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="space-y-3 py-4 text-xs">
-              <div className="flex justify-between"><span>Subtotal</span><span className="font-semibold">{formatPrice(subtotal)}</span></div>
-              {appliedCoupon && <div className="flex justify-between text-emerald-700"><span>Discount ({appliedCoupon.coupon?.code || couponCode})</span><span>−{formatPrice(discountAmount)}</span></div>}
-              <div className="flex justify-between text-stone-500"><span className="flex items-center gap-1.5">Shipping <span title="Shipping charges based on delivery location">ⓘ</span></span><span>{shipping === 0 ? 'Free Shipping' : formatPrice(shipping)}</span></div>
-              <div className="flex justify-between"><span>Estimated GST (3%)</span><span className="font-semibold">{formatPrice(tax)}</span></div>
-              {paymentMethod === 'cod' && codFee && <div className="flex justify-between text-stone-500"><span>COD advance due now</span><span>{formatPrice(codDueNow)}</span></div>}
+            {/* Price Breakdown */}
+            <div className="space-y-2.5 border-t border-stone-100 pt-4 text-xs">
+              <div className="flex justify-between text-stone-600">
+                <span>Subtotal</span>
+                <span className="font-semibold text-stone-900">{formatPrice(subtotal)}</span>
+              </div>
+              {appliedCoupon && (
+                <div className="flex justify-between text-emerald-700 font-medium">
+                  <span className="flex items-center gap-1.5">
+                    <HiOutlineTag className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Coupon Savings ({appliedCoupon.coupon?.code || couponCode})</span>
+                  </span>
+                  <span className="font-bold text-emerald-700">−{formatPrice(discountAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-stone-600">
+                <span className="flex items-center gap-1">
+                  Shipping <span className="text-stone-400" title="Free standard delivery">ⓘ</span>
+                </span>
+                <span className="font-semibold text-stone-900">
+                  {shipping === 0 ? 'Free Shipping' : formatPrice(shipping)}
+                </span>
+              </div>
+              <div className="flex justify-between text-stone-600">
+                <span>Estimated GST (3%)</span>
+                <span className="font-semibold text-stone-900">{formatPrice(tax)}</span>
+              </div>
+              {paymentMethod === 'cod' && codFee && (
+                <div className="flex justify-between text-stone-600">
+                  <span>COD advance due now</span>
+                  <span className="font-semibold text-stone-900">{formatPrice(codDueNow)}</span>
+                </div>
+              )}
             </div>
 
+            {/* Total */}
             <div className="flex items-center justify-between border-t border-stone-100 pt-4">
-              <div><h3 className="text-lg font-semibold">Total</h3><p className="mt-0.5 text-[10px] text-stone-500">Inclusive of all taxes</p></div>
-              <div className="text-right"><span className="block text-[9px] uppercase text-stone-500">INR</span><span className="font-serif text-2xl font-semibold">{formatPrice(finalTotal)}</span></div>
+              <div>
+                <h3 className="text-base font-bold text-stone-900">Total</h3>
+                <p className="text-[11px] text-stone-400">Inclusive of all taxes</p>
+              </div>
+              <div className="text-right">
+                <span className="text-xl sm:text-2xl font-bold font-sans text-stone-900">
+                  {formatPrice(finalTotal)}
+                </span>
+              </div>
             </div>
-
           </aside>
         </form>
       </div>

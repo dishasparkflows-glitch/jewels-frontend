@@ -138,46 +138,36 @@ export function getProductCardData(product) {
   const isSilver =
     productType === 'silver' ||
     Boolean(product?.isOrnate || rep.isOrnate) ||
-    /silver/i.test(product?.basicInfo?.title || product?.title || product?.name || '') ||
+    /silver/i.test(product?.basicInfo?.title || '') ||
     /silver/i.test(product?.ornate?.metalName || rep.ornate?.metalName || '');
 
   const isGold =
     productType === 'gold' ||
-    (!productType && !isSilver && /gold/i.test(product?.basicInfo?.title || product?.title || product?.name || ''));
+    (!productType && !isSilver && /gold/i.test(product?.basicInfo?.title || ''));
 
   const salePrice = firstPrice(
     prodPricing.salePrice,
-    product?.salePrice,
     repPricing.salePrice,
-    rep.salePrice,
     prodPricing.calculatedPrice,
     repPricing.calculatedPrice,
     prodPricing.ornatePrice,
-    prodPricing.price,
-    product?.price,
     prodPricing.costPrice
   );
 
   const mrp = firstPrice(
     prodPricing.mrp,
-    product?.mrp,
-    repPricing.mrp,
-    rep.mrp,
-    product?.originalPrice
+    repPricing.mrp
   );
 
   const price = salePrice || firstPrice(
     prodPricing.salePrice,
-    product?.salePrice,
     prodPricing.mrp,
-    product?.mrp,
-    prodPricing.cataloguePrice,
-    product?.price
+    prodPricing.cataloguePrice
   );
 
   const originalPrice = !isGold && mrp && Number(mrp) > Number(price) ? mrp : null;
-  const name = product?.basicInfo?.title || product?.title || product?.name || rep.basicInfo?.title || 'Untitled product';
-  const rawSlug = product?.basicInfo?.slug || product?.slug || rep.basicInfo?.slug || rep.slug;
+  const name = product?.basicInfo?.title || rep.basicInfo?.title || 'Untitled product';
+  const rawSlug = product?.basicInfo?.slug || rep.basicInfo?.slug;
   const slug =
     rawSlug ||
     (name && name !== 'Untitled product'

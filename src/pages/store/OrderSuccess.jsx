@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { HiOutlineCheckCircle, HiOutlineShoppingBag, HiOutlineArrowRight, HiOutlinePhone, HiOutlineMail } from 'react-icons/hi';
+import { HiOutlineCheckCircle, HiOutlineShoppingBag, HiOutlinePhone } from 'react-icons/hi';
 import { ordersAPI } from '../../api/services';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
 
@@ -9,7 +9,6 @@ export default function OrderSuccess() {
   const orderId = searchParams.get('orderId');
   const orderNumber = searchParams.get('orderNumber');
   const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(Boolean(orderId || orderNumber));
 
   useEffect(() => {
     let active = true;
@@ -26,8 +25,6 @@ export default function OrderSuccess() {
         }
       } catch (err) {
         console.error('Failed to load order confirmation:', err);
-      } finally {
-        if (active) setLoading(false);
       }
     };
 

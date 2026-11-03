@@ -179,7 +179,7 @@ export const CartProvider = ({ children }) => {
     const parsedQty = Math.max(1, parseInt(quantity, 10) || 1);
     const selectedMetal = resolveMetalName(options.selectedMetal || product.selectedMetal || '', product);
     const selectedSize = cleanAttribute(options.selectedSize || product.selectedSize || '');
-    const title = product.title || product.name || '';
+    const title = product.basicInfo?.title || product.title || '';
     const price = Number(product.price) || 0;
     const image = product.image?.url || product.image || getPrimaryProductImage(product);
 
@@ -191,7 +191,6 @@ export const CartProvider = ({ children }) => {
       product.basicInfo?.slug ||
       product.slug ||
       product.representative?.basicInfo?.slug ||
-      product.representative?.slug ||
       (title
         ? String(title)
             .toLowerCase()

@@ -18,6 +18,7 @@ import {
   HiOutlineHeart,
   HiOutlinePhone,
   HiOutlineVideoCamera,
+  HiOutlineShieldCheck,
 } from 'react-icons/hi';
 import { IoDiamondOutline } from 'react-icons/io5';
 
@@ -63,7 +64,10 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isCheckout = location.pathname === '/checkout';
-  const phoneNumber = String(storeSettings.mobileNumber || '').trim();
+  const phoneNumber = String(
+    storeSettings?.businessDetails?.mobileNumber ||
+    '+91 84600-91955'
+  ).trim();
   const phoneHref = phoneNumber.replace(/[^\d+]/g, '');
 
   // Instant search debounce effect
@@ -241,6 +245,32 @@ const Navbar = () => {
     }
   };
 
+  if (isCheckout) {
+    return (
+      <header className="sticky top-0 z-40 w-full bg-[#181614] border-b border-white/10 shadow-sm font-sans">
+        <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 group" title="Return to store">
+            {brandLogo.desktop ? (
+              <img
+                src={brandLogo.desktop}
+                alt={storeSettings.companyName || 'Neirah'}
+                className="h-7 sm:h-8 w-auto object-contain brightness-0 invert"
+              />
+            ) : (
+              <span className="font-serif text-xl sm:text-2xl font-light tracking-[0.2em] text-white uppercase flex items-center gap-1.5">
+                NEIRAH <span className="text-stone-400 text-xs font-normal tracking-[0.1em]">JEWELS</span>
+              </span>
+            )}
+          </Link>
+          <div className="flex items-center gap-2 text-xs font-medium text-stone-300">
+            <HiOutlineShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>Secure Checkout</span>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header className="sticky top-0 z-40 w-full shadow-sm font-sans">
       {/* ─── Top announcement bar (Neirah Charcoal) ───────────── */}
@@ -293,7 +323,7 @@ const Navbar = () => {
                     </div>
                   );
                 })() : (
-                  <span className="truncate">{storeSettings.companyName}</span>
+                  <span className="truncate">{storeSettings?.businessDetails?.companyName || 'Neirah'}</span>
                 )}
               </div>
             </div>
@@ -303,11 +333,11 @@ const Navbar = () => {
               {phoneNumber ? (
                 <a
                   href={`tel:${phoneHref}`}
-                  className="hidden sm:flex items-center gap-1.5 hover:text-white transition-colors text-white/80 shrink-0"
+                  className="flex items-center gap-1.5 hover:text-white transition-colors text-white/80 shrink-0"
                   title={`Call ${phoneNumber}`}
                 >
                   <HiOutlinePhone className="w-3.5 h-3.5 shrink-0" />
-                  <span className="font-normal">{phoneNumber}</span>
+                  <span className="hidden sm:inline font-normal">{phoneNumber}</span>
                 </a>
               ) : null}
             </div>
@@ -686,7 +716,7 @@ const Navbar = () => {
                     className="flex items-center gap-2 p-1.5 rounded-full hover:bg-white/10 transition-colors"
                   >
                     <div className="w-7 h-7 rounded-full bg-[#60574d] border border-stone-600 flex items-center justify-center text-white font-medium text-xs">
-                      {user.firstName?.[0] || 'U'}
+                      {user.profile?.firstName?.[0] || 'U'}
                     </div>
                   </button>
 
@@ -696,8 +726,8 @@ const Navbar = () => {
                       className="absolute right-0 mt-2 w-52 border border-stone-800 rounded-xl shadow-2xl py-2 z-50 text-xs"
                     >
                       <div className="px-4 py-2 border-b border-stone-800">
-                        <p className="font-semibold text-white truncate">{user.firstName} {user.lastName}</p>
-                        <p className="text-stone-400 truncate">{user.email}</p>
+                        <p className="font-semibold text-white truncate">{user.profile?.firstName} {user.profile?.lastName}</p>
+                        <p className="text-stone-400 truncate">{user.auth?.email}</p>
                       </div>
                       <Link
                         to="/profile"

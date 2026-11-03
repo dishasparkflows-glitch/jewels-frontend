@@ -11,7 +11,6 @@ export default function FilterSidebar({
   onPriceChange,
   onClearAll,
   filtersActive = false,
-  categories = [],
   currentCategoryParam = '',
 }) {
   const minPrice = params.get('minPrice') || '';

@@ -112,8 +112,8 @@ export function trackPageView(pagePath, pageTitle) {
 export function trackProductView(product) {
   if (!product) return;
   const id = product.id || product._id || '';
-  const name = product.basicInfo?.title || product.title || product.name || '';
-  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || product.price || 0);
+  const name = product.basicInfo?.title || '';
+  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || 0);
 
   return logAnalyticsEvent('view_item', {
     currency: 'INR',
@@ -123,7 +123,7 @@ export function trackProductView(product) {
         item_id: String(id),
         item_name: name,
         price,
-        item_category: product.productType || product.category || 'Jewellery',
+        item_category: product.productType || 'Jewellery',
       },
     ],
   });
@@ -135,8 +135,8 @@ export function trackProductView(product) {
 export function trackAddToCart(product, quantity = 1) {
   if (!product) return;
   const id = product.id || product._id || '';
-  const name = product.basicInfo?.title || product.title || product.name || '';
-  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || product.price || 0);
+  const name = product.basicInfo?.title || '';
+  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || 0);
 
   return logAnalyticsEvent('add_to_cart', {
     currency: 'INR',
@@ -158,8 +158,8 @@ export function trackAddToCart(product, quantity = 1) {
 export function trackRemoveFromCart(product, quantity = 1) {
   if (!product) return;
   const id = product.id || product._id || '';
-  const name = product.basicInfo?.title || product.title || product.name || '';
-  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || product.price || 0);
+  const name = product.basicInfo?.title || '';
+  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || 0);
 
   return logAnalyticsEvent('remove_from_cart', {
     currency: 'INR',
@@ -181,8 +181,8 @@ export function trackRemoveFromCart(product, quantity = 1) {
 export function trackAddToWishlist(product) {
   if (!product) return;
   const id = product.id || product._id || '';
-  const name = product.basicInfo?.title || product.title || product.name || '';
-  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || product.price || 0);
+  const name = product.basicInfo?.title || '';
+  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || 0);
 
   return logAnalyticsEvent('add_to_wishlist', {
     currency: 'INR',
@@ -205,9 +205,9 @@ export function trackBeginCheckout(items = [], totalValue = 0) {
     currency: 'INR',
     value: Number(totalValue) || 0,
     items: items.map((item) => ({
-      item_id: String(item.id || item._id || ''),
-      item_name: item.title || item.name || '',
-      price: Number(item.price || item.salePrice || 0),
+      item_id: String(item.productId || item.id || item._id || ''),
+      item_name: item.title || item.basicInfo?.title || '',
+      price: Number(item.price || item.totalItemPrice || 0),
       quantity: Number(item.quantity || 1),
     })),
   });
@@ -222,9 +222,9 @@ export function trackPurchase(orderId, items = [], totalValue = 0) {
     currency: 'INR',
     value: Number(totalValue) || 0,
     items: items.map((item) => ({
-      item_id: String(item.id || item._id || ''),
-      item_name: item.title || item.name || '',
-      price: Number(item.price || item.salePrice || 0),
+      item_id: String(item.productId || item.id || item._id || ''),
+      item_name: item.title || item.basicInfo?.title || '',
+      price: Number(item.price || item.totalItemPrice || 0),
       quantity: Number(item.quantity || 1),
     })),
   });

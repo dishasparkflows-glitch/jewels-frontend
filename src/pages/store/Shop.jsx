@@ -25,7 +25,6 @@ export default function Shop({ defaultCategory = '' }) {
   const [pagination, setPagination] = useState({ totalDocs: 0, totalPages: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [navigationError, setNavigationError] = useState(false);
   const [navigationReady, setNavigationReady] = useState(false);
   const [mobileFilters, setMobileFilters] = useState(false);
   const [retry, setRetry] = useState(0);
@@ -57,11 +56,8 @@ export default function Shop({ defaultCategory = '' }) {
       .then((catsRes) => {
         if (!current) return;
         setCategories(getItems(catsRes));
-        setNavigationError(false);
       })
-      .catch(() => {
-        if (current) setNavigationError(true);
-      })
+      .catch(() => {})
       .finally(() => {
         if (current) setNavigationReady(true);
       });
@@ -190,19 +186,6 @@ export default function Shop({ defaultCategory = '' }) {
     next.delete('page');
     Object.entries(changes).forEach(([key, value]) => (value ? next.set(key, value) : next.delete(key)));
     setParams(next);
-  }
-
-  function applyPrice(event) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const min = data.get('minPrice');
-    const max = data.get('maxPrice');
-    if (min && max && Number(min) > Number(max)) {
-      event.currentTarget.elements.maxPrice.setCustomValidity('Maximum price must be greater than minimum price.');
-      event.currentTarget.elements.maxPrice.reportValidity();
-      return;
-    }
-    updateFilters({ minPrice: min, maxPrice: max });
   }
 
   // Active filters check

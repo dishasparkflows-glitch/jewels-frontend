@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * LuxuryDivider - A delicate luxury jewellery ornament divider
  * featuring horizontal lines flanking a 4-point diamond sparkle motif.

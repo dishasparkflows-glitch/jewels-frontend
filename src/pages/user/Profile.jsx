@@ -21,6 +21,7 @@ import {
   HiOutlineMap,
   HiOutlineViewGrid,
   HiOutlinePlus,
+  HiOutlineTrash,
 } from 'react-icons/hi';
 
 const INDIAN_STATES = [
@@ -70,11 +71,11 @@ const Profile = () => {
   useEffect(() => {
     if (user) {
       setProfileForm({
-        firstName: user.firstName || user.profile?.firstName || '',
-        lastName: user.lastName || user.profile?.lastName || '',
-        phone: user.phone || user.profile?.phone || '',
-        location: user.location || user.profile?.location || '',
-        bio: user.bio || user.profile?.bio || '',
+        firstName: user.profile?.firstName || '',
+        lastName: user.profile?.lastName || '',
+        phone: user.profile?.phone || '',
+        location: user.profile?.location || '',
+        bio: user.profile?.bio || '',
       });
     }
   }, [user]);
@@ -119,7 +120,7 @@ const Profile = () => {
   // User display name helper
   const userFullName = useMemo(() => {
     if (!user) return '';
-    return user.fullName || [user.profile?.firstName || user.firstName, user.profile?.lastName || user.lastName].filter(Boolean).join(' ') || '';
+    return [user.profile?.firstName, user.profile?.lastName].filter(Boolean).join(' ') || '';
   }, [user]);
 
   // Current effective addresses from dedicated addresses table
@@ -130,6 +131,9 @@ const Profile = () => {
   const shippingAddress = useMemo(() => {
     return addresses.find((a) => a.defaults?.isShippingDefault || a.isShippingDefault) || addresses.find((a) => a.defaults?.isDefault || a.isDefault) || addresses[0] || {};
   }, [addresses]);
+
+  const bAddr = useMemo(() => billingAddress?.address || billingAddress || {}, [billingAddress]);
+  const sAddr = useMemo(() => shippingAddress?.address || shippingAddress || {}, [shippingAddress]);
 
   const additionalAddresses = useMemo(() => {
     return addresses.filter((a) => a._id !== billingAddress?._id && a._id !== shippingAddress?._id);
@@ -173,7 +177,7 @@ const Profile = () => {
       setSelectedAddressId(target._id);
       setAddressForm({
         type: aData.type || 'home',
-        phone: aData.phone || user?.phone || '',
+        phone: aData.phone || user?.profile?.phone || '',
         addressLine: aData.addressLine || '',
         street: aData.street || '',
         city: aData.city || 'Gandhinagar',
@@ -186,7 +190,7 @@ const Profile = () => {
       setSelectedAddressId(null);
       setAddressForm({
         type: 'home',
-        phone: user?.phone || '',
+        phone: user?.profile?.phone || '',
         addressLine: '',
         street: '',
         city: 'Gandhinagar',
@@ -416,14 +420,14 @@ const Profile = () => {
                       {/* 1. Avatar + Name & Email */}
                       <div className="flex items-center gap-3.5 shrink-0 min-w-0">
                         <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-[#f4ebe1] text-[#8b6f4e] font-serif text-xl sm:text-2xl font-medium flex items-center justify-center shrink-0 border border-[#e8dfd5]">
-                          {(userFullName?.[0] || user?.firstName?.[0] || user?.name?.[0] || 'D').toUpperCase()}
+                          {(userFullName?.[0] || user?.profile?.firstName?.[0] || 'D').toUpperCase()}
                         </div>
                         <div className="space-y-0.5 min-w-0">
-                          <h2 className="text-base sm:text-lg font-medium text-stone-900 leading-tight whitespace-nowrap" title={userFullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim()}>
-                            {userFullName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Disha Customer'}
+                          <h2 className="text-base sm:text-lg font-medium text-stone-900 leading-tight whitespace-nowrap" title={userFullName || `${user?.profile?.firstName || ''} ${user?.profile?.lastName || ''}`.trim()}>
+                            {userFullName || `${user?.profile?.firstName || ''} ${user?.profile?.lastName || ''}`.trim() || 'Disha Customer'}
                           </h2>
-                          <p className="text-xs text-stone-500 font-normal truncate max-w-[180px]" title={user?.email}>
-                            {user?.email || '—'}
+                          <p className="text-xs text-stone-500 font-normal truncate max-w-[180px]" title={user?.auth?.email}>
+                            {user?.auth?.email || '—'}
                           </p>
                         </div>
                       </div>
@@ -441,7 +445,7 @@ const Profile = () => {
                             PHONE
                           </span>
                           <span className="text-xs sm:text-sm text-stone-900 font-medium whitespace-nowrap">
-                            {user?.phone ? (user.phone.startsWith('+') ? user.phone : `+91 ${user.phone}`) : '—'}
+                            {user?.profile?.phone ? (user.profile.phone.startsWith('+') ? user.profile.phone : `+91 ${user.profile.phone}`) : '—'}
                           </span>
                         </div>
                       </div>
@@ -458,8 +462,8 @@ const Profile = () => {
                           <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
                             LOCATION
                           </span>
-                          <span className="text-xs sm:text-sm text-stone-900 font-medium whitespace-nowrap" title={user?.location || user?.profile?.location}>
-                            {user?.location || user?.profile?.location || '—'}
+                          <span className="text-xs sm:text-sm text-stone-900 font-medium whitespace-nowrap" title={user?.profile?.location}>
+                            {user?.profile?.location || '—'}
                           </span>
                         </div>
                       </div>
@@ -478,9 +482,9 @@ const Profile = () => {
                           </span>
                           <span
                             className="text-xs sm:text-sm text-stone-900 font-medium block break-words"
-                            title={user?.bio || user?.profile?.bio || ''}
+                            title={user?.profile?.bio || ''}
                           >
-                            {user?.bio || user?.profile?.bio || '—'}
+                            {user?.profile?.bio || '—'}
                           </span>
                         </div>
                       </div>
@@ -522,13 +526,13 @@ const Profile = () => {
                         </button>
                       </div>
                       <p className="font-normal text-stone-900">{billingAddress.fullName || userFullName || 'Disha Customer'}</p>
-                      <p className="text-stone-600 leading-relaxed">{billingAddress.addressLine || 'No address set'}</p>
-                      {billingAddress.city && (
+                      <p className="text-stone-600 leading-relaxed">{bAddr.addressLine || 'No address set'}</p>
+                      {bAddr.city && (
                         <p className="text-stone-600">
-                          {billingAddress.city}, {billingAddress.state} {billingAddress.pincode}
+                          {[bAddr.city, bAddr.state, bAddr.pincode].filter(Boolean).join(', ')}
                         </p>
                       )}
-                      {billingAddress.phone && <p className="text-stone-600 pt-1">{billingAddress.phone}</p>}
+                      {bAddr.phone && <p className="text-stone-600 pt-1">{bAddr.phone}</p>}
                     </div>
 
                     {/* Default Shipping Address */}
@@ -546,13 +550,13 @@ const Profile = () => {
                         </button>
                       </div>
                       <p className="font-normal text-stone-900">{shippingAddress.fullName || userFullName || 'Disha Customer'}</p>
-                      <p className="text-stone-600 leading-relaxed">{shippingAddress.addressLine || 'No address set'}</p>
-                      {shippingAddress.city && (
+                      <p className="text-stone-600 leading-relaxed">{sAddr.addressLine || 'No address set'}</p>
+                      {sAddr.city && (
                         <p className="text-stone-600">
-                          {shippingAddress.city}, {shippingAddress.state} {shippingAddress.pincode}
+                          {[sAddr.city, sAddr.state, sAddr.pincode].filter(Boolean).join(', ')}
                         </p>
                       )}
-                      {shippingAddress.phone && <p className="text-stone-600 pt-1">{shippingAddress.phone}</p>}
+                      {sAddr.phone && <p className="text-stone-600 pt-1">{sAddr.phone}</p>}
                     </div>
                   </div>
                 </div>
@@ -584,14 +588,14 @@ const Profile = () => {
                           <HiOutlinePencilAlt className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <p className="font-normal text-stone-900">{userFullName || 'Disha Customer'}</p>
-                      <p className="text-stone-600 leading-relaxed">{(billingAddress.address || billingAddress).addressLine || 'No address set'}</p>
-                      {(billingAddress.address || billingAddress).city && (
+                      <p className="font-normal text-stone-900">{billingAddress.fullName || userFullName || 'Disha Customer'}</p>
+                      <p className="text-stone-600 leading-relaxed">{bAddr.addressLine || 'No address set'}</p>
+                      {bAddr.city && (
                         <p className="text-stone-600">
-                          {(billingAddress.address || billingAddress).city}, {(billingAddress.address || billingAddress).state} {(billingAddress.address || billingAddress).pincode}
+                          {[bAddr.city, bAddr.state, bAddr.pincode].filter(Boolean).join(', ')}
                         </p>
                       )}
-                      {(billingAddress.address || billingAddress).phone && <p className="text-stone-600 pt-1">{(billingAddress.address || billingAddress).phone}</p>}
+                      {bAddr.phone && <p className="text-stone-600 pt-1">{bAddr.phone}</p>}
                     </div>
 
                     {/* Default Shipping Address */}
@@ -608,14 +612,14 @@ const Profile = () => {
                           <HiOutlinePencilAlt className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <p className="font-normal text-stone-900">{userFullName || 'Disha Customer'}</p>
-                      <p className="text-stone-600 leading-relaxed">{(shippingAddress.address || shippingAddress).addressLine || 'No address set'}</p>
-                      {(shippingAddress.address || shippingAddress).city && (
+                      <p className="font-normal text-stone-900">{shippingAddress.fullName || userFullName || 'Disha Customer'}</p>
+                      <p className="text-stone-600 leading-relaxed">{sAddr.addressLine || 'No address set'}</p>
+                      {sAddr.city && (
                         <p className="text-stone-600">
-                          {(shippingAddress.address || shippingAddress).city}, {(shippingAddress.address || shippingAddress).state} {(shippingAddress.address || shippingAddress).pincode}
+                          {[sAddr.city, sAddr.state, sAddr.pincode].filter(Boolean).join(', ')}
                         </p>
                       )}
-                      {(shippingAddress.address || shippingAddress).phone && <p className="text-stone-600 pt-1">{(shippingAddress.address || shippingAddress).phone}</p>}
+                      {sAddr.phone && <p className="text-stone-600 pt-1">{sAddr.phone}</p>}
                     </div>
                   </div>
                 </div>
@@ -659,16 +663,22 @@ const Profile = () => {
 
                               <div className="flex items-center gap-4 pt-3 border-t border-stone-100 text-xs">
                                 <button
+                                  type="button"
                                   onClick={() => openAddressModal('edit-additional', addrItem)}
-                                  className="text-stone-600 hover:text-black hover:underline"
+                                  className="inline-flex items-center gap-1.5 text-stone-600 hover:text-[#8b6f4e] font-medium transition-colors"
+                                  title="Edit address"
                                 >
-                                  Edit
+                                  <HiOutlinePencilAlt className="w-3.5 h-3.5" />
+                                  <span>Edit</span>
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => handleDeleteAddress(addrItem._id)}
-                                  className="text-red-500 hover:text-red-700 hover:underline"
+                                  className="inline-flex items-center gap-1.5 text-rose-500 hover:text-rose-700 font-medium transition-colors"
+                                  title="Delete address"
                                 >
-                                  Delete
+                                  <HiOutlineTrash className="w-3.5 h-3.5" />
+                                  <span>Delete</span>
                                 </button>
                               </div>
                             </div>

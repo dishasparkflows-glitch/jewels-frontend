@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { HiOutlineClock, HiOutlineSearch, HiOutlineArrowRight } from 'react-icons/hi';
 import { blogsAPI, blogCategoriesAPI } from '../../api/services';
@@ -9,8 +9,29 @@ export default function BlogList() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const categorySectionRef = useRef(null);
 
   const activeCategory = searchParams.get('category') || 'all';
+
+  const scrollToArticles = (smooth = true) => {
+    if (categorySectionRef.current) {
+      const navbar = document.querySelector('header');
+      const navHeight = navbar ? navbar.offsetHeight : 120;
+      const top = categorySectionRef.current.getBoundingClientRect().top + window.pageYOffset - (navHeight + 20);
+      window.scrollTo({
+        top: Math.max(0, top),
+        behavior: smooth ? 'smooth' : 'auto',
+      });
+    }
+  };
+
+  useEffect(() => {
+    const hasFilter = searchParams.get('category') || searchParams.get('search');
+    if (hasFilter && !loading) {
+      const timer = setTimeout(() => scrollToArticles(true), 120);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, loading]);
 
   useEffect(() => {
     let current = true;
@@ -39,21 +60,22 @@ export default function BlogList() {
 
   // Filter blogs
   const filteredBlogs = blogs.filter((blog) => {
+    const blogTitle = blog.basicInfo?.title || blog.title || '';
+    const blogDesc = blog.basicInfo?.description || blog.description || '';
+    const blogShortDesc = blog.basicInfo?.shortDescription || blog.shortDescription || '';
+
     const matchesCategory =
       activeCategory === 'all' ||
       (blog.blogCategory?.slug === activeCategory || blog.blogCategory?._id === activeCategory);
 
     const matchesSearch =
       !searchQuery ||
-      blog.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      blog.shortDescription?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      blog.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      blogTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      blogShortDesc.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      blogDesc.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesCategory && matchesSearch;
   });
-
-  const featuredBlog = filteredBlogs[0];
-  const regularBlogs = filteredBlogs.slice(1);
 
   const handleCategoryClick = (catSlug) => {
     const newParams = new URLSearchParams(searchParams);
@@ -63,6 +85,7 @@ export default function BlogList() {
       newParams.set('category', catSlug);
     }
     setSearchParams(newParams);
+    setTimeout(() => scrollToArticles(true), 50);
   };
 
   const handleSearchSubmit = (e) => {
@@ -74,6 +97,7 @@ export default function BlogList() {
       newParams.delete('search');
     }
     setSearchParams(newParams);
+    setTimeout(() => scrollToArticles(true), 50);
   };
 
   return (
@@ -123,7 +147,11 @@ export default function BlogList() {
       </section>
 
       {/* ─── Category Filter Navigation ─── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-4">
+      <section
+        ref={categorySectionRef}
+        id="journal-categories"
+        className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 pb-4 scroll-mt-36"
+      >
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none justify-start sm:justify-center">
           <button
             type="button"
@@ -178,137 +206,81 @@ export default function BlogList() {
             </button>
           </div>
         ) : (
-          <div className="space-y-12">
-            {/* ─── Featured Article (Top Large Card) ─── */}
-            {featuredBlog && !searchQuery && activeCategory === 'all' && (
-              <article className="group bg-white rounded-3xl border border-stone-200/80 overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 grid grid-cols-1 lg:grid-cols-12">
-                <div className="lg:col-span-7 relative h-72 sm:h-96 lg:h-auto overflow-hidden bg-stone-100">
-                  <img
-                    src={featuredBlog.image?.url || featuredBlog.image || 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=1200&q=80'}
-                    alt={featuredBlog.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-black/70 backdrop-blur-md text-[#d4af37] text-[11px] font-bold uppercase tracking-wider rounded-full border border-[#d4af37]/30">
-                      Featured Story
-                    </span>
-                  </div>
-                </div>
-
-                <div className="lg:col-span-5 p-6 sm:p-10 flex flex-col justify-between space-y-6">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 text-xs text-stone-500 font-medium">
-                      <span className="text-[#8b6f4e] font-semibold uppercase tracking-wider text-[11px]">
-                        {featuredBlog.blogCategory?.name || 'Journal'}
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <HiOutlineClock className="w-3.5 h-3.5" />
-                        {featuredBlog.readTime || '3 min read'}
-                      </span>
-                    </div>
-
-                    <h2 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900 group-hover:text-[#8b6f4e] transition-colors leading-tight">
-                      <Link to={`/blog/${featuredBlog.slug || featuredBlog._id}`}>
-                        {featuredBlog.title}
-                      </Link>
-                    </h2>
-
-                    <p className="text-stone-600 text-xs sm:text-sm font-light leading-relaxed line-clamp-3">
-                      {featuredBlog.shortDescription || featuredBlog.description?.replace(/<[^>]+>/g, '').substring(0, 160) + '...'}
-                    </p>
-                  </div>
-
-                  <div className="pt-4 border-t border-stone-100 flex items-center justify-between">
-                    <span className="text-xs text-stone-400">
-                      {featuredBlog.meta?.createdAt
-                        ? new Date(featuredBlog.meta.createdAt).toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                        : ''}
-                    </span>
-                    <Link
-                      to={`/blog/${featuredBlog.slug || featuredBlog._id}`}
-                      className="inline-flex items-center gap-2 text-xs font-semibold text-[#8b6f4e] group-hover:text-black group-hover:translate-x-1 transition-all"
-                    >
-                      <span>Read Story</span>
-                      <HiOutlineArrowRight className="w-3.5 h-3.5" />
-                    </Link>
-                  </div>
-                </div>
-              </article>
-            )}
-
-            {/* ─── Grid of Regular Articles ─── */}
+          <div>
+            {/* ─── Grid of Articles (Small Box / Card View) ─── */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {(searchQuery || activeCategory !== 'all' ? filteredBlogs : regularBlogs).map((blog) => (
-                <article
-                  key={blog._id}
-                  className="group bg-white rounded-3xl border border-stone-200/80 overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col"
-                >
-                  {/* Thumbnail */}
-                  <Link
-                    to={`/blog/${blog.slug || blog._id}`}
-                    className="relative block h-56 overflow-hidden bg-stone-100 shrink-0"
-                  >
-                    <img
-                      src={blog.image?.url || blog.image || 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=800&q=80'}
-                      alt={blog.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <div className="absolute top-3 left-3">
-                      <span className="px-2.5 py-1 bg-white/90 backdrop-blur-md text-[#8b6f4e] text-[10px] font-bold uppercase tracking-wider rounded-full shadow-2xs border border-stone-200">
-                        {blog.blogCategory?.name || 'Journal'}
-                      </span>
-                    </div>
-                  </Link>
+              {filteredBlogs.map((blog) => {
+                const title = blog.basicInfo?.title || blog.title || '';
+                const slug = blog.basicInfo?.slug || blog.slug || blog._id;
+                const shortDesc = blog.basicInfo?.shortDescription || blog.shortDescription || (blog.basicInfo?.description || blog.description)?.replace(/<[^>]+>/g, '').substring(0, 130) + '...';
 
-                  {/* Body */}
-                  <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-2 text-[11px] text-stone-500 font-medium">
-                        <span className="flex items-center gap-1">
-                          <HiOutlineClock className="w-3.5 h-3.5 text-stone-400" />
-                          {blog.readTime || '3 min read'}
-                        </span>
-                        <span>•</span>
-                        <span>
-                          {blog.meta?.createdAt
-                            ? new Date(blog.meta.createdAt).toLocaleDateString('en-GB', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric',
-                              })
-                            : ''}
+                return (
+                  <article
+                    key={blog._id}
+                    className="group bg-white rounded-3xl border border-stone-200/80 overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col"
+                  >
+                    {/* Thumbnail */}
+                    <Link
+                      to={`/blog/${slug}`}
+                      className="relative block h-56 overflow-hidden bg-stone-100 shrink-0"
+                    >
+                      <img
+                        src={blog.image?.url || blog.image || 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=800&q=80'}
+                        alt={title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute top-3 left-3">
+                        <span className="px-2.5 py-1 bg-white/90 backdrop-blur-md text-[#8b6f4e] text-[10px] font-bold uppercase tracking-wider rounded-full shadow-2xs border border-stone-200">
+                          {blog.blogCategory?.name || 'Journal'}
                         </span>
                       </div>
+                    </Link>
 
-                      <h3 className="font-serif font-bold text-lg text-stone-900 group-hover:text-[#8b6f4e] transition-colors leading-snug line-clamp-2">
-                        <Link to={`/blog/${blog.slug || blog._id}`}>
-                          {blog.title}
+                    {/* Body */}
+                    <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                      <div className="space-y-2.5">
+                        <div className="flex items-center gap-2 text-[11px] text-stone-500 font-medium">
+                          <span className="flex items-center gap-1">
+                            <HiOutlineClock className="w-3.5 h-3.5 text-stone-400" />
+                            {blog.basicInfo?.readTime || blog.readTime || '3 min read'}
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {blog.basicInfo?.publishDate || blog.publishDate || blog.createdAt || blog.meta?.createdAt
+                              ? new Date(blog.basicInfo?.publishDate || blog.publishDate || blog.createdAt || blog.meta.createdAt).toLocaleDateString('en-GB', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })
+                              : ''}
+                          </span>
+                        </div>
+
+                        <h3 className="font-serif font-bold text-lg text-stone-900 group-hover:text-[#8b6f4e] transition-colors leading-snug line-clamp-2">
+                          <Link to={`/blog/${slug}`}>
+                            {title}
+                          </Link>
+                        </h3>
+
+                        <p className="text-stone-600 text-xs font-light leading-relaxed line-clamp-3">
+                          {shortDesc}
+                        </p>
+                      </div>
+
+                      <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
+                        <span className="text-[11px] text-stone-400">By {blog.basicInfo?.author || blog.author || 'Neirah'}</span>
+                        <Link
+                          to={`/blog/${slug}`}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8b6f4e] group-hover:translate-x-1 transition-transform"
+                        >
+                          <span>Read</span>
+                          <HiOutlineArrowRight className="w-3.5 h-3.5" />
                         </Link>
-                      </h3>
-
-                      <p className="text-stone-600 text-xs font-light leading-relaxed line-clamp-3">
-                        {blog.shortDescription || blog.description?.replace(/<[^>]+>/g, '').substring(0, 130) + '...'}
-                      </p>
+                      </div>
                     </div>
-
-                    <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
-                      <span className="text-[11px] text-stone-400">By {blog.author || 'Neirah'}</span>
-                      <Link
-                        to={`/blog/${blog.slug || blog._id}`}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8b6f4e] group-hover:translate-x-1 transition-transform"
-                      >
-                        <span>Read</span>
-                        <HiOutlineArrowRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           </div>
         )}

@@ -66,17 +66,12 @@ export function useProductCard(product, options = {}) {
 
   const rawSlug =
     product.basicInfo?.slug ||
-    product.slug ||
     data.slug ||
-    product.representative?.basicInfo?.slug ||
-    product.representative?.slug;
+    product.representative?.basicInfo?.slug;
 
   const title =
     (isGroup && product.groupName) ||
     product.basicInfo?.title ||
-    product.title ||
-    product.name ||
-    product.itemName ||
     data?.name ||
     'Jewellery';
 

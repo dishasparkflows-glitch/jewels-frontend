@@ -111,7 +111,6 @@ export default function ProductCard({ product }) {
     imageIndex,
     setImageIndex,
     previewImages,
-    isGroup,
     title,
     href,
     wished,

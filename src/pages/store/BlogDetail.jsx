@@ -7,7 +7,15 @@ import {
   HiOutlineShare,
   HiOutlineEye,
   HiOutlineChevronRight,
+  HiOutlineLink,
 } from 'react-icons/hi';
+import {
+  FaFacebookF,
+  FaPinterestP,
+  FaLinkedinIn,
+  FaWhatsapp,
+} from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 import toast from 'react-hot-toast';
 import { blogsAPI } from '../../api/services';
 
@@ -53,16 +61,36 @@ export default function BlogDetail() {
     };
   }, [slug]);
 
-  const handleCopyLink = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success('Article link copied to clipboard!');
-    }
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
+  const shareTitle = blog?.title || '';
+
+  const handleShareFacebook = () => {
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShareTwitter = () => {
+    window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleSharePinterest = () => {
+    const media = blog?.image?.url ? `&media=${encodeURIComponent(blog.image.url)}` : '';
+    window.open(`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(shareUrl)}&description=${encodeURIComponent(shareTitle)}${media}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShareLinkedIn = () => {
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, '_blank', 'noopener,noreferrer');
   };
 
   const handleShareWhatsApp = () => {
-    const text = encodeURIComponent(`Read "${blog?.title}" on Neirah: ${window.location.href}`);
-    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+    const text = encodeURIComponent(`Read "${shareTitle}" on Neirah: ${shareUrl}`);
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleCopyLink = () => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(shareUrl);
+      toast.success('Article link copied to clipboard!');
+    }
   };
 
   if (loading) {
@@ -99,8 +127,11 @@ export default function BlogDetail() {
   const categoryName = blog.blogCategory?.name || 'Editorial';
   const categorySlug = blog.blogCategory?.slug || '';
   const imageUrl = blog.image?.url || (typeof blog.image === 'string' ? blog.image : '');
-  const publishDate = blog.meta?.createdAt
-    ? new Date(blog.meta.createdAt).toLocaleDateString('en-GB', {
+  const title = blog.basicInfo?.title || blog.title || '';
+  const description = blog.basicInfo?.description || blog.description || '';
+  const shortDescription = blog.basicInfo?.shortDescription || blog.shortDescription || '';
+  const publishDate = blog.basicInfo?.publishDate || blog.publishDate || blog.createdAt || blog.meta?.createdAt
+    ? new Date(blog.basicInfo?.publishDate || blog.publishDate || blog.createdAt || blog.meta.createdAt).toLocaleDateString('en-GB', {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
@@ -124,7 +155,7 @@ export default function BlogDetail() {
             </>
           )}
           <HiOutlineChevronRight className="w-3 h-3 text-stone-300 shrink-0" />
-          <span className="text-stone-800 truncate max-w-xs">{blog.title}</span>
+          <span className="text-stone-800 truncate max-w-xs">{title}</span>
         </div>
       </div>
 
@@ -139,15 +170,15 @@ export default function BlogDetail() {
         </Link>
 
         <h1 className="text-3xl sm:text-5xl font-serif font-bold text-stone-950 tracking-tight leading-[1.2] max-w-3xl mx-auto">
-          {blog.title}
+          {title}
         </h1>
 
         <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-stone-500 font-medium pt-2">
-          <span>By <strong className="text-stone-800 font-semibold">{blog.author || 'Neirah Editorial'}</strong></span>
+          <span>By <strong className="text-stone-800 font-semibold">{blog.basicInfo?.author || blog.author || 'Neirah Editorial'}</strong></span>
           <span>•</span>
           <span className="flex items-center gap-1">
             <HiOutlineClock className="w-3.5 h-3.5 text-[#8b6f4e]" />
-            {blog.readTime || '3 min read'}
+            {blog.basicInfo?.readTime || blog.readTime || '3 min read'}
           </span>
           <span>•</span>
           <span>{publishDate}</span>
@@ -169,7 +200,7 @@ export default function BlogDetail() {
           <div className="relative rounded-3xl overflow-hidden shadow-xl max-h-[540px] bg-stone-100">
             <img
               src={imageUrl}
-              alt={blog.image?.alt || blog.title}
+              alt={blog.image?.alt || title}
               className="w-full h-full object-cover"
             />
           </div>
@@ -179,16 +210,16 @@ export default function BlogDetail() {
       {/* ─── Main Content Container ─── */}
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         {/* Short excerpt / lead paragraph */}
-        {blog.shortDescription && (
+        {shortDescription && (
           <div className="p-6 my-6 rounded-2xl bg-[#faf5ee] border-l-4 border-[#8b6f4e] text-base sm:text-lg font-serif italic text-stone-800 leading-relaxed">
-            &ldquo;{blog.shortDescription}&rdquo;
+            &ldquo;{shortDescription}&rdquo;
           </div>
         )}
 
         {/* Rich HTML Description */}
         <div
           className="prose prose-stone max-w-none text-stone-800 leading-relaxed text-base sm:text-lg pt-4 font-sans article-body"
-          dangerouslySetInnerHTML={{ __html: blog.description }}
+          dangerouslySetInnerHTML={{ __html: description }}
         />
 
         {/* Tags */}
@@ -206,33 +237,77 @@ export default function BlogDetail() {
           </div>
         )}
 
-        {/* Share Bar */}
-        <div className="my-10 p-5 rounded-2xl bg-white border border-stone-200 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
-          <div className="flex items-center gap-2">
-            <HiOutlineShare className="w-5 h-5 text-[#8b6f4e]" />
-            <span className="text-xs font-bold uppercase tracking-wider text-stone-700">Share This Story</span>
+        {/* ─── Share Bar & Back to Blogs (Matching Reference) ─── */}
+        <div className="mt-12 pt-8 border-t border-stone-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          <div className="flex items-center flex-wrap gap-2.5">
+            <span className="text-xs uppercase tracking-[0.2em] font-semibold text-stone-500 mr-1 sm:mr-2">
+              Share On:
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleShareFacebook}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-stone-200 bg-white text-stone-600 hover:border-[#8b6f4e] hover:text-[#8b6f4e] hover:bg-[#faf6f0] flex items-center justify-center transition-all shadow-2xs cursor-pointer group"
+                title="Share on Facebook"
+                aria-label="Share on Facebook"
+              >
+                <FaFacebookF className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+              </button>
+              <button
+                type="button"
+                onClick={handleShareTwitter}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-stone-200 bg-white text-stone-600 hover:border-[#8b6f4e] hover:text-[#8b6f4e] hover:bg-[#faf6f0] flex items-center justify-center transition-all shadow-2xs cursor-pointer group"
+                title="Share on X (Twitter)"
+                aria-label="Share on X (Twitter)"
+              >
+                <FaXTwitter className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+              </button>
+              <button
+                type="button"
+                onClick={handleSharePinterest}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-stone-200 bg-white text-stone-600 hover:border-[#8b6f4e] hover:text-[#8b6f4e] hover:bg-[#faf6f0] flex items-center justify-center transition-all shadow-2xs cursor-pointer group"
+                title="Share on Pinterest"
+                aria-label="Share on Pinterest"
+              >
+                <FaPinterestP className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+              </button>
+              <button
+                type="button"
+                onClick={handleShareLinkedIn}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-stone-200 bg-white text-stone-600 hover:border-[#8b6f4e] hover:text-[#8b6f4e] hover:bg-[#faf6f0] flex items-center justify-center transition-all shadow-2xs cursor-pointer group"
+                title="Share on LinkedIn"
+                aria-label="Share on LinkedIn"
+              >
+                <FaLinkedinIn className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+              </button>
+              <button
+                type="button"
+                onClick={handleShareWhatsApp}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-stone-200 bg-white text-stone-600 hover:border-[#25D366] hover:text-[#25D366] hover:bg-[#f0faf3] flex items-center justify-center transition-all shadow-2xs cursor-pointer group"
+                title="Share on WhatsApp"
+                aria-label="Share on WhatsApp"
+              >
+                <FaWhatsapp className="w-4 h-4 transition-transform group-hover:scale-110" />
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-stone-200 bg-white text-stone-600 hover:border-[#8b6f4e] hover:text-[#8b6f4e] hover:bg-[#faf6f0] flex items-center justify-center transition-all shadow-2xs cursor-pointer group"
+                title="Copy Article Link"
+                aria-label="Copy Article Link"
+              >
+                <HiOutlineLink className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleCopyLink}
-              className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
-            >
-              Copy Link
-            </button>
-            <button
-              type="button"
-              onClick={handleShareWhatsApp}
-              className="px-4 py-2 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
-            >
-              WhatsApp
-            </button>
+          <div className="shrink-0">
             <Link
               to="/blog"
-              className="px-4 py-2 border border-stone-300 hover:bg-stone-50 text-stone-800 rounded-xl text-xs font-semibold transition-colors"
+              className="inline-flex items-center gap-2 pb-1 text-xs uppercase tracking-[0.18em] font-semibold text-stone-900 border-b border-stone-900 hover:text-[#8b6f4e] hover:border-[#8b6f4e] transition-colors"
             >
-              All Articles
+              <span>&larr;</span>
+              <span>Back to Blogs</span>
             </Link>
           </div>
         </div>
@@ -255,12 +330,12 @@ export default function BlogDetail() {
                 className="group bg-white rounded-3xl border border-stone-200/80 overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col"
               >
                 <Link
-                  to={`/blog/${item.slug || item._id}`}
+                  to={`/blog/${item.basicInfo?.slug || item.slug || item._id}`}
                   className="relative block h-48 overflow-hidden bg-stone-100 shrink-0"
                 >
                   <img
                     src={item.image?.url || item.image || 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=800&q=80'}
-                    alt={item.title}
+                    alt={item.basicInfo?.title || item.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <div className="absolute top-3 left-3">
@@ -272,15 +347,15 @@ export default function BlogDetail() {
 
                 <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
                   <div className="space-y-1.5">
-                    <span className="text-[11px] text-stone-400">{item.readTime || '3 min read'}</span>
+                    <span className="text-[11px] text-stone-400">{item.basicInfo?.readTime || item.readTime || '3 min read'}</span>
                     <h3 className="font-serif font-bold text-base text-stone-900 group-hover:text-[#8b6f4e] transition-colors leading-snug line-clamp-2">
-                      <Link to={`/blog/${item.slug || item._id}`}>
-                        {item.title}
+                      <Link to={`/blog/${item.basicInfo?.slug || item.slug || item._id}`}>
+                        {item.basicInfo?.title || item.title}
                       </Link>
                     </h3>
                   </div>
                   <Link
-                    to={`/blog/${item.slug || item._id}`}
+                    to={`/blog/${item.basicInfo?.slug || item.slug || item._id}`}
                     className="text-xs font-semibold text-[#8b6f4e] hover:underline"
                   >
                     Read Story →

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { HiOutlineDeviceMobile, HiOutlineEye, HiOutlineEyeOff, HiOutlineLockClosed, HiOutlineMail } from 'react-icons/hi';
+import { HiOutlineEye, HiOutlineEyeOff, HiOutlineLockClosed, HiOutlineMail } from 'react-icons/hi';
 import { FcGoogle } from 'react-icons/fc';
 import { useAuth } from '../../contexts/AuthContext';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
@@ -58,7 +58,7 @@ const Login = () => {
   }, [navigate, returnTo, getDestination, isProtectedPath]);
 
   const finishLogin = useCallback((user) => {
-    toast.success(`Welcome back${user?.firstName ? `, ${user.firstName}` : ''}!`);
+    toast.success(`Welcome back${user?.profile?.firstName ? `, ${user.profile.firstName}` : ''}!`);
     navigate(getDestination(returnTo), { replace: true });
   }, [navigate, returnTo, getDestination]);
 

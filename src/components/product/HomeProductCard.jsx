@@ -22,7 +22,6 @@ export default function HomeProductCard({ product, isSilver: isSilverProp }) {
     selectColor,
     activeImage,
     isSilver,
-    isGroup,
     title,
     href,
     wished,
