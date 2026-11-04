@@ -530,10 +530,17 @@ export default function ProductDetail() {
   // Determine whether this product is Case 1 (Center Diamond Driven) or Case 2 (Side Diamond Driven)
   const isCenterDriven = useMemo(() => {
     if (!product) return false;
+    // Explicit 0 center diamonds configured in admin panel
+    if (Array.isArray(product.centerDiamondRows) && product.centerDiamondRows.length === 0) {
+      return false;
+    }
     const hasCenterRows = Array.isArray(product.centerDiamondRows) && product.centerDiamondRows.length > 0;
+    if (hasCenterRows) return true;
+
     const variants = Array.isArray(product.variants) ? product.variants : [];
-    const hasCenterWeights = variants.some((v) => Number(v.centerDiamondWeight) > 0);
-    return Boolean(hasCenterRows || hasCenterWeights);
+    // Only center-driven if variants actually have configured center diamond weight AND positive center cost
+    const hasCenterWeights = variants.some((v) => Number(v.centerDiamondWeight) > 0 && Number(v.centerDiamondCost || 0) > 0);
+    return Boolean(hasCenterWeights);
   }, [product]);
 
   // Extract dimensions available across variants
@@ -561,7 +568,10 @@ export default function ProductDetail() {
         });
       }
 
-      const ct = Number(v.centerDiamondWeight || v.caratWeight || 0);
+      // Only add to carat dropdown if this is a center diamond driven product or variant has genuine center diamond weight
+      const ct = isCenterDriven
+        ? Number(v.centerDiamondWeight || v.caratWeight || 0)
+        : Number(v.centerDiamondWeight || 0);
       if (ct > 0) ctSet.add(ct);
 
       const col = referenceName(v.diamondColor || v.diamondColorId) || v.diamondColor || '';
@@ -673,7 +683,7 @@ export default function ProductDetail() {
                        purities[0];
       setSelectedPurity(defaultP);
     }
-    if (carats.length && !selectedCarat) {
+    if (isCenterDriven && carats.length && !selectedCarat) {
       setSelectedCarat(carats[0]);
     }
     if (qualities.length && !selectedQuality) {
@@ -681,7 +691,7 @@ export default function ProductDetail() {
       const defaultQ = qualities.find((q) => q.includes('F-G') && q.includes('VS')) || qualities[0];
       setSelectedQuality(defaultQ);
     }
-  }, [product, isGold, purities, colors, carats, qualities, selectedPurity, selectedColor, selectedCarat, selectedQuality]);
+  }, [product, isGold, isCenterDriven, purities, colors, carats, qualities, selectedPurity, selectedColor, selectedCarat, selectedQuality]);
 
   // Swatches for the combined Metal (Purity + Color) selector matching Neirah standard
   const { metalSwatches, purityGroups } = useMemo(() => {

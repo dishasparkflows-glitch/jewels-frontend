@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import toast, { Toaster, ToastBar } from 'react-hot-toast';
 import { HiOutlineX } from 'react-icons/hi';
@@ -8,23 +9,31 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import ScrollToTop from './components/common/ScrollToTop';
 import AnalyticsTracker from './components/common/AnalyticsTracker';
 import StoreLayout from './components/layout/StoreLayout';
-import Home from './pages/store/Home';
-import Shop from './pages/store/Shop';
-import ProductDetail from './pages/store/ProductDetail';
-import Cart from './pages/store/Cart';
-import Checkout from './pages/store/Checkout';
-import Wishlist from './pages/store/Wishlist';
-import BlogList from './pages/store/BlogList';
-import BlogDetail from './pages/store/BlogDetail';
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
-import Profile from './pages/user/Profile';
-import StaticPageView from './pages/store/StaticPageView';
-import DynamicSlugView from './pages/store/DynamicSlugView';
-import OrderSuccess from './pages/store/OrderSuccess';
-import OrderFailed from './pages/store/OrderFailed';
+
+// Lazy-loaded route pages for code-splitting & performance
+const Home = lazy(() => import('./pages/store/Home'));
+const Shop = lazy(() => import('./pages/store/Shop'));
+const ProductDetail = lazy(() => import('./pages/store/ProductDetail'));
+const Cart = lazy(() => import('./pages/store/Cart'));
+const Checkout = lazy(() => import('./pages/store/Checkout'));
+const Wishlist = lazy(() => import('./pages/store/Wishlist'));
+const BlogList = lazy(() => import('./pages/store/BlogList'));
+const BlogDetail = lazy(() => import('./pages/store/BlogDetail'));
+const Login = lazy(() => import('./pages/auth/Login'));
+const Register = lazy(() => import('./pages/auth/Register'));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
+const Profile = lazy(() => import('./pages/user/Profile'));
+const StaticPageView = lazy(() => import('./pages/store/StaticPageView'));
+const DynamicSlugView = lazy(() => import('./pages/store/DynamicSlugView'));
+const OrderSuccess = lazy(() => import('./pages/store/OrderSuccess'));
+const OrderFailed = lazy(() => import('./pages/store/OrderFailed'));
+
+const PageLoader = () => (
+  <div className="min-h-[50vh] flex items-center justify-center">
+    <div className="w-8 h-8 border-2 border-stone-200 border-t-[#8b6f4e] rounded-full animate-spin" />
+  </div>
+);
 
 function App() {
   return (
@@ -80,55 +89,57 @@ function App() {
               )}
             </Toaster>
 
-            <Routes>
-              {/* Storefront Layout with Header and Footer */}
-              <Route element={<StoreLayout />}>
-                <Route path="/" element={<Home />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/product/:slug" element={<ProductDetail />} />
-                <Route path="/:categorySlug/:slug" element={<ProductDetail />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/order-success" element={<OrderSuccess />} />
-                <Route path="/order-failed" element={<OrderFailed />} />
-                <Route
-                  path="/wishlist"
-                  element={
-                    <ProtectedRoute>
-                      <Wishlist />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/blog" element={<BlogList />} />
-                <Route path="/blogs" element={<BlogList />} />
-                <Route path="/blog/:slug" element={<BlogDetail />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/pages/:slug" element={<StaticPageView />} />
-              <Route path="/:slug" element={<DynamicSlugView />} />
-            </Route>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Storefront Layout with Header and Footer */}
+                <Route element={<StoreLayout />}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/product/:slug" element={<ProductDetail />} />
+                  <Route path="/:categorySlug/:slug" element={<ProductDetail />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/order-success" element={<OrderSuccess />} />
+                  <Route path="/order-failed" element={<OrderFailed />} />
+                  <Route
+                    path="/wishlist"
+                    element={
+                      <ProtectedRoute>
+                        <Wishlist />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="/blog" element={<BlogList />} />
+                  <Route path="/blogs" element={<BlogList />} />
+                  <Route path="/blog/:slug" element={<BlogDetail />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="/pages/:slug" element={<StaticPageView />} />
+                  <Route path="/:slug" element={<DynamicSlugView />} />
+                </Route>
 
-            {/* Catch-all redirect to Home */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+                {/* Catch-all redirect to Home */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
         </WishlistProvider>
       </CartProvider>
       </BrowserRouter>

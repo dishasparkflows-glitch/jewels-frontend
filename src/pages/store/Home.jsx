@@ -252,7 +252,7 @@ const Home = () => {
           const featuredSelections = themeConfig?.featuredSelections || [];
 
           // Process Celebrate items
-          const celebrateSelections = featuredSelections.filter((s) => (s.placement || s.display?.type || 'Celebrate') === 'Celebrate' && s.visible !== false);
+          const celebrateSelections = featuredSelections.filter((s) => (s.display?.type || s.placement || 'Celebrate') === 'Celebrate' && s.visible !== false);
           let rawCelebrate = list.filter((item) => (item.display?.type || item.placement || '').toLowerCase() === 'celebrate');
           if (celebrateSelections.length > 0) {
             const orderMap = new Map(celebrateSelections.map((s) => [String(s.featuredId?._id || s.featuredId || ''), s.order || 0]));
@@ -268,7 +268,7 @@ const Home = () => {
           })));
 
           // Process Gifts items
-          const giftSelections = featuredSelections.filter((s) => (s.placement || s.display?.type || '').toLowerCase() === 'gifts' && s.visible !== false);
+          const giftSelections = featuredSelections.filter((s) => (s.display?.type || s.placement || '').toLowerCase() === 'gifts' && s.visible !== false);
           let rawGifts = list.filter((item) => (item.display?.type || item.placement || '').toLowerCase() === 'gifts');
           if (giftSelections.length > 0) {
             const orderMap = new Map(giftSelections.map((s) => [String(s.featuredId?._id || s.featuredId || ''), s.order || 0]));

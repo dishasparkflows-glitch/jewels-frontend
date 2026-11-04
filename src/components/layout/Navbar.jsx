@@ -25,6 +25,108 @@ import { IoDiamondOutline } from 'react-icons/io5';
 import VirtualAppointmentModal from '../common/VirtualAppointmentModal';
 import CartDrawer from '../store/CartDrawer';
 
+const getSearchProductMeta = (item) => {
+  const title = item.basicInfo?.title || '';
+  const targetSlug =
+    item.basicInfo?.slug ||
+    item.slug ||
+    (title ? title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
+  const productHref = `/product/${encodeURIComponent(targetSlug)}`;
+  const minPrice = Number(item.pricing?.minPrice || 0);
+  const maxPrice = Number(item.pricing?.maxPrice || 0);
+  const hasRange = minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
+  const priceText = hasRange
+    ? `${formatProductPrice(minPrice)} – ${formatProductPrice(maxPrice)}`
+    : (item.pricing?.salePrice || item.pricing?.minPrice ? formatProductPrice(item.pricing.salePrice || item.pricing.minPrice) : '');
+  const imgUrl = item.image || (Array.isArray(item.images) && item.images[0]) || '';
+  return { title, targetSlug, productHref, priceText, imgUrl };
+};
+
+const SearchProductCard = ({ item, variant = 'desktop', onSelect }) => {
+  const { title, productHref, priceText, imgUrl } = getSearchProductMeta(item);
+
+  if (variant === 'mobile-overlay') {
+    return (
+      <Link
+        to={productHref}
+        onClick={onSelect}
+        className="w-28 shrink-0 flex flex-col text-left group"
+      >
+        <div className="w-28 h-28 rounded-xl bg-[#f8f6f0] border border-stone-100 flex items-center justify-center p-2 overflow-hidden shadow-2xs">
+          {imgUrl ? (
+            <img
+              src={imgUrl}
+              alt={title}
+              className="w-full h-full object-contain mix-blend-multiply"
+            />
+          ) : (
+            <IoDiamondOutline className="w-6 h-6 text-[#8b6f4e]/40" />
+          )}
+        </div>
+        <p className="text-[11px] font-semibold text-stone-800 line-clamp-2 mt-1.5 leading-tight" title={title}>
+          {title}
+        </p>
+        <p className="text-[11px] font-bold text-[#8b6f4e] mt-0.5">
+          {priceText}
+        </p>
+      </Link>
+    );
+  }
+
+  if (variant === 'mobile-drawer') {
+    return (
+      <Link
+        to={productHref}
+        onClick={onSelect}
+        className="w-24 shrink-0 flex flex-col text-left group"
+      >
+        <div className="w-24 h-24 rounded-xl bg-[#f8f6f0] border border-stone-100 flex items-center justify-center p-1.5 overflow-hidden">
+          {imgUrl ? (
+            <img
+              src={imgUrl}
+              alt={title}
+              className="w-full h-full object-contain mix-blend-multiply"
+            />
+          ) : (
+            <IoDiamondOutline className="w-5 h-5 text-[#8b6f4e]/40" />
+          )}
+        </div>
+        <p className="text-[10px] font-semibold text-stone-800 truncate mt-1" title={title}>{title}</p>
+        <p className="text-[10px] font-bold text-[#8b6f4e]">{priceText}</p>
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      to={productHref}
+      onClick={onSelect}
+      className="group flex flex-col text-left"
+    >
+      <div className="w-full aspect-square rounded-2xl bg-[#f8f6f0] border border-stone-100 flex items-center justify-center p-2.5 overflow-hidden group-hover:border-[#8b6f4e]/40 transition-all shadow-2xs">
+        {imgUrl ? (
+          <img
+            src={imgUrl}
+            alt={title}
+            className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-stone-300">
+            <IoDiamondOutline className="w-8 h-8 text-[#8b6f4e]/40" />
+          </div>
+        )}
+      </div>
+      <p className="text-xs font-semibold text-stone-800 line-clamp-2 mt-2 leading-tight group-hover:text-[#8b6f4e] transition-colors min-h-[2rem]" title={title}>
+        {title}
+      </p>
+      <p className="text-xs font-bold text-[#8b6f4e] mt-1">
+        {priceText}
+      </p>
+    </Link>
+  );
+};
+
 const Navbar = () => {
   const { user, logout } = useAuth();
   const { totalItems, cartDrawerOpen, setCartDrawerOpen } = useCart();
@@ -524,59 +626,17 @@ const Navbar = () => {
                     ) : (searchTab === 'all' || searchTab === 'products') ? (
                       displayedProducts.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-3.5">
-                          {displayedProducts.map((item) => {
-                            const title = item.basicInfo?.title || '';
-                            const targetSlug =
-                              item.basicInfo?.slug ||
-                              item.slug ||
-                              (title ? title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
-                            const productHref = `/product/${encodeURIComponent(targetSlug)}`;
-                            const minPrice = Number(item.pricing?.minPrice || 0);
-                            const maxPrice = Number(item.pricing?.maxPrice || 0);
-                            const hasRange = minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
-                            const priceText = hasRange
-                              ? `${formatProductPrice(minPrice)} – ${formatProductPrice(maxPrice)}`
-                              : (item.pricing?.salePrice || item.pricing?.minPrice ? formatProductPrice(item.pricing.salePrice || item.pricing.minPrice) : '');
-                            const imgUrl = item.image || (Array.isArray(item.images) && item.images[0]) || '';
-
-                            return (
-                              <Link
-                                key={item._id}
-                                to={productHref}
-                                onClick={() => {
-                                  setShowSearchDropdown(false);
-                                  setSearchQuery('');
-                                }}
-                                className="group flex flex-col text-left"
-                              >
-                                {/* Warm Ivory Image Container */}
-                                <div className="w-full aspect-square rounded-2xl bg-[#f8f6f0] border border-stone-100 flex items-center justify-center p-2.5 overflow-hidden group-hover:border-[#8b6f4e]/40 transition-all shadow-2xs">
-                                  {imgUrl ? (
-                                    <img
-                                      src={imgUrl}
-                                      alt={title}
-                                      className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
-                                      loading="lazy"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-stone-300">
-                                      <IoDiamondOutline className="w-8 h-8 text-[#8b6f4e]/40" />
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Title */}
-                                <p className="text-xs font-semibold text-stone-800 line-clamp-2 mt-2 leading-tight group-hover:text-[#8b6f4e] transition-colors min-h-[2rem]" title={title}>
-                                  {title}
-                                </p>
-
-                                {/* Price */}
-                                <p className="text-xs font-bold text-[#8b6f4e] mt-1">
-                                  {priceText}
-                                </p>
-                              </Link>
-                            );
-                          })}
+                          {displayedProducts.map((item) => (
+                            <SearchProductCard
+                              key={item._id}
+                              item={item}
+                              variant="desktop"
+                              onSelect={() => {
+                                setShowSearchDropdown(false);
+                                setSearchQuery('');
+                              }}
+                            />
+                          ))}
                         </div>
                       ) : (
                         <div className="py-8 px-4 text-center">
@@ -839,51 +899,18 @@ const Navbar = () => {
                 <div className="py-6 text-center text-xs text-stone-400">Searching jewellery...</div>
               ) : displayedProducts.length > 0 ? (
                 <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-1">
-                  {displayedProducts.map((item) => {
-                    const title = item.basicInfo?.title || '';
-                    const targetSlug =
-                      item.basicInfo?.slug ||
-                      item.slug ||
-                      (title ? title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
-                    const productHref = `/product/${encodeURIComponent(targetSlug)}`;
-                    const minPrice = Number(item.pricing?.minPrice || 0);
-                    const maxPrice = Number(item.pricing?.maxPrice || 0);
-                    const hasRange = minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
-                    const priceText = hasRange
-                      ? `${formatProductPrice(minPrice)} – ${formatProductPrice(maxPrice)}`
-                      : (item.pricing?.salePrice || item.pricing?.minPrice ? formatProductPrice(item.pricing.salePrice || item.pricing.minPrice) : '');
-                    const imgUrl = item.image || (Array.isArray(item.images) && item.images[0]) || '';
-                    return (
-                      <Link
-                        key={item._id}
-                        to={productHref}
-                        onClick={() => {
-                          setMobileSearchOpen(false);
-                          setShowSearchDropdown(false);
-                          setSearchQuery('');
-                        }}
-                        className="w-28 shrink-0 flex flex-col text-left group"
-                      >
-                        <div className="w-28 h-28 rounded-xl bg-[#f8f6f0] border border-stone-100 flex items-center justify-center p-2 overflow-hidden shadow-2xs">
-                          {imgUrl ? (
-                            <img
-                              src={imgUrl}
-                              alt={title}
-                              className="w-full h-full object-contain mix-blend-multiply"
-                            />
-                          ) : (
-                            <IoDiamondOutline className="w-6 h-6 text-[#8b6f4e]/40" />
-                          )}
-                        </div>
-                        <p className="text-[11px] font-semibold text-stone-800 line-clamp-2 mt-1.5 leading-tight" title={title}>
-                          {title}
-                        </p>
-                        <p className="text-[11px] font-bold text-[#8b6f4e] mt-0.5">
-                          {priceText}
-                        </p>
-                      </Link>
-                    );
-                  })}
+                  {displayedProducts.map((item) => (
+                    <SearchProductCard
+                      key={item._id}
+                      item={item}
+                      variant="mobile-overlay"
+                      onSelect={() => {
+                        setMobileSearchOpen(false);
+                        setShowSearchDropdown(false);
+                        setSearchQuery('');
+                      }}
+                    />
+                  ))}
                 </div>
               ) : (
                 <div className="py-4 text-center text-xs text-stone-400">No products found</div>
@@ -937,47 +964,18 @@ const Navbar = () => {
                 ) : displayedProducts.length > 0 ? (
                   <>
                     <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-2">
-                      {displayedProducts.map((item) => {
-                        const title = item.basicInfo?.title || '';
-                        const targetSlug =
-                          item.basicInfo?.slug ||
-                          item.slug ||
-                          (title ? title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
-                        const productHref = `/product/${encodeURIComponent(targetSlug)}`;
-                        const minPrice = Number(item.pricing?.minPrice || 0);
-                        const maxPrice = Number(item.pricing?.maxPrice || 0);
-                        const hasRange = minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
-                        const priceText = hasRange
-                          ? `${formatProductPrice(minPrice)} – ${formatProductPrice(maxPrice)}`
-                          : (item.pricing?.salePrice || item.pricing?.minPrice ? formatProductPrice(item.pricing.salePrice || item.pricing.minPrice) : '');
-                        const imgUrl = item.image || (Array.isArray(item.images) && item.images[0]) || '';
-                        return (
-                          <Link
-                            key={item._id}
-                            to={productHref}
-                            onClick={() => {
-                              setShowSearchDropdown(false);
-                              setSearchQuery('');
-                              setMobileMenuOpen(false);
-                            }}
-                            className="w-24 shrink-0 flex flex-col text-left group"
-                          >
-                            <div className="w-24 h-24 rounded-xl bg-[#f8f6f0] border border-stone-100 flex items-center justify-center p-1.5 overflow-hidden">
-                              {imgUrl ? (
-                                <img
-                                  src={imgUrl}
-                                  alt={title}
-                                  className="w-full h-full object-contain mix-blend-multiply"
-                                />
-                              ) : (
-                                <IoDiamondOutline className="w-5 h-5 text-[#8b6f4e]/40" />
-                              )}
-                            </div>
-                            <p className="text-[10px] font-semibold text-stone-800 truncate mt-1" title={title}>{title}</p>
-                            <p className="text-[10px] font-bold text-[#8b6f4e]">{priceText}</p>
-                          </Link>
-                        );
-                      })}
+                      {displayedProducts.map((item) => (
+                        <SearchProductCard
+                          key={item._id}
+                          item={item}
+                          variant="mobile-drawer"
+                          onSelect={() => {
+                            setShowSearchDropdown(false);
+                            setSearchQuery('');
+                            setMobileMenuOpen(false);
+                          }}
+                        />
+                      ))}
                     </div>
                     <button
                       type="button"

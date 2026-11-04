@@ -1,33 +1,67 @@
 /**
  * Neirah Jewelry Sizing Engine Utility
  * 
- * Category Sizing Rules & Steps:
- * - Rings: Base Size = 7.0 (US), Step = 1.0 -> ±2.5% per step
- * - Bangles: Base Size = 2.4, Step = 0.2 -> ±4.0% per step
- * - Bracelets: Base Size = 7.0 Inch, Step = 0.5 Inch -> ±3.0% per step
- * - Necklaces: Base Size = 16.0 Inch, Step = 2.0 Inch -> ±10.0% per step
+ * Dynamic database-driven sizing engine:
+ * Reads sizingConfig directly from the category record in the database:
+ * - isScalable: Whether this category scales metal weight with size (true for Rings, Bangles, Bracelets, Chains; false for Earrings, Pendants, etc.)
+ * - sizeLabel: Storefront label (e.g. "Size (US)", "Bangle Size", "Chain Length (Inch)")
+ * - baseSize: Baseline size measured by the CAD designer (e.g. 7.0 for Rings, 2.4 for Bangles, 16.0 for Necklaces)
+ * - stepSize: Size increment per jump (e.g. 1.0 for Rings, 0.2 for Bangles, 2.0 for Necklaces)
+ * - percentPerStep: Weight change percentage per step (e.g. 2.5% for Rings, 4.0% for Bangles, 10.0% for Necklaces)
  */
+
+/**
+ * Extracts sizingConfig directly from a category, array of categories, or product record
+ */
+export const extractSizingConfig = (category) => {
+  if (!category) return null;
+
+  // If a full product object was passed
+  if (category.categoryIds || category.category) {
+    const fromIds = extractSizingConfig(category.categoryIds);
+    if (fromIds) return fromIds;
+    return extractSizingConfig(category.category);
+  }
+
+  // If an array of categories was passed
+  if (Array.isArray(category)) {
+    for (const item of category) {
+      if (item && typeof item === 'object' && item.sizingConfig) {
+        return item.sizingConfig;
+      }
+    }
+    return null;
+  }
+
+  // If single category object was passed
+  if (typeof category === 'object' && category?.sizingConfig) {
+    return category.sizingConfig;
+  }
+
+  return null;
+};
 
 /**
  * Checks if a given category object or string represents a Ring
  */
 export const isRingCategory = (category) => {
-  if (!category) return false;
-  if (Array.isArray(category)) {
-    return category.some((c) => {
-      const name = (c?.name || c?.title || c || '').toString().toLowerCase();
-      return name.includes('ring') && !name.includes('earring');
-    });
+  const config = extractSizingConfig(category);
+  if (config?.sizeLabel) {
+    return config.sizeLabel.toLowerCase().includes('us') || config.sizeLabel.toLowerCase().includes('ring');
   }
-  const name = (category?.name || category?.title || category || '').toString().toLowerCase();
+  const name = (typeof category === 'object' ? (category?.name || '') : String(category || '')).toLowerCase();
   return name.includes('ring') && !name.includes('earring');
 };
 
 /**
- * Returns dynamic size label based on category (e.g. "Size (US)" for rings, "Size" otherwise)
+ * Returns dynamic size label based on category database configuration (e.g. "Size (US)", "Bangle Size", "Chain Length (Inch)")
  */
 export const getCategorySizeLabel = (category) => {
-  return isRingCategory(category) ? 'Size (US)' : 'Size';
+  const sizingConfig = extractSizingConfig(category);
+  if (sizingConfig?.sizeLabel) {
+    return sizingConfig.sizeLabel;
+  }
+  return 'Size';
 };
 
 /**
@@ -46,39 +80,21 @@ export const sortSizesNumerically = (sizes = []) => {
 };
 
 /**
- * Calculates size-adjusted metal weight for jewelry products
+ * Calculates size-adjusted metal weight for jewelry products directly from database sizingConfig
  */
 export const calculateSizeAdjustedMetalWeight = ({
   baseMetalWeight = 0,
   selectedSize = '',
   sizeList = [],
   category = null,
-  subType = null,
 }) => {
   const baseWeightNum = Number(baseMetalWeight);
   if (!baseWeightNum || baseWeightNum <= 0) return baseWeightNum || 0;
 
-  // Category matching helper
-  const checkCategory = (keyword) => {
-    if (Array.isArray(category)) {
-      return category.some((cat) => {
-        const name = (cat?.name || cat?.title || cat || '').toString().toLowerCase();
-        if (keyword === 'ring') return name.includes('ring') && !name.includes('earring');
-        return name.includes(keyword);
-      });
-    }
-    const name = (category?.name || category?.title || category || '').toString().toLowerCase();
-    if (keyword === 'ring') return name.includes('ring') && !name.includes('earring');
-    return name.includes(keyword);
-  };
+  const sizingConfig = extractSizingConfig(category);
 
-  const isRing = checkCategory('ring');
-  const isBangle = checkCategory('bangle');
-  const isBracelet = !isBangle && checkCategory('bracelet');
-  const isNecklace = checkCategory('necklace') || checkCategory('pendant');
-
-  // If category is not size-scalable (e.g. earrings, brooches), return base weight
-  if (!isRing && !isBracelet && !isNecklace && !isBangle) {
+  // Directly fetch from DB sizingConfig: If not scalable in DB, metal weight is static
+  if (!sizingConfig || !sizingConfig.isScalable) {
     return baseWeightNum;
   }
 
@@ -103,27 +119,10 @@ export const calculateSizeAdjustedMetalWeight = ({
 
   if (isNaN(numericSize)) return baseWeightNum;
 
-  let baseSize = 7.0;
-  let stepSize = 1.0;
-  let percentPerStep = 0.025; // 2.5% for Rings
-
-  if (isBangle) {
-    baseSize = 2.4;
-    stepSize = 0.2;
-    percentPerStep = 0.04; // 4.0% per 0.2 step
-  } else if (isNecklace) {
-    baseSize = 16.0;
-    stepSize = 2.0;
-    percentPerStep = 0.10; // 10.0% per 2 Inch step
-  } else if (isBracelet) {
-    baseSize = 7.0;
-    stepSize = 0.5;
-    percentPerStep = 0.03; // 3.0% per 0.5 Inch step
-  } else if (isRing) {
-    baseSize = 7.0;
-    stepSize = 1.0;
-    percentPerStep = 0.025; // 2.5% per 1.0 US size step
-  }
+  // Direct parameters from Database sizingConfig
+  const baseSize = Number(sizingConfig.baseSize ?? 7.0);
+  const stepSize = Number(sizingConfig.stepSize ?? 1.0) || 1.0;
+  const percentPerStep = Number(sizingConfig.percentPerStep ?? 2.5) / 100;
 
   const steps = (numericSize - baseSize) / stepSize;
   const weightMultiplier = 1 + steps * percentPerStep;
@@ -131,4 +130,3 @@ export const calculateSizeAdjustedMetalWeight = ({
 
   return Math.max(0, Math.round(adjustedWeight * 1000) / 1000);
 };
-

@@ -13,12 +13,8 @@ export const authAPI = {
 
 // ─── Users ────────────────────────────────────────
 export const usersAPI = {
-  getAll: (params) => getOnce('/users', { params }),
   getById: (id) => getOnce(`/users/${id}`),
-  create: (data) => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
-  delete: (id) => api.delete(`/users/${id}`),
-  toggleStatus: (id) => api.patch(`/users/${id}/toggle-status`),
   getMe: () => getOnce('/users/me'),
   updateMe: (data) => api.put('/users/me', data),
 };
@@ -26,28 +22,6 @@ export const usersAPI = {
 // ─── Appointments ─────────────────────────────────
 export const appointmentsAPI = {
   create: (data) => api.post('/appointments', data),
-  getAll: (params) => getOnce('/appointments', { params }),
-  getById: (id) => getOnce(`/appointments/${id}`),
-};
-
-// ─── Notifications ────────────────────────────────
-export const notificationsAPI = {
-  getAll: (params) => getOnce('/notifications', { params }),
-  getUnreadCount: () => getOnce('/notifications/unread-count'),
-  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
-  markAllAsRead: () => api.patch('/notifications/read-all'),
-  delete: (id) => api.delete(`/notifications/${id}`),
-};
-
-// ─── Upload ───────────────────────────────────────
-export const uploadAPI = {
-  single: (formData, folder) => api.post(`/upload/single?folder=${folder}`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-  multiple: (formData, folder) => api.post(`/upload/multiple?folder=${folder}`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  }),
-  delete: (filepath) => api.delete('/upload', { data: { filepath } }),
 };
 
 // ─── Banners ──────────────────────────────────────
@@ -123,12 +97,12 @@ export const addressesAPI = {
 
 // ─── Checkout ──────────────────────────────────────
 export const checkoutAPI = {
-  validateCoupon: (code, cartAmount) => api.post('/coupons/validate', { code, cartAmount }),
+  validateCoupon: (code, cartAmount) => couponsAPI.validate(code, cartAmount),
   calculateCodFee: (amount) => getOnce('/cod-sequences/calculate', { params: { amount } }),
-  getAddresses: () => api.get('/addresses'),
-  getPaymentConfig: () => getOnce('/payments/config'),
-  createOrder: (orderData) => api.post('/orders', orderData),
-  verifyRazorpay: (data) => api.post('/payments/razorpay/verify', data),
+  getAddresses: () => addressesAPI.getAll(),
+  getPaymentConfig: () => paymentsAPI.getConfig(),
+  createOrder: (orderData) => ordersAPI.create(orderData),
+  verifyRazorpay: (data) => paymentsAPI.verifyRazorpay(data),
 };
 
 // ─── Orders ─────────────────────────────────────────
@@ -158,10 +132,10 @@ export const featuredAPI = {
 // ─── Products ─────────────────────────────────────
 export const productsAPI = {
   getAll: (params) => getOnce('/products/storefront', { params }),
-  getStorefront: (params) => getOnce('/products/storefront', { params }),
+  getStorefront: (params) => productsAPI.getAll(params),
   getSearchStorefront: (params) => api.get('/products/search/storefront', { params }),
   getHomeProducts: (params) => getOnce('/products/home', { params }),
-  getHomeStorefront: (params) => getOnce('/products/home', { params }),
+  getHomeStorefront: (params) => productsAPI.getHomeProducts(params),
   getById: (id) => getOnce(`/products/${id}`),
   getBySku: (code) => getOnce(`/products/sku/${encodeURIComponent(code)}`),
 };
