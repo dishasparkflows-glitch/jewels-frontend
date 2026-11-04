@@ -141,6 +141,10 @@ export function useProductCard(product, options = {}) {
     product?.representative?.pricing?.mrp ||
     data.originalPrice;
 
+  const minPrice = Number(product?.pricing?.minPrice || product?.representative?.pricing?.minPrice || data?.minPrice || 0);
+  const maxPrice = Number(product?.pricing?.maxPrice || product?.representative?.pricing?.maxPrice || data?.maxPrice || 0);
+  const hasRange = minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
+
   const isGold = product.productType === 'gold';
   const hasDiscount = !isGold && mrp && Number(mrp) > Number(salePrice);
   const discountPercent =
@@ -177,6 +181,9 @@ export function useProductCard(product, options = {}) {
     handleWishlist,
     salePrice,
     mrp,
+    minPrice,
+    maxPrice,
+    hasRange,
     isGold,
     hasDiscount,
     discountPercent,

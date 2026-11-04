@@ -118,6 +118,9 @@ export default function ProductCard({ product }) {
     handleWishlist,
     salePrice,
     mrp,
+    minPrice,
+    maxPrice,
+    hasRange,
     hasDiscount,
   } = useProductCard(product);
 
@@ -238,9 +241,13 @@ export default function ProductCard({ product }) {
 
         <div className="flex flex-wrap items-center justify-center gap-1.5 text-center">
           <p className="text-[11px] sm:text-[14px] text-gray-900 font-bold tracking-tight">
-            {formatProductPrice(salePrice) || "Price on request"}
+            {hasRange ? (
+              `${formatProductPrice(minPrice)} – ${formatProductPrice(maxPrice)}`
+            ) : (
+              formatProductPrice(salePrice) || "Price on request"
+            )}
           </p>
-          {hasDiscount && (
+          {!hasRange && hasDiscount && (
             <p className="text-[9px] sm:text-[11px] text-gray-400 line-through font-normal">
               {formatProductPrice(mrp)}
             </p>

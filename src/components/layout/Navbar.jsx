@@ -6,7 +6,7 @@ import { useWishlist } from '../../contexts/WishlistContext';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import MegaMenuNav from './MegaMenuNav';
 import { getOnce } from '../../api/axios';
-import { productsAPI, featuredAPI } from '../../api/services';
+import { productsAPI } from '../../api/services';
 import { formatProductPrice } from '../../utils/productCard';
 import { getImageUrl } from '../../utils/imageUrl';
 import {
@@ -25,21 +25,24 @@ import { IoDiamondOutline } from 'react-icons/io5';
 import VirtualAppointmentModal from '../common/VirtualAppointmentModal';
 import CartDrawer from '../store/CartDrawer';
 
-const TRENDING_SEARCHES = [
-  'Solitaire Rings',
-  'Diamond Earrings',
-  'Huggie Hoops',
-  '18K Yellow Gold',
-  'Lab Grown Diamonds',
-  'Daily Wear',
-];
-
 const Navbar = () => {
   const { user, logout } = useAuth();
   const { totalItems, cartDrawerOpen, setCartDrawerOpen } = useCart();
   const { wishlistCount } = useWishlist();
   const [categories, setCategories] = useState([]);
-  const [collections, setCollections] = useState([]);
+  const collections = useMemo(() => {
+    return (categories || [])
+      .filter(
+        (c) =>
+          String(c.type || '').toLowerCase() === 'collection' ||
+          /collection/i.test(c.name || c.title || '')
+      )
+      .map((item) => ({
+        id: item._id || item.id,
+        name: item.name || item.title || '',
+        query: item.name || item.title || '',
+      }));
+  }, [categories]);
   const [navigationError, setNavigationError] = useState(false);
   const [navigationRevision, setNavigationRevision] = useState(0);
   const { settings: storeSettings, theme: themeConfig, topAnnouncement: contextTopAnnouncement } = useStoreSettings();
@@ -106,31 +109,6 @@ const Navbar = () => {
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
-
-  useEffect(() => {
-    let active = true;
-    featuredAPI
-      .getLookup()
-      .then((res) => {
-        if (!active) return;
-        const items = res.data?.data || res.data || [];
-        if (Array.isArray(items)) {
-          setCollections(
-            items.map((item) => ({
-              id: item._id,
-              name: item.name,
-              query: item.name,
-            }))
-          );
-        }
-      })
-      .catch(() => {
-        if (active) setCollections([]);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const matchedCategories = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -420,10 +398,17 @@ const Navbar = () => {
                 type="text"
                 placeholder="Search jewellery, diamonds, rings..."
                 value={searchQuery}
-                onFocus={() => setShowSearchDropdown(true)}
+                onFocus={() => {
+                  if (searchQuery.trim().length >= 2) setShowSearchDropdown(true);
+                }}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  if (!showSearchDropdown) setShowSearchDropdown(true);
+                  const val = e.target.value;
+                  setSearchQuery(val);
+                  if (val.trim().length >= 2) {
+                    setShowSearchDropdown(true);
+                  } else {
+                    setShowSearchDropdown(false);
+                  }
                 }}
                 className="w-full bg-transparent px-2.5 text-xs sm:text-[13px] text-stone-900 placeholder:text-stone-400 font-normal focus:outline-none"
               />
@@ -433,6 +418,7 @@ const Navbar = () => {
                   type="button"
                   onClick={() => {
                     setSearchQuery('');
+                    setShowSearchDropdown(false);
                     searchInputRef.current?.focus();
                   }}
                   className="p-1 mr-1 text-stone-400 hover:text-stone-700 rounded-full hover:bg-stone-100 transition-colors cursor-pointer"
@@ -453,35 +439,10 @@ const Navbar = () => {
             </form>
 
             {/* Desktop Instant Search Dropdown (Matches Screenshot) */}
-            {showSearchDropdown && (
+            {showSearchDropdown && searchQuery.trim().length >= 2 && (
               <div className="absolute left-1/2 -translate-x-1/2 top-full mt-3 w-[780px] lg:w-[890px] xl:w-[980px] max-w-[calc(100vw-2rem)] bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-stone-200/90 p-5 z-50 text-left animate-fadeIn">
-                {/* Empty / Short query -> Trending Suggestions */}
-                {searchQuery.trim().length < 2 ? (
-                  <div className="py-2">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#8b6f4e] flex items-center gap-1.5">
-                        <span>✨</span> Trending Searches
-                      </span>
-                      <span className="text-[11px] text-stone-400">Popular fine jewellery</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {TRENDING_SEARCHES.map((item) => (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() => handleTrendingClick(item)}
-                          className="px-3.5 py-1.5 rounded-full text-xs font-medium text-stone-700 bg-[#f8f6f0] hover:bg-[#8b6f4e]/15 hover:text-[#8b6f4e] border border-stone-200 transition-all cursor-pointer flex items-center gap-1.5"
-                        >
-                          <HiOutlineSearch className="w-3 h-3 text-[#8b6f4e]" />
-                          <span>{item}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {/* Top Tab Bar: All (128) | Products (128) | Collections (4) | Categories (6) | View all -> */}
-                    <div className="flex items-center justify-between border-b border-stone-100 pb-3 mb-4">
+                {/* Top Tab Bar: All (128) | Products (128) | Collections (4) | Categories (6) | View all -> */}
+                <div className="flex items-center justify-between border-b border-stone-100 pb-3 mb-4">
                       <div className="flex items-center gap-5 sm:gap-7 text-xs sm:text-sm">
                         <button
                           type="button"
@@ -564,12 +525,18 @@ const Navbar = () => {
                       displayedProducts.length > 0 ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-3.5">
                           {displayedProducts.map((item) => {
+                            const title = item.basicInfo?.title || '';
                             const targetSlug =
                               item.basicInfo?.slug ||
                               item.slug ||
-                              (item.title ? item.title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
+                              (title ? title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
                             const productHref = `/product/${encodeURIComponent(targetSlug)}`;
-                            const price = item.pricing?.salePrice || item.pricing?.minPrice || 0;
+                            const minPrice = Number(item.pricing?.minPrice || 0);
+                            const maxPrice = Number(item.pricing?.maxPrice || 0);
+                            const hasRange = minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
+                            const priceText = hasRange
+                              ? `${formatProductPrice(minPrice)} – ${formatProductPrice(maxPrice)}`
+                              : (item.pricing?.salePrice || item.pricing?.minPrice ? formatProductPrice(item.pricing.salePrice || item.pricing.minPrice) : '');
                             const imgUrl = item.image || (Array.isArray(item.images) && item.images[0]) || '';
 
                             return (
@@ -587,7 +554,7 @@ const Navbar = () => {
                                   {imgUrl ? (
                                     <img
                                       src={imgUrl}
-                                      alt={item.title}
+                                      alt={title}
                                       className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
                                       loading="lazy"
                                     />
@@ -599,13 +566,13 @@ const Navbar = () => {
                                 </div>
 
                                 {/* Title */}
-                                <p className="text-xs font-semibold text-stone-800 line-clamp-2 mt-2 leading-tight group-hover:text-[#8b6f4e] transition-colors min-h-[2rem]">
-                                  {item.title}
+                                <p className="text-xs font-semibold text-stone-800 line-clamp-2 mt-2 leading-tight group-hover:text-[#8b6f4e] transition-colors min-h-[2rem]" title={title}>
+                                  {title}
                                 </p>
 
                                 {/* Price */}
                                 <p className="text-xs font-bold text-[#8b6f4e] mt-1">
-                                  {price > 0 ? formatProductPrice(price) : ''}
+                                  {priceText}
                                 </p>
                               </Link>
                             );
@@ -616,18 +583,6 @@ const Navbar = () => {
                           <p className="text-xs text-stone-500">
                             No products found matching &ldquo;<span className="text-stone-900 font-semibold">{searchQuery}</span>&rdquo;.
                           </p>
-                          <div className="mt-3 flex flex-wrap justify-center gap-1.5">
-                            {TRENDING_SEARCHES.map((t) => (
-                              <button
-                                key={t}
-                                type="button"
-                                onClick={() => handleTrendingClick(t)}
-                                className="px-3 py-1 rounded-full text-xs bg-[#f8f6f0] hover:bg-[#8b6f4e]/10 text-stone-700 hover:text-[#8b6f4e] border border-stone-200 transition-colors"
-                              >
-                                {t}
-                              </button>
-                            ))}
-                          </div>
                         </div>
                       )
                     ) : searchTab === 'collections' ? (
@@ -684,8 +639,6 @@ const Navbar = () => {
                         })}
                       </div>
                     )}
-                  </>
-                )}
               </div>
             )}
           </div>
@@ -887,12 +840,18 @@ const Navbar = () => {
               ) : displayedProducts.length > 0 ? (
                 <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-1">
                   {displayedProducts.map((item) => {
+                    const title = item.basicInfo?.title || '';
                     const targetSlug =
                       item.basicInfo?.slug ||
                       item.slug ||
-                      (item.title ? item.title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
+                      (title ? title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
                     const productHref = `/product/${encodeURIComponent(targetSlug)}`;
-                    const price = item.pricing?.salePrice || item.pricing?.minPrice || 0;
+                    const minPrice = Number(item.pricing?.minPrice || 0);
+                    const maxPrice = Number(item.pricing?.maxPrice || 0);
+                    const hasRange = minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
+                    const priceText = hasRange
+                      ? `${formatProductPrice(minPrice)} – ${formatProductPrice(maxPrice)}`
+                      : (item.pricing?.salePrice || item.pricing?.minPrice ? formatProductPrice(item.pricing.salePrice || item.pricing.minPrice) : '');
                     const imgUrl = item.image || (Array.isArray(item.images) && item.images[0]) || '';
                     return (
                       <Link
@@ -909,18 +868,18 @@ const Navbar = () => {
                           {imgUrl ? (
                             <img
                               src={imgUrl}
-                              alt={item.title}
+                              alt={title}
                               className="w-full h-full object-contain mix-blend-multiply"
                             />
                           ) : (
                             <IoDiamondOutline className="w-6 h-6 text-[#8b6f4e]/40" />
                           )}
                         </div>
-                        <p className="text-[11px] font-semibold text-stone-800 line-clamp-2 mt-1.5 leading-tight">
-                          {item.title}
+                        <p className="text-[11px] font-semibold text-stone-800 line-clamp-2 mt-1.5 leading-tight" title={title}>
+                          {title}
                         </p>
                         <p className="text-[11px] font-bold text-[#8b6f4e] mt-0.5">
-                          {price > 0 ? formatProductPrice(price) : ''}
+                          {priceText}
                         </p>
                       </Link>
                     );
@@ -979,12 +938,18 @@ const Navbar = () => {
                   <>
                     <div className="flex gap-2.5 overflow-x-auto scrollbar-none pb-2">
                       {displayedProducts.map((item) => {
+                        const title = item.basicInfo?.title || '';
                         const targetSlug =
                           item.basicInfo?.slug ||
                           item.slug ||
-                          (item.title ? item.title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
+                          (title ? title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
                         const productHref = `/product/${encodeURIComponent(targetSlug)}`;
-                        const price = item.pricing?.salePrice || item.pricing?.minPrice || 0;
+                        const minPrice = Number(item.pricing?.minPrice || 0);
+                        const maxPrice = Number(item.pricing?.maxPrice || 0);
+                        const hasRange = minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
+                        const priceText = hasRange
+                          ? `${formatProductPrice(minPrice)} – ${formatProductPrice(maxPrice)}`
+                          : (item.pricing?.salePrice || item.pricing?.minPrice ? formatProductPrice(item.pricing.salePrice || item.pricing.minPrice) : '');
                         const imgUrl = item.image || (Array.isArray(item.images) && item.images[0]) || '';
                         return (
                           <Link
@@ -1001,15 +966,15 @@ const Navbar = () => {
                               {imgUrl ? (
                                 <img
                                   src={imgUrl}
-                                  alt={item.title}
+                                  alt={title}
                                   className="w-full h-full object-contain mix-blend-multiply"
                                 />
                               ) : (
                                 <IoDiamondOutline className="w-5 h-5 text-[#8b6f4e]/40" />
                               )}
                             </div>
-                            <p className="text-[10px] font-semibold text-stone-800 truncate mt-1">{item.title}</p>
-                            <p className="text-[10px] font-bold text-[#8b6f4e]">{price > 0 ? formatProductPrice(price) : ''}</p>
+                            <p className="text-[10px] font-semibold text-stone-800 truncate mt-1" title={title}>{title}</p>
+                            <p className="text-[10px] font-bold text-[#8b6f4e]">{priceText}</p>
                           </Link>
                         );
                       })}

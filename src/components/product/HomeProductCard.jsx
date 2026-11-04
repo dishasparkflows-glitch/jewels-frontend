@@ -29,6 +29,9 @@ export default function HomeProductCard({ product, isSilver: isSilverProp }) {
     handleWishlist,
     salePrice,
     mrp,
+    minPrice,
+    maxPrice,
+    hasRange,
     hasDiscount,
   } = useProductCard(product, { isSilver: isSilverProp });
 
@@ -170,9 +173,13 @@ export default function HomeProductCard({ product, isSilver: isSilverProp }) {
 
         <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
           <p className="text-[11px] sm:text-[14px] text-gray-900 font-semibold">
-            {formatProductPrice(salePrice) || "Price on request"}
+            {hasRange ? (
+              `${formatProductPrice(minPrice)} – ${formatProductPrice(maxPrice)}`
+            ) : (
+              formatProductPrice(salePrice) || "Price on request"
+            )}
           </p>
-          {hasDiscount && (
+          {!hasRange && hasDiscount && (
             <p className="text-[9px] sm:text-[11px] text-gray-400 line-through font-normal">
               {formatProductPrice(mrp)}
             </p>

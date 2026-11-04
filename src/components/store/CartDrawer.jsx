@@ -57,15 +57,16 @@ export default function CartDrawer({ open, onClose }) {
         {/* ─── Cart Items List ────────────────────────────────────── */}
         {cart.length ? (
           <ul className="relative z-10 flex-1 divide-y divide-[#ebdcc8] overflow-y-auto px-6 luxury-scrollbar">
-            {cart.map((item) => {
+            {cart.map((item, index) => {
               const attrs = item.selectedAttributes || {};
-              const diamondType = attrs.diamondType || 'LAB GROWN DIAMOND';
-              const metalPurity = attrs.metalPurity || '';
-              const metalColor = attrs.metalColor || resolveMetalName(item.selectedMetal) || '';
+              const rawDiamondType = attrs.diamondType || 'LAB GROWN DIAMOND';
+              const diamondType = cleanAttribute(rawDiamondType) || 'LAB GROWN DIAMOND';
+              const metalPurity = cleanAttribute(attrs.metalPurity) || '';
+              const metalColor = cleanAttribute(attrs.metalColor) || resolveMetalName(item.selectedMetal) || '';
               const metalDisplay = [metalPurity, metalColor].filter(Boolean).join(' ') || resolveMetalName(item.selectedMetal);
-              const diamondShape = attrs.diamondShape || '';
-              const diamondColor = attrs.diamondColor || '';
-              const diamondClarity = attrs.diamondClarity || '';
+              const diamondShape = cleanAttribute(attrs.diamondShape) || '';
+              const diamondColor = cleanAttribute(attrs.diamondColor) || '';
+              const diamondClarity = cleanAttribute(attrs.diamondClarity) || '';
               const clarityDisplay = [diamondColor, diamondClarity].filter(Boolean).join(' ');
               const caratWeight = attrs.caratWeight != null ? attrs.caratWeight : null;
               const sizeDisplay = cleanAttribute(attrs.size || item.selectedSize);
@@ -83,8 +84,10 @@ export default function CartDrawer({ open, onClose }) {
               const targetIdentifier = item.slug || item.basicInfo?.slug || item.productId || item.id || (displayName ? displayName.toLowerCase().trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') : '');
               const productLink = `/product/${encodeURIComponent(targetIdentifier)}`;
 
+              const itemKey = `${item.id || item.productId || index}-${item.selectedMetal || ''}-${item.selectedSize || ''}`;
+
               return (
-                <li key={`${item.id}-${item.selectedMetal || ''}`} className="flex gap-4 py-5">
+                <li key={itemKey} className="flex gap-4 py-5">
                   {/* Clickable Image Link to PDP */}
                   <Link
                     to={productLink}

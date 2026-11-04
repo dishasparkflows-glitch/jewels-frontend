@@ -2,7 +2,7 @@ import api from '../../api/axios';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { HiOutlineAdjustments, HiOutlineX, HiOutlineTrash } from 'react-icons/hi';
+import { HiOutlineAdjustments, HiOutlineX, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi';
 import ProductCard from '../../components/product/ProductCard';
 import FilterSidebar from '../../components/product/FilterSidebar';
 import Dropdown from '../../components/common/Dropdown';
@@ -47,6 +47,33 @@ export default function Shop({ defaultCategory = '' }) {
   const selectedStockStatus = params.get('stockStatus') || '';
   const sort = params.get('sort') || 'newest';
   const page = Math.max(1, Number(params.get('page')) || 1);
+  const limit = Math.max(1, Number(params.get('limit')) || 12);
+
+  const goToPage = (newPage) => {
+    if (newPage < 1 || (pagination.totalPages && newPage > pagination.totalPages)) return;
+    const next = new URLSearchParams(params);
+    if (newPage <= 1) {
+      next.delete('page');
+    } else {
+      next.set('page', String(newPage));
+    }
+    setParams(next);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const getPageNumbers = (current, total) => {
+    if (!total || total <= 1) return [1];
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    if (current <= 4) {
+      return [1, 2, 3, 4, 5, '...', total];
+    }
+    if (current >= total - 3) {
+      return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+    }
+    return [1, '...', current - 1, current, current + 1, '...', total];
+  };
 
   // 1. Fetch Categories for navigation
   useEffect(() => {
@@ -124,7 +151,7 @@ export default function Shop({ defaultCategory = '' }) {
     const query = {
       status: 'approved',
       page,
-      limit: 24,
+      limit,
       sort,
       includeFacets: true,
       includeGroups: true,
@@ -171,6 +198,7 @@ export default function Shop({ defaultCategory = '' }) {
     maxPrice,
     sort,
     page,
+    limit,
     retry,
     shopFor,
     selectedDiamondType,
@@ -385,7 +413,7 @@ export default function Shop({ defaultCategory = '' }) {
                 </button>
               </div>
             ) : sortedDisplayedProducts.length ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-x-2 sm:gap-x-4 gap-y-3 sm:gap-y-8">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-2 sm:gap-x-4 gap-y-3 sm:gap-y-8">
                 {sortedDisplayedProducts.map((product) => (
                   <ProductCard key={product._id || product.id} product={product} />
                 ))}
@@ -406,25 +434,109 @@ export default function Shop({ defaultCategory = '' }) {
             )}
 
             {/* Pagination Controls */}
-            {!loading && !error && pagination.totalPages > 1 && (
-              <nav aria-label="Product pages" className="mt-12 flex items-center justify-center gap-5 text-sm">
-                <button
-                  disabled={page <= 1}
-                  onClick={() => setParams({ ...Object.fromEntries(params), page: String(page - 1) })}
-                  className="rounded border border-stone-200 px-4 py-2 hover:bg-stone-50 disabled:opacity-40 cursor-pointer"
-                >
-                  Previous
-                </button>
-                <span className="text-stone-600">
-                  Page {page} of {pagination.totalPages}
-                </span>
-                <button
-                  disabled={page >= pagination.totalPages}
-                  onClick={() => setParams({ ...Object.fromEntries(params), page: String(page + 1) })}
-                  className="rounded border border-stone-200 px-4 py-2 hover:bg-stone-50 disabled:opacity-40 cursor-pointer"
-                >
-                  Next
-                </button>
+            {!loading && !error && pagination.totalDocs > 0 && (
+              <nav
+                aria-label="Product pagination"
+                className="mt-12 sm:mt-16 pt-8 border-t border-stone-200/80 flex flex-col sm:flex-row items-center justify-between gap-4"
+              >
+                {/* Product count summary */}
+                <div className="text-xs sm:text-sm text-stone-500 font-medium order-2 sm:order-1">
+                  Showing{' '}
+                  <span className="font-semibold text-stone-800">
+                    {Math.min((page - 1) * limit + 1, pagination.totalDocs)}
+                  </span>
+                  {' '}–{' '}
+                  <span className="font-semibold text-stone-800">
+                    {Math.min(page * limit, pagination.totalDocs)}
+                  </span>
+                  {' '}of{' '}
+                  <span className="font-semibold text-stone-800">
+                    {pagination.totalDocs}
+                  </span>
+                  {' '}{pagination.totalDocs === 1 ? 'product' : 'products'}
+                </div>
+
+                {/* Page Buttons */}
+                <div className="flex items-center gap-1 sm:gap-1.5 order-1 sm:order-2">
+                  {/* Previous Page Button */}
+                  <button
+                    type="button"
+                    disabled={page <= 1}
+                    onClick={() => goToPage(page - 1)}
+                    className="inline-flex items-center gap-1 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
+                    aria-label="Previous page"
+                  >
+                    <HiOutlineChevronLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">Previous</span>
+                  </button>
+
+                  {/* Numbered Page Buttons */}
+                  {getPageNumbers(page, pagination.totalPages).map((pageNum, idx) => {
+                    if (pageNum === '...') {
+                      return (
+                        <span
+                          key={`ellipsis-${idx}`}
+                          className="px-2 py-1 text-xs sm:text-sm text-stone-400 select-none"
+                        >
+                          …
+                        </span>
+                      );
+                    }
+                    const isActive = pageNum === page;
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => goToPage(pageNum)}
+                        aria-current={isActive ? 'page' : undefined}
+                        className={`min-w-[36px] h-9 px-3 flex items-center justify-center text-xs sm:text-sm font-medium rounded-lg transition-all duration-150 cursor-pointer ${
+                          isActive
+                            ? 'bg-[#8b6f4e] text-white border border-[#8b6f4e] shadow-xs font-semibold'
+                            : 'bg-white text-stone-700 border border-stone-200 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e]'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+
+                  {/* Next Page Button */}
+                  <button
+                    type="button"
+                    disabled={page >= pagination.totalPages}
+                    onClick={() => goToPage(page + 1)}
+                    className="inline-flex items-center gap-1 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
+                    aria-label="Next page"
+                  >
+                    <span className="hidden sm:inline">Next</span>
+                    <HiOutlineChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Per Page Quick Selector */}
+                <div className="flex items-center gap-1.5 text-xs text-stone-500 font-medium order-3">
+                  <span className="hidden md:inline">Items:</span>
+                  {[9, 12, 24].map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => {
+                        const next = new URLSearchParams(params);
+                        next.delete('page');
+                        next.set('limit', String(size));
+                        setParams(next);
+                      }}
+                      className={`px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+                        limit === size
+                          ? 'bg-[#8b6f4e] text-white font-semibold shadow-2xs'
+                          : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                      }`}
+                      title={`Show ${size} items per page`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
               </nav>
             )}
           </section>

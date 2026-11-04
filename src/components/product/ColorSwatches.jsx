@@ -1,4 +1,5 @@
 /* eslint-disable react/prop-types */
+import { getMetallicColorStyle } from '../../utils/productCard';
 
 /**
  * Reusable color swatch buttons for product cards and details.
@@ -20,9 +21,11 @@ export default function ColorSwatches({
         const isSelected = Boolean(
           activeColorName && entry.name?.toLowerCase() === activeColorName.toLowerCase()
         );
-        const bg = entry.colorCodeEnd
-          ? `linear-gradient(135deg, ${entry.hex || entry.colorCode}, ${entry.colorCodeEnd})`
-          : entry.hex || entry.colorCode || '#ccc';
+        const metallic = getMetallicColorStyle(
+          entry.name,
+          entry.hex || entry.colorCode,
+          entry.colorCodeEnd
+        );
 
         return (
           <button
@@ -36,11 +39,26 @@ export default function ColorSwatches({
               e.stopPropagation();
               onSelectColor?.(entry.name);
             }}
-            className={`${sizeClass} rounded-full border transition-all cursor-pointer ${
-              isSelected ? 'ring-1 ring-black scale-110' : 'border-gray-200'
+            className={`${sizeClass} rounded-full transition-all cursor-pointer relative overflow-hidden ${
+              isSelected
+                ? 'ring-2 ring-black ring-offset-1 ring-offset-white scale-110 shadow-sm z-10'
+                : 'hover:scale-110 opacity-95 hover:opacity-100'
             }`}
-            style={{ background: bg }}
-          />
+            style={{
+              background: metallic.background,
+              boxShadow: metallic.boxShadow,
+              border: metallic.border,
+            }}
+          >
+            <span
+              className="absolute inset-0 rounded-full pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(circle at 32% 24%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.2) 28%, rgba(255,255,255,0) 55%)',
+              }}
+              aria-hidden="true"
+            />
+          </button>
         );
       })}
       {colors.length > maxVisible && (

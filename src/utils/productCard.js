@@ -7,6 +7,56 @@ const colorHex = { 'white gold': '#dedede', 'rose gold': '#c88c88', 'yellow gold
 const imageOnly = (image) => image?.mediaType !== 'video' && !/\.(mp4|webm|mov)(?:[?#]|$)/i.test(typeof image === 'string' ? image : image?.url || '') && !isOrnateImage(image);
 const validHex = (value) => /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value || '');
 
+export function getMetallicColorStyle(colorName = '', colorCode = '', colorCodeEnd = '') {
+  const norm = String(colorName || '').toLowerCase().trim();
+
+  if (norm.includes('white') || norm.includes('platinum')) {
+    return {
+      background: 'linear-gradient(135deg, #E2E8F0 0%, #FFFFFF 45%, #FFFFFF 55%, #E2E8F0 100%)',
+      boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 1px 2px rgba(0, 0, 0, 0.05)',
+      border: '1px solid rgba(0, 0, 0, 0.05)',
+      color: '#1f2937',
+    };
+  }
+
+  if (norm.includes('silver') || norm.includes('ss')) {
+    return {
+      background: 'linear-gradient(135deg, #CBD5E1 0%, #FFFFFF 45%, #FFFFFF 55%, #CBD5E1 100%)',
+      boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 1px 2px rgba(0, 0, 0, 0.05)',
+      border: '1px solid rgba(0, 0, 0, 0.05)',
+      color: '#1f2937',
+    };
+  }
+
+  if (norm.includes('rose') || norm.includes('pink')) {
+    return {
+      background: 'linear-gradient(135deg, #C98A7D 0%, #F5D6CE 45%, #F5D6CE 55%, #C98A7D 100%)',
+      boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 1px 2px rgba(0, 0, 0, 0.05)',
+      border: '1px solid rgba(0, 0, 0, 0.05)',
+      color: '#1f2937',
+    };
+  }
+
+  if (norm.includes('yellow') || norm.includes('gold')) {
+    return {
+      background: 'linear-gradient(135deg, #B38B34 0%, #F9E498 45%, #F9E498 55%, #B38B34 100%)',
+      boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 1px 2px rgba(0, 0, 0, 0.05)',
+      border: '1px solid rgba(0, 0, 0, 0.05)',
+      color: '#1f2937',
+    };
+  }
+
+  // Fallback for custom or DB hex colors using 4-stop metallic shine
+  const start = colorCode || '#FFFFFF';
+  const end = colorCodeEnd || '#CBD5E1';
+  return {
+    background: `linear-gradient(135deg, ${end} 0%, ${start} 45%, ${start} 55%, ${end} 100%)`,
+    boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 1px 2px rgba(0, 0, 0, 0.05)',
+    border: '1px solid rgba(0, 0, 0, 0.05)',
+    color: '#1f2937',
+  };
+}
+
 export function getProductCardData(product) {
   // If product already provides images (from lightweight storefront API)
   const apiImages = (Array.isArray(product.images) && product.images.length > 0)
@@ -164,6 +214,8 @@ export function getProductCardData(product) {
     prodPricing.cataloguePrice
   );
 
+  const minPrice = Number(prodPricing.minPrice || repPricing.minPrice || 0);
+  const maxPrice = Number(prodPricing.maxPrice || repPricing.maxPrice || 0);
   const originalPrice = !isGold && mrp && Number(mrp) > Number(price) ? mrp : null;
   const name = product?.basicInfo?.title || rep.basicInfo?.title || 'Untitled product';
   const rawSlug = product?.basicInfo?.slug || rep.basicInfo?.slug;
@@ -183,6 +235,8 @@ export function getProductCardData(product) {
     originalPrice,
     salePrice,
     mrp,
+    minPrice,
+    maxPrice,
     productType: productType || (isSilver ? 'silver' : ''),
     isSilver,
   };

@@ -18,6 +18,7 @@ import {
   HiOutlineDuplicate,
   HiOutlineRefresh,
   HiOutlineDocumentText,
+  HiOutlineStar,
 } from 'react-icons/hi';
 import {
   FaWhatsapp,
@@ -43,6 +44,8 @@ import {
   sortSizesNumerically,
   getCategorySizeLabel,
 } from '../../utils/sizePriceCalculator';
+import { getMetallicColorStyle } from '../../utils/productCard';
+import { isRawObjectId, cleanAttribute } from '../../utils/metalColors';
 
 const referenceName = (value) => (value && typeof value === 'object' ? value.name || '' : (typeof value === 'string' ? value : ''));
 
@@ -1373,17 +1376,42 @@ export default function ProductDetail() {
     );
     const resolvedSizeName = selectedSizeObj ? selectedSizeObj.name : (selectedSize || '');
 
+    const resolvedDiamondTypeName =
+      (selectedVariant?.diamondTypeId && typeof selectedVariant.diamondTypeId === 'object' && selectedVariant.diamondTypeId.name) ||
+      (selectedVariant?.diamondType && typeof selectedVariant.diamondType === 'object' && selectedVariant.diamondType.name) ||
+      (product.representative?.diamondType && !isRawObjectId(product.representative?.diamondType) ? product.representative?.diamondType : null) ||
+      'Lab Grown Diamond';
+
+    const resolvedShapeName =
+      (selectedVariant?.diamondShapeId && typeof selectedVariant.diamondShapeId === 'object' && selectedVariant.diamondShapeId.name) ||
+      (selectedVariant?.diamondShape && typeof selectedVariant.diamondShape === 'object' && selectedVariant.diamondShape.name) ||
+      '';
+
+    const resolvedClarityName = selectedQuality ||
+      (selectedVariant?.diamondClarityId && typeof selectedVariant.diamondClarityId === 'object' && selectedVariant.diamondClarityId.name) ||
+      '';
+
+    const resolvedColorName =
+      (selectedVariant?.diamondColorId && typeof selectedVariant.diamondColorId === 'object' && selectedVariant.diamondColorId.name) ||
+      '';
+
     let selectedAttributes = null;
     if (isGold) {
       const attrs = {
-        metalPurity: selectedVariant?.metalPurityId?._id || selectedVariant?.metalPurityId || product.metalPurityIds?.[0]?._id || product.metalPurityIds?.[0] || null,
-        metalColor: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId?.id || selectedVariant?.metalColorId || product.metalColors?.[0]?.id || product.metalColors?.[0]?._id || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null,
-        diamondType: selectedVariant?.diamondTypeId?._id || selectedVariant?.diamondTypeId || null,
-        diamondShape: selectedVariant?.diamondShapeId?._id || selectedVariant?.diamondShapeId || null,
-        diamondClarity: selectedVariant?.diamondClarityId?._id || selectedVariant?.diamondClarityId || null,
-        diamondColor: selectedVariant?.diamondColorId?._id || selectedVariant?.diamondColorId || null,
+        metalPurity: selectedPurity || '9KT Gold',
+        metalColor: selectedColor || 'Rose Gold',
+        diamondType: resolvedDiamondTypeName,
+        diamondShape: cleanAttribute(resolvedShapeName),
+        diamondClarity: cleanAttribute(resolvedClarityName),
+        diamondColor: cleanAttribute(resolvedColorName),
         caratWeight: Number(selectedVariant?.caratWeight || selectedCarat || 0) || null,
         size: resolvedSizeName || null,
+        metalPurityId: selectedVariant?.metalPurityId?._id || (isRawObjectId(selectedVariant?.metalPurityId) ? selectedVariant.metalPurityId : null) || product.metalPurityIds?.[0]?._id || (isRawObjectId(product.metalPurityIds?.[0]) ? product.metalPurityIds[0] : null) || null,
+        metalColorId: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId?.id || (isRawObjectId(selectedVariant?.metalColorId) ? selectedVariant.metalColorId : null) || product.metalColors?.[0]?.id || product.metalColors?.[0]?._id || product.metalColorIds?.[0]?._id || (isRawObjectId(product.metalColorIds?.[0]) ? product.metalColorIds[0] : null) || null,
+        diamondTypeId: selectedVariant?.diamondTypeId?._id || (isRawObjectId(selectedVariant?.diamondTypeId) ? selectedVariant.diamondTypeId : null) || null,
+        diamondShapeId: selectedVariant?.diamondShapeId?._id || (isRawObjectId(selectedVariant?.diamondShapeId) ? selectedVariant.diamondShapeId : null) || null,
+        diamondClarityId: selectedVariant?.diamondClarityId?._id || (isRawObjectId(selectedVariant?.diamondClarityId) ? selectedVariant.diamondClarityId : null) || null,
+        diamondColorId: selectedVariant?.diamondColorId?._id || (isRawObjectId(selectedVariant?.diamondColorId) ? selectedVariant.diamondColorId : null) || null,
       };
       const validEntries = Object.entries(attrs).filter(([, val]) => val !== null && val !== undefined && val !== '');
       if (validEntries.length > 0) {
@@ -1946,49 +1974,49 @@ export default function ProductDetail() {
                     </div>
                   )}
 
-                  {/* 3. Metal Selector: Unified Purity + Color Swatches (Matches Neirah Screenshot) */}
+                  {/* 3. Metal Selector: Unified Purity + Color Swatches (Exact Guide Spec) */}
                   {metalSwatches.length > 0 && (
                     <div className="space-y-2">
                       <label className="block text-[11px] font-bold text-stone-700">
                         Metal: <span className="font-semibold text-stone-900">{metalDisplayName}</span>
                       </label>
 
-                      <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
-                        {purityGroups.map((group, gIdx) => (
-                          <div key={group.key} className="flex items-center gap-2">
-                            <div className="flex items-center gap-1.5 sm:gap-2">
-                              {group.swatches.map((swatch) => {
-                                const isSel = isSwatchSelected(swatch);
-                                const bg = swatch.colorCode && swatch.colorCodeEnd
-                                  ? `linear-gradient(135deg, ${swatch.colorCode} 0%, ${swatch.colorCodeEnd} 100%)`
-                                  : (swatch.colorCode || swatch.colorCodeEnd || '#f1f5f9');
+                      <div className="flex items-center gap-3 sm:gap-4 flex-wrap mb-2">
+                        {purityGroups.map((group) => (
+                          <div key={group.key} className="flex items-center gap-2 shrink-0">
+                            {group.swatches.map((swatch) => {
+                              const isSel = isSwatchSelected(swatch);
+                              const metallic = getMetallicColorStyle(swatch.color, swatch.colorCode, swatch.colorCodeEnd);
 
-                                return (
-                                  <button
-                                    key={swatch.id}
-                                    type="button"
-                                    onClick={() => handleSelectMetalSwatch(swatch)}
-                                    className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-[9px] sm:text-[10px] tracking-tight transition-all cursor-pointer shadow-2xs ${
-                                      isSel
-                                        ? 'ring-2 ring-stone-900 ring-offset-2 scale-105 z-10'
-                                        : 'hover:scale-105 active:scale-95 opacity-90 hover:opacity-100'
+                              return (
+                                <button
+                                  key={swatch.id}
+                                  type="button"
+                                  onClick={() => handleSelectMetalSwatch(swatch)}
+                                  className={`relative w-9 h-9 rounded-full transition-all duration-200 flex items-center justify-center cursor-pointer select-none ${
+                                    isSel
+                                      ? 'ring-2 ring-black ring-offset-2 ring-offset-white shadow-md scale-105 z-10'
+                                      : 'hover:scale-105 opacity-90 hover:opacity-100'
+                                  }`}
+                                  style={{
+                                    background: metallic.background,
+                                    boxShadow: isSel ? '0 4px 12px rgba(0, 0, 0, 0.2)' : metallic.boxShadow,
+                                    border: isSel ? '2px solid #000000' : (metallic.border || '1px solid rgba(0, 0, 0, 0.08)'),
+                                  }}
+                                  title={`${swatch.label} ${swatch.color}`}
+                                  aria-label={`${swatch.label} ${swatch.color}`}
+                                >
+                                  <span
+                                    className={`text-[10px] font-bold select-none drop-shadow-sm ${
+                                      isSel ? 'text-black' : 'text-gray-800'
                                     }`}
-                                    style={{
-                                      background: bg,
-                                      border: '1px solid rgba(0, 0, 0, 0.12)',
-                                      color: '#334155',
-                                    }}
-                                    title={`${swatch.label} ${swatch.color}`}
-                                    aria-label={`${swatch.label} ${swatch.color}`}
+                                    style={{ textShadow: '0 1px 1px rgba(255, 255, 255, 0.7)' }}
                                   >
                                     {swatch.label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            {gIdx < purityGroups.length - 1 && (
-                              <span className="w-px h-5 bg-stone-200 mx-0.5 shrink-0" aria-hidden="true" />
-                            )}
+                                  </span>
+                                </button>
+                              );
+                            })}
                           </div>
                         ))}
                       </div>
@@ -2046,7 +2074,7 @@ export default function ProductDetail() {
                           <div
                             className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full transition-all flex items-center justify-center p-0.5 relative ${
                               isSel
-                                ? 'ring-2 ring-stone-900 ring-offset-2 scale-105 shadow-sm'
+                                ? 'ring-2 ring-black ring-offset-2 ring-offset-white scale-105 shadow-md'
                                 : 'ring-1 ring-stone-200/90 hover:ring-stone-400 group-hover:scale-105 opacity-90 hover:opacity-100'
                             }`}
                           >
@@ -2062,9 +2090,21 @@ export default function ProductDetail() {
                                 />
                               ) : (
                                 <div
-                                  className="w-full h-full rounded-full"
-                                  style={{ background: bg }}
-                                />
+                                  className="w-full h-full rounded-full relative overflow-hidden"
+                                  style={{
+                                    background: getMetallicColorStyle(c.name, c.colorCode, c.colorCodeEnd).background,
+                                    boxShadow: getMetallicColorStyle(c.name, c.colorCode, c.colorCodeEnd).boxShadow,
+                                  }}
+                                >
+                                  <span
+                                    className="absolute inset-0 rounded-full pointer-events-none"
+                                    style={{
+                                      background:
+                                        'radial-gradient(circle at 32% 24%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.2) 28%, rgba(255,255,255,0) 55%)',
+                                    }}
+                                    aria-hidden="true"
+                                  />
+                                </div>
                               )}
                             </div>
                           </div>
@@ -2438,11 +2478,9 @@ export default function ProductDetail() {
                     </div>
 
                     {/* Variation in Weight Notice Card */}
-                    <div className="mt-4 p-3 rounded border border-stone-200 bg-stone-50 flex items-center gap-2.5">
-                      <svg className="w-3.5 h-3.5 text-stone-600 shrink-0 fill-none stroke-current" viewBox="0 0 24 24" strokeWidth="1.6">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-                      </svg>
-                      <p className="text-[11px] text-stone-700 leading-snug">
+                    <div className="mt-4 p-3.5 sm:p-4 rounded-xl border border-[#faedd3] bg-[#fffdf7] flex items-start gap-3">
+                      <HiOutlineStar className="w-4 h-4 text-[#8b6f4e] shrink-0 mt-0.5" />
+                      <p className="text-[13px] text-[#44382c] leading-relaxed font-normal">
                         The final invoice amount will be adjusted in case of variation in weight.
                       </p>
                     </div>
@@ -2703,7 +2741,7 @@ export default function ProductDetail() {
                           }}
                           className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-all cursor-pointer shadow-inner relative flex items-center justify-center overflow-hidden border border-black/10 bg-white ${
                             isSelected
-                              ? 'ring-2 ring-stone-900 ring-offset-1 scale-110'
+                              ? 'ring-2 ring-black ring-offset-1 ring-offset-white scale-110'
                               : 'hover:scale-105 opacity-80 hover:opacity-100'
                           }`}
                           style={c.variantIcon ? undefined : { background: c.gradient }}

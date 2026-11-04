@@ -151,8 +151,8 @@ export const paymentsAPI = {
 export const featuredAPI = {
   getAll: (params) => getOnce('/featured', { params }),
   getLookup: (params) => getOnce('/featured/lookup', { params }),
-  getCelebrate: () => getOnce('/featured/lookup?placement=Celebrate&status=active'),
-  getGifts: () => getOnce('/featured/lookup?placement=Gifts&status=active'),
+  getCelebrate: () => getOnce('/featured/lookup?type=Celebrate&status=active'),
+  getGifts: () => getOnce('/featured/lookup?type=Gifts&status=active'),
 };
 
 // ─── Products ─────────────────────────────────────

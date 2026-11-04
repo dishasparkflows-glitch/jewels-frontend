@@ -11,24 +11,57 @@ import { joinUserSocketRooms, onCartCountUpdate } from '../services/socket';
 /* eslint-disable react/prop-types, react-refresh/only-export-components */
 const CartContext = createContext(null);
 
+/**
+ * Deduplicates and consolidates cart items by product ID.
+ * Ensures the same product always increments quantity on a single card.
+ */
+const consolidateItems = (items) => {
+  if (!Array.isArray(items)) return [];
+  const map = new Map();
+  for (const item of items) {
+    const pId = String(item.productId || item.id || item._id || '');
+    if (!pId) continue;
+    if (map.has(pId)) {
+      const existing = map.get(pId);
+      const combinedQty = (Number(existing.quantity) || 0) + (Number(item.quantity) || 1);
+      const unitPrice = Number(item.price) || Number(existing.price) || 0;
+      map.set(pId, {
+        ...existing,
+        ...item,
+        quantity: combinedQty,
+        price: unitPrice,
+        totalItemPrice: unitPrice * combinedQty,
+        selectedMetal: item.selectedMetal || existing.selectedMetal,
+        selectedSize: item.selectedSize || existing.selectedSize,
+        selectedAttributes: item.selectedAttributes || existing.selectedAttributes,
+      });
+    } else {
+      map.set(pId, { ...item });
+    }
+  }
+  return Array.from(map.values());
+};
+
 export const CartProvider = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, token } = useAuth();
   const isFetchingCartRef = useRef(false);
   const isFetchingCountsRef = useRef(false);
+  const cartReqIdRef = useRef(0);
   const [cart, setCart] = useState(() => {
     try {
       const saved = localStorage.getItem('jewels_cart');
       if (!saved) return [];
       const parsed = JSON.parse(saved);
       if (!Array.isArray(parsed)) return [];
-      return parsed.map((item) => ({
+      const mapped = parsed.map((item) => ({
         ...item,
         category: (item.category && !/^[0-9a-fA-F]{24}$/.test(String(item.category).trim())) ? item.category : '',
         selectedMetal: resolveMetalName(item.selectedMetal),
         selectedSize: cleanAttribute(item.selectedSize),
       }));
+      return consolidateItems(mapped);
     } catch {
       return [];
     }
@@ -97,15 +130,16 @@ export const CartProvider = ({ children }) => {
             selectedAttributes: i.selectedAttributes || undefined,
           };
         });
-        setCart(formattedItems);
+        const consolidated = consolidateItems(formattedItems);
+        setCart(consolidated);
         setCartTotals({
-          totalItems: data.totalItems ?? formattedItems.length,
-          subtotal: data.subtotal ?? 0,
+          totalItems: data.totalItems ?? consolidated.length,
+          subtotal: data.subtotal ?? calculateTotals(consolidated).subtotal,
           shipping: data.shipping ?? 0,
           tax: data.tax ?? 0,
-          total: data.total ?? 0,
+          total: data.total ?? calculateTotals(consolidated).total,
         });
-        localStorage.setItem('jewels_cart', JSON.stringify(formattedItems));
+        localStorage.setItem('jewels_cart', JSON.stringify(consolidated));
       }
     } catch (err) {
       console.warn('Failed to load cart from API, using local fallback:', err);
@@ -199,19 +233,30 @@ export const CartProvider = ({ children }) => {
             .replace(/\s+/g, '-')
         : '');
 
+    // Increment request ID to track racing async requests
+    const reqId = ++cartReqIdRef.current;
+
     // 1. Optimistic local update
     setCart((prev) => {
       const existingIndex = prev.findIndex(
-        (item) => String(item.id) === productId && (item.selectedMetal || '') === selectedMetal
+        (item) => String(item.productId || item.id) === productId || String(item._id) === productId
       );
 
       let updated;
       if (existingIndex > -1) {
         updated = [...prev];
-        updated[existingIndex].quantity += parsedQty;
-        updated[existingIndex].totalItemPrice = (Number(updated[existingIndex].price) || price) * updated[existingIndex].quantity;
-        if (slug) updated[existingIndex].slug = slug;
-        if (selectedAttributes) updated[existingIndex].selectedAttributes = selectedAttributes;
+        const nextQty = (Number(updated[existingIndex].quantity) || 0) + parsedQty;
+        const currentUnitPrice = Number(price) || Number(updated[existingIndex].price) || 0;
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: nextQty,
+          price: currentUnitPrice,
+          totalItemPrice: currentUnitPrice * nextQty,
+          slug: slug || updated[existingIndex].slug,
+          selectedMetal: selectedMetal || updated[existingIndex].selectedMetal,
+          selectedSize: cleanAttribute(selectedSize) || updated[existingIndex].selectedSize,
+          selectedAttributes: selectedAttributes || updated[existingIndex].selectedAttributes,
+        };
       } else {
         updated = [
           ...prev,
@@ -225,18 +270,19 @@ export const CartProvider = ({ children }) => {
             totalItemPrice,
             originalPrice: product.originalPrice || null,
             image,
-            category: product.category || '',
+            category: (product.category && !/^[0-9a-fA-F]{24}$/.test(String(product.category).trim())) ? product.category : '',
             quantity: parsedQty,
             selectedMetal,
-            selectedSize,
+            selectedSize: cleanAttribute(selectedSize),
             selectedAttributes,
             addedAt,
           },
         ];
       }
-      localStorage.setItem('jewels_cart', JSON.stringify(updated));
-      setCartTotals(calculateTotals(updated));
-      return updated;
+      const consolidated = consolidateItems(updated);
+      localStorage.setItem('jewels_cart', JSON.stringify(consolidated));
+      setCartTotals(calculateTotals(consolidated));
+      return consolidated;
     });
 
     if (location.pathname !== '/cart' && location.pathname !== '/checkout') {
@@ -281,32 +327,51 @@ export const CartProvider = ({ children }) => {
       }
 
       const res = await cartAPI.add(payload);
+      // If a newer add/update request has already been initiated, ignore this stale response
+      if (reqId !== cartReqIdRef.current) {
+        return;
+      }
       const data = res?.data?.data || res?.data || {};
 
       if (Array.isArray(data.items)) {
-        const formattedItems = data.items.map((i) => ({
-          id: i.productId || i._id,
-          productId: i.productId,
-          _id: i._id,
-          name: i.title,
-          title: i.title,
-          price: i.price,
-          originalPrice: i.originalPrice,
-          image: i.image?.url || i.image || '',
-          category: i.category,
-          quantity: i.quantity,
-          selectedMetal: resolveMetalName(i.selectedMetal, i.productId),
-          selectedSize: cleanAttribute(i.selectedSize),
-        }));
-        setCart(formattedItems);
+        const formattedItems = data.items.map((i) => {
+          const itemSlug =
+            i.slug ||
+            i.basicInfo?.slug ||
+            (i.title
+              ? String(i.title)
+                  .toLowerCase()
+                  .trim()
+                  .replace(/[^\w\s-]/g, '')
+                  .replace(/\s+/g, '-')
+              : '');
+          return {
+            id: String(i.productId?._id || i.productId || i.id || i._id),
+            productId: String(i.productId?._id || i.productId || i.id || i._id),
+            _id: i._id,
+            slug: itemSlug,
+            name: i.title,
+            title: i.title,
+            price: i.price,
+            originalPrice: i.originalPrice,
+            image: i.image?.url || i.image || '',
+            category: (i.category && !/^[0-9a-fA-F]{24}$/.test(String(i.category).trim())) ? i.category : '',
+            quantity: i.quantity,
+            selectedMetal: resolveMetalName(i.selectedMetal, i.productId),
+            selectedSize: cleanAttribute(i.selectedSize),
+            selectedAttributes: i.selectedAttributes || selectedAttributes || undefined,
+          };
+        });
+        const consolidated = consolidateItems(formattedItems);
+        setCart(consolidated);
         setCartTotals({
-          totalItems: data.totalItems ?? formattedItems.length,
-          subtotal: data.subtotal ?? 0,
+          totalItems: data.totalItems ?? consolidated.length,
+          subtotal: data.subtotal ?? calculateTotals(consolidated).subtotal,
           shipping: data.shipping ?? 0,
           tax: data.tax ?? 0,
-          total: data.total ?? 0,
+          total: data.total ?? calculateTotals(consolidated).total,
         });
-        localStorage.setItem('jewels_cart', JSON.stringify(formattedItems));
+        localStorage.setItem('jewels_cart', JSON.stringify(consolidated));
       }
     } catch (err) {
       console.warn('Backend cart sync error:', err);

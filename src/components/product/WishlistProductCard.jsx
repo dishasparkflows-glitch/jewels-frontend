@@ -2,16 +2,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HiOutlineX } from 'react-icons/hi';
-import { useCart } from '../../contexts/CartContext';
-import { useAuth } from '../../contexts/AuthContext';
 import { productsAPI } from '../../api/services';
-import { getProductCardData, formatProductPrice } from '../../utils/productCard';
+import { getProductCardData, formatProductPrice, getMetallicColorStyle } from '../../utils/productCard';
 import { getImageUrl } from '../../utils/imageUrl';
 
 export default function WishlistProductCard({ item, onRemove }) {
-  const { addToCart } = useCart();
-  const { user } = useAuth();
-
   const [fullProduct, setFullProduct] = useState(null);
   const [selectedColorName, setSelectedColorName] = useState(null);
 
@@ -68,62 +63,6 @@ export default function WishlistProductCard({ item, onRemove }) {
 
   const price = cardData.price || activeProduct.pricing?.salePrice || activeProduct.pricing?.calculatedPrice || activeProduct.pricing?.mrp;
 
-  const [addingToCart, setAddingToCart] = useState(false);
-
-  const handleAddToCart = async (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    if (addingToCart) return;
-    setAddingToCart(true);
-
-    try {
-      const colorEntry = activeColor;
-      const metalColorId = colorEntry?.id || activeProduct.metalColorIds?.[0]?._id || activeProduct.metalColorIds?.[0] || null;
-
-      let selectedAttributes = activeProduct.selectedAttributes ? { ...activeProduct.selectedAttributes } : undefined;
-      if (metalColorId) {
-        selectedAttributes = {
-          ...(selectedAttributes || {}),
-          metalColor: metalColorId,
-        };
-      }
-
-      const itemPrice = Number(price) || 0;
-      const quantity = 1;
-      const totalItemPrice = itemPrice * quantity;
-      const addedAt = new Date().toISOString();
-
-      await addToCart(
-        {
-          id,
-          productId: id,
-          userId: user?._id || user?.id || null,
-          title: name,
-          price: itemPrice,
-          totalItemPrice,
-          addedAt,
-          quantity,
-          originalPrice: cardData.originalPrice,
-          image: displayImage,
-          category: activeProduct.category || activeProduct.categoryIds?.[0]?.name || '',
-          productType: activeProduct.productType || '',
-          selectedAttributes,
-          selectedMetal: activeColorName || colorEntry?.name || '',
-        },
-        1,
-        {
-          selectedMetal: activeColorName || colorEntry?.name || '',
-        }
-      );
-    } catch (err) {
-      console.error('Failed to add to cart from wishlist:', err);
-    } finally {
-      setAddingToCart(false);
-    }
-  };
-
   return (
     <article className="group min-w-0 flex flex-col justify-between text-center transition-all duration-300">
       {/* ─── Image Box (Warm subtle background matching reference) ─── */}
@@ -172,11 +111,11 @@ export default function WishlistProductCard({ item, onRemove }) {
               const isSelected = Boolean(
                 activeColorName && colorEntry.name?.toLowerCase() === activeColorName.toLowerCase()
               );
-              const bgGradient = colorEntry.colorCodeEnd
-                ? `linear-gradient(135deg, ${colorEntry.hex}, ${colorEntry.colorCodeEnd})`
-                : colorEntry.hex
-                  ? `linear-gradient(135deg, ${colorEntry.hex}, ${colorEntry.hex})`
-                  : undefined;
+              const metallic = getMetallicColorStyle(
+                colorEntry.name,
+                colorEntry.hex,
+                colorEntry.colorCodeEnd
+              );
 
               return (
                 <button
@@ -194,13 +133,26 @@ export default function WishlistProductCard({ item, onRemove }) {
                 >
                   {colorEntry.hex ? (
                     <span
-                      style={{ background: bgGradient || colorEntry.hex }}
-                      className={`block h-3 w-3 rounded-full border transition-all ${
+                      style={{
+                        background: metallic.background,
+                        boxShadow: metallic.boxShadow,
+                        border: metallic.border,
+                      }}
+                      className={`block h-3 w-3 rounded-full relative overflow-hidden transition-all ${
                         isSelected
-                          ? 'ring-1 ring-stone-900 ring-offset-1 scale-110 border-transparent'
-                          : 'border-stone-300/80 hover:border-stone-400'
+                          ? 'ring-1.5 ring-stone-900 ring-offset-1 scale-110'
+                          : 'opacity-95 hover:opacity-100'
                       }`}
-                    />
+                    >
+                      <span
+                        className="absolute inset-0 rounded-full pointer-events-none"
+                        style={{
+                          background:
+                            'radial-gradient(circle at 32% 24%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.2) 28%, rgba(255,255,255,0) 55%)',
+                        }}
+                        aria-hidden="true"
+                      />
+                    </span>
                   ) : (
                     <span className="rounded border px-1 text-[9px] border-stone-200">
                       {colorEntry.name}
@@ -219,6 +171,18 @@ export default function WishlistProductCard({ item, onRemove }) {
               Boolean(cardData.isSilver) ||
               String(activeProduct?.productType || activeProduct?.representative?.productType || '').toLowerCase() === 'silver' ||
               Boolean(activeProduct?.isOrnate || activeProduct?.representative?.isOrnate);
+
+            const minPrice = Number(activeProduct?.pricing?.minPrice || cardData?.minPrice || 0);
+            const maxPrice = Number(activeProduct?.pricing?.maxPrice || cardData?.maxPrice || 0);
+            const hasRange = minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
+
+            if (hasRange) {
+              return (
+                <span className="text-xs sm:text-[13px] font-bold text-stone-950">
+                  {formatProductPrice(minPrice)} – {formatProductPrice(maxPrice)}
+                </span>
+              );
+            }
 
             const salePrice =
               cardData.salePrice ||
@@ -262,22 +226,6 @@ export default function WishlistProductCard({ item, onRemove }) {
               </>
             );
           })()}
-        </div>
-
-        {/* ─── ADD TO CART Button ─── */}
-        <div className="mt-3.5 w-full">
-          <button
-            type="button"
-            disabled={addingToCart}
-            onClick={handleAddToCart}
-            className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-[11px] sm:text-xs font-semibold uppercase tracking-[0.16em] transition-all duration-300 shadow-2xs hover:shadow-sm active:scale-98 cursor-pointer disabled:opacity-60"
-          >
-            {addingToCart ? (
-              <span>ADDING…</span>
-            ) : (
-              <span>ADD TO CART</span>
-            )}
-          </button>
         </div>
       </div>
     </article>

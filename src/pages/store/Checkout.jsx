@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
+  HiOutlineArrowLeft,
   HiOutlineArrowRight,
   HiOutlineCheck,
   HiOutlineCreditCard,
@@ -21,7 +22,7 @@ import {
 } from 'react-icons/hi';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { checkoutAPI } from '../../api/services';
+import { checkoutAPI, addressesAPI } from '../../api/services';
 import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 import { trackBeginCheckout } from '../../config/firebase';
 import { resolveMetalName, cleanAttribute } from '../../utils/metalColors';
@@ -100,6 +101,7 @@ export default function Checkout() {
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('online');
   const [paymentProvider, setPaymentProvider] = useState('razorpay');
   const [couponCode, setCouponCode] = useState('');
@@ -141,7 +143,8 @@ export default function Checkout() {
   }, [user]);
 
   useEffect(() => {
-    if (!isAuthenticated) return undefined;
+    const hasAuth = isAuthenticated || Boolean(user) || Boolean(localStorage.getItem('token'));
+    if (!hasAuth) return undefined;
     let active = true;
     checkoutAPI.getAddresses()
       .then((response) => {
@@ -156,8 +159,8 @@ export default function Checkout() {
         const pAddr = preferred?.address || preferred || {};
         setForm((current) => ({
           ...current,
-          firstName: current.firstName || preferred?.firstName || preferred?.fullName?.split(/\s+/)[0] || '',
-          lastName: current.lastName || preferred?.lastName || preferred?.fullName?.split(/\s+/).slice(1).join(' ') || '',
+          firstName: current.firstName || preferred?.firstName || user?.profile?.firstName || '',
+          lastName: current.lastName || preferred?.lastName || user?.profile?.lastName || '',
           addressLine: current.addressLine || pAddr.addressLine || pAddr.street || '',
           apartment: current.apartment || pAddr.street || '',
           city: current.city || pAddr.city || '',
@@ -171,7 +174,47 @@ export default function Checkout() {
         // Guest checkout stays available if saved addresses are not accessible.
       });
     return () => { active = false; };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
+
+  const handleSaveNewAddress = async () => {
+    if (!form.addressLine || !form.city || !form.state || !form.postalCode) {
+      toast.error('Please enter complete address line, city, state and PIN code');
+      return;
+    }
+    setSavingAddress(true);
+    try {
+      const payload = {
+        address: {
+          type: 'home',
+          phone: form.phone || '',
+          addressLine: form.addressLine,
+          street: form.apartment || '',
+          city: form.city,
+          state: form.state,
+          pincode: form.postalCode,
+          country: form.country || 'India',
+        },
+        defaults: {
+          isDefault: addresses.length === 0,
+          isShippingDefault: addresses.length === 0,
+        },
+      };
+      await addressesAPI.create(payload);
+      const res = await addressesAPI.getAll();
+      const data = unwrapResponse(res);
+      const updated = Array.isArray(data) ? data : data?.items || [];
+      setAddresses(updated);
+      if (updated.length > 0) {
+        setSelectedAddressId(String(updated[0]._id));
+      }
+      setIsAddingNewAddress(false);
+      toast.success('Address saved to your address book!');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not save address');
+    } finally {
+      setSavingAddress(false);
+    }
+  };
 
   const discountAmount = Number(appliedCoupon?.discountAmount || 0);
   const finalTotal = Math.max(0, Number(total || subtotal + shipping + tax) - discountAmount);
@@ -431,7 +474,7 @@ export default function Checkout() {
         </p>
         <Link
           to="/shop"
-          className="mt-7 inline-flex h-12 items-center justify-center rounded-xl bg-stone-900 px-8 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#8c6536]"
+          className="mt-7 inline-flex h-12 items-center justify-center rounded-xl bg-[#8c6536] px-8 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#75522b]"
         >
           Continue shopping
         </Link>
@@ -532,15 +575,38 @@ export default function Checkout() {
                     <HiOutlineLocationMarker className="h-3.5 w-3.5 text-[#8c6536]" />
                     <span>Use Current Location</span>
                   </button>
-                  {addresses.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingNewAddress(!isAddingNewAddress)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-stone-900 bg-stone-900 text-xs font-semibold text-white hover:bg-stone-800 transition cursor-pointer"
-                    >
-                      {isAddingNewAddress ? 'Saved Addresses' : '+ Add New'}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isAddingNewAddress) {
+                        setIsAddingNewAddress(false);
+                        if (addresses.length > 0) {
+                          const sel = addresses.find((a) => String(a._id) === selectedAddressId) || addresses[0];
+                          if (sel) applySavedAddress(sel);
+                        }
+                      } else {
+                        setIsAddingNewAddress(true);
+                        setForm((prev) => ({
+                          ...prev,
+                          addressLine: '',
+                          apartment: '',
+                          city: '',
+                          state: '',
+                          postalCode: '',
+                        }));
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full border border-[#8c6536] bg-[#8c6536] hover:bg-[#75522b] text-xs font-semibold text-white transition cursor-pointer shadow-2xs"
+                  >
+                    {isAddingNewAddress && addresses.length > 0 ? (
+                      <>
+                        <HiOutlineHome className="h-3.5 w-3.5" />
+                        <span>Saved Addresses</span>
+                      </>
+                    ) : (
+                      <span>+ Add New</span>
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -680,6 +746,33 @@ export default function Checkout() {
                       className="rounded-xl border border-stone-200"
                     />
                   </div>
+
+                  {/* Actions when adding new address */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-stone-100">
+                    {addresses.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingNewAddress(false);
+                          const sel = addresses.find((a) => String(a._id) === selectedAddressId) || addresses[0];
+                          if (sel) applySavedAddress(sel);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 text-xs font-semibold tracking-wide transition shadow-2xs hover:border-stone-300 cursor-pointer"
+                      >
+                        <HiOutlineArrowLeft className="h-3.5 w-3.5 text-stone-500" />
+                        <span>Cancel & Use Saved Address</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSaveNewAddress}
+                      disabled={savingAddress}
+                      className="ml-auto inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#8c6536] hover:bg-[#75522b] text-white text-xs font-semibold tracking-wide transition shadow-sm cursor-pointer disabled:opacity-60"
+                    >
+                      <HiOutlineCheck className="h-3.5 w-3.5" />
+                      <span>{savingAddress ? 'Saving...' : 'Save & Use This Address'}</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </section>
@@ -708,11 +801,6 @@ export default function Checkout() {
                 >
                   <div className="flex items-start justify-between gap-3 sm:gap-4">
                     <div className="flex items-start gap-3">
-                      <div className="mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 border-[#8c6536]">
-                        {paymentMethod === 'online' ? (
-                          <span className="h-2 w-2 rounded-full bg-[#8c6536]" />
-                        ) : null}
-                      </div>
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[#f0e8dc] text-[#8c6536]">
                         <HiOutlineCreditCard className="h-3.5 w-3.5" />
                       </span>
@@ -744,11 +832,6 @@ export default function Checkout() {
                 >
                   <div className="flex items-start justify-between gap-3 sm:gap-4">
                     <div className="flex items-start gap-3">
-                      <div className="mt-0.5 flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border-2 border-stone-300">
-                        {paymentMethod === 'cod' ? (
-                          <span className="h-2 w-2 rounded-full bg-[#8c6536]" />
-                        ) : null}
-                      </div>
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[#f0e8dc] text-[#8c6536]">
                         <HiOutlineCube className="h-3.5 w-3.5" />
                       </span>
@@ -787,7 +870,7 @@ export default function Checkout() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex h-12 items-center justify-center gap-2.5 rounded-xl bg-[#181614] px-8 text-xs sm:text-sm font-medium text-white transition hover:bg-[#2c2723] disabled:opacity-60 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+                className="inline-flex h-12 items-center justify-center gap-2.5 rounded-xl bg-[#8c6536] px-8 text-xs sm:text-sm font-semibold text-white transition hover:bg-[#75522b] disabled:opacity-60 disabled:cursor-not-allowed shadow-xs cursor-pointer"
               >
                 <span>
                   {submitting
