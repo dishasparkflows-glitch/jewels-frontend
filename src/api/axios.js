@@ -54,17 +54,24 @@ api.interceptors.request.use(
 );
 
 // Response interceptor - handle auth errors
+// ONLY clear credentials when the /auth/me endpoint explicitly says the token
+// is invalid/expired.  A 401 from /cart or /wishlist just means the user wasn't
+// attached by optionalAuth — do NOT wipe the stored session for those.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      const isAuthRequiredPath = ['/profile', '/user', '/orders', '/account'].some(
-        (p) => window.location.pathname.startsWith(p)
-      );
-      if (isAuthRequiredPath) {
-        window.location.href = '/login';
+      const url = error.config?.url || '';
+      const isAuthEndpoint = url.includes('/auth/me') || url.includes('/auth/login');
+      if (isAuthEndpoint) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        const isAuthRequiredPath = ['/profile', '/user', '/orders', '/account'].some(
+          (p) => window.location.pathname.startsWith(p)
+        );
+        if (isAuthRequiredPath) {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

@@ -12,15 +12,15 @@ export default function Wishlist() {
   }, [refreshWishlist]);
 
   return (
-    <section className="min-h-[75vh] bg-white py-10 sm:py-16">
+    <section className="min-h-[75vh] bg-white pt-3 sm:pt-5 pb-12 sm:pb-16">
       <div className="mx-auto max-w-[1380px] px-4 sm:px-8">
-        <nav aria-label="Breadcrumb" className="mb-6 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.16em] text-stone-400">
+        <nav aria-label="Breadcrumb" className="mb-2 sm:mb-2.5 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-stone-400">
           <Link to="/" className="transition hover:text-stone-800">Home</Link>
           <span aria-hidden="true">›</span>
           <span aria-current="page" className="text-stone-800">Wishlist</span>
         </nav>
 
-        <header className="mb-8 flex items-center justify-between border-b border-stone-200 pb-4 sm:mb-12">
+        <header className="mb-5 sm:mb-6 flex items-center justify-between border-b border-stone-200 pb-3 sm:pb-3.5">
           <h1 className="text-xl font-medium text-[#211f1c] sm:text-2xl">
             My Wishlist <span className="font-normal text-stone-500">({wishlistCount})</span>
           </h1>
@@ -28,7 +28,7 @@ export default function Wishlist() {
             <button
               type="button"
               onClick={clearWishlist}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] text-xs sm:text-[13px] font-medium transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] text-xs sm:text-[13px] font-medium transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
             >
               <HiOutlineTrash className="w-4 h-4 text-[#8b6f4e]" />
               <span>Clear All</span>
@@ -41,7 +41,7 @@ export default function Wishlist() {
             {Array.from({ length: 4 }, (_, index) => <div key={index} className="animate-pulse"><div className="aspect-square bg-stone-100" /><div className="mx-auto mt-4 h-4 w-3/4 bg-stone-100" /><div className="mx-auto mt-3 h-4 w-1/3 bg-stone-100" /></div>)}
           </div>
         ) : wishlistItems.length ? (
-          <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-4 lg:gap-x-8">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4 lg:gap-x-8">
             {wishlistItems.map((item) => (
               <WishlistProductCard key={item._id || item.productId} item={item} onRemove={removeFromWishlist} />
             ))}

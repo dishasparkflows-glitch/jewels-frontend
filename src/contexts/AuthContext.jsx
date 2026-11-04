@@ -12,27 +12,57 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
-  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(() => {
+    try {
+      return localStorage.getItem('token') || null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [loading, setLoading] = useState(false);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    } catch {}
     setToken(null);
     setUser(null);
   }, []);
 
   const fetchUser = useCallback(async () => {
+    const activeToken = token || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
+    if (!activeToken) {
+      setLoading(false);
+      return;
+    }
     try {
       const { data } = await authAPI.getMe();
-      setUser(data.data);
-    } catch {
-      logout();
+      if (data?.data) {
+        setUser(data.data);
+        try {
+          localStorage.setItem('user', JSON.stringify(data.data));
+        } catch {}
+      }
+    } catch (err) {
+      // Only logout and clear credentials if server explicitly returns 401 Unauthorized
+      if (err.response?.status === 401) {
+        logout();
+      }
     } finally {
       setLoading(false);
     }
-  }, [logout]);
+  }, [token, logout]);
 
   useEffect(() => {
     if (token) fetchUser();
@@ -49,28 +79,40 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (identifier, password) => {
     const { data } = await authAPI.login({ identifier, password });
-    localStorage.setItem('token', data.data.token);
-    localStorage.setItem('user', JSON.stringify(data.data.user));
-    setToken(data.data.token);
-    setUser(data.data.user);
+    const receivedToken = data.data.token;
+    const receivedUser = data.data.user;
+    try {
+      localStorage.setItem('token', receivedToken);
+      localStorage.setItem('user', JSON.stringify(receivedUser));
+    } catch {}
+    setToken(receivedToken);
+    setUser(receivedUser);
     return data.data;
   };
 
   const loginWithGoogle = useCallback(async (credential) => {
     const { data } = await authAPI.googleLogin(credential);
-    localStorage.setItem('token', data.data.token);
-    localStorage.setItem('user', JSON.stringify(data.data.user));
-    setToken(data.data.token);
-    setUser(data.data.user);
+    const receivedToken = data.data.token;
+    const receivedUser = data.data.user;
+    try {
+      localStorage.setItem('token', receivedToken);
+      localStorage.setItem('user', JSON.stringify(receivedUser));
+    } catch {}
+    setToken(receivedToken);
+    setUser(receivedUser);
     return data.data;
   }, []);
 
   const register = async (formData) => {
     const { data } = await authAPI.register(formData);
-    localStorage.setItem('token', data.data.token);
-    localStorage.setItem('user', JSON.stringify(data.data.user));
-    setToken(data.data.token);
-    setUser(data.data.user);
+    const receivedToken = data.data.token;
+    const receivedUser = data.data.user;
+    try {
+      localStorage.setItem('token', receivedToken);
+      localStorage.setItem('user', JSON.stringify(receivedUser));
+    } catch {}
+    setToken(receivedToken);
+    setUser(receivedUser);
     return data.data;
   };
 

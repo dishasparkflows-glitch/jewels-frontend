@@ -99,7 +99,7 @@ const Home = () => {
       };
     })
     .filter((item) => item.name && item.image);
-  const effectiveCategoryItems = themeCategoryItems.length ? themeCategoryItems : celebrateItems;
+  const effectiveCategoryItems = celebrateItems.length ? celebrateItems : themeCategoryItems;
 
   const sectionConfig = themeConfig?.sections || [];
   const sectionStyle = (key) => {
@@ -251,6 +251,39 @@ const Home = () => {
         if (Array.isArray(list)) {
           const featuredSelections = themeConfig?.featuredSelections || [];
 
+          // Helper to dynamically build link: If products exist -> /shop?featured=ID, else if category -> /shop?category=SLUG
+          const getFeaturedItemLink = (item) => {
+            const pIds = Array.isArray(item.productIds) ? item.productIds : [];
+            const hasProducts = pIds.length > 0;
+
+            if (hasProducts) {
+              const q = new URLSearchParams();
+              q.set('featured', String(item._id));
+              if (item.name) q.set('title', item.name);
+              return `/shop?${q.toString()}`;
+            }
+
+            // Fallback: If productIds is empty, display category products
+            const cat = item.categoryId;
+            const catSlug = (cat && typeof cat === 'object') ? (cat.slug || cat._id || cat.name) : (cat || '');
+            const matched = (storeCategories || []).find((c) => String(c._id) === String(cat?._id || cat));
+            const finalSlug = matched?.slug || catSlug;
+
+            if (finalSlug) {
+              const q = new URLSearchParams();
+              q.set('category', finalSlug);
+              if (item.name && item.name.toLowerCase() !== finalSlug.toLowerCase()) {
+                q.set('title', item.name);
+              }
+              return `/shop?${q.toString()}`;
+            }
+
+            if (item.name) {
+              return `/shop?featured=${encodeURIComponent(item._id)}&title=${encodeURIComponent(item.name)}`;
+            }
+            return '/shop';
+          };
+
           // Process Celebrate items
           const celebrateSelections = featuredSelections.filter((s) => (s.display?.type || s.placement || 'Celebrate') === 'Celebrate' && s.visible !== false);
           let rawCelebrate = list.filter((item) => (item.display?.type || item.placement || '').toLowerCase() === 'celebrate');
@@ -264,7 +297,9 @@ const Home = () => {
             _id: item._id,
             name: item.name || '',
             image: item.image?.url || '',
-            link: `/shop?category=${encodeURIComponent((item.name || '').toLowerCase().replace(/\s+/g, '-'))}`,
+            productIds: item.productIds || [],
+            categoryId: item.categoryId || null,
+            link: getFeaturedItemLink(item),
           })));
 
           // Process Gifts items
@@ -280,7 +315,9 @@ const Home = () => {
             _id: item._id,
             name: item.name || '',
             image: item.image?.url || '',
-            link: `/shop?category=${encodeURIComponent((item.name || '').toLowerCase().replace(/\s+/g, '-'))}`,
+            productIds: item.productIds || [],
+            categoryId: item.categoryId || null,
+            link: getFeaturedItemLink(item),
           })));
         }
       } catch (err) {
@@ -288,7 +325,7 @@ const Home = () => {
       }
     };
     fetchFeatured();
-  }, [themeConfig?.mediaOverrides, themeConfig?.featuredSelections]);
+  }, [themeConfig?.mediaOverrides, themeConfig?.featuredSelections, storeCategories]);
 
   const scrollCelebrate = useCallback((direction) => {
     const el = celebrateScrollRef.current;

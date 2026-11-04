@@ -1,17 +1,40 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { wishlistAPI } from '../api/services';
 import { useAuth } from './AuthContext';
 import { joinUserSocketRooms, onWishlistCountUpdate } from '../services/socket';
+import { trackAddToWishlist } from '../config/firebase';
 
 /* eslint-disable react/prop-types, react-refresh/only-export-components */
-const WishlistContext = createContext(null);
+const defaultWishlistValue = {
+  wishlist: [],
+  wishlistItems: [],
+  wishlistMap: {},
+  wishlistCount: 0,
+  loading: false,
+  isWishlisted: () => false,
+  toggleWishlist: async () => {},
+  addToWishlist: async () => {},
+  removeFromWishlist: async () => {},
+  refreshWishlist: async () => {},
+};
+
+const WishlistContext = createContext(defaultWishlistValue);
 
 export const WishlistProvider = ({ children }) => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
   const [wishlistItems, setWishlistItems] = useState(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      try {
+        localStorage.removeItem('jewels_wishlist');
+      } catch {}
+      return [];
+    }
     try {
       const saved = localStorage.getItem('jewels_wishlist');
       return saved ? JSON.parse(saved) : [];
@@ -19,7 +42,10 @@ export const WishlistProvider = ({ children }) => {
       return [];
     }
   });
+
   const [wishlistMap, setWishlistMap] = useState(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return {};
     try {
       const saved = localStorage.getItem('jewels_wishlist');
       const list = saved ? JSON.parse(saved) : [];
@@ -74,6 +100,8 @@ export const WishlistProvider = ({ children }) => {
   }, [user]);
 
   const [wishlistCount, setWishlistCount] = useState(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return 0;
     try {
       const saved = localStorage.getItem('jewels_wishlist');
       return saved ? JSON.parse(saved).length : 0;
@@ -84,8 +112,11 @@ export const WishlistProvider = ({ children }) => {
 
   // Fast counts fetcher (only asks for badge counts, never full wishlist)
   const fetchWishlistCount = useCallback(async () => {
-    const token = localStorage.getItem('token');
-    if (!token && !user) return;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token && !user) {
+      setWishlistCount(0);
+      return;
+    }
     try {
       const res = await wishlistAPI.getCounts();
       const data = res?.data?.data || res?.data || {};
@@ -99,6 +130,7 @@ export const WishlistProvider = ({ children }) => {
 
   // Realtime Socket.IO synchronization for instant counts across tabs and devices
   useEffect(() => {
+    if (!user) return;
     joinUserSocketRooms({ userId: user?._id || user?.id });
 
     const unsubscribe = onWishlistCountUpdate((data) => {
@@ -118,6 +150,16 @@ export const WishlistProvider = ({ children }) => {
 
   // Sync count on mount or user/route change: only fetch full wishlist if directly on /wishlist page
   useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token && !user) {
+      setWishlistItems([]);
+      setWishlistMap({});
+      setWishlistCount(0);
+      try {
+        localStorage.removeItem('jewels_wishlist');
+      } catch {}
+      return;
+    }
     fetchWishlistCount();
     if (location.pathname === '/wishlist') {
       fetchWishlist();
@@ -127,15 +169,40 @@ export const WishlistProvider = ({ children }) => {
   // Check if a specific product is wishlisted
   const isWishlisted = useCallback(
     (productId) => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      if (!token && !user) return false;
       if (!productId) return false;
       return !!wishlistMap[String(productId)];
     },
-    [wishlistMap]
+    [wishlistMap, user]
   );
 
   // Toggle item in wishlist with instant optimistic UI update & API sync
   const toggleWishlist = async (product, isCurrentlyWished = null) => {
     if (!product) return false;
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const currentUser = user || (() => {
+      try {
+        const u = localStorage.getItem('user');
+        return u ? JSON.parse(u) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (!token || !currentUser) {
+      toast.error('Please sign in to add items to your wishlist', {
+        icon: '🔒',
+        style: {
+          background: '#22201e',
+          color: '#f5f0eb',
+          border: '1px solid rgba(225, 29, 72, 0.4)',
+        },
+      });
+      navigate('/login', { state: { from: location } });
+      return false;
+    }
 
     const productId = String(product.id || product._id || product.productId || '').trim();
     if (!productId) return false;
@@ -174,6 +241,7 @@ export const WishlistProvider = ({ children }) => {
     setWishlistCount((prev) => (willBeWishlisted ? prev + 1 : Math.max(0, prev - 1)));
 
     if (willBeWishlisted) {
+      trackAddToWishlist(product, { shopperId: user?._id || user?.id });
       toast.success('Added to wishlist', {
         icon: '❤️',
         style: {
@@ -193,7 +261,6 @@ export const WishlistProvider = ({ children }) => {
       });
     }
 
-    const token = localStorage.getItem('token');
     if (token || user) {
       try {
         const res = await wishlistAPI.toggle({ productId });
@@ -277,6 +344,10 @@ export const WishlistProvider = ({ children }) => {
     }
   };
 
+  const addToWishlist = async (product) => {
+    return toggleWishlist(product, false);
+  };
+
   return (
     <WishlistContext.Provider
       value={{
@@ -287,6 +358,7 @@ export const WishlistProvider = ({ children }) => {
         loading,
         isWishlisted,
         toggleWishlist,
+        addToWishlist,
         removeFromWishlist,
         clearWishlist,
         refreshWishlist: fetchWishlist,
@@ -299,10 +371,7 @@ export const WishlistProvider = ({ children }) => {
 
 export const useWishlist = () => {
   const context = useContext(WishlistContext);
-  if (!context) {
-    throw new Error('useWishlist must be used within a WishlistProvider');
-  }
-  return context;
+  return context || defaultWishlistValue;
 };
 
 export default WishlistContext;

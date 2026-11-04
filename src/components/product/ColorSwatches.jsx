@@ -19,7 +19,9 @@ export default function ColorSwatches({
     <div className={className} onClick={(e) => e.stopPropagation()}>
       {colors.slice(0, maxVisible).map((entry) => {
         const isSelected = Boolean(
-          activeColorName && entry.name?.toLowerCase() === activeColorName.toLowerCase()
+          activeColorName &&
+          entry?.name &&
+          entry.name.toLowerCase().trim() === activeColorName.toLowerCase().trim()
         );
         const metallic = getMetallicColorStyle(
           entry.name,
@@ -39,19 +41,21 @@ export default function ColorSwatches({
               e.stopPropagation();
               onSelectColor?.(entry.name);
             }}
-            className={`${sizeClass} rounded-full transition-all cursor-pointer relative overflow-hidden ${
+            className={`${sizeClass} rounded-full transition-all cursor-pointer relative ${
               isSelected
-                ? 'ring-2 ring-black ring-offset-1 ring-offset-white scale-110 shadow-sm z-10'
-                : 'hover:scale-110 opacity-95 hover:opacity-100'
+                ? 'ring-2 ring-black ring-offset-2 ring-offset-white scale-110 shadow-sm z-10'
+                : 'hover:scale-110 opacity-90 hover:opacity-100'
             }`}
             style={{
               background: metallic.background,
-              boxShadow: metallic.boxShadow,
               border: metallic.border,
+              boxShadow: isSelected
+                ? '0 0 0 1.5px #ffffff, 0 0 0 3px #000000'
+                : metallic.boxShadow,
             }}
           >
             <span
-              className="absolute inset-0 rounded-full pointer-events-none"
+              className="absolute inset-0 rounded-full pointer-events-none overflow-hidden"
               style={{
                 background:
                   'radial-gradient(circle at 32% 24%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.2) 28%, rgba(255,255,255,0) 55%)',

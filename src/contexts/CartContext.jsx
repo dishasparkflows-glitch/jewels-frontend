@@ -9,7 +9,29 @@ import { resolveMetalName, cleanAttribute } from '../utils/metalColors';
 import { joinUserSocketRooms, onCartCountUpdate } from '../services/socket';
 
 /* eslint-disable react/prop-types, react-refresh/only-export-components */
-const CartContext = createContext(null);
+const defaultCartValue = {
+  cart: [],
+  addToCart: async () => {},
+  updateQuantity: async () => {},
+  removeFromCart: async () => {},
+  clearCart: async () => {},
+  totalItems: 0,
+  subtotal: 0,
+  shipping: 0,
+  tax: 0,
+  total: 0,
+  loading: false,
+  cartDrawerOpen: false,
+  setCartDrawerOpen: () => {},
+  openCartDrawer: () => {},
+  closeCartDrawer: () => {},
+  isCartOpen: false,
+  setIsCartOpen: () => {},
+  fetchCounts: async () => {},
+  refreshCart: async () => {},
+};
+
+const CartContext = createContext(defaultCartValue);
 
 /**
  * Deduplicates and consolidates cart items by product ID.
@@ -201,10 +223,26 @@ export const CartProvider = ({ children }) => {
   const addToCart = async (product, quantity = 1, options = {}) => {
     if (!product) return;
 
-    // Cart writes require an authenticated customer. Keep the attempted page so
-    // the user can return after signing in; the axios client attaches this token.
-    const accessToken = token || localStorage.getItem('token');
-    if (!accessToken) {
+    // Check authentication: user must be logged in to add to cart
+    const accessToken = token || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
+    const currentUser = user || (() => {
+      try {
+        const u = localStorage.getItem('user');
+        return u ? JSON.parse(u) : null;
+      } catch {
+        return null;
+      }
+    })();
+
+    if (!accessToken || !currentUser) {
+      toast.error('Please sign in to add items to your cart', {
+        icon: '🔒',
+        style: {
+          background: '#22201e',
+          color: '#f5f0eb',
+          border: '1px solid rgba(198, 145, 60, 0.4)',
+        },
+      });
       navigate('/login', { state: { from: location } });
       return;
     }
@@ -289,16 +327,7 @@ export const CartProvider = ({ children }) => {
       setCartDrawerOpen(true);
     }
 
-    trackAddToCart(product, parsedQty);
-
-    toast.success(`Added "${title}" to your bag!`, {
-      icon: '🛍️',
-      style: {
-        background: '#22201e',
-        color: '#f5f0eb',
-        border: '1px solid rgba(198, 145, 60, 0.4)',
-      },
-    });
+    trackAddToCart(product, parsedQty, { shopperId: user?._id || user?.id });
 
     // 2. Call backend Cart API
     try {
@@ -332,6 +361,16 @@ export const CartProvider = ({ children }) => {
         return;
       }
       const data = res?.data?.data || res?.data || {};
+
+      // Show success toast only AFTER backend confirms
+      toast.success(`Added "${title}" to your bag!`, {
+        icon: '🛍️',
+        style: {
+          background: '#22201e',
+          color: '#f5f0eb',
+          border: '1px solid rgba(198, 145, 60, 0.4)',
+        },
+      });
 
       if (Array.isArray(data.items)) {
         const formattedItems = data.items.map((i) => {
@@ -375,8 +414,18 @@ export const CartProvider = ({ children }) => {
       }
     } catch (err) {
       console.warn('Backend cart sync error:', err);
+      // Revert the optimistic update
+      fetchCart();
       if (err.response?.status === 401) {
-        navigate('/login', { state: { from: location }, replace: true });
+        // Don't hard-redirect — just show a toast so the user can sign in when ready
+        toast.error('Please sign in to add items to your cart', {
+          icon: '🔒',
+          style: {
+            background: '#22201e',
+            color: '#f5f0eb',
+            border: '1px solid rgba(225, 29, 72, 0.4)',
+          },
+        });
       }
     }
   };
@@ -513,8 +562,7 @@ export const CartProvider = ({ children }) => {
 
 export const useCart = () => {
   const context = useContext(CartContext);
-  if (!context) throw new Error('useCart must be used within a CartProvider');
-  return context;
+  return context || defaultCartValue;
 };
 
 export default CartContext;

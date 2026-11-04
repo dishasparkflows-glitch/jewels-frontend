@@ -86,12 +86,19 @@ export function useProductCard(product, options = {}) {
     : `/product/${encodeURIComponent(slug)}`;
 
   const [localWished, setLocalWished] = useState(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return false;
     if (wishlistMap && wishlistMap[data.id] !== undefined) return Boolean(wishlistMap[data.id]);
     if (product?.inWishlist !== undefined) return Boolean(product.inWishlist);
-    return undefined;
+    return false;
   });
 
   useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      setLocalWished(false);
+      return;
+    }
     if (wishlistMap && wishlistMap[data.id] !== undefined) {
       setLocalWished(Boolean(wishlistMap[data.id]));
     } else if (product?.inWishlist !== undefined) {
@@ -108,11 +115,18 @@ export function useProductCard(product, options = {}) {
       e.stopPropagation();
     }
     if (wishlistBusy) return;
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) {
+      await toggleWishlist(product, false);
+      return;
+    }
+
     setWishlistBusy(true);
     const nextWished = !wished;
     setLocalWished(nextWished);
     try {
-      await toggleWishlist(
+      const res = await toggleWishlist(
         {
           ...product,
           id: data.id,
@@ -122,6 +136,9 @@ export function useProductCard(product, options = {}) {
         },
         wished,
       );
+      if (res === false && !token) {
+        setLocalWished(wished);
+      }
     } catch {
       setLocalWished(!nextWished);
     } finally {

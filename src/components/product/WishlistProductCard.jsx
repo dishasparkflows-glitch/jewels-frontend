@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HiOutlineX } from 'react-icons/hi';
 import { productsAPI } from '../../api/services';
-import { getProductCardData, formatProductPrice, getMetallicColorStyle } from '../../utils/productCard';
+import { getProductCardData, formatProductPrice } from '../../utils/productCard';
 import { getImageUrl } from '../../utils/imageUrl';
+import ColorSwatches from './ColorSwatches';
 
 export default function WishlistProductCard({ item, onRemove }) {
   const [fullProduct, setFullProduct] = useState(null);
@@ -100,68 +101,16 @@ export default function WishlistProductCard({ item, onRemove }) {
           {name}
         </Link>
 
-        {/* ─── Metal Color Swatches (Matches Reference) ─── */}
+        {/* ─── Metal Color Swatches ─── */}
         {colors.length > 0 && (
-          <div
-            role="group"
-            aria-label={`${name} available metal colors`}
-            className="my-2 flex min-h-[20px] items-center justify-center gap-1.5"
-          >
-            {colors.slice(0, 6).map((colorEntry) => {
-              const isSelected = Boolean(
-                activeColorName && colorEntry.name?.toLowerCase() === activeColorName.toLowerCase()
-              );
-              const metallic = getMetallicColorStyle(
-                colorEntry.name,
-                colorEntry.hex,
-                colorEntry.colorCodeEnd
-              );
-
-              return (
-                <button
-                  key={colorEntry.name}
-                  type="button"
-                  title={colorEntry.name}
-                  aria-label={`Select ${colorEntry.name}`}
-                  aria-pressed={isSelected}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setSelectedColorName(colorEntry.name);
-                  }}
-                  className="flex h-4 w-4 sm:h-4.5 sm:w-4.5 items-center justify-center rounded-full transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8b6f4e] cursor-pointer"
-                >
-                  {colorEntry.hex ? (
-                    <span
-                      style={{
-                        background: metallic.background,
-                        boxShadow: metallic.boxShadow,
-                        border: metallic.border,
-                      }}
-                      className={`block h-3 w-3 rounded-full relative overflow-hidden transition-all ${
-                        isSelected
-                          ? 'ring-1.5 ring-stone-900 ring-offset-1 scale-110'
-                          : 'opacity-95 hover:opacity-100'
-                      }`}
-                    >
-                      <span
-                        className="absolute inset-0 rounded-full pointer-events-none"
-                        style={{
-                          background:
-                            'radial-gradient(circle at 32% 24%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.2) 28%, rgba(255,255,255,0) 55%)',
-                        }}
-                        aria-hidden="true"
-                      />
-                    </span>
-                  ) : (
-                    <span className="rounded border px-1 text-[9px] border-stone-200">
-                      {colorEntry.name}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          <ColorSwatches
+            colors={colors}
+            activeColorName={activeColorName}
+            onSelectColor={(colorName) => setSelectedColorName(colorName)}
+            maxVisible={6}
+            className="my-2 flex min-h-[22px] items-center justify-center gap-2"
+            sizeClass="w-3.5 h-3.5 sm:w-4 sm:h-4"
+          />
         )}
 
         {/* ─── Price ─── */}

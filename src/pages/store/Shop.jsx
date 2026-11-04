@@ -34,6 +34,27 @@ export default function Shop({ defaultCategory = '' }) {
   const category = categories.find((entry) => entry._id === categoryParam || slugify(entry.slug || entry.name) === (aliases[categoryParam] || categoryParam));
   const categoryId = category?._id || (/^[a-f0-9]{24}$/i.test(categoryParam) ? categoryParam : '');
 
+  const featuredParam = params.get('featured') || '';
+  const titleParam = params.get('title') || '';
+  const [featuredData, setFeaturedData] = useState(null);
+
+  // Fetch featured showcase details when featuredParam is present
+  useEffect(() => {
+    if (!featuredParam) {
+      setFeaturedData(null);
+      return;
+    }
+    let current = true;
+    api
+      .get(`/featured/${featuredParam}`)
+      .then((res) => {
+        if (!current) return;
+        setFeaturedData(res.data?.data || null);
+      })
+      .catch(() => {});
+    return () => { current = false; };
+  }, [featuredParam]);
+
   const menuItem = params.get('menuItem') || '';
   const shopFor = params.get('shopFor') || '';
   const search = params.get('search') || '';
@@ -96,7 +117,8 @@ export default function Shop({ defaultCategory = '' }) {
   useEffect(() => {
     let current = true;
     setLoadingFilters(true);
-    const catQuery = categoryId || categoryParam;
+    const featCatId = featuredData?.categoryId?._id || featuredData?.categoryId;
+    const catQuery = categoryId || categoryParam || featCatId;
 
     api
       .get('/filters', { params: catQuery ? { category: catQuery } : {} })
@@ -109,6 +131,8 @@ export default function Shop({ defaultCategory = '' }) {
         // When switching category, prune incompatible filter keys from URL params
         if (catQuery && filterList.length > 0) {
           const validKeys = new Set([
+            'featured',
+            'title',
             'category',
             'menuItem',
             'search',
@@ -139,7 +163,7 @@ export default function Shop({ defaultCategory = '' }) {
       });
 
     return () => { current = false; };
-  }, [categoryParam, categoryId]);
+  }, [categoryParam, categoryId, featuredData]);
 
   // 3. Fetch Products with all active filters executed on backend
   useEffect(() => {
@@ -156,6 +180,7 @@ export default function Shop({ defaultCategory = '' }) {
       includeFacets: true,
       includeGroups: true,
     };
+    if (featuredParam) query.featured = featuredParam;
     if (categoryId || categoryParam) query.category = categoryId || categoryParam;
     if (menuItem) query.menuItem = menuItem;
     if (shopFor) query.shopFor = shopFor;
@@ -190,6 +215,7 @@ export default function Shop({ defaultCategory = '' }) {
     return () => { current = false; };
   }, [
     navigationReady,
+    featuredParam,
     categoryId,
     categoryParam,
     menuItem,
@@ -218,6 +244,7 @@ export default function Shop({ defaultCategory = '' }) {
 
   // Active filters check
   const filtersActive =
+    !!featuredParam ||
     !!categoryParam ||
     !!menuItem ||
     !!search ||
@@ -233,10 +260,16 @@ export default function Shop({ defaultCategory = '' }) {
 
   // Active chips array
   const activeChips = [];
+  if (featuredParam) {
+    activeChips.push({
+      label: titleParam || featuredData?.name || 'Showcase',
+      onRemove: () => updateFilters({ featured: '', title: '' }),
+    });
+  }
   if (category?.name) {
     activeChips.push({
       label: category.name,
-      onRemove: () => updateFilters({ category: '', menuItem: '' }),
+      onRemove: () => updateFilters({ category: '', menuItem: '', title: '' }),
     });
   }
   if (search) {
@@ -292,7 +325,11 @@ export default function Shop({ defaultCategory = '' }) {
   }, [displayedProducts, sort]);
 
   // Page title: When nothing in filter, display 'All Jewellery'
-  const pageTitle = category?.name || (search ? `Search: "${search}"` : (selectedCollection || 'All Jewellery'));
+  const pageTitle =
+    titleParam ||
+    featuredData?.name ||
+    category?.name ||
+    (search ? `Search: "${search}"` : (selectedCollection || 'All Jewellery'));
 
   return (
     <div className="min-h-[75vh] bg-white px-4 pb-16 pt-4 sm:px-8 lg:px-12">

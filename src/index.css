@@ -341,3 +341,18 @@ dialog.store-modal,
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
 }
+
+/* Smooth luxury accordion drawer expansion */
+.accordion-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 320ms cubic-bezier(0.25, 1, 0.5, 1), opacity 240ms ease;
+}
+.accordion-collapse.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.accordion-collapse-inner {
+  overflow: hidden;
+}

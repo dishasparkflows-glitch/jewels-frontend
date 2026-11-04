@@ -94,6 +94,25 @@ export async function logAnalyticsEvent(eventName, eventParams = {}) {
 }
 
 /**
+ * Retrieve current user ID from storage for analytics dimension attribution
+ */
+export function getStoredShopperId() {
+  try {
+    const rawUser = localStorage.getItem('user');
+    if (rawUser) {
+      const parsed = JSON.parse(rawUser);
+      const uid = parsed?._id || parsed?.id || parsed?.userId;
+      if (uid) return String(uid);
+    }
+  } catch {}
+  try {
+    return localStorage.getItem('shopper_id') || localStorage.getItem('guest_shopper_id') || '';
+  } catch {
+    return '';
+  }
+}
+
+/**
  * Track Page Views
  */
 export function trackPageView(pagePath, pageTitle) {
@@ -111,9 +130,9 @@ export function trackPageView(pagePath, pageTitle) {
  */
 export function trackProductView(product) {
   if (!product) return;
-  const id = product.id || product._id || '';
-  const name = product.basicInfo?.title || '';
-  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || 0);
+  const id = product.id || product._id || product.productId || '';
+  const name = product.basicInfo?.title || product.title || product.name || '';
+  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || product.price || 0);
 
   return logAnalyticsEvent('view_item', {
     currency: 'INR',
@@ -123,7 +142,7 @@ export function trackProductView(product) {
         item_id: String(id),
         item_name: name,
         price,
-        item_category: product.productType || 'Jewellery',
+        item_category: product.productType || product.category || 'Jewellery',
       },
     ],
   });
@@ -132,13 +151,14 @@ export function trackProductView(product) {
 /**
  * Track Add to Cart
  */
-export function trackAddToCart(product, quantity = 1) {
+export function trackAddToCart(product, quantity = 1, options = {}) {
   if (!product) return;
-  const id = product.id || product._id || '';
-  const name = product.basicInfo?.title || '';
-  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || 0);
+  const id = product.id || product._id || product.productId || '';
+  const name = product.basicInfo?.title || product.title || product.name || '';
+  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || product.price || 0);
+  const shopperId = options?.shopperId || options?.shopper_id || getStoredShopperId();
 
-  return logAnalyticsEvent('add_to_cart', {
+  const params = {
     currency: 'INR',
     value: price * quantity,
     items: [
@@ -147,9 +167,17 @@ export function trackAddToCart(product, quantity = 1) {
         item_name: name,
         price,
         quantity,
+        item_category: product.productType || product.category || 'Jewellery',
       },
     ],
-  });
+  };
+
+  if (shopperId) {
+    params.shopper_id = shopperId;
+    params['customEvent:shopper_id'] = shopperId;
+  }
+
+  return logAnalyticsEvent('add_to_cart', params);
 }
 
 /**
@@ -157,9 +185,9 @@ export function trackAddToCart(product, quantity = 1) {
  */
 export function trackRemoveFromCart(product, quantity = 1) {
   if (!product) return;
-  const id = product.id || product._id || '';
-  const name = product.basicInfo?.title || '';
-  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || 0);
+  const id = product.id || product._id || product.productId || '';
+  const name = product.basicInfo?.title || product.title || product.name || '';
+  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || product.price || 0);
 
   return logAnalyticsEvent('remove_from_cart', {
     currency: 'INR',
@@ -178,13 +206,14 @@ export function trackRemoveFromCart(product, quantity = 1) {
 /**
  * Track Add to Wishlist
  */
-export function trackAddToWishlist(product) {
+export function trackAddToWishlist(product, options = {}) {
   if (!product) return;
-  const id = product.id || product._id || '';
-  const name = product.basicInfo?.title || '';
-  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || 0);
+  const id = product.id || product._id || product.productId || '';
+  const name = product.basicInfo?.title || product.title || product.name || '';
+  const price = Number(product.pricing?.salePrice || product.pricing?.mrp || product.price || 0);
+  const shopperId = options?.shopperId || options?.shopper_id || getStoredShopperId();
 
-  return logAnalyticsEvent('add_to_wishlist', {
+  const params = {
     currency: 'INR',
     value: price,
     items: [
@@ -192,9 +221,17 @@ export function trackAddToWishlist(product) {
         item_id: String(id),
         item_name: name,
         price,
+        item_category: product.productType || product.category || 'Jewellery',
       },
     ],
-  });
+  };
+
+  if (shopperId) {
+    params.shopper_id = shopperId;
+    params['customEvent:shopper_id'] = shopperId;
+  }
+
+  return logAnalyticsEvent('add_to_wishlist', params);
 }
 
 /**
