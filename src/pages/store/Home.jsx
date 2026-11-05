@@ -251,16 +251,23 @@ const Home = () => {
         if (Array.isArray(list)) {
           const featuredSelections = themeConfig?.featuredSelections || [];
 
-          // Helper to dynamically build link: If products exist -> /shop?featured=ID, else if category -> /shop?category=SLUG
+          // Helper to dynamically build link: If products exist -> /shop?featured=SLUG, else if category -> /shop?category=SLUG
           const getFeaturedItemLink = (item) => {
             const pIds = Array.isArray(item.productIds) ? item.productIds : [];
             const hasProducts = pIds.length > 0;
+            const featuredSlug =
+              item.slug ||
+              (item.name
+                ? item.name
+                    .toLowerCase()
+                    .trim()
+                    .replace(/[\s\W-]+/g, '-')
+                    .replace(/^-+|-+$/g, '')
+                : '') ||
+              item._id;
 
             if (hasProducts) {
-              const q = new URLSearchParams();
-              q.set('featured', String(item._id));
-              if (item.name) q.set('title', item.name);
-              return `/shop?${q.toString()}`;
+              return `/shop?featured=${encodeURIComponent(featuredSlug)}`;
             }
 
             // Fallback: If productIds is empty, display category products
@@ -278,8 +285,8 @@ const Home = () => {
               return `/shop?${q.toString()}`;
             }
 
-            if (item.name) {
-              return `/shop?featured=${encodeURIComponent(item._id)}&title=${encodeURIComponent(item.name)}`;
+            if (featuredSlug) {
+              return `/shop?featured=${encodeURIComponent(featuredSlug)}`;
             }
             return '/shop';
           };
@@ -295,6 +302,7 @@ const Home = () => {
           }
           setCelebrateItems(rawCelebrate.map((item) => ({
             _id: item._id,
+            slug: item.slug || '',
             name: item.name || '',
             image: item.image?.url || '',
             productIds: item.productIds || [],
@@ -313,6 +321,7 @@ const Home = () => {
           }
           setGiftItems(rawGifts.map((item) => ({
             _id: item._id,
+            slug: item.slug || '',
             name: item.name || '',
             image: item.image?.url || '',
             productIds: item.productIds || [],

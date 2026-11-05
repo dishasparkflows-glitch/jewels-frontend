@@ -1,13 +1,13 @@
 import api from '../../api/axios';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { HiOutlineAdjustments, HiOutlineX, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi';
 import ProductCard from '../../components/product/ProductCard';
 import FilterSidebar from '../../components/product/FilterSidebar';
 import Dropdown from '../../components/common/Dropdown';
 import LuxuryDivider from '../../components/common/LuxuryDivider';
-import { categoriesAPI, productsAPI } from '../../api/services';
+import { categoriesAPI, productsAPI, bannersAPI } from '../../api/services';
 
 const slugify = (value = '') => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const aliases = { necklaces: 'pendant', bracelets: 'bangles-bracelets' };
@@ -37,6 +37,28 @@ export default function Shop({ defaultCategory = '' }) {
   const featuredParam = params.get('featured') || '';
   const titleParam = params.get('title') || '';
   const [featuredData, setFeaturedData] = useState(null);
+  const [displayBanner, setDisplayBanner] = useState(null);
+
+  // Fetch Category Display Banner when category is selected
+  useEffect(() => {
+    const targetCat = categoryId || category?._id || categoryParam;
+    if (!targetCat) {
+      setDisplayBanner(null);
+      return;
+    }
+    let current = true;
+    bannersAPI
+      .getCategoryDisplay({ category: targetCat, platform: 'web' })
+      .then((res) => {
+        if (!current) return;
+        const bannerData = res?.data?.data?.banner || null;
+        setDisplayBanner(bannerData);
+      })
+      .catch(() => {
+        if (current) setDisplayBanner(null);
+      });
+    return () => { current = false; };
+  }, [categoryId, category?._id, categoryParam]);
 
   // Fetch featured showcase details when featuredParam is present
   useEffect(() => {
@@ -68,7 +90,28 @@ export default function Shop({ defaultCategory = '' }) {
   const selectedStockStatus = params.get('stockStatus') || '';
   const sort = params.get('sort') || 'newest';
   const page = Math.max(1, Number(params.get('page')) || 1);
-  const limit = Math.max(1, Number(params.get('limit')) || 12);
+  const limit = [12, 24, 48].includes(Number(params.get('limit'))) ? Number(params.get('limit')) : 12;
+
+  const scrollToTop = () => {
+    try {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      document.documentElement.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      document.body.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    } catch (_) {
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const isFirstMount = useRef(true);
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    scrollToTop();
+    const timer = setTimeout(scrollToTop, 60);
+    return () => clearTimeout(timer);
+  }, [page, limit]);
 
   const goToPage = (newPage) => {
     if (newPage < 1 || (pagination.totalPages && newPage > pagination.totalPages)) return;
@@ -79,7 +122,8 @@ export default function Shop({ defaultCategory = '' }) {
       next.set('page', String(newPage));
     }
     setParams(next);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTop();
+    requestAnimationFrame(scrollToTop);
   };
 
   const getPageNumbers = (current, total) => {
@@ -258,11 +302,21 @@ export default function Shop({ defaultCategory = '' }) {
     !!selectedMetal ||
     !!selectedStockStatus;
 
+  // Formatted fallback title for featured slug (e.g. "necklace" -> "Necklace", "solitaire-jewellery" -> "Solitaire Jewellery")
+  const formattedFeaturedTitle =
+    featuredData?.name ||
+    (featuredParam && !/^[a-f0-9]{24}$/i.test(featuredParam)
+      ? featuredParam
+          .split('-')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ')
+      : '');
+
   // Active chips array
   const activeChips = [];
   if (featuredParam) {
     activeChips.push({
-      label: titleParam || featuredData?.name || 'Showcase',
+      label: titleParam || formattedFeaturedTitle || 'Showcase',
       onRemove: () => updateFilters({ featured: '', title: '' }),
     });
   }
@@ -327,13 +381,36 @@ export default function Shop({ defaultCategory = '' }) {
   // Page title: When nothing in filter, display 'All Jewellery'
   const pageTitle =
     titleParam ||
-    featuredData?.name ||
+    formattedFeaturedTitle ||
     category?.name ||
     (search ? `Search: "${search}"` : (selectedCollection || 'All Jewellery'));
 
   return (
-    <div className="min-h-[75vh] bg-white px-4 pb-16 pt-4 sm:px-8 lg:px-12">
-      <div className="mx-auto max-w-[1440px]">
+    <div className="min-h-[75vh] bg-white">
+      {/* ─── Top Category Banner Image (Exact Match: 100% full width, max-h-[360px], object-cover, bg-[#FAF7F2]) ─── */}
+      {displayBanner && (
+        <div className="w-full relative overflow-hidden bg-[#FAF7F2]">
+          {displayBanner.mediaType === 'video' ? (
+            <video
+              src={displayBanner.video?.url || displayBanner.image?.url}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-auto block max-h-[360px] object-cover"
+            />
+          ) : (
+            <img
+              src={displayBanner.image?.url || displayBanner.video?.url}
+              className="w-full h-auto block max-h-[360px] object-cover"
+              alt={displayBanner.title || category?.name || pageTitle || 'Category Banner'}
+            />
+          )}
+        </div>
+      )}
+
+      <div className="px-4 pb-16 pt-4 sm:px-8 lg:px-12">
+        <div className="mx-auto max-w-[1440px]">
         {/* ─── Category Header Title (Centered) ─── */}
         <div className="py-4 sm:py-6 text-center">
           <h1 className="font-serif text-3xl sm:text-4xl lg:text-[40px] text-stone-900 tracking-tight capitalize">
@@ -500,11 +577,11 @@ export default function Shop({ defaultCategory = '' }) {
                     type="button"
                     disabled={page <= 1}
                     onClick={() => goToPage(page - 1)}
-                    className="inline-flex items-center gap-1 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
                     aria-label="Previous page"
+                    title="Previous page"
                   >
                     <HiOutlineChevronLeft className="w-4 h-4" />
-                    <span className="hidden sm:inline">Previous</span>
                   </button>
 
                   {/* Numbered Page Buttons */}
@@ -542,41 +619,43 @@ export default function Shop({ defaultCategory = '' }) {
                     type="button"
                     disabled={page >= pagination.totalPages}
                     onClick={() => goToPage(page + 1)}
-                    className="inline-flex items-center gap-1 px-3 py-2 text-xs sm:text-sm font-medium rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
+                    className="w-9 h-9 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
                     aria-label="Next page"
+                    title="Next page"
                   >
-                    <span className="hidden sm:inline">Next</span>
                     <HiOutlineChevronRight className="w-4 h-4" />
                   </button>
                 </div>
 
-                {/* Per Page Quick Selector */}
-                <div className="flex items-center gap-1.5 text-xs text-stone-500 font-medium order-3">
-                  <span className="hidden md:inline">Items:</span>
-                  {[9, 12, 24].map((size) => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => {
-                        const next = new URLSearchParams(params);
-                        next.delete('page');
-                        next.set('limit', String(size));
-                        setParams(next);
-                      }}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors ${
-                        limit === size
-                          ? 'bg-[#8b6f4e] text-white font-semibold shadow-2xs'
-                          : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                      }`}
-                      title={`Show ${size} items per page`}
-                    >
-                      {size}
-                    </button>
-                  ))}
+                {/* Per Page Dropdown Selector */}
+                <div className="flex items-center gap-2 text-xs text-stone-500 font-medium order-3">
+                  <span className="hidden sm:inline">Items:</span>
+                  <Dropdown
+                    value={limit}
+                    onChange={(val) => {
+                      const next = new URLSearchParams(params);
+                      next.delete('page');
+                      next.set('limit', String(val));
+                      setParams(next);
+                      scrollToTop();
+                      requestAnimationFrame(scrollToTop);
+                    }}
+                    options={[
+                      { value: 12, label: '12' },
+                      { value: 24, label: '24' },
+                      { value: 48, label: '48' },
+                    ]}
+                    size="sm"
+                    direction="up"
+                    className="w-24 sm:w-28 text-xs"
+                    menuClassName="min-w-[6rem]"
+                    showDivider={false}
+                  />
                 </div>
               </nav>
             )}
           </section>
+        </div>
         </div>
       </div>
     </div>

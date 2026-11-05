@@ -1,71 +1,125 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { settingsAPI, websiteAPI } from '../api/services';
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { commonAPI } from '../api/services';
 
 /* eslint-disable react/prop-types */
 
 const StoreSettingsContext = createContext(null);
+const BOOTSTRAP_STORAGE_KEY = 'neirah_storefront_bootstrap_v1';
+
+function getInitialCachedBootstrap() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(BOOTSTRAP_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+}
 
 export function StoreSettingsProvider({ children }) {
-  const [settings, setSettings] = useState({});
-  const [footerSettings, setFooterSettings] = useState({});
-  const [topAnnouncement, setTopAnnouncement] = useState({ isEnabled: false, displayDirection: 'horizontal', autoplayInterval: 4000, items: [] });
-  const [websiteConfig, setWebsiteConfig] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const cached = useMemo(() => getInitialCachedBootstrap(), []);
 
+  const [settings, setSettings] = useState(() => cached?.settings || {});
+  const [footerSettings, setFooterSettings] = useState(() => cached?.footerSettings || {});
+  const [topAnnouncement, setTopAnnouncement] = useState(() => cached?.topAnnouncement || {
+    isEnabled: false,
+    displayDirection: 'horizontal',
+    autoplayInterval: 4000,
+    items: [],
+  });
+  const [websiteConfig, setWebsiteConfig] = useState(() => cached?.websiteConfig || null);
+  const [navigation, setNavigation] = useState(() => cached?.navigation || []);
+  const [revision, setRevision] = useState(() => cached?.revision || 0);
+  const [loading, setLoading] = useState(() => !cached);
+
+  const currentRevisionRef = useRef(revision);
+  useEffect(() => {
+    currentRevisionRef.current = revision;
+  }, [revision]);
+
+  const applyBootstrapData = useCallback((data) => {
+    if (!data) return;
+    if (data.settings) setSettings(data.settings);
+    if (data.footerSettings) setFooterSettings(data.footerSettings);
+    if (data.topAnnouncement) setTopAnnouncement(data.topAnnouncement);
+    if (data.websiteConfig) setWebsiteConfig(data.websiteConfig);
+    if (Array.isArray(data.navigation)) setNavigation(data.navigation);
+    if (typeof data.revision === 'number') {
+      setRevision(data.revision);
+      currentRevisionRef.current = data.revision;
+    }
+
+    try {
+      sessionStorage.setItem(BOOTSTRAP_STORAGE_KEY, JSON.stringify(data));
+    } catch (_) {}
+  }, []);
+
+  const refreshBootstrap = useCallback(async (options = { fresh: true }) => {
+    try {
+      const res = await commonAPI.getBootstrap(options);
+      const data = res?.data?.data;
+      if (data) {
+        applyBootstrapData(data);
+      }
+      return data;
+    } catch (err) {
+      console.warn('Failed to load storefront bootstrap data:', err);
+      return null;
+    }
+  }, [applyBootstrapData]);
+
+  // Initial load
   useEffect(() => {
     let mounted = true;
-
-    Promise.allSettled([settingsAPI.getCommonSettings(), websiteAPI.getConfig()])
-      .then(([commonResult, themeResult]) => {
+    commonAPI.getBootstrap()
+      .then((res) => {
         if (!mounted) return;
-        if (commonResult.status === 'fulfilled') {
-          const commonData = commonResult.value?.data?.data || {};
-          setSettings(commonData.settings || {});
-          setFooterSettings(commonData.footerSettings || {});
-          if (commonData.topAnnouncement) {
-            setTopAnnouncement(commonData.topAnnouncement);
-          }
-        } else {
-          console.warn('Failed to load store settings:', commonResult.reason);
-        }
-        if (themeResult.status === 'fulfilled') setWebsiteConfig(themeResult.value?.data?.data || null);
-        else console.warn('Failed to load website theme configuration:', themeResult.reason);
+        const data = res?.data?.data;
+        if (data) applyBootstrapData(data);
       })
-      .finally(() => { if (mounted) setLoading(false); });
+      .catch((err) => {
+        console.warn('Initial bootstrap fetch error:', err);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
 
     return () => { mounted = false; };
-  }, []);
+  }, [applyBootstrapData]);
 
+  // Smart Revalidation: Check revision on tab focus & gentle interval
   useEffect(() => {
-    let mounted = true;
-    const refreshStoreData = () => {
-      websiteAPI.getConfig()
-        .then(({ data }) => {
-          if (!mounted) return;
-          const next = data?.data || null;
-          setWebsiteConfig((current) => current?.revision === next?.revision ? current : next);
-        })
-        .catch((error) => console.warn('Failed to refresh website theme configuration:', error));
+    let isChecking = false;
 
-      settingsAPI.getCommonSettings({ fresh: true })
-        .then(({ data }) => {
-          if (!mounted) return;
-          const commonData = data?.data || {};
-          setSettings(commonData.settings || {});
-          setFooterSettings(commonData.footerSettings || {});
-          if (commonData.topAnnouncement) {
-            setTopAnnouncement(commonData.topAnnouncement);
-          }
-        })
-        .catch((error) => console.warn('Failed to refresh store settings:', error));
+    const checkFreshness = async () => {
+      if (isChecking) return;
+      isChecking = true;
+      try {
+        const res = await commonAPI.getRevision();
+        const remoteRev = res?.data?.data?.revision;
+        if (typeof remoteRev === 'number' && remoteRev !== currentRevisionRef.current) {
+          // Admin updated something! Silently fetch fresh bootstrap data
+          await refreshBootstrap({ fresh: true });
+        }
+      } catch (_) {
+        // Silently ignore revision ping failures
+      } finally {
+        isChecking = false;
+      }
     };
 
-    const timer = window.setInterval(refreshStoreData, 300_000);
+    const handleFocus = () => {
+      checkFreshness();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    const intervalTimer = window.setInterval(checkFreshness, 60_000); // Check every 60s
+
     return () => {
-      mounted = false;
-      window.clearInterval(timer);
+      window.removeEventListener('focus', handleFocus);
+      window.clearInterval(intervalTimer);
     };
-  }, []);
+  }, [refreshBootstrap]);
 
   const theme = websiteConfig?.theme?.config || null;
 
@@ -95,6 +149,7 @@ export function StoreSettingsProvider({ children }) {
     root.style.setProperty('--storefront-footer-bg', footerBg);
     root.style.setProperty('--storefront-footer-text', footerText);
   }, [settings?.themeColors, theme?.colors?.primary]);
+
   useEffect(() => {
     const title = theme?.seo?.metaTitle;
     const description = theme?.seo?.metaDescription;
@@ -109,6 +164,7 @@ export function StoreSettingsProvider({ children }) {
       if (meta && previousDescription !== undefined) meta.content = previousDescription;
     };
   }, [theme?.seo?.metaTitle, theme?.seo?.metaDescription]);
+
   const themeStyle = useMemo(() => {
     const colors = theme?.colors || {};
     const savedButtonColors = settings?.themeColors || {};
@@ -133,7 +189,20 @@ export function StoreSettingsProvider({ children }) {
   }, [theme, settings?.themeColors, settings?.buttonColor, settings?.buttonHoverColor, settings?.buttonTextColor]);
 
   return (
-    <StoreSettingsContext.Provider value={{ settings, footerSettings, topAnnouncement, websiteConfig, theme, themeStyle, loading }}>
+    <StoreSettingsContext.Provider
+      value={{
+        settings,
+        footerSettings,
+        topAnnouncement,
+        websiteConfig,
+        navigation,
+        revision,
+        theme,
+        themeStyle,
+        loading,
+        refreshBootstrap,
+      }}
+    >
       {children}
     </StoreSettingsContext.Provider>
   );

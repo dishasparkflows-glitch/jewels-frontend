@@ -31,6 +31,7 @@ export const bannersAPI = {
     const platform = ['web', 'mobile'].includes(params.platform) ? params.platform : 'web';
     return getOnce('/banners/lookup', { params: { platform } });
   },
+  getCategoryDisplay: (params = {}) => getOnce('/banners/category-display', { params }),
 };
 
 // ─── Store settings ───────────────────────────────
@@ -61,6 +62,17 @@ export const settingsAPI = {
     }
     return storeSettingsRequest;
   },
+};
+
+// ─── Common Storefront Bootstrap (Navigation, Settings, Announcement, WebsiteConfig) ───
+export const commonAPI = {
+  getBootstrap: (options = {}) => {
+    if (options?.fresh) {
+      return api.get('/common/bootstrap');
+    }
+    return getOnce('/common/bootstrap');
+  },
+  getRevision: () => api.get('/common/revision'),
 };
 
 // Public, revisioned storefront presentation configuration.
@@ -176,12 +188,12 @@ export const cartAPI = {
       selectedAttributes: payload?.selectedAttributes ?? null,
       selectedMetal: payload?.selectedMetal || payload?.options?.selectedMetal || null,
       selectedSize: payload?.selectedSize || payload?.options?.selectedSize || null,
-      userId: payload?.userId ?? null,
       productId: payload?.productId || payload?.id || payload?._id,
       price: Number(payload?.price) || 0,
       totalItemPrice: Number(payload?.totalItemPrice) || Number(payload?.price) || 0,
       quantity: payload?.quantity || 1,
       options: payload?.options || {},
+      ...(payload?.userId ? { userId: payload.userId } : {}),
     }),
   updateQuantity: (productId, quantity, options = {}) =>
     api.put('/cart/quantity', { productId, quantity, options }),

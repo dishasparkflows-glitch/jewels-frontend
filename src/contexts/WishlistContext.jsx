@@ -23,7 +23,7 @@ const defaultWishlistValue = {
 const WishlistContext = createContext(defaultWishlistValue);
 
 export const WishlistProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, token: authToken, openLoginModal } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -178,11 +178,11 @@ export const WishlistProvider = ({ children }) => {
   );
 
   // Toggle item in wishlist with instant optimistic UI update & API sync
-  const toggleWishlist = async (product, isCurrentlyWished = null) => {
+  const toggleWishlist = async (product, isCurrentlyWished = null, explicitUser = null) => {
     if (!product) return false;
 
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const currentUser = user || (() => {
+    const accessToken = authToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
+    const currentUser = explicitUser || user || (() => {
       try {
         const u = localStorage.getItem('user');
         return u ? JSON.parse(u) : null;
@@ -191,16 +191,14 @@ export const WishlistProvider = ({ children }) => {
       }
     })();
 
-    if (!token || !currentUser) {
-      toast.error('Please sign in to add items to your wishlist', {
-        icon: '🔒',
-        style: {
-          background: '#22201e',
-          color: '#f5f0eb',
-          border: '1px solid rgba(225, 29, 72, 0.4)',
-        },
-      });
-      navigate('/login', { state: { from: location } });
+    if (!accessToken || !currentUser) {
+      if (typeof openLoginModal === 'function') {
+        openLoginModal(async (authedUser) => {
+          await toggleWishlist(product, isCurrentlyWished, authedUser);
+        });
+      } else {
+        navigate('/login', { state: { from: location } });
+      }
       return false;
     }
 

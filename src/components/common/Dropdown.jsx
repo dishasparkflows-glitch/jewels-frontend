@@ -258,11 +258,11 @@ export default function Dropdown({
   // Sizing styles
   const sizeClasses = {
     sm: {
-      button: 'h-9 px-3 text-xs rounded-xl',
-      menuItem: 'px-3 py-2 text-xs rounded-lg',
+      button: 'h-9 px-2.5 sm:px-3 text-xs rounded-xl',
+      menuItem: 'px-2.5 py-1.5 text-xs rounded-lg',
       divider: 'h-3.5',
       chevron: 'w-3.5 h-3.5',
-      check: 'w-3.5 h-3.5',
+      check: 'w-3 h-3',
     },
     md: {
       button: 'h-10 sm:h-11 px-3.5 sm:px-4 text-xs sm:text-[13px] rounded-xl sm:rounded-2xl',
@@ -308,7 +308,7 @@ export default function Dropdown({
           } ${isOpen ? 'border-[#8b6f4e] ring-2 ring-[#8b6f4e]/15' : ''}`
         }
       >
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
           {prefixIcon && <span className="shrink-0 text-[#8b6f4e]">{prefixIcon}</span>}
           {selectedOption ? (
             <span className="truncate text-stone-900 font-medium">
@@ -408,7 +408,7 @@ export default function Dropdown({
                     onClick={(e) => handleSelect(option, e)}
                     onMouseDown={(e) => e.stopPropagation()}
                     onMouseEnter={() => setHighlightedIndex(idx)}
-                    className={`relative flex items-center justify-between gap-2.5 cursor-pointer transition-colors duration-150 select-none ${
+                    className={`relative flex items-center justify-between gap-1.5 cursor-pointer transition-colors duration-150 select-none ${
                       sizeClasses.menuItem
                     } ${
                       option.disabled

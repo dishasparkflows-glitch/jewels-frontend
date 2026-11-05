@@ -9,10 +9,16 @@ import { getImageUrl } from '../../utils/imageUrl';
 import Modal from '../../components/common/Modal';
 
 const Login = () => {
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogle, user } = useAuth();
   const { settings } = useStoreSettings();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

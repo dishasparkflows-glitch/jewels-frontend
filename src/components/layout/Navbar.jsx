@@ -128,7 +128,7 @@ const SearchProductCard = ({ item, variant = 'desktop', onSelect }) => {
 };
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, openLoginModal } = useAuth();
   const { totalItems, cartDrawerOpen, setCartDrawerOpen } = useCart();
   const { wishlistCount } = useWishlist();
   const [categories, setCategories] = useState([]);
@@ -147,7 +147,7 @@ const Navbar = () => {
   }, [categories]);
   const [navigationError, setNavigationError] = useState(false);
   const [navigationRevision, setNavigationRevision] = useState(0);
-  const { settings: storeSettings, theme: themeConfig, topAnnouncement: contextTopAnnouncement } = useStoreSettings();
+  const { settings: storeSettings, theme: themeConfig, topAnnouncement: contextTopAnnouncement, navigation: bootstrapNavigation } = useStoreSettings();
   const topAnnouncement = contextTopAnnouncement || { isEnabled: false, displayDirection: 'horizontal', autoplayInterval: 4000, items: [] };
   const [announcementIndex, setAnnouncementIndex] = useState(0);
   const brandLogo = {
@@ -297,29 +297,37 @@ const Navbar = () => {
     return () => window.removeEventListener('open-virtual-appointment', handleOpen);
   }, []);
 
-  // A single request contains categories, sections, items and promo banners.
+  // Storefront navigation sourced primarily from fast bootstrap context
   useEffect(() => {
+    const applyNav = (currentCategories) => {
+      if (!themeConfig?.navigation?.length) { setCategories(currentCategories); return; }
+      const byId = new Map(currentCategories.map((category) => [String(category._id), category]));
+      const themedCategories = themeConfig.navigation
+        .filter((entry) => entry.visible !== false)
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map((entry) => {
+          const category = byId.get(String(entry.categoryId?._id || entry.categoryId));
+          return category ? { ...category, name: entry.displayName || category.name } : null;
+        })
+        .filter(Boolean);
+      setCategories(themedCategories);
+    };
+
+    if (bootstrapNavigation && bootstrapNavigation.length > 0) {
+      applyNav(bootstrapNavigation);
+      return;
+    }
+
     let active = true;
     setNavigationError(false);
     getOnce('/categories/navigation')
       .then((response) => {
         if (!active) return;
-        const currentCategories = response.data?.data || [];
-        if (!themeConfig?.navigation?.length) { setCategories(currentCategories); return; }
-        const byId = new Map(currentCategories.map((category) => [String(category._id), category]));
-        const themedCategories = themeConfig.navigation
-          .filter((entry) => entry.visible !== false)
-          .sort((a, b) => (a.order || 0) - (b.order || 0))
-          .map((entry) => {
-            const category = byId.get(String(entry.categoryId?._id || entry.categoryId));
-            return category ? { ...category, name: entry.displayName || category.name } : null;
-          })
-          .filter(Boolean);
-        setCategories(themedCategories);
+        applyNav(response.data?.data || []);
       })
       .catch(() => { if (active) setNavigationError(true); });
     return () => { active = false; };
-  }, [navigationRevision, themeConfig?.navigation, themeConfig?.mediaOverrides]);
+  }, [bootstrapNavigation, navigationRevision, themeConfig?.navigation, themeConfig?.mediaOverrides]);
 
   useEffect(() => {
     const items = topAnnouncement.items || [];
@@ -718,22 +726,32 @@ const Navbar = () => {
 
             {isCheckout && <span className="hidden items-center gap-1.5 rounded-full border border-white/15 px-2.5 py-1.5 text-[11px] text-white sm:inline-flex"><span aria-hidden="true">🇮🇳</span> INR <span aria-hidden="true">⌄</span></span>}
             {/* Wishlist Icon */}
-            <Link
-              to={user ? "/wishlist" : "/login"}
-              state={!user ? { from: '/wishlist' } : undefined}
-              onClick={() => {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors relative"
-              title="My Wishlist"
-            >
-              <HiOutlineHeart className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
-              {wishlistCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#e11d48] text-white text-[9px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center font-bold shadow-md ring-2 ring-[#201e1b] transition-transform animate-scaleIn">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
+            {user ? (
+              <Link
+                to="/wishlist"
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors relative"
+                title="My Wishlist"
+              >
+                <HiOutlineHeart className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#e11d48] text-white text-[9px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center font-bold shadow-md ring-2 ring-[#201e1b] transition-transform animate-scaleIn">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => openLoginModal(() => navigate('/wishlist'))}
+                className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors relative cursor-pointer"
+                title="My Wishlist"
+              >
+                <HiOutlineHeart className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
+              </button>
+            )}
 
             {/* User Account / Profile */}
             <div className="relative">
@@ -777,14 +795,14 @@ const Navbar = () => {
                   )}
                 </div>
               ) : (
-                <Link
-                  to="/login"
-                  state={{ from: location }}
-                  className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors block"
+                <button
+                  type="button"
+                  onClick={() => openLoginModal()}
+                  className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors block cursor-pointer"
                   title="Sign In"
                 >
                   <HiOutlineUser className="w-5 h-5" />
-                </Link>
+                </button>
               )}
             </div>
 
@@ -995,22 +1013,34 @@ const Navbar = () => {
           {/* Categories List */}
           <nav className="flex flex-col space-y-3 pt-2">
             <MegaMenuNav categories={categories} mobile onNavigate={() => setMobileMenuOpen(false)} error={navigationError} onRetry={() => setNavigationRevision((value) => value + 1)} />
-            <Link
-              to={user ? "/wishlist" : "/login"}
-              state={!user ? { from: '/wishlist' } : undefined}
-              onClick={() => {
-                setMobileMenuOpen(false);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="text-xs uppercase font-medium tracking-[0.16em] text-amber-200 hover:text-white py-1.5 border-b border-white/5 flex items-center justify-between"
-            >
-              <span>My Wishlist</span>
-              {wishlistCount > 0 && (
-                <span className="bg-[#e11d48] text-white text-[10px] min-w-[18px] h-[18px] px-1.5 rounded-full flex items-center justify-center font-bold">
-                  {wishlistCount}
-                </span>
-              )}
-            </Link>
+            {user ? (
+              <Link
+                to="/wishlist"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="text-xs uppercase font-medium tracking-[0.16em] text-amber-200 hover:text-white py-1.5 border-b border-white/5 flex items-center justify-between"
+              >
+                <span>My Wishlist</span>
+                {wishlistCount > 0 && (
+                  <span className="bg-[#e11d48] text-white text-[10px] min-w-[18px] h-[18px] px-1.5 rounded-full flex items-center justify-center font-bold">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openLoginModal(() => navigate('/wishlist'));
+                }}
+                className="text-xs uppercase font-medium tracking-[0.16em] text-amber-200 hover:text-white py-1.5 border-b border-white/5 flex items-center justify-between w-full cursor-pointer text-left"
+              >
+                <span>My Wishlist</span>
+              </button>
+            )}
             <Link
               to="/blog"
               onClick={() => setMobileMenuOpen(false)}
@@ -1020,7 +1050,18 @@ const Navbar = () => {
             </Link>
             <div className="grid grid-cols-2 gap-3 pt-1">
               <Link to="/cart" onClick={() => setMobileMenuOpen(false)} className="rounded-lg border border-white/15 px-3 py-3 text-center text-xs uppercase tracking-wider text-stone-200 hover:bg-white/5">Shopping Bag ({totalItems || 0})</Link>
-              {!user && <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="rounded-lg border border-white/15 px-3 py-3 text-center text-xs uppercase tracking-wider text-stone-200 hover:bg-white/5">Sign In</Link>}
+              {!user && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    openLoginModal();
+                  }}
+                  className="rounded-lg border border-white/15 px-3 py-3 text-center text-xs uppercase tracking-wider text-stone-200 hover:bg-white/5 cursor-pointer"
+                >
+                  Sign In
+                </button>
+              )}
               {!user && <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="rounded-lg bg-[#8b6b47] px-3 py-3 text-center text-xs uppercase tracking-wider text-white hover:bg-[#745735]">Create Account</Link>}
               {user && <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="rounded-lg bg-[#8b6b47] px-3 py-3 text-center text-xs uppercase tracking-wider text-white hover:bg-[#745735]">My Account</Link>}
             </div>

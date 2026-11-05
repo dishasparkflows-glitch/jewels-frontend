@@ -67,7 +67,7 @@ const consolidateItems = (items) => {
 export const CartProvider = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, token } = useAuth();
+  const { user, token, openLoginModal } = useAuth();
   const isFetchingCartRef = useRef(false);
   const isFetchingCountsRef = useRef(false);
   const cartReqIdRef = useRef(0);
@@ -220,12 +220,12 @@ export const CartProvider = ({ children }) => {
   }, [user, location.pathname, fetchCounts, fetchCart]);
 
   // Add item to cart with backend API call & optimistic update
-  const addToCart = async (product, quantity = 1, options = {}) => {
+  const addToCart = async (product, quantity = 1, options = {}, explicitUser = null) => {
     if (!product) return;
 
     // Check authentication: user must be logged in to add to cart
     const accessToken = token || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
-    const currentUser = user || (() => {
+    const currentUser = explicitUser || user || (() => {
       try {
         const u = localStorage.getItem('user');
         return u ? JSON.parse(u) : null;
@@ -235,15 +235,14 @@ export const CartProvider = ({ children }) => {
     })();
 
     if (!accessToken || !currentUser) {
-      toast.error('Please sign in to add items to your cart', {
-        icon: '🔒',
-        style: {
-          background: '#22201e',
-          color: '#f5f0eb',
-          border: '1px solid rgba(198, 145, 60, 0.4)',
-        },
-      });
-      navigate('/login', { state: { from: location } });
+      setCartDrawerOpen(false);
+      if (typeof openLoginModal === 'function') {
+        openLoginModal(async (authedUser) => {
+          await addToCart(product, quantity, options, authedUser);
+        });
+      } else {
+        navigate('/login', { state: { from: location } });
+      }
       return;
     }
 
@@ -336,6 +335,7 @@ export const CartProvider = ({ children }) => {
         quantity: parsedQty,
         price,
         totalItemPrice,
+        userId: currentUser?._id || currentUser?.id,
       };
 
       if (selectedMetal) {
@@ -417,15 +417,12 @@ export const CartProvider = ({ children }) => {
       // Revert the optimistic update
       fetchCart();
       if (err.response?.status === 401) {
-        // Don't hard-redirect — just show a toast so the user can sign in when ready
-        toast.error('Please sign in to add items to your cart', {
-          icon: '🔒',
-          style: {
-            background: '#22201e',
-            color: '#f5f0eb',
-            border: '1px solid rgba(225, 29, 72, 0.4)',
-          },
-        });
+        setCartDrawerOpen(false);
+        if (typeof openLoginModal === 'function') {
+          openLoginModal(async () => {
+            await addToCart(product, quantity, options);
+          });
+        }
       }
     }
   };

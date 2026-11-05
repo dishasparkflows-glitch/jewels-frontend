@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { authAPI } from '../api/services';
 import { setAnalyticsUser } from '../config/firebase';
 
@@ -30,6 +30,33 @@ export const AuthProvider = ({ children }) => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const loginSuccessCallbackRef = useRef(null);
+
+  const openLoginModal = useCallback((onSuccess) => {
+    loginSuccessCallbackRef.current = typeof onSuccess === 'function' ? onSuccess : null;
+    setLoginModalOpen(true);
+  }, []);
+
+  const closeLoginModal = useCallback(() => {
+    setLoginModalOpen(false);
+    loginSuccessCallbackRef.current = null;
+  }, []);
+
+  const onLoginSuccess = useCallback((loggedInUser) => {
+    setLoginModalOpen(false);
+    const cb = loginSuccessCallbackRef.current;
+    loginSuccessCallbackRef.current = null;
+    if (cb) {
+      setTimeout(() => {
+        try {
+          cb(loggedInUser);
+        } catch (err) {
+          console.warn('Error running post-login callback:', err);
+        }
+      }, 100);
+    }
+  }, []);
 
   const logout = useCallback(() => {
     try {
@@ -137,6 +164,10 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated: !!token && !!user,
         isAdmin,
         isSuperAdmin,
+        loginModalOpen,
+        openLoginModal,
+        closeLoginModal,
+        onLoginSuccess,
       }}
     >
       {children}

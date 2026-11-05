@@ -48,7 +48,7 @@ const Footer = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const { settings, footerSettings } = useStoreSettings();
+  const { settings, footerSettings, navigation: bootstrapNavigation } = useStoreSettings();
 
   const playStoreUrl = String(settings?.businessDetails?.playStoreUrl || '').trim();
   const appStoreUrl = String(settings?.businessDetails?.appStoreUrl || '').trim();
@@ -102,8 +102,12 @@ const Footer = () => {
     return list;
   }, [settings?.socialMedia, footerSettings?.socialLinks]);
 
-  // Fetch categories & navigation items from API - shared cache with Navbar
+  // Populate categories & navigation items from bootstrap context
   useEffect(() => {
+    if (bootstrapNavigation && bootstrapNavigation.length > 0) {
+      setCategories(bootstrapNavigation);
+      return;
+    }
     let active = true;
     getOnce('/categories/navigation')
       .then((res) => {
@@ -121,7 +125,7 @@ const Footer = () => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [bootstrapNavigation]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
