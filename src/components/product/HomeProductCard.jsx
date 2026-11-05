@@ -121,8 +121,8 @@ export default function HomeProductCard({ product, isSilver: isSilverProp }) {
           <ProductMediaImage
             src={activeImage}
             alt={title}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            videoClassName="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 pointer-events-none"
+            className="w-full h-full object-contain p-1.5 sm:p-2 transition-transform duration-700 group-hover:scale-105"
+            videoClassName="w-full h-full object-contain p-1.5 sm:p-2 transition-transform duration-700 group-hover:scale-105 pointer-events-none"
           />
 
           {/* Slide-Up Add to Cart Overlay on Hover */}
