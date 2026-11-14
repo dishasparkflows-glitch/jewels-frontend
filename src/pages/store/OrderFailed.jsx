@@ -33,7 +33,7 @@ export default function OrderFailed() {
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link
             to="/checkout"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[#171613] px-8 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#80603d]"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#8c6536] px-8 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#75522b] shadow-xs active:scale-95 cursor-pointer"
           >
             <HiOutlineRefresh className="h-4 w-4" /> Try Again
           </Link>

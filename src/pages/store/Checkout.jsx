@@ -352,8 +352,6 @@ export default function Checkout() {
           price: item.price,
           quantity: item.quantity,
           totalItemPrice: (Number(item.price) || 0) * (Number(item.quantity) || 1),
-          image: item.image,
-          category: item.category,
           selectedMetal: item.selectedMetal,
           selectedSize: item.selectedSize,
           selectedAttributes: item.selectedAttributes,
@@ -369,6 +367,13 @@ export default function Checkout() {
         throw new Error('Could not create order.');
       }
 
+      // Online payment integration temporarily commented out for testing
+      toast.success('Order placed successfully!', { id: toastId });
+      if (clearCart) clearCart();
+      navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}`);
+      return;
+
+      /*
       if (!payment || (paymentMethod === 'cod' && codDueNow === 0)) {
         toast.success('Order placed successfully!', { id: toastId });
         if (clearCart) clearCart();
@@ -439,6 +444,7 @@ export default function Checkout() {
 
         rzp.open();
       }
+      */
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || 'Failed to place order. Please try again.', { id: toastId });
       setSubmitting(false);

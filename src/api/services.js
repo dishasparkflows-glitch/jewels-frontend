@@ -122,7 +122,7 @@ export const ordersAPI = {
   create: (orderData) => api.post('/orders', orderData),
   getMyOrders: (params) => api.get('/orders/my-orders', { params }),
   getById: (id) => api.get(`/orders/${id}`),
-  getByNumber: (orderNumber) => api.get(`/orders/lookup/${orderNumber}`),
+  getByNumber: (orderNumber) => api.get(`/orders/lookup/${encodeURIComponent(orderNumber)}`),
   cancel: (id, reason) => api.post(`/orders/${id}/cancel`, { reason }),
 };
 

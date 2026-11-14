@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { usersAPI, addressesAPI } from '../../api/services';
+import { usersAPI, addressesAPI, ordersAPI } from '../../api/services';
 import { toast } from 'react-hot-toast';
 import Dropdown from '../../components/common/Dropdown';
 import PhoneInput from '../../components/common/PhoneInput';
@@ -22,6 +22,10 @@ import {
   HiOutlineViewGrid,
   HiOutlinePlus,
   HiOutlineTrash,
+  HiOutlineShoppingBag,
+  HiOutlineClock,
+  HiOutlineEye,
+  HiOutlineCheckCircle,
 } from 'react-icons/hi';
 
 const INDIAN_STATES = [
@@ -32,9 +36,32 @@ const INDIAN_STATES = [
   'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
 ];
 
+const formatOrderDate = (dateVal) => {
+  if (!dateVal) return '';
+  try {
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return '';
+  }
+};
+
 const Profile = () => {
   const { user, logout, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'orders' | 'returns' | 'addresses'
+
+  // Orders state
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
   
   // Profile edit state
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -91,11 +118,32 @@ const Profile = () => {
     }
   };
 
+  // Load orders from API
+  const fetchOrders = async () => {
+    try {
+      setOrdersLoading(true);
+      const res = await ordersAPI.getMyOrders();
+      const list = res?.data?.data?.items || res?.data?.items || res?.data?.data || res?.data || [];
+      setOrders(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('Failed to load orders:', err);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (user?._id) {
       fetchAddresses();
+      fetchOrders();
     }
   }, [user?._id]);
+
+  useEffect(() => {
+    if (user?._id && activeTab === 'orders') {
+      fetchOrders();
+    }
+  }, [activeTab]);
 
   // Handle outside click for modals
   useEffect(() => {
@@ -354,14 +402,21 @@ const Profile = () => {
               {/* Orders Tab */}
               <button
                 onClick={() => setActiveTab('orders')}
-                className={`flex items-center gap-3 px-4 py-3.5 text-left transition-colors ${
+                className={`flex items-center justify-between px-4 py-3.5 text-left transition-colors ${
                   activeTab === 'orders'
                     ? 'border-l-4 border-[#8b6f4e] bg-[#FAF7F2] font-medium text-[#8b6f4e]'
                     : 'text-stone-600 hover:bg-stone-50 hover:text-black border-l-4 border-transparent'
                 }`}
               >
-                <HiOutlineCube className={`w-4 h-4 ${activeTab === 'orders' ? 'text-[#8b6f4e]' : 'text-stone-500'}`} />
-                <span>Orders</span>
+                <div className="flex items-center gap-3">
+                  <HiOutlineCube className={`w-4 h-4 ${activeTab === 'orders' ? 'text-[#8b6f4e]' : 'text-stone-500'}`} />
+                  <span>Orders</span>
+                </div>
+                {orders.length > 0 && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#8b6f4e]/10 text-[#8b6f4e]">
+                    {orders.length}
+                  </span>
+                )}
               </button>
 
               {/* Returns Tab */}
@@ -704,22 +759,150 @@ const Profile = () => {
 
             {/* ─── TAB 3: ORDERS ────────────────────────────────────── */}
             {activeTab === 'orders' && (
-              <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-5 text-center space-y-3">
-                <div className="w-16 h-16 rounded-full bg-stone-100 mx-auto flex items-center justify-center text-stone-400">
-                  <HiOutlineCube className="w-8 h-8" />
-                </div>
-                <h3 className="font-serif text-xl font-normal text-stone-800">Your Orders</h3>
-                <p className="text-xs text-stone-500 max-w-sm mx-auto">
-                  You have no pending orders. Explore our exquisite jewelry collections and certified solitaires.
-                </p>
-                <div className="pt-2">
-                  <Link
-                    to="/shop"
-                    className="inline-block btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-xs font-semibold uppercase tracking-wider px-6 py-2.5 rounded-lg shadow-sm hover:shadow transition-all"
-                  >
-                    Shop Collection
-                  </Link>
-                </div>
+              <div className="space-y-4">
+                {ordersLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2].map((n) => (
+                      <div key={n} className="bg-white rounded-xl border border-stone-200 p-5 space-y-3 animate-pulse">
+                        <div className="flex justify-between items-center">
+                          <div className="h-4 bg-stone-200 rounded w-32" />
+                          <div className="h-4 bg-stone-200 rounded w-20" />
+                        </div>
+                        <div className="h-14 bg-stone-100 rounded-lg" />
+                      </div>
+                    ))}
+                  </div>
+                ) : orders.length === 0 ? (
+                  <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-8 text-center space-y-3">
+                    <div className="w-16 h-16 rounded-full bg-[#FAF7F2] text-[#8b6f4e] mx-auto flex items-center justify-center">
+                      <HiOutlineCube className="w-8 h-8" />
+                    </div>
+                    <h3 className="font-serif text-xl font-normal text-stone-800">Your Orders</h3>
+                    <p className="text-xs text-stone-500 max-w-sm mx-auto">
+                      You have no pending orders. Explore our exquisite jewelry collections and certified solitaires.
+                    </p>
+                    <div className="pt-2">
+                      <Link
+                        to="/shop"
+                        className="inline-block btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-xs font-semibold uppercase tracking-wider px-6 py-2.5 rounded-lg shadow-sm hover:shadow transition-all"
+                      >
+                        Shop Collection
+                      </Link>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="pb-1 border-b border-stone-200/60">
+                      <h2 className="font-serif text-lg font-normal text-stone-900">
+                        Order History ({orders.length})
+                      </h2>
+                    </div>
+
+                    {orders.map((order) => {
+                      const orderDate = formatOrderDate(order.meta?.createdAt || order.createdAt);
+                      const totalAmount = order.pricing?.total ?? order.totalAmount ?? 0;
+                      const status = String(order.orderStatus || 'placed').toLowerCase();
+
+                      return (
+                        <div
+                          key={order._id || order.id}
+                          className="bg-white rounded-xl border border-stone-200 shadow-2xs hover:shadow-sm transition-all overflow-hidden"
+                        >
+                          {/* Top Order Summary Bar */}
+                          <div className="bg-[#FAF7F2] px-4 py-3 border-b border-stone-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+                            <div className="flex items-center gap-2.5 flex-wrap">
+                              <span className="font-mono font-bold text-xs text-[#8b6f4e] bg-white border border-[#8b6f4e]/30 px-2 py-0.5 rounded shadow-2xs">
+                                {order.orderNumber || 'Order'}
+                              </span>
+                              {orderDate && (
+                                <span className="text-stone-500 font-medium flex items-center gap-1 text-[11px]">
+                                  <HiOutlineClock className="w-3.5 h-3.5 text-stone-400" />
+                                  {orderDate}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2.5">
+                              <span
+                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border capitalize tracking-wider ${
+                                  status === 'confirmed'
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                    : status === 'placed'
+                                    ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                    : status === 'shipped'
+                                    ? 'bg-sky-50 text-sky-800 border-sky-300'
+                                    : status === 'delivered'
+                                    ? 'bg-purple-50 text-purple-800 border-purple-300'
+                                    : status === 'cancelled'
+                                    ? 'bg-rose-50 text-rose-800 border-rose-300'
+                                    : 'bg-stone-100 text-stone-700 border-stone-200'
+                                }`}
+                              >
+                                {order.orderStatus || 'Placed'}
+                              </span>
+                              <span className="font-bold text-stone-900 text-sm">
+                                ₹{Number(totalAmount).toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Items in Order */}
+                          <div className="p-4 divide-y divide-stone-100">
+                            {Array.isArray(order.items) && order.items.map((item, idx) => (
+                              <div key={item._id || idx} className="py-2.5 first:pt-0 last:pb-0 flex items-start justify-between gap-3 text-xs">
+                                <div className="flex items-start gap-3 min-w-0 flex-1">
+                                  <div className="w-9 h-9 rounded-lg bg-amber-50/70 border border-amber-200/60 text-[#8b6f4e] flex items-center justify-center shrink-0 mt-0.5">
+                                    <HiOutlineShoppingBag className="w-4 h-4 text-[#8b6f4e]" />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="font-semibold text-stone-900 leading-snug line-clamp-2">
+                                      {item.title || 'Jewellery Item'}
+                                    </p>
+                                    <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-stone-500 mt-1">
+                                      {item.selectedMetal && (
+                                        <span className="px-1.5 py-0.5 rounded bg-stone-100 text-stone-700 font-medium">
+                                          {item.selectedMetal}
+                                        </span>
+                                      )}
+                                      {item.selectedSize && (
+                                        <span className="px-1.5 py-0.5 rounded bg-stone-100 text-stone-700">
+                                          Size: {item.selectedSize}
+                                        </span>
+                                      )}
+                                      <span className="text-stone-500">Qty: {item.quantity || 1}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <div className="font-semibold text-stone-900 text-xs">
+                                    ₹{Number(item.totalItemPrice || item.price || 0).toLocaleString('en-IN')}
+                                  </div>
+                                  {item.quantity > 1 && (
+                                    <div className="text-[10px] text-stone-400">
+                                      ₹{Number(item.price || 0).toLocaleString('en-IN')} each
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Card Footer: Actions */}
+                          <div className="px-4 py-3 bg-stone-50/60 border-t border-stone-100 flex items-center justify-end gap-2 text-xs">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedOrder(order)}
+                              className="px-3.5 py-1.5 rounded-lg border border-[#8b6f4e]/30 bg-[#FAF7F2] hover:bg-[#8b6f4e] hover:text-white text-[#8b6f4e] text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                            >
+                              <HiOutlineEye className="w-3.5 h-3.5" />
+                              View Details
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1049,6 +1232,165 @@ const Profile = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ─── ORDER DETAILS MODAL ────────────────────────────────────── */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div
+            className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col"
+          >
+            <div className="bg-[#22201e] text-white px-6 py-4 flex items-center justify-between shrink-0">
+              <div>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-[#d6c7b2] block">
+                  ORDER DETAILS
+                </span>
+                <h3 className="font-mono text-base font-bold text-white">
+                  {selectedOrder.orderNumber}
+                </h3>
+              </div>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="text-stone-400 hover:text-white cursor-pointer"
+              >
+                <HiOutlineX className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs">
+              {/* Status & Date */}
+              <div className="p-3.5 rounded-xl bg-[#FAF7F2] border border-[#8b6f4e]/20 flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <span className="text-[10px] uppercase font-semibold text-stone-500 block">Status</span>
+                  <span className="font-bold text-stone-900 capitalize text-sm">
+                    {selectedOrder.orderStatus || 'Placed'}
+                  </span>
+                </div>
+                {(selectedOrder.meta?.createdAt || selectedOrder.createdAt) && (
+                  <div className="text-right text-[11px] text-stone-500">
+                    <span className="block text-[10px] uppercase font-semibold text-stone-400">Order Placed</span>
+                    {formatOrderDate(selectedOrder.meta?.createdAt || selectedOrder.createdAt)}
+                  </div>
+                )}
+              </div>
+
+              {/* Items */}
+              <div className="space-y-2">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-stone-400 block">
+                  Items ({selectedOrder.items?.length || 0})
+                </span>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {Array.isArray(selectedOrder.items) && selectedOrder.items.map((item, idx) => (
+                    <div key={item._id || idx} className="p-3 rounded-xl bg-stone-50 border border-stone-200/70 flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <p className="font-semibold text-stone-900 text-xs leading-snug">
+                          {item.title}
+                        </p>
+                        <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-stone-500">
+                          {item.selectedMetal && (
+                            <span className="px-1.5 py-0.5 rounded bg-white text-stone-700 font-medium border border-stone-200">
+                              {item.selectedMetal}
+                            </span>
+                          )}
+                          {item.selectedSize && (
+                            <span className="px-1.5 py-0.5 rounded bg-white text-stone-700 border border-stone-200">
+                              Size: {item.selectedSize}
+                            </span>
+                          )}
+                          <span>Qty: {item.quantity || 1}</span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="font-bold text-stone-900 text-xs">
+                          ₹{Number(item.totalItemPrice || item.price || 0).toLocaleString('en-IN')}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Shipping Address */}
+              {selectedOrder.shippingAddress && (
+                <div className="p-3.5 rounded-xl bg-stone-50 border border-stone-200/70 space-y-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-stone-400 block">
+                    Delivery Address
+                  </span>
+                  <p className="font-semibold text-stone-900 text-xs">
+                    {selectedOrder.shippingAddress.fullName || selectedOrder.customer?.firstName}
+                  </p>
+                  <p className="text-stone-600 text-xs">
+                    {[
+                      selectedOrder.shippingAddress.addressLine,
+                      selectedOrder.shippingAddress.apartment,
+                      selectedOrder.shippingAddress.city,
+                      selectedOrder.shippingAddress.state,
+                      selectedOrder.shippingAddress.postalCode,
+                      selectedOrder.shippingAddress.country,
+                    ].filter(Boolean).join(', ')}
+                  </p>
+                  {(selectedOrder.shippingAddress.phone || selectedOrder.customer?.phone) && (
+                    <p className="text-stone-500 text-[11px] pt-1">
+                      Phone: {selectedOrder.shippingAddress.phone || selectedOrder.customer?.phone}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Price Breakdown */}
+              <div className="p-3.5 rounded-xl bg-stone-50 border border-stone-200/70 space-y-2">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-stone-400 block">
+                  Price Breakdown
+                </span>
+                <div className="space-y-1 text-xs text-stone-600">
+                  {selectedOrder.pricing?.subtotal !== undefined && (
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
+                      <span>₹{Number(selectedOrder.pricing.subtotal).toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  {selectedOrder.pricing?.tax !== undefined && (
+                    <div className="flex justify-between">
+                      <span>Estimated Tax (GST 3%)</span>
+                      <span>₹{Number(selectedOrder.pricing.tax).toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span>Shipping</span>
+                    <span className="text-emerald-700 font-medium">
+                      {selectedOrder.pricing?.shipping === 0 || !selectedOrder.pricing?.shipping ? 'FREE' : `₹${selectedOrder.pricing.shipping}`}
+                    </span>
+                  </div>
+                  {selectedOrder.pricing?.discount > 0 && (
+                    <div className="flex justify-between text-emerald-600 font-medium">
+                      <span>Discount</span>
+                      <span>-₹{Number(selectedOrder.pricing.discount).toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-stone-900 font-bold text-sm pt-2 border-t border-stone-200">
+                    <span>Total Paid</span>
+                    <span className="text-[#8b6f4e]">₹{Number(selectedOrder.pricing?.total ?? selectedOrder.totalAmount ?? 0).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-stone-50 border-t border-stone-100 flex items-center justify-between shrink-0">
+              <Link
+                to={`/order-success?orderId=${selectedOrder._id || selectedOrder.id}&orderNumber=${encodeURIComponent(selectedOrder.orderNumber)}`}
+                className="text-xs text-[#8b6f4e] hover:underline font-medium"
+              >
+                View Order Receipt →
+              </Link>
+              <button
+                type="button"
+                onClick={() => setSelectedOrder(null)}
+                className="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

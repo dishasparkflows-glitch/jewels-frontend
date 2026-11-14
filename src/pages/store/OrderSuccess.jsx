@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { HiOutlineCheckCircle, HiOutlineShoppingBag, HiOutlinePhone } from 'react-icons/hi';
+import { HiOutlineCheckCircle, HiOutlineShoppingBag } from 'react-icons/hi';
 import { ordersAPI } from '../../api/services';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
 
@@ -139,16 +139,10 @@ export default function OrderSuccess() {
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link
             to="/shop"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[#171613] px-8 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#80603d]"
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#8c6536] px-8 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#75522b] shadow-xs active:scale-95 cursor-pointer"
           >
             <HiOutlineShoppingBag className="h-4 w-4" /> Continue Shopping
           </Link>
-          <a
-            href="tel:+919726237723"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-stone-300 bg-white px-6 text-xs font-semibold text-stone-700 transition hover:bg-stone-50"
-          >
-            <HiOutlinePhone className="h-4 w-4 text-[#bd9462]" /> Need Assistance?
-          </a>
         </div>
       </div>
     </main>
