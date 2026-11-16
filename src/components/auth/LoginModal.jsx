@@ -149,30 +149,17 @@ export default function LoginModal({ isOpen, onClose }) {
         </button>
 
         {/* Left Column: Form Section */}
-        <section className="flex flex-col justify-center px-6 py-8 sm:px-9 sm:py-9 overflow-y-auto">
-          {/* Brand Logo Header */}
-          <div className="mb-3">
-            {logoUrl ? (
-              <img src={logoUrl} alt="Neirah" className="h-7 max-w-32 object-contain object-left" />
-            ) : (
-              <div>
-                <span className="font-serif text-lg tracking-[0.2em] font-semibold text-stone-900 block leading-tight">NEIRAH</span>
-                <span className="text-[8px] uppercase tracking-[0.28em] text-stone-400 block font-light">SHINE YOUR WAY</span>
-              </div>
-            )}
-          </div>
-
+        <section className="flex flex-col justify-center px-6 py-8 sm:px-10 sm:py-10 overflow-y-auto">
           <div>
-            <h1 className="font-serif text-2xl font-bold tracking-tight text-stone-900">Welcome Back</h1>
-            <p className="mt-1 text-xs text-stone-500">Sign in to access your wishlist, cart & orders.</p>
+            <h1 className="font-serif text-[26px] sm:text-[28px] font-bold tracking-tight text-[#4A3525] leading-tight">
+              Welcome Back
+            </h1>
+            <p className="mt-1.5 text-xs sm:text-[13px] text-[#6B635B] font-normal">
+              Sign in to access your wishlist, cart & orders.
+            </p>
           </div>
 
-          <div
-            ref={googleButtonRef}
-            className={`mt-5 flex min-h-11 justify-center ${googleReady ? '' : 'hidden'}`}
-            aria-label="Sign in with Google"
-          />
-          {!googleReady && (
+          <div className="relative mt-5">
             <button
               type="button"
               onClick={() => {
@@ -184,17 +171,22 @@ export default function LoginModal({ isOpen, onClose }) {
                   console.warn('Google sign-in prompt error:', err);
                 }
               }}
-              className="mt-5 flex h-11 w-full items-center justify-center gap-3 rounded-xl border border-stone-200 bg-white px-4 text-xs sm:text-sm font-medium text-stone-700 shadow-2xs hover:bg-stone-50 transition-colors cursor-pointer"
+              className="flex h-11 sm:h-12 w-full items-center justify-center gap-3 rounded-xl border border-stone-200/90 bg-white px-4 text-xs sm:text-[13.5px] font-medium text-stone-700 shadow-2xs hover:bg-stone-50 transition-colors cursor-pointer"
             >
               <FcGoogle className="h-5 w-5 shrink-0" />
               <span>Continue with Google</span>
             </button>
-          )}
+            <div
+              ref={googleButtonRef}
+              className={`absolute inset-0 opacity-0 overflow-hidden cursor-pointer flex items-center justify-center [&>div]:scale-x-125 [&_iframe]:scale-x-125 ${googleReady ? '' : 'pointer-events-none'}`}
+              aria-label="Sign in with Google"
+            />
+          </div>
           {googleLoading && <p className="mt-1.5 text-center text-xs text-stone-500">Signing in with Google…</p>}
 
-          <div className="my-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-widest text-stone-400">
+          <div className="my-4 sm:my-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wider text-stone-400">
             <span className="h-px flex-1 bg-stone-200" />
-            <span>or</span>
+            <span>OR</span>
             <span className="h-px flex-1 bg-stone-200" />
           </div>
 
@@ -207,7 +199,7 @@ export default function LoginModal({ isOpen, onClose }) {
             )}
             <label className="sr-only" htmlFor="modal-login-identifier">Mobile number or email</label>
             <div className="relative">
-              <HiOutlineMail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+              <HiOutlineMail className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-600" />
               <input
                 id="modal-login-identifier"
                 type="text"
@@ -216,14 +208,14 @@ export default function LoginModal({ isOpen, onClose }) {
                 value={identifier}
                 onChange={(event) => setIdentifier(event.target.value)}
                 placeholder="Email or Mobile Number"
-                className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-[#8c6b45] focus:ring-2 focus:ring-[#8c6b45]/15"
+                className="h-11 sm:h-12 w-full rounded-xl border border-stone-200/90 bg-[#F8F7F5] pl-11 pr-3 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-[#7A5B3E] focus:bg-white focus:ring-2 focus:ring-[#7A5B3E]/15 autofill-neutral"
                 required
               />
             </div>
 
             <label className="sr-only" htmlFor="modal-login-password">Password</label>
             <div className="relative">
-              <HiOutlineLockClosed className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+              <HiOutlineLockClosed className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-600" />
               <input
                 id="modal-login-password"
                 type={showPassword ? 'text' : 'password'}
@@ -231,16 +223,16 @@ export default function LoginModal({ isOpen, onClose }) {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Password"
-                className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-10 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-[#8c6b45] focus:ring-2 focus:ring-[#8c6b45]/15"
+                className="h-11 sm:h-12 w-full rounded-xl border border-stone-200/90 bg-[#F8F7F5] pl-11 pr-11 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-[#7A5B3E] focus:bg-white focus:ring-2 focus:ring-[#7A5B3E]/15 autofill-neutral"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((visible) => !visible)}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 cursor-pointer"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-600 hover:text-stone-900 cursor-pointer"
               >
-                {showPassword ? <HiOutlineEyeOff className="h-4 w-4" /> : <HiOutlineEye className="h-4 w-4" />}
+                {showPassword ? <HiOutlineEyeOff className="h-5 w-5" /> : <HiOutlineEye className="h-5 w-5" />}
               </button>
             </div>
 
@@ -251,7 +243,7 @@ export default function LoginModal({ isOpen, onClose }) {
                   handleClose();
                   navigate('/forgot-password');
                 }}
-                className="text-xs text-[#8c6b45] hover:underline cursor-pointer"
+                className="text-xs sm:text-[13px] font-medium text-stone-600 hover:text-stone-900 transition-colors cursor-pointer"
               >
                 Forgot password?
               </button>
@@ -260,21 +252,21 @@ export default function LoginModal({ isOpen, onClose }) {
             <button
               type="submit"
               disabled={loading}
-              className="!mt-4 flex h-11 w-full items-center justify-center rounded-xl btn-theme-primary text-sm font-medium shadow-sm transition disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+              className="!mt-4 flex h-11 sm:h-12 w-full items-center justify-center rounded-xl bg-[#715538] hover:bg-[#5f472e] text-white text-sm sm:text-[15px] font-semibold tracking-wide shadow-xs transition-all active:scale-[0.99] disabled:cursor-wait disabled:opacity-60 cursor-pointer"
             >
               {loading ? 'Signing In…' : 'Sign In'}
             </button>
           </form>
 
-          <p className="mt-4 text-center text-xs text-stone-500">
-            Don’t have an account?{' '}
+          <p className="mt-4 sm:mt-5 text-center text-xs sm:text-[13px] text-stone-500 font-normal">
+            Don't have an account?{' '}
             <button
               type="button"
               onClick={() => {
                 handleClose();
                 navigate('/register');
               }}
-              className="font-semibold text-stone-800 hover:text-[#8c6b45] transition-colors cursor-pointer"
+              className="font-bold text-[#715538] hover:text-[#523d26] transition-colors cursor-pointer ml-0.5"
             >
               Create Account
             </button>

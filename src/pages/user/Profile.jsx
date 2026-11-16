@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCart } from '../../contexts/CartContext';
 import { usersAPI, addressesAPI, ordersAPI } from '../../api/services';
 import { toast } from 'react-hot-toast';
 import Dropdown from '../../components/common/Dropdown';
@@ -24,9 +25,11 @@ import {
   HiOutlineTrash,
   HiOutlineShoppingBag,
   HiOutlineClock,
+  HiOutlineCalendar,
   HiOutlineEye,
   HiOutlineCheckCircle,
 } from 'react-icons/hi';
+import { getImageUrl } from '../../utils/imageUrl';
 
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
@@ -54,14 +57,68 @@ const formatOrderDate = (dateVal) => {
   }
 };
 
+const resolveItemImage = (item) => {
+  if (item?.image) return item.image;
+  if (item?.thumbnail) return item.thumbnail;
+  const prod = item?.productId;
+  if (!prod) return '';
+  if (Array.isArray(prod.ornate?.ornateImages) && prod.ornate.ornateImages.length > 0) {
+    const found = prod.ornate.ornateImages.find((img) => img?.url);
+    if (found?.url) return found.url;
+  }
+  if (Array.isArray(prod.colorImages) && prod.colorImages.length > 0) {
+    for (const ci of prod.colorImages) {
+      if (Array.isArray(ci.images)) {
+        const found = ci.images.find((img) => img?.url && (img.mediaType === 'image' || !/\.(webm|mp4|mov)$/i.test(img.url)));
+        if (found?.url) return found.url;
+      }
+    }
+  }
+  if (Array.isArray(prod.media) && prod.media.length > 0) {
+    const found = prod.media.find((m) => m?.url);
+    if (found?.url) return found.url;
+  }
+  if (Array.isArray(prod.basicInfo?.images) && prod.basicInfo.images.length > 0) {
+    return prod.basicInfo.images[0];
+  }
+  if (prod.assets?.thumbnail) return prod.assets.thumbnail;
+  return '';
+};
+
+const getOrderStatusBadge = (status = '') => {
+  const s = String(status).toLowerCase();
+  switch (s) {
+    case 'pending':
+    case 'placed':
+      return 'bg-[#fdeee0] text-[#935418] border border-[#f3d7bc]/70';
+    case 'confirmed':
+      return 'bg-[#eaf7ee] text-[#1b7a3a] border border-[#c4e8ce]/70';
+    case 'processing':
+      return 'bg-[#eaf1fb] text-[#1e58a7] border border-[#c7dcf7]/70';
+    case 'shipped':
+    case 'out_for_delivery':
+      return 'bg-[#e8f7fa] text-[#117688] border border-[#bee7ee]/70';
+    case 'delivered':
+      return 'bg-[#eaf7ee] text-[#1b7a3a] border border-[#c4e8ce]/70';
+    case 'cancelled':
+    case 'rejected':
+      return 'bg-[#fdeeed] text-[#9e2724] border border-[#f7c9c7]/70';
+    default:
+      return 'bg-stone-100 text-stone-700 border border-stone-200';
+  }
+};
+
 const Profile = () => {
   const { user, logout, updateUser } = useAuth();
+  const { addToCart, openCartDrawer } = useCart();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'orders' | 'returns' | 'addresses'
 
   // Orders state
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [reorderingId, setReorderingId] = useState(null);
   
   // Profile edit state
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -101,6 +158,7 @@ const Profile = () => {
         firstName: user.profile?.firstName || '',
         lastName: user.profile?.lastName || '',
         phone: user.profile?.phone || '',
+        countryCode: user.profile?.countryCode || '+91',
         location: user.profile?.location || '',
         bio: user.profile?.bio || '',
       });
@@ -132,6 +190,60 @@ const Profile = () => {
     }
   };
 
+  const handleBuyAgain = async (order) => {
+    if (!order || !Array.isArray(order.items) || order.items.length === 0) {
+      toast.error('No items found in this order');
+      return;
+    }
+
+    try {
+      setReorderingId(order._id || order.id);
+      let count = 0;
+
+      for (const item of order.items) {
+        const productPayload = {
+          _id: item.productId,
+          id: item.productId,
+          title: item.title,
+          name: item.title,
+          price: item.price,
+          pricing: {
+            salePrice: item.price,
+            mrp: item.price,
+          },
+          images: item.image ? [item.image] : [],
+        };
+
+        const options = {
+          selectedMetal: item.selectedMetal || '',
+          selectedSize: item.selectedSize || '',
+          selectedAttributes: item.selectedAttributes || null,
+        };
+
+        await addToCart(productPayload, item.quantity || 1, options);
+        count += 1;
+      }
+
+      toast.success(
+        count === 1
+          ? 'Item added back to your cart!'
+          : `${count} items added back to your cart!`,
+        { icon: '🛍️' }
+      );
+
+      if (typeof openCartDrawer === 'function') {
+        openCartDrawer();
+      } else {
+        navigate('/cart');
+      }
+    } catch (err) {
+      console.error('Failed to reorder items:', err);
+      toast.error('Could not add items to cart. Please try again.');
+    } finally {
+      setReorderingId(null);
+    }
+  };
+
   useEffect(() => {
     if (user?._id) {
       fetchAddresses();
@@ -144,6 +256,22 @@ const Profile = () => {
       fetchOrders();
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!selectedOrder) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setSelectedOrder(null);
+      }
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedOrder]);
 
   // Handle outside click for modals
   useEffect(() => {
@@ -196,6 +324,7 @@ const Profile = () => {
         firstName: profileForm.firstName,
         lastName: profileForm.lastName,
         phone: profileForm.phone,
+        countryCode: profileForm.countryCode || '+91',
         location: profileForm.location,
         bio: profileForm.bio,
       });
@@ -226,6 +355,7 @@ const Profile = () => {
       setAddressForm({
         type: aData.type || 'home',
         phone: aData.phone || user?.profile?.phone || '',
+        countryCode: aData.countryCode || user?.profile?.countryCode || '+91',
         addressLine: aData.addressLine || '',
         street: aData.street || '',
         city: aData.city || 'Gandhinagar',
@@ -239,6 +369,7 @@ const Profile = () => {
       setAddressForm({
         type: 'home',
         phone: user?.profile?.phone || '',
+        countryCode: user?.profile?.countryCode || '+91',
         addressLine: '',
         street: '',
         city: 'Gandhinagar',
@@ -311,6 +442,7 @@ const Profile = () => {
         address: {
           type: addressForm.type || 'home',
           phone: addressForm.phone,
+          countryCode: addressForm.countryCode || '+91',
           addressLine: addressForm.addressLine,
           street: addressForm.street || '',
           city: addressForm.city,
@@ -801,101 +933,140 @@ const Profile = () => {
                     {orders.map((order) => {
                       const orderDate = formatOrderDate(order.meta?.createdAt || order.createdAt);
                       const totalAmount = order.pricing?.total ?? order.totalAmount ?? 0;
-                      const status = String(order.orderStatus || 'placed').toLowerCase();
+                      const status = String(order.orderStatus || 'pending').toLowerCase();
 
                       return (
                         <div
                           key={order._id || order.id}
-                          className="bg-white rounded-xl border border-stone-200 shadow-2xs hover:shadow-sm transition-all overflow-hidden"
+                          className="bg-white rounded-2xl border border-stone-200/90 shadow-2xs hover:shadow-xs transition-all p-5 space-y-4"
                         >
-                          {/* Top Order Summary Bar */}
-                          <div className="bg-[#FAF7F2] px-4 py-3 border-b border-stone-200/80 flex flex-wrap items-center justify-between gap-3 text-xs">
-                            <div className="flex items-center gap-2.5 flex-wrap">
-                              <span className="font-mono font-bold text-xs text-[#8b6f4e] bg-white border border-[#8b6f4e]/30 px-2 py-0.5 rounded shadow-2xs">
+                          {/* Top Header Row */}
+                          <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-stone-100">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <span className="font-mono font-medium text-xs text-stone-700 bg-stone-50 border border-stone-200/90 px-3.5 py-1 rounded-full shadow-2xs">
                                 {order.orderNumber || 'Order'}
                               </span>
                               {orderDate && (
-                                <span className="text-stone-500 font-medium flex items-center gap-1 text-[11px]">
-                                  <HiOutlineClock className="w-3.5 h-3.5 text-stone-400" />
+                                <span className="text-stone-500 font-medium flex items-center gap-1.5 text-xs">
+                                  <HiOutlineCalendar className="w-3.5 h-3.5 text-stone-400" />
                                   {orderDate}
                                 </span>
                               )}
                             </div>
 
-                            <div className="flex items-center gap-2.5">
+                            <div className="flex items-center gap-3">
                               <span
-                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border capitalize tracking-wider ${
-                                  status === 'confirmed'
-                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                                    : status === 'placed'
-                                    ? 'bg-amber-50 text-amber-800 border-amber-300'
-                                    : status === 'shipped'
-                                    ? 'bg-sky-50 text-sky-800 border-sky-300'
-                                    : status === 'delivered'
-                                    ? 'bg-purple-50 text-purple-800 border-purple-300'
-                                    : status === 'cancelled'
-                                    ? 'bg-rose-50 text-rose-800 border-rose-300'
-                                    : 'bg-stone-100 text-stone-700 border-stone-200'
-                                }`}
+                                className={`px-3.5 py-1 rounded-full text-xs font-medium border capitalize ${getOrderStatusBadge(
+                                  status
+                                )}`}
                               >
-                                {order.orderStatus || 'Placed'}
+                                {order.orderStatus || 'Pending'}
                               </span>
-                              <span className="font-bold text-stone-900 text-sm">
+                              <span className="font-bold text-stone-900 text-base ml-1">
                                 ₹{Number(totalAmount).toLocaleString('en-IN')}
                               </span>
                             </div>
                           </div>
 
                           {/* Items in Order */}
-                          <div className="p-4 divide-y divide-stone-100">
-                            {Array.isArray(order.items) && order.items.map((item, idx) => (
-                              <div key={item._id || idx} className="py-2.5 first:pt-0 last:pb-0 flex items-start justify-between gap-3 text-xs">
-                                <div className="flex items-start gap-3 min-w-0 flex-1">
-                                  <div className="w-9 h-9 rounded-lg bg-amber-50/70 border border-amber-200/60 text-[#8b6f4e] flex items-center justify-center shrink-0 mt-0.5">
-                                    <HiOutlineShoppingBag className="w-4 h-4 text-[#8b6f4e]" />
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="font-semibold text-stone-900 leading-snug line-clamp-2">
-                                      {item.title || 'Jewellery Item'}
-                                    </p>
-                                    <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-stone-500 mt-1">
-                                      {item.selectedMetal && (
-                                        <span className="px-1.5 py-0.5 rounded bg-stone-100 text-stone-700 font-medium">
-                                          {item.selectedMetal}
-                                        </span>
+                          <div className="space-y-4">
+                            {Array.isArray(order.items) &&
+                              order.items.map((item, idx) => {
+                                const itemThumb = resolveItemImage(item);
+                                const itemSku =
+                                  item.sku ||
+                                  item.productId?.basicInfo?.sku ||
+                                  item.productId?.ornate?.tagNo;
+
+                                return (
+                                  <div
+                                    key={item._id || idx}
+                                    className="flex items-center justify-between gap-4"
+                                  >
+                                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-stone-50 border border-stone-200/80 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                                        {itemThumb ? (
+                                          <img
+                                            src={getImageUrl(itemThumb)}
+                                            alt={item.title || 'Product'}
+                                            className="w-full h-full object-contain"
+                                            onError={(e) => {
+                                              e.currentTarget.style.display = 'none';
+                                              if (e.currentTarget.parentElement) {
+                                                e.currentTarget.parentElement.innerHTML =
+                                                  '<span class="text-xl">💍</span>';
+                                              }
+                                            }}
+                                          />
+                                        ) : (
+                                          <span className="text-xl">💍</span>
+                                        )}
+                                      </div>
+
+                                      <div className="min-w-0 flex-1 space-y-1.5">
+                                        <h4
+                                          className="font-bold text-stone-900 text-sm leading-snug truncate"
+                                          title={item.title || 'Jewellery Item'}
+                                        >
+                                          {item.title || 'Jewellery Item'}
+                                        </h4>
+                                        <div className="flex items-center gap-2 flex-wrap text-xs">
+                                          {item.selectedMetal && (
+                                            <span className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 font-medium text-[11px]">
+                                              {item.selectedMetal}
+                                            </span>
+                                          )}
+                                          {itemSku && (
+                                            <span className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 font-medium text-[11px]">
+                                              SKU: {itemSku}
+                                            </span>
+                                          )}
+                                          <span className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 font-medium text-[11px]">
+                                            Qty: {item.quantity || 1}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="text-right shrink-0">
+                                      <div className="font-bold text-stone-900 text-sm sm:text-base">
+                                        ₹{Number(item.totalItemPrice || item.price || 0).toLocaleString('en-IN')}
+                                      </div>
+                                      {item.quantity > 1 && (
+                                        <div className="text-[11px] text-stone-400 mt-0.5">
+                                          ₹{Number(item.price || 0).toLocaleString('en-IN')} each
+                                        </div>
                                       )}
-                                      {item.selectedSize && (
-                                        <span className="px-1.5 py-0.5 rounded bg-stone-100 text-stone-700">
-                                          Size: {item.selectedSize}
-                                        </span>
-                                      )}
-                                      <span className="text-stone-500">Qty: {item.quantity || 1}</span>
                                     </div>
                                   </div>
-                                </div>
-                                <div className="text-right shrink-0">
-                                  <div className="font-semibold text-stone-900 text-xs">
-                                    ₹{Number(item.totalItemPrice || item.price || 0).toLocaleString('en-IN')}
-                                  </div>
-                                  {item.quantity > 1 && (
-                                    <div className="text-[10px] text-stone-400">
-                                      ₹{Number(item.price || 0).toLocaleString('en-IN')} each
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
+                                );
+                              })}
                           </div>
 
                           {/* Card Footer: Actions */}
-                          <div className="px-4 py-3 bg-stone-50/60 border-t border-stone-100 flex items-center justify-end gap-2 text-xs">
+                          <div className="flex items-center justify-end gap-2.5 pt-1">
+                            {['delivered', 'completed'].includes(status) && (
+                              <button
+                                type="button"
+                                disabled={reorderingId === (order._id || order.id)}
+                                onClick={() => handleBuyAgain(order)}
+                                className="px-4 py-2 rounded-xl border border-[#8b6f4e] bg-[#8b6f4e] hover:bg-[#785e40] text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95 disabled:opacity-60 disabled:cursor-wait"
+                              >
+                                <HiOutlineRefresh
+                                  className={`w-3.5 h-3.5 ${
+                                    reorderingId === (order._id || order.id) ? 'animate-spin' : ''
+                                  }`}
+                                />
+                                {reorderingId === (order._id || order.id) ? 'Adding…' : 'Buy Again'}
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => setSelectedOrder(order)}
-                              className="px-3.5 py-1.5 rounded-lg border border-[#8b6f4e]/30 bg-[#FAF7F2] hover:bg-[#8b6f4e] hover:text-white text-[#8b6f4e] text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                              className="px-4 py-2 rounded-xl border border-stone-300 hover:border-stone-400 bg-white hover:bg-stone-50 text-stone-700 text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
                             >
-                              <HiOutlineEye className="w-3.5 h-3.5" />
-                              View Details
+                              <HiOutlineEye className="w-4 h-4 text-stone-500" />
+                              <span>View Details</span>
                             </button>
                           </div>
                         </div>
@@ -924,10 +1095,14 @@ const Profile = () => {
 
       {/* ─── EDIT PROFILE MODAL ─────────────────────────────────────── */}
       {editProfileOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+          onClick={() => setEditProfileOpen(false)}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+        >
           <div
             ref={modalRef}
-            className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in cursor-default"
           >
             <div className="bg-[#22201e] text-white px-6 py-4 flex items-center justify-between">
               <h3 className="font-cinzel text-base tracking-wider uppercase text-white">
@@ -1032,10 +1207,14 @@ const Profile = () => {
 
       {/* ─── EDIT / ADD ADDRESS MODAL ───────────────────────────────── */}
       {addressModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+        <div
+          onClick={() => setAddressModalOpen(false)}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto cursor-pointer"
+        >
           <div
             ref={modalRef}
-            className="w-full max-w-[540px] bg-white rounded-2xl shadow-2xl animate-scale-in my-6 relative"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[540px] bg-white rounded-2xl shadow-2xl animate-scale-in my-6 relative cursor-default"
           >
             {/* Dark Header */}
             <div className="bg-[#262320] text-white px-7 py-5 flex items-center justify-between rounded-t-2xl">
@@ -1237,9 +1416,13 @@ const Profile = () => {
       )}
       {/* ─── ORDER DETAILS MODAL ────────────────────────────────────── */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+          onClick={() => setSelectedOrder(null)}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+        >
           <div
-            className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col cursor-default"
           >
             <div className="bg-[#22201e] text-white px-6 py-4 flex items-center justify-between shrink-0">
               <div>
@@ -1264,7 +1447,7 @@ const Profile = () => {
                 <div>
                   <span className="text-[10px] uppercase font-semibold text-stone-500 block">Status</span>
                   <span className="font-bold text-stone-900 capitalize text-sm">
-                    {selectedOrder.orderStatus || 'Placed'}
+                    {selectedOrder.orderStatus || 'Pending'}
                   </span>
                 </div>
                 {(selectedOrder.meta?.createdAt || selectedOrder.createdAt) && (
@@ -1280,34 +1463,73 @@ const Profile = () => {
                 <span className="text-[10px] uppercase font-bold tracking-wider text-stone-400 block">
                   Items ({selectedOrder.items?.length || 0})
                 </span>
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {Array.isArray(selectedOrder.items) && selectedOrder.items.map((item, idx) => (
-                    <div key={item._id || idx} className="p-3 rounded-xl bg-stone-50 border border-stone-200/70 flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <p className="font-semibold text-stone-900 text-xs leading-snug">
-                          {item.title}
-                        </p>
-                        <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-stone-500">
-                          {item.selectedMetal && (
-                            <span className="px-1.5 py-0.5 rounded bg-white text-stone-700 font-medium border border-stone-200">
-                              {item.selectedMetal}
-                            </span>
-                          )}
-                          {item.selectedSize && (
-                            <span className="px-1.5 py-0.5 rounded bg-white text-stone-700 border border-stone-200">
-                              Size: {item.selectedSize}
-                            </span>
-                          )}
-                          <span>Qty: {item.quantity || 1}</span>
+                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                  {Array.isArray(selectedOrder.items) &&
+                    selectedOrder.items.map((item, idx) => {
+                      const itemThumb = resolveItemImage(item);
+                      const itemSku =
+                        item.sku ||
+                        item.productId?.basicInfo?.sku ||
+                        item.productId?.ornate?.tagNo;
+
+                      return (
+                        <div
+                          key={item._id || idx}
+                          className="p-3 rounded-xl bg-stone-50 border border-stone-200/70 flex items-center justify-between gap-3"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="w-12 h-12 rounded-lg bg-white border border-stone-200/80 p-0.5 flex items-center justify-center shrink-0 overflow-hidden">
+                              {itemThumb ? (
+                                <img
+                                  src={getImageUrl(itemThumb)}
+                                  alt={item.title || 'Product'}
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    if (e.currentTarget.parentElement) {
+                                      e.currentTarget.parentElement.innerHTML =
+                                        '<span class="text-sm">💍</span>';
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-sm">💍</span>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <p className="font-semibold text-stone-900 text-xs leading-snug">
+                                {item.title}
+                              </p>
+                              <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-stone-500">
+                                {item.selectedMetal && (
+                                  <span className="px-1.5 py-0.5 rounded bg-white text-stone-700 font-medium border border-stone-200">
+                                    {item.selectedMetal}
+                                  </span>
+                                )}
+                                {itemSku && (
+                                  <span className="px-1.5 py-0.5 rounded bg-white text-stone-700 border border-stone-200 font-medium">
+                                    SKU: {itemSku}
+                                  </span>
+                                )}
+                                <span className="px-1.5 py-0.5 rounded bg-white text-stone-600 border border-stone-200">
+                                  Qty: {item.quantity || 1}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="font-bold text-stone-900 text-xs">
+                              ₹{Number(item.totalItemPrice || item.price || 0).toLocaleString('en-IN')}
+                            </div>
+                            {item.quantity > 1 && (
+                              <div className="text-[10px] text-stone-400 mt-0.5">
+                                ₹{Number(item.price || 0).toLocaleString('en-IN')} each
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className="font-bold text-stone-900 text-xs">
-                          ₹{Number(item.totalItemPrice || item.price || 0).toLocaleString('en-IN')}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
                 </div>
               </div>
 
@@ -1383,13 +1605,29 @@ const Profile = () => {
               >
                 View Order Receipt →
               </Link>
-              <button
-                type="button"
-                onClick={() => setSelectedOrder(null)}
-                className="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-              >
-                Close
-              </button>
+              <div className="flex items-center gap-2">
+                {String(selectedOrder.orderStatus || '').toLowerCase() === 'delivered' && (
+                  <button
+                    type="button"
+                    disabled={reorderingId === (selectedOrder._id || selectedOrder.id)}
+                    onClick={() => {
+                      handleBuyAgain(selectedOrder);
+                      setSelectedOrder(null);
+                    }}
+                    className="px-3.5 py-2 bg-[#8b6f4e] hover:bg-[#785e40] text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-wait shadow-2xs"
+                  >
+                    <HiOutlineRefresh className={`w-3.5 h-3.5 ${reorderingId === (selectedOrder._id || selectedOrder.id) ? 'animate-spin' : ''}`} />
+                    {reorderingId === (selectedOrder._id || selectedOrder.id) ? 'Adding…' : 'Buy Again'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrder(null)}
+                  className="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

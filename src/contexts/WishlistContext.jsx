@@ -259,10 +259,17 @@ export const WishlistProvider = ({ children }) => {
       });
     }
 
-    if (token || user) {
+    if (accessToken || currentUser) {
       try {
         const res = await wishlistAPI.toggle({ productId });
         const result = res?.data?.data || {};
+
+        if (result.isWishlisted !== undefined) {
+          setWishlistMap((prev) => ({
+            ...prev,
+            [productId]: Boolean(result.isWishlisted),
+          }));
+        }
 
         if (result.items && Array.isArray(result.items)) {
           setWishlistItems(result.items);

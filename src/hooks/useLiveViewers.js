@@ -1,26 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:9900/api';
-const SOCKET_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+import { getSocket } from '../services/socket';
 
 const MIN_VIEWERS = 25;
 const MAX_VIEWERS = 60;
-
-// Shared socket instance across the application
-let sharedSocket = null;
-function getSharedSocket() {
-  if (!sharedSocket) {
-    sharedSocket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
-      autoConnect: true,
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
-    });
-  }
-  return sharedSocket;
-}
 
 /**
  * Generate a deterministic seed from productId in range 28-45
@@ -104,7 +86,7 @@ export function useLiveViewers(productId) {
     // 1. Connect and join room via Socket.IO
     let socket = null;
     try {
-      socket = getSharedSocket();
+      socket = getSocket();
       if (!socket.connected) {
         socket.connect();
       }

@@ -301,15 +301,16 @@ export default function Dropdown({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={
-          buttonClassName ||
-          `w-full flex items-center justify-between gap-2.5 border border-[#e7ded3] bg-white text-stone-800 font-medium transition-all duration-200 cursor-pointer shadow-2xs hover:border-[#8b6f4e]/60 hover:bg-[#faf7f3]/40 focus:outline-none focus:ring-2 focus:ring-[#8b6f4e]/15 disabled:opacity-50 disabled:cursor-not-allowed ${
-            sizeClasses.button
-          } ${isOpen ? 'border-[#8b6f4e] ring-2 ring-[#8b6f4e]/15' : ''}`
-        }
+        className={`w-full flex items-center justify-between gap-2.5 text-left transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+          buttonClassName
+            ? buttonClassName
+            : `border border-[#e7ded3] bg-white text-stone-800 font-medium shadow-2xs hover:border-[#8b6f4e]/60 hover:bg-[#faf7f3]/40 focus:outline-none focus:ring-2 focus:ring-[#8b6f4e]/15 ${
+                sizeClasses.button
+              }`
+        } ${isOpen ? 'border-[#8b6f4e] ring-2 ring-[#8b6f4e]/15' : ''}`}
       >
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          {prefixIcon && <span className="shrink-0 text-[#8b6f4e]">{prefixIcon}</span>}
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          {prefixIcon && <span className="shrink-0 text-[#8b6f4e] flex items-center justify-center">{prefixIcon}</span>}
           {selectedOption ? (
             <span className="truncate text-stone-900 font-medium">
               {selectedOption.label}

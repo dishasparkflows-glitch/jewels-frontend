@@ -356,3 +356,14 @@ dialog.store-modal,
 .accordion-collapse-inner {
   overflow: hidden;
 }
+
+/* Clean neutral autofill style preventing ugly blue browser background */
+input.autofill-neutral:-webkit-autofill,
+input.autofill-neutral:-webkit-autofill:hover,
+input.autofill-neutral:-webkit-autofill:focus,
+input.autofill-neutral:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #F8F7F5 inset !important;
+  box-shadow: 0 0 0 1000px #F8F7F5 inset !important;
+  -webkit-text-fill-color: #292524 !important;
+  transition: background-color 5000s ease-in-out 0s;
+}

@@ -179,7 +179,7 @@ const Home = () => {
             subtitle: contentOf(customBannerData).subtitle || 'Bring your vision to life with a one-of-a-kind piece, designed and handcrafted to reflect your unique style.',
             image: customBannerData.media?.url || customBannerData.image?.url || (typeof (customBannerData.media || customBannerData.image) === 'string' ? (customBannerData.media || customBannerData.image) : ''),
             buttonText: contentOf(customBannerData).buttonText || 'CUSTOMIZE NOW',
-            link: customBannerData.link || '/custom',
+            link: customBannerData.link || '/custom-jewellery',
           });
         } else {
           setCustomBanner(null);
@@ -809,22 +809,12 @@ const Home = () => {
                 {customBanner.subtitle}
               </p>
               <div>
-                {customBanner.link && customBanner.link !== '/custom' ? (
-                  <Link
-                    to={customBanner.link}
-                    className="inline-block w-auto bg-[#F4594B] text-white px-6 py-2.5 text-[10px] lg:text-[11px] xl:text-[12px] font-bold tracking-[0.2em] uppercase rounded-xl shadow-md hover:bg-[#F4594B]/95 hover:transform hover:-translate-y-0.5 transition-all duration-300"
-                  >
-                    {customBanner.buttonText || 'CUSTOMIZE NOW'}
-                  </Link>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={openAppointmentModal}
-                    className="inline-block w-auto bg-[#F4594B] text-white px-6 py-2.5 text-[10px] lg:text-[11px] xl:text-[12px] font-bold tracking-[0.2em] uppercase rounded-xl shadow-md hover:bg-[#F4594B]/95 hover:transform hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
-                  >
-                    {customBanner.buttonText || 'CUSTOMIZE NOW'}
-                  </button>
-                )}
+                <Link
+                  to={customBanner.link && customBanner.link !== '/custom' ? customBanner.link : '/custom-jewellery'}
+                  className="inline-block w-auto bg-[#F4594B] text-white px-6 py-2.5 text-[10px] lg:text-[11px] xl:text-[12px] font-bold tracking-[0.2em] uppercase rounded-xl shadow-md hover:bg-[#F4594B]/95 hover:transform hover:-translate-y-0.5 transition-all duration-300"
+                >
+                  {customBanner.buttonText || 'CUSTOMIZE NOW'}
+                </Link>
               </div>
             </div>
           </div>
@@ -845,22 +835,12 @@ const Home = () => {
                   {customBanner.subtitle}
                 </p>
                 <div>
-                  {customBanner.link && customBanner.link !== '/custom' ? (
-                    <Link
-                      to={customBanner.link}
-                      className="inline-block w-auto bg-[#F4594B] text-white px-3 sm:px-4 py-1.5 sm:py-2 text-[8px] sm:text-[9px] font-bold tracking-[0.2em] uppercase rounded-lg shadow-md hover:bg-[#F4594B]/95 transition-all"
-                    >
-                      {customBanner.buttonText || 'CUSTOMIZE NOW'}
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={openAppointmentModal}
-                      className="inline-block w-auto bg-[#F4594B] text-white px-3 sm:px-4 py-1.5 sm:py-2 text-[8px] sm:text-[9px] font-bold tracking-[0.2em] uppercase rounded-lg shadow-md hover:bg-[#F4594B]/95 transition-all cursor-pointer"
-                    >
-                      {customBanner.buttonText || 'CUSTOMIZE NOW'}
-                    </button>
-                  )}
+                  <Link
+                    to={customBanner.link && customBanner.link !== '/custom' ? customBanner.link : '/custom-jewellery'}
+                    className="inline-block w-auto bg-[#F4594B] text-white px-3 sm:px-4 py-1.5 sm:py-2 text-[8px] sm:text-[9px] font-bold tracking-[0.2em] uppercase rounded-lg shadow-md hover:bg-[#F4594B]/95 transition-all"
+                  >
+                    {customBanner.buttonText || 'CUSTOMIZE NOW'}
+                  </Link>
                 </div>
               </div>
             </div>

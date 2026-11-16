@@ -88,6 +88,8 @@ export default function Shop({ defaultCategory = '' }) {
   const selectedCollection = params.get('collection') || '';
   const selectedMetal = params.get('metal') || '';
   const selectedStockStatus = params.get('stockStatus') || '';
+  const selectedGemstone = params.get('gemstone') || params.get('stone_names') || '';
+  const selectedGemstoneShape = params.get('gemstoneShape') || params.get('stone_shapes') || '';
   const sort = params.get('sort') || 'newest';
   const page = Math.max(1, Number(params.get('page')) || 1);
   const limit = [12, 24, 48].includes(Number(params.get('limit'))) ? Number(params.get('limit')) : 12;
@@ -237,6 +239,8 @@ export default function Shop({ defaultCategory = '' }) {
     if (selectedCollection) query.collection = selectedCollection;
     if (selectedMetal) query.metal = selectedMetal;
     if (selectedStockStatus) query.stockStatus = selectedStockStatus;
+    if (selectedGemstone) query.gemstone = selectedGemstone;
+    if (selectedGemstoneShape) query.gemstoneShape = selectedGemstoneShape;
 
     productsAPI
       .getAll(query)
@@ -277,6 +281,8 @@ export default function Shop({ defaultCategory = '' }) {
     selectedCollection,
     selectedMetal,
     selectedStockStatus,
+    selectedGemstone,
+    selectedGemstoneShape,
   ]);
 
   function updateFilters(changes) {
@@ -300,7 +306,9 @@ export default function Shop({ defaultCategory = '' }) {
     !!selectedCarat ||
     !!selectedCollection ||
     !!selectedMetal ||
-    !!selectedStockStatus;
+    !!selectedStockStatus ||
+    !!selectedGemstone ||
+    !!selectedGemstoneShape;
 
   // Formatted fallback title for featured slug (e.g. "necklace" -> "Necklace", "solitaire-jewellery" -> "Solitaire Jewellery")
   const formattedFeaturedTitle =
@@ -347,6 +355,8 @@ export default function Shop({ defaultCategory = '' }) {
     'collection',
     'metal',
     'stockStatus',
+    'gemstone',
+    'gemstoneShape',
   ];
 
   multiFilterKeys.forEach((key) => {

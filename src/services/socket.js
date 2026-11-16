@@ -12,7 +12,11 @@ export function getSocket() {
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 15,
-      reconnectionDelay: 1500,
+      reconnectionDelay: 2000,
+    });
+
+    socketInstance.on('connect_error', () => {
+      // Suppress noisy console errors during nodemon server restarts
     });
   }
   return socketInstance;

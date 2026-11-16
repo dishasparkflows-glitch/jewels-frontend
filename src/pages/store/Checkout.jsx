@@ -17,6 +17,7 @@ import {
   HiOutlineTruck,
   HiOutlineUser,
   HiOutlineX,
+  HiOutlineExclamationCircle,
   HiX,
   HiSparkles,
 } from 'react-icons/hi';
@@ -29,6 +30,7 @@ import { resolveMetalName, cleanAttribute } from '../../utils/metalColors';
 import Dropdown from '../../components/common/Dropdown';
 import PhoneInput from '../../components/common/PhoneInput';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
+import OtpVerificationModal from '../../components/store/OtpVerificationModal';
 
 const indianStates = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
@@ -107,8 +109,12 @@ export default function Checkout() {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
   const [codFee, setCodFee] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [devOtp, setDevOtp] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [activeStep, setActiveStep] = useState('shipping');
 
   useEffect(() => {
@@ -167,6 +173,7 @@ export default function Checkout() {
           state: current.state || pAddr.state || '',
           postalCode: current.postalCode || pAddr.pincode || pAddr.postalCode || '',
           phone: current.phone || pAddr.phone || '',
+          countryCode: current.countryCode || pAddr.countryCode || '+91',
           country: current.country || pAddr.country || 'India',
         }));
       })
@@ -187,6 +194,7 @@ export default function Checkout() {
         address: {
           type: 'home',
           phone: form.phone || '',
+          countryCode: form.countryCode || '+91',
           addressLine: form.addressLine,
           street: form.apartment || '',
           city: form.city,
@@ -232,19 +240,24 @@ export default function Checkout() {
     if (event?.preventDefault) event.preventDefault();
     const code = couponCode.trim();
     if (!code) {
+      setCouponError('Please enter a coupon code.');
       toast.error('Enter a coupon code first.');
       return;
     }
 
+    setCouponError('');
     setCouponLoading(true);
     try {
       const data = unwrapResponse(await checkoutAPI.validateCoupon(code, subtotal));
       setAppliedCoupon(data);
       setCouponCode(data?.coupon?.code || code.toUpperCase());
+      setCouponError('');
       toast.success('Coupon applied successfully.');
     } catch (error) {
       setAppliedCoupon(null);
-      toast.error(error.response?.data?.message || 'This coupon could not be applied.');
+      const errMsg = error.response?.data?.message || 'Invalid coupon code';
+      setCouponError(errMsg);
+      toast.error(errMsg);
     } finally {
       setCouponLoading(false);
     }
@@ -315,15 +328,7 @@ export default function Checkout() {
     );
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    if (!form.email || !form.phone || !form.addressLine || !form.city || !form.state || !form.postalCode) {
-      toast.error('Please fill in all required shipping and contact details.');
-      setActiveStep('shipping');
-      return;
-    }
-
+  const proceedWithOrderPlacement = async (verifyResult = null) => {
     setSubmitting(true);
     const toastId = toast.loading('Creating your order...');
 
@@ -346,9 +351,12 @@ export default function Checkout() {
         couponCode: appliedCoupon?.coupon?.code || couponCode.trim() || undefined,
         paymentMethod,
         paymentProvider,
+        otpVerificationToken: verifyResult?.verificationToken,
+        isPhoneVerified: true,
         items: cart.map((item) => ({
           productId: item.productId || item.id,
           title: item.title || item.name,
+          sku: item.sku || item.basicInfo?.sku || '',
           price: item.price,
           quantity: item.quantity,
           totalItemPrice: (Number(item.price) || 0) * (Number(item.quantity) || 1),
@@ -361,94 +369,57 @@ export default function Checkout() {
       const response = await checkoutAPI.createOrder(orderPayload);
       const data = unwrapResponse(response);
       const order = data?.order;
-      const payment = data?.payment;
 
       if (!order) {
         throw new Error('Could not create order.');
       }
 
-      // Online payment integration temporarily commented out for testing
       toast.success('Order placed successfully!', { id: toastId });
       if (clearCart) clearCart();
       navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}`);
-      return;
-
-      /*
-      if (!payment || (paymentMethod === 'cod' && codDueNow === 0)) {
-        toast.success('Order placed successfully!', { id: toastId });
-        if (clearCart) clearCart();
-        navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}`);
-        return;
-      }
-
-      if (payment.provider === 'ccavenue') {
-        toast.loading('Redirecting to CCAvenue secure gateway...', { id: toastId });
-        submitCCAvenueForm({
-          gatewayUrl: payment.gatewayUrl,
-          accessCode: payment.accessCode,
-          encRequest: payment.encRequest,
-        });
-        return;
-      }
-
-      if (payment.provider === 'razorpay') {
-        const isLoaded = await loadRazorpayScript();
-        if (!isLoaded) {
-          toast.error('Unable to load Razorpay checkout SDK. Please verify your connection.', { id: toastId });
-          setSubmitting(false);
-          return;
-        }
-
-        toast.dismiss(toastId);
-
-        const rzp = new window.Razorpay({
-          key: payment.keyId,
-          amount: payment.amount,
-          currency: payment.currency || 'INR',
-          name: 'Neirah Jewels',
-          description: `Order ${order.orderNumber}`,
-          order_id: payment.gatewayOrderId,
-          prefill: {
-            name: `${form.firstName} ${form.lastName}`.trim(),
-            email: form.email,
-            contact: `${form.countryCode || '+91'}${form.phone}`.replace(/[^0-9]/g, ''),
-          },
-          theme: {
-            color: '#8c6536',
-          },
-          handler: async (resp) => {
-            const verifyToast = toast.loading('Confirming payment...');
-            try {
-              await checkoutAPI.verifyRazorpay({
-                orderId: order._id,
-                orderNumber: order.orderNumber,
-                razorpayOrderId: resp.razorpay_order_id,
-                razorpayPaymentId: resp.razorpay_payment_id,
-                razorpaySignature: resp.razorpay_signature,
-              });
-              toast.success('Payment verified successfully!', { id: verifyToast });
-              if (clearCart) clearCart();
-              navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}`);
-            } catch (err) {
-              toast.error(err.response?.data?.message || 'Payment verification failed', { id: verifyToast });
-              navigate(`/order-failed?orderId=${order._id}&orderNumber=${order.orderNumber}&error=verification_failed`);
-            }
-          },
-          modal: {
-            ondismiss: () => {
-              toast.error('Payment was cancelled.');
-              setSubmitting(false);
-            },
-          },
-        });
-
-        rzp.open();
-      }
-      */
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || 'Failed to place order. Please try again.', { id: toastId });
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!form.email || !form.phone || !form.addressLine || !form.city || !form.state || !form.postalCode) {
+      toast.error('Please fill in all required shipping and contact details.');
+      setActiveStep('shipping');
+      return;
+    }
+
+    const cleanPhone = String(form.phone || '').replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      toast.error('Please enter a valid 10-digit mobile number.');
+      setActiveStep('shipping');
+      return;
+    }
+
+    setIsSendingOtp(true);
+    const otpToast = toast.loading('Sending verification code...');
+
+    try {
+      const resp = await checkoutAPI.sendOtp(form.phone, 'order_verification');
+      const resData = resp?.data?.data || resp?.data;
+      toast.dismiss(otpToast);
+      if (resData?.devOtp) {
+        setDevOtp(resData.devOtp);
+      }
+      setShowOtpModal(true);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to send OTP to mobile. Please try again.', { id: otpToast });
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleOtpVerified = (verifyResult) => {
+    setShowOtpModal(false);
+    proceedWithOrderPlacement(verifyResult);
   };
 
   const applySavedAddress = (address) => {
@@ -464,6 +435,7 @@ export default function Checkout() {
       state: addr.state || '',
       postalCode: addr.pincode || addr.postalCode || '',
       phone: addr.phone || current.phone,
+      countryCode: addr.countryCode || current.countryCode || '+91',
       country: addr.country || current.country || 'India',
     }));
   };
@@ -573,46 +545,48 @@ export default function Checkout() {
                   <h2 className="text-base font-bold text-stone-900">Delivery</h2>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleUseLocation}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#ebd9c8] bg-[#fdfbf9] text-xs font-medium text-[#8c6536] hover:bg-[#fbf5ee] transition cursor-pointer"
-                  >
-                    <HiOutlineLocationMarker className="h-3.5 w-3.5 text-[#8c6536]" />
-                    <span>Use Current Location</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isAddingNewAddress) {
-                        setIsAddingNewAddress(false);
-                        if (addresses.length > 0) {
+                  {(isAddingNewAddress || addresses.length === 0) && (
+                    <button
+                      type="button"
+                      onClick={handleUseLocation}
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#ebd9c8] bg-[#fdfbf9] text-xs font-medium text-[#8c6536] hover:bg-[#fbf5ee] transition cursor-pointer"
+                    >
+                      <HiOutlineLocationMarker className="h-3.5 w-3.5 text-[#8c6536]" />
+                      <span>Use Current Location</span>
+                    </button>
+                  )}
+                  {addresses.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isAddingNewAddress) {
+                          setIsAddingNewAddress(false);
                           const sel = addresses.find((a) => String(a._id) === selectedAddressId) || addresses[0];
                           if (sel) applySavedAddress(sel);
+                        } else {
+                          setIsAddingNewAddress(true);
+                          setForm((prev) => ({
+                            ...prev,
+                            addressLine: '',
+                            apartment: '',
+                            city: '',
+                            state: '',
+                            postalCode: '',
+                          }));
                         }
-                      } else {
-                        setIsAddingNewAddress(true);
-                        setForm((prev) => ({
-                          ...prev,
-                          addressLine: '',
-                          apartment: '',
-                          city: '',
-                          state: '',
-                          postalCode: '',
-                        }));
-                      }
-                    }}
-                    className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full border border-[#8c6536] bg-[#8c6536] hover:bg-[#75522b] text-xs font-semibold text-white transition cursor-pointer shadow-2xs"
-                  >
-                    {isAddingNewAddress && addresses.length > 0 ? (
-                      <>
-                        <HiOutlineHome className="h-3.5 w-3.5" />
-                        <span>Saved Addresses</span>
-                      </>
-                    ) : (
-                      <span>+ Add New</span>
-                    )}
-                  </button>
+                      }}
+                      className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full border border-[#8c6536] bg-[#8c6536] hover:bg-[#75522b] text-xs font-semibold text-white transition cursor-pointer shadow-2xs"
+                    >
+                      {isAddingNewAddress ? (
+                        <>
+                          <HiOutlineHome className="h-3.5 w-3.5" />
+                          <span>Saved Addresses</span>
+                        </>
+                      ) : (
+                        <span>+ Add New</span>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -658,6 +632,19 @@ export default function Checkout() {
                 </div>
               ) : (
                 <div className="space-y-3 pt-1">
+                  <div className="flex items-center justify-between pb-1">
+                    <span className="text-xs font-bold text-stone-700 uppercase tracking-wider">
+                      New Delivery Address
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleUseLocation}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8c6536] hover:text-[#75522b] bg-[#fbf5ee] hover:bg-[#f5ecdf] border border-[#ebd9c8] px-3 py-1.5 rounded-lg transition cursor-pointer shadow-2xs"
+                    >
+                      <HiOutlineLocationMarker className="h-3.5 w-3.5 text-[#8c6536]" />
+                      <span>Use Current Location</span>
+                    </button>
+                  </div>
                   {/* Row 1: First Name & Last Name */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="relative">
@@ -875,12 +862,14 @@ export default function Checkout() {
               </p>
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || isSendingOtp}
                 className="inline-flex h-12 items-center justify-center gap-2.5 rounded-xl bg-[#8c6536] px-8 text-xs sm:text-sm font-semibold text-white transition hover:bg-[#75522b] disabled:opacity-60 disabled:cursor-not-allowed shadow-xs cursor-pointer"
               >
                 <span>
                   {submitting
                     ? 'Processing Order...'
+                    : isSendingOtp
+                    ? 'Sending OTP...'
                     : paymentMethod === 'cod' && codFee
                     ? `Pay ${formatPrice(codDueNow)} & Confirm`
                     : `Pay ${formatPrice(finalTotal)}`}
@@ -1003,6 +992,7 @@ export default function Checkout() {
                       onClick={() => {
                         setAppliedCoupon(null);
                         setCouponCode('');
+                        setCouponError('');
                         toast.success('Coupon removed');
                       }}
                       className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-2.5 py-1 text-xs font-semibold text-stone-600 shadow-2xs transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 cursor-pointer shrink-0"
@@ -1024,9 +1014,16 @@ export default function Checkout() {
                   </label>
                   <div className="flex">
                     <input
-                      className="h-10 min-w-0 flex-1 rounded-l-xl border border-r-0 border-stone-200 bg-white px-3.5 text-xs text-stone-800 placeholder:text-stone-400 outline-none focus:border-[#8c6536] transition"
+                      className={`h-10 min-w-0 flex-1 rounded-l-xl border border-r-0 bg-white px-3.5 text-xs text-stone-800 placeholder:text-stone-400 outline-none transition ${
+                        couponError
+                          ? 'border-red-400 focus:border-red-500 bg-red-50/20'
+                          : 'border-stone-200 focus:border-[#8c6536]'
+                      }`}
                       value={couponCode}
-                      onChange={(event) => setCouponCode(event.target.value)}
+                      onChange={(event) => {
+                        setCouponCode(event.target.value);
+                        if (couponError) setCouponError('');
+                      }}
                       placeholder="Enter coupon code or gift card"
                       aria-label="Coupon code or gift card"
                       onKeyDown={(e) => {
@@ -1045,6 +1042,12 @@ export default function Checkout() {
                       {couponLoading ? 'Verifying...' : 'Apply'}
                     </button>
                   </div>
+                  {couponError && (
+                    <p className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600">
+                      <HiOutlineExclamationCircle className="h-4 w-4 shrink-0 text-red-500" />
+                      <span>{couponError}</span>
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -1098,6 +1101,16 @@ export default function Checkout() {
             </div>
           </aside>
         </form>
+
+        {/* Mobile OTP Verification Modal */}
+        <OtpVerificationModal
+          isOpen={showOtpModal}
+          onClose={() => setShowOtpModal(false)}
+          phone={form.phone}
+          countryCode={form.countryCode || '+91'}
+          onVerified={handleOtpVerified}
+          initialDevOtp={devOtp}
+        />
       </div>
     </main>
   );

@@ -24,6 +24,11 @@ export const appointmentsAPI = {
   create: (data) => api.post('/appointments', data),
 };
 
+// ─── Custom Inquiries ────────────────────────────
+export const customInquiryAPI = {
+  create: (data) => api.post('/custom-inquiries', data),
+};
+
 // ─── Banners ──────────────────────────────────────
 export const bannersAPI = {
   getAll: (params) => getOnce('/banners', { params }),
@@ -115,6 +120,14 @@ export const checkoutAPI = {
   getPaymentConfig: () => paymentsAPI.getConfig(),
   createOrder: (orderData) => ordersAPI.create(orderData),
   verifyRazorpay: (data) => paymentsAPI.verifyRazorpay(data),
+  sendOtp: (phone, purpose) => otpAPI.send({ phone, purpose }),
+  verifyOtp: (phone, otp, purpose) => otpAPI.verify({ phone, otp, purpose }),
+};
+
+// ─── OTP (Mobile Verification) ─────────────────────────
+export const otpAPI = {
+  send: (data) => api.post('/otp/send', data),
+  verify: (data) => api.post('/otp/verify', data),
 };
 
 // ─── Orders ─────────────────────────────────────────
@@ -150,6 +163,7 @@ export const productsAPI = {
   getHomeStorefront: (params) => productsAPI.getHomeProducts(params),
   getById: (id) => getOnce(`/products/${id}`),
   getBySku: (code) => getOnce(`/products/sku/${encodeURIComponent(code)}`),
+  getSimilar: (id, params) => api.get(`/products/${id}/similar`, { params }),
 };
 
 // ─── Reviews ──────────────────────────────────────

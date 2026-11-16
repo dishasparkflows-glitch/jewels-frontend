@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useId } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback, useId } from 'react';
 import { defaultCountries, parseCountry } from 'react-international-phone';
 import { HiOutlineSearch, HiChevronDown, HiCheck, HiX } from 'react-icons/hi';
 
@@ -10,16 +10,22 @@ export default function CountryCodeSelect({
   defaultCountry = 'in',
   disabled = false,
   size = 'md',
+  direction = 'auto',
   className = '',
   buttonClassName = '',
   menuClassName = '',
   id,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(direction === 'up');
+  const [maxListHeight, setMaxListHeight] = useState(250);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIso, setSelectedIso] = useState(defaultCountry.toLowerCase());
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   const containerRef = useRef(null);
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
   const searchInputRef = useRef(null);
   const listRef = useRef(null);
   const generatedId = useId();
@@ -84,27 +90,163 @@ export default function CountryCodeSelect({
     );
   }, [allCountries, searchQuery]);
 
-  // Handle outside click & escape key
+  // Flat list for keyboard navigation
+  const activeList = useMemo(() => {
+    if (searchQuery.trim()) {
+      return filteredCountries;
+    }
+    return [...popularCountries, ...allCountries];
+  }, [searchQuery, filteredCountries, popularCountries, allCountries]);
+
+  // Smart auto-flip & max height calculation
+  const updateDropdownPosition = useCallback(() => {
+    if (!containerRef.current) return;
+
+    if (direction === 'down') {
+      setDropUp(false);
+      return;
+    }
+    if (direction === 'up') {
+      setDropUp(true);
+      return;
+    }
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const spaceBelowWindow = window.innerHeight - rect.bottom;
+    const spaceAboveWindow = rect.top;
+    const estimatedMenuHeight = 280;
+
+    let containerSpaceBelow = spaceBelowWindow;
+    let containerSpaceAbove = spaceAboveWindow;
+
+    let parent = containerRef.current.parentElement;
+    while (parent && parent !== document.body) {
+      const style = window.getComputedStyle(parent);
+      const overflowY = style.overflowY || '';
+      const overflow = style.overflow || '';
+      const isScrollable =
+        overflowY === 'auto' ||
+        overflowY === 'scroll' ||
+        overflowY === 'hidden' ||
+        overflow === 'auto' ||
+        overflow === 'scroll' ||
+        overflow === 'hidden';
+      const isModal =
+        parent.getAttribute('role') === 'dialog' ||
+        parent.getAttribute('aria-modal') === 'true' ||
+        parent.classList.contains('modal');
+
+      if (isScrollable || isModal) {
+        const parentRect = parent.getBoundingClientRect();
+        const pBelow = parentRect.bottom - rect.bottom;
+        const pAbove = rect.top - parentRect.top;
+        if (pBelow < containerSpaceBelow) containerSpaceBelow = pBelow;
+        if (pAbove < containerSpaceAbove) containerSpaceAbove = pAbove;
+      }
+      parent = parent.parentElement;
+    }
+
+    const effectiveSpaceBelow = Math.max(0, Math.min(spaceBelowWindow, containerSpaceBelow));
+    const effectiveSpaceAbove = Math.max(0, Math.min(spaceAboveWindow, containerSpaceAbove));
+
+    const shouldDropUp =
+      effectiveSpaceBelow < estimatedMenuHeight && effectiveSpaceAbove > effectiveSpaceBelow;
+
+    setDropUp(shouldDropUp);
+
+    const availableSpace = shouldDropUp ? effectiveSpaceAbove : effectiveSpaceBelow;
+    // Leave room for search bar (~52px) and margins (~16px)
+    const calculatedListHeight = Math.max(140, Math.min(260, availableSpace - 68));
+    setMaxListHeight(calculatedListHeight);
+  }, [direction]);
+
+  const handleToggle = () => {
+    if (disabled) return;
+    if (!isOpen) {
+      updateDropdownPosition();
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+    }
+  };
+
+  const handleSelect = (country) => {
+    setSelectedIso(country.iso2);
+    setIsOpen(false);
+    setSearchQuery('');
+    setHighlightedIndex(-1);
+    if (onChange) {
+      onChange(country.dialCode, country);
+    }
+    buttonRef.current?.focus();
+  };
+
+  // Keyboard navigation
+  const handleKeyDown = (e) => {
+    if (!isOpen) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev < activeList.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const target =
+        highlightedIndex >= 0 && activeList[highlightedIndex]
+          ? activeList[highlightedIndex]
+          : activeList[0];
+      if (target) {
+        handleSelect(target);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsOpen(false);
+      buttonRef.current?.focus();
+    }
+  };
+
+  const handleButtonKeyDown = (e) => {
+    if (disabled) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!isOpen) {
+        updateDropdownPosition();
+        setIsOpen(true);
+      }
+    }
+  };
+
+  // Handle outside click & escape key & window scroll/resize
   useEffect(() => {
     if (!isOpen) return;
 
     const handleClickOutside = (event) => {
       if (
         containerRef.current &&
-        !containerRef.current.contains(event.target)
+        !containerRef.current.contains(event.target) &&
+        (!menuRef.current || !menuRef.current.contains(event.target))
       ) {
         setIsOpen(false);
       }
     };
 
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
+    const handleScroll = (event) => {
+      // Do not close or re-orient if scroll happened inside the countries list
+      if (menuRef.current && menuRef.current.contains(event.target)) {
+        return;
       }
+      updateDropdownPosition();
+    };
+
+    const handleResize = () => {
+      updateDropdownPosition();
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', handleResize);
 
     // Auto-focus search input when opened
     const timer = setTimeout(() => {
@@ -115,19 +257,41 @@ export default function CountryCodeSelect({
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', handleResize);
       clearTimeout(timer);
     };
-  }, [isOpen]);
+  }, [isOpen, updateDropdownPosition]);
 
-  const handleSelect = (country) => {
-    setSelectedIso(country.iso2);
-    setIsOpen(false);
-    setSearchQuery('');
-    if (onChange) {
-      onChange(country.dialCode, country);
+  // Auto-scroll highlighted index into view
+  useEffect(() => {
+    if (isOpen && highlightedIndex >= 0 && listRef.current) {
+      const optionEls = listRef.current.querySelectorAll('[role="option"]');
+      if (optionEls[highlightedIndex]) {
+        optionEls[highlightedIndex].scrollIntoView({ block: 'nearest' });
+      }
     }
-  };
+  }, [highlightedIndex, isOpen]);
+
+  // Auto-scroll selected country into view on open
+  useEffect(() => {
+    if (!isOpen) {
+      setHighlightedIndex(-1);
+      setSearchQuery('');
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (listRef.current) {
+        const selectedEl = listRef.current.querySelector('[aria-selected="true"]');
+        if (selectedEl) {
+          selectedEl.scrollIntoView({ block: 'nearest' });
+        }
+      }
+    }, 60);
+
+    return () => clearTimeout(timer);
+  }, [isOpen]);
 
   const getFlagEmoji = (iso2) => {
     if (!iso2 || iso2.length !== 2) return '';
@@ -167,14 +331,49 @@ export default function CountryCodeSelect({
     );
   };
 
+  const renderCountryItem = (country, index) => {
+    const isSelected = country.iso2 === selectedIso;
+    const isHighlighted = highlightedIndex === index;
+    return (
+      <button
+        key={`${country.iso2}-${index}`}
+        type="button"
+        role="option"
+        aria-selected={isSelected}
+        onClick={() => handleSelect(country)}
+        onMouseEnter={() => setHighlightedIndex(index)}
+        className={`flex w-full items-center justify-between gap-2.5 px-3.5 py-2 text-left transition cursor-pointer ${
+          isSelected
+            ? 'bg-[#f7efe6] text-[#92704e] font-semibold'
+            : isHighlighted
+            ? 'bg-stone-100/90 text-stone-900 font-medium'
+            : 'text-stone-700 hover:bg-stone-50'
+        }`}
+      >
+        <div className="flex min-w-0 items-center gap-2.5">
+          {renderFlag(country.iso2, country.name)}
+          <span className="truncate">{country.name}</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2 font-mono text-xs text-stone-500">
+          <span>{country.dialCode}</span>
+          {isSelected && (
+            <HiCheck className="h-4 w-4 text-[#92704e]" />
+          )}
+        </div>
+      </button>
+    );
+  };
+
   return (
     <div ref={containerRef} className={`relative inline-block ${className}`}>
       {/* Trigger Button */}
       <button
         id={selectId}
+        ref={buttonRef}
         type="button"
         disabled={disabled}
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={handleToggle}
+        onKeyDown={handleButtonKeyDown}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={`Country calling code, currently ${currentCountry.name} (${currentCountry.dialCode})`}
@@ -197,8 +396,13 @@ export default function CountryCodeSelect({
       {/* Popover Dropdown */}
       {isOpen && (
         <div
+          ref={menuRef}
           role="listbox"
-          className={`absolute left-0 top-full z-[100] mt-1.5 w-72 sm:w-80 rounded-xl border border-stone-200 bg-white shadow-2xl overflow-hidden transition-all duration-150 animate-in fade-in zoom-in-95 ${menuClassName}`}
+          tabIndex={-1}
+          onKeyDown={handleKeyDown}
+          className={`absolute left-0 z-[100] w-72 sm:w-80 max-w-[calc(100vw-2.5rem)] rounded-2xl border border-stone-200 bg-white shadow-2xl overflow-hidden transition-all duration-150 animate-in fade-in zoom-in-95 ${
+            dropUp ? 'bottom-full mb-1.5 origin-bottom' : 'top-full mt-1.5 origin-top'
+          } ${menuClassName}`}
         >
           {/* Search Bar Header */}
           <div className="sticky top-0 z-10 border-b border-stone-100 bg-stone-50/90 p-2.5 backdrop-blur-xs">
@@ -228,39 +432,13 @@ export default function CountryCodeSelect({
           {/* Countries List */}
           <div
             ref={listRef}
-            className="max-h-64 overflow-y-auto overscroll-contain py-1 text-xs sm:text-sm"
+            style={{ maxHeight: `${maxListHeight}px` }}
+            className="overflow-y-auto overscroll-contain py-1 text-xs sm:text-sm luxury-scrollbar"
           >
             {/* If searching, display flat filtered list */}
             {searchQuery.trim() ? (
               filteredCountries.length > 0 ? (
-                filteredCountries.map((country) => {
-                  const isSelected = country.iso2 === selectedIso;
-                  return (
-                    <button
-                      key={country.iso2}
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => handleSelect(country)}
-                      className={`flex w-full items-center justify-between gap-2.5 px-3.5 py-2 text-left transition cursor-pointer ${
-                        isSelected
-                          ? 'bg-[#f7efe6] text-[#92704e] font-semibold'
-                          : 'text-stone-700 hover:bg-stone-50'
-                      }`}
-                    >
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        {renderFlag(country.iso2, country.name)}
-                        <span className="truncate">{country.name}</span>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2 font-mono text-xs text-stone-500">
-                        <span>{country.dialCode}</span>
-                        {isSelected && (
-                          <HiCheck className="h-4 w-4 text-[#92704e]" />
-                        )}
-                      </div>
-                    </button>
-                  );
-                })
+                filteredCountries.map((country, idx) => renderCountryItem(country, idx))
               ) : (
                 <div className="py-8 text-center text-xs text-stone-400">
                   No countries matching "{searchQuery}"
@@ -273,34 +451,7 @@ export default function CountryCodeSelect({
                 <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
                   Popular Countries
                 </div>
-                {popularCountries.map((country) => {
-                  const isSelected = country.iso2 === selectedIso;
-                  return (
-                    <button
-                      key={`pop-${country.iso2}`}
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => handleSelect(country)}
-                      className={`flex w-full items-center justify-between gap-2.5 px-3.5 py-2 text-left transition cursor-pointer ${
-                        isSelected
-                          ? 'bg-[#f7efe6] text-[#92704e] font-semibold'
-                          : 'text-stone-700 hover:bg-stone-50'
-                      }`}
-                    >
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        {renderFlag(country.iso2, country.name)}
-                        <span className="truncate">{country.name}</span>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2 font-mono text-xs text-stone-500">
-                        <span>{country.dialCode}</span>
-                        {isSelected && (
-                          <HiCheck className="h-4 w-4 text-[#92704e]" />
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
+                {popularCountries.map((country, idx) => renderCountryItem(country, idx))}
 
                 <div className="my-1 border-t border-stone-100" />
 
@@ -308,34 +459,9 @@ export default function CountryCodeSelect({
                 <div className="px-3.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
                   All Countries ({allCountries.length})
                 </div>
-                {allCountries.map((country) => {
-                  const isSelected = country.iso2 === selectedIso;
-                  return (
-                    <button
-                      key={country.iso2}
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      onClick={() => handleSelect(country)}
-                      className={`flex w-full items-center justify-between gap-2.5 px-3.5 py-2 text-left transition cursor-pointer ${
-                        isSelected
-                          ? 'bg-[#f7efe6] text-[#92704e] font-semibold'
-                          : 'text-stone-700 hover:bg-stone-50'
-                      }`}
-                    >
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        {renderFlag(country.iso2, country.name)}
-                        <span className="truncate">{country.name}</span>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2 font-mono text-xs text-stone-500">
-                        <span>{country.dialCode}</span>
-                        {isSelected && (
-                          <HiCheck className="h-4 w-4 text-[#92704e]" />
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
+                {allCountries.map((country, idx) =>
+                  renderCountryItem(country, popularCountries.length + idx)
+                )}
               </>
             )}
           </div>

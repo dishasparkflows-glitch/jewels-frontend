@@ -60,8 +60,8 @@ export default function OrderSuccess() {
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                 <div>
                   <span className="text-stone-500">Status: </span>
-                  <span className="font-semibold uppercase tracking-wide text-emerald-700">
-                    {order.payment?.status === 'paid' ? 'Paid & Confirmed' : order.orderStatus}
+                  <span className="font-semibold uppercase tracking-wide text-[#8b6f4e]">
+                    {order.orderStatus || 'Pending'}
                   </span>
                 </div>
                 <div>

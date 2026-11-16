@@ -26,6 +26,7 @@ import CountryCodeSelect from './CountryCodeSelect';
  *  - buttonClassName     : string — trigger button custom classes
  *  - menuClassName       : string — popover menu custom classes
  *  - inputClassName      : string — input custom classes
+ *  - direction           : 'auto' | 'down' | 'up' — popover open direction (default: 'auto')
  *  - id                  : string
  */
 export default function PhoneInput({
@@ -44,6 +45,7 @@ export default function PhoneInput({
   buttonClassName = '',
   menuClassName = '',
   inputClassName = '',
+  direction = 'auto',
   id,
 }) {
   const generatedId = useId();
@@ -65,6 +67,24 @@ export default function PhoneInput({
       'rounded-xl border border-[#e5ded5] hover:border-[#bdae99] bg-white shadow-2xs focus-within:border-[#9e7a46] focus-within:ring-2 focus-within:ring-[#9e7a46]/10',
   };
   const containerVariant = variantStyles[variant] || variantStyles.default;
+
+  // Clean countryCode from phone number input so country code is never shown inside the text field
+  const cleanPhone = (val, code) => {
+    if (!val) return '';
+    const s = String(val).trim();
+    if (code && s.startsWith(code)) {
+      return s.slice(code.length).trim();
+    }
+    return s;
+  };
+
+  const displayValue = cleanPhone(value, countryCode);
+
+  const handleInputChange = (e) => {
+    const raw = e.target.value;
+    const clean = cleanPhone(raw, countryCode);
+    if (onChange) onChange(clean);
+  };
 
   return (
     <div
@@ -89,6 +109,7 @@ export default function PhoneInput({
         }}
         disabled={disabled}
         size={size}
+        direction={direction}
         className="h-full shrink-0"
         buttonClassName={
           buttonClassName ||
@@ -108,10 +129,8 @@ export default function PhoneInput({
         type="tel"
         inputMode="tel"
         autoComplete="tel-national"
-        value={value}
-        onChange={(e) => {
-          if (onChange) onChange(e.target.value);
-        }}
+        value={displayValue}
+        onChange={handleInputChange}
         placeholder={placeholder}
         required={required}
         disabled={disabled}

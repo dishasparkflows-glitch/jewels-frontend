@@ -167,7 +167,7 @@ const Register = () => {
         </button>
 
         {/* Left Column: Form Section */}
-        <section className="flex flex-col justify-center px-6 py-8 sm:px-9 sm:py-9 overflow-y-auto">
+        <section className="flex flex-col justify-center px-6 py-8 sm:px-9 sm:py-9 overflow-y-auto luxury-scrollbar">
           {/* Brand Logo Header */}
           <div className="mb-3">
             {logoUrl ? (

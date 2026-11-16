@@ -19,6 +19,7 @@ import {
   HiOutlineRefresh,
   HiOutlineDocumentText,
   HiOutlineStar,
+  HiSparkles,
 } from 'react-icons/hi';
 import {
   FaWhatsapp,
@@ -39,6 +40,7 @@ import { getValidProductImages, getPrimaryProductImage, isOrnateImage } from '..
 import { trackProductView } from '../../config/firebase';
 import { useLiveViewers } from '../../hooks/useLiveViewers';
 import Dropdown from '../../components/common/Dropdown';
+import SimilarProductsDrawer from '../../components/store/SimilarProductsDrawer';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
 import {
   calculateSizeAdjustedMetalWeight,
@@ -559,7 +561,7 @@ export default function ProductDetail() {
       if (p && !/^[a-f0-9]{24}$/i.test(p)) pSet.add(p);
 
       const cObj = v.metalColorId;
-      const cName = referenceName(cObj) || v.color || '';
+      const cName = referenceName(cObj) || referenceName(v.metalColor) || '';
       if (cName && !/^[a-f0-9]{24}$/i.test(cName)) {
         const existing = cMap.get(cName) || {};
         cMap.set(cName, {
@@ -1047,7 +1049,7 @@ export default function ProductDetail() {
     // 1. Exact match across all active dimensions
     let match = raw.find((v) => {
       const p = referenceName(v.metalPurity || v.metalPurityId) || v.purity || '';
-      const c = referenceName(v.metalColorId) || v.color || '';
+      const c = referenceName(v.metalColorId) || referenceName(v.metalColor) || '';
       const ct = Number(v.centerDiamondWeight || v.caratWeight || 0);
       const col = referenceName(v.diamondColor || v.diamondColorId) || v.diamondColor || '';
       const cla = referenceName(v.diamondClarity || v.diamondClarityId) || v.diamondClarity || '';
@@ -1516,6 +1518,7 @@ export default function ProductDetail() {
   // Share state & handlers
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [similarDrawerOpen, setSimilarDrawerOpen] = useState(false);
 
   const handleCopyLink = () => {
     if (navigator?.clipboard?.writeText) {
@@ -1576,13 +1579,16 @@ export default function ProductDetail() {
   const handleToggleWishlist = async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!token && !user) {
-      await toggleWishlist(product);
+      await toggleWishlist(product, isItemWishlisted);
       return;
     }
     const nextState = !isItemWishlisted;
     setLocalWished(nextState);
     try {
-      await toggleWishlist(product);
+      const res = await toggleWishlist(product, isItemWishlisted);
+      if (typeof res === 'boolean') {
+        setLocalWished(res);
+      }
     } catch {
       setLocalWished(!nextState);
     }
@@ -1823,6 +1829,26 @@ export default function ProductDetail() {
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
                     <div className="bg-black text-white text-[11px] font-medium px-2.5 py-1 rounded shadow-lg whitespace-nowrap">
                       Share piece
+                    </div>
+                    <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-black" />
+                  </div>
+                </div>
+
+                {/* View Similar Products Button */}
+                <div className="relative group">
+                  <button
+                    type="button"
+                    onClick={() => setSimilarDrawerOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-stone-200 hover:border-[#8b6f4e]/60 bg-stone-50/80 hover:bg-[#FAF7F2] text-stone-700 hover:text-[#8b6f4e] transition-all cursor-pointer text-xs font-medium active:scale-95 shadow-2xs"
+                    aria-label="View similar products"
+                    title="View Similar Products"
+                  >
+                    <HiSparkles className="w-3.5 h-3.5 text-[#8b6f4e] shrink-0" />
+                    <span className="text-[11.5px] font-semibold tracking-wide">Similar</span>
+                  </button>
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                    <div className="bg-black text-white text-[11px] font-medium px-2.5 py-1 rounded shadow-lg whitespace-nowrap">
+                      View Similar Products
                     </div>
                     <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-black" />
                   </div>
@@ -3430,6 +3456,14 @@ export default function ProductDetail() {
           </div>
         </div>
       )}
+
+      {/* Similar Products Bottom Slide-Up Drawer */}
+      <SimilarProductsDrawer
+        open={similarDrawerOpen}
+        onClose={() => setSimilarDrawerOpen(false)}
+        productId={product?._id || product?.id}
+        currentProduct={product}
+      />
     </div>
   );
 }

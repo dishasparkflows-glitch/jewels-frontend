@@ -235,7 +235,7 @@ const Footer = () => {
                     const isDiamond = nameLower.includes('diamond');
                     const isCustom = nameLower.includes('custom');
                     const path = isCustom
-                      ? '/shop'
+                      ? '/custom-jewellery'
                       : isSilver
                       ? '/shop?category=silver-collection'
                       : isDiamond

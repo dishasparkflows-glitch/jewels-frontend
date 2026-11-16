@@ -28,6 +28,7 @@ const StaticPageView = lazy(() => import('./pages/store/StaticPageView'));
 const DynamicSlugView = lazy(() => import('./pages/store/DynamicSlugView'));
 const OrderSuccess = lazy(() => import('./pages/store/OrderSuccess'));
 const OrderFailed = lazy(() => import('./pages/store/OrderFailed'));
+const CustomJewellery = lazy(() => import('./pages/store/CustomJewellery'));
 
 const PageLoader = () => (
   <div className="min-h-[50vh] flex items-center justify-center">
@@ -133,6 +134,9 @@ function App() {
                     }
                   />
                   <Route path="/pages/:slug" element={<StaticPageView />} />
+                  <Route path="/custom-jewellery" element={<CustomJewellery />} />
+                  <Route path="/custom-jewelry" element={<CustomJewellery />} />
+                  <Route path="/custom" element={<Navigate to="/custom-jewellery" replace />} />
                   <Route path="/:slug" element={<DynamicSlugView />} />
                 </Route>
 
