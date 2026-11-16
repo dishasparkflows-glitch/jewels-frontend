@@ -115,7 +115,6 @@ export default function Checkout() {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [devOtp, setDevOtp] = useState('');
   const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [activeStep, setActiveStep] = useState('shipping');
 
   useEffect(() => {
     if (cart && cart.length > 0) {
@@ -388,14 +387,12 @@ export default function Checkout() {
 
     if (!form.email || !form.phone || !form.addressLine || !form.city || !form.state || !form.postalCode) {
       toast.error('Please fill in all required shipping and contact details.');
-      setActiveStep('shipping');
       return;
     }
 
     const cleanPhone = String(form.phone || '').replace(/\D/g, '');
     if (cleanPhone.length < 10) {
       toast.error('Please enter a valid 10-digit mobile number.');
-      setActiveStep('shipping');
       return;
     }
 
@@ -463,58 +460,14 @@ export default function Checkout() {
   return (
     <main className="min-h-screen bg-[#faf8f5] text-stone-900 font-sans">
       <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
-        {/* Stepper Progress */}
-        <nav aria-label="Checkout progress" className="mx-auto mb-8 flex max-w-lg items-center justify-between">
-          {[
-            { id: 'shipping', label: 'Shipping', number: 1 },
-            { id: 'payment', label: 'Payment', number: 2 },
-            { id: 'review', label: 'Review', number: 3 },
-          ].map((step, index, steps) => (
-            <div key={step.id} className="flex flex-1 items-center last:flex-none">
-              <button
-                type="button"
-                onClick={() => setActiveStep(step.id)}
-                aria-current={activeStep === step.id ? 'step' : undefined}
-                className="flex items-center gap-2.5 whitespace-nowrap text-xs cursor-pointer"
-              >
-                <span
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
-                    activeStep === step.id || (step.number === 1 && activeStep === 'shipping')
-                      ? 'bg-[#8c6536] text-white'
-                      : steps.findIndex((entry) => entry.id === activeStep) >= index
-                      ? 'bg-[#8c6536] text-white'
-                      : 'border border-stone-300 bg-white text-stone-400'
-                  }`}
-                >
-                  {steps.findIndex((entry) => entry.id === activeStep) > index ? (
-                    <HiOutlineCheck className="h-4 w-4" />
-                  ) : (
-                    step.number
-                  )}
-                </span>
-                <span
-                  className={`text-xs ${
-                    activeStep === step.id ? 'font-bold text-stone-900' : 'font-medium text-stone-500'
-                  }`}
-                >
-                  {step.label}
-                </span>
-              </button>
-              {index < steps.length - 1 && (
-                <span className="mx-4 h-px flex-1 bg-[#ebd9c8]" />
-              )}
-            </div>
-          ))}
-        </nav>
-
         <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(360px,1fr)] xl:gap-8">
           {/* Left Column: Form Card */}
           <div className="rounded-2xl border border-stone-200/90 bg-white p-6 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-7">
             {/* 1. Contact Information */}
             <section className="space-y-4">
               <div className="flex items-center gap-3.5">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fbf5ee] border border-[#ebd9c8] text-[#8c6536]">
-                  <HiOutlineUser className="h-4 w-4" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f8f3ed] text-[#8c6536]">
+                  <HiOutlineUser className="h-4.5 w-4.5" />
                 </span>
                 <div>
                   <h2 className="text-base font-bold text-stone-900">Contact Information</h2>
@@ -536,11 +489,11 @@ export default function Checkout() {
             </section>
 
             {/* 2. Delivery */}
-            <section className="space-y-4 pt-2">
+            <section className="space-y-4 border-t-[1.5px] border-dashed border-stone-400 pt-7">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3.5">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fbf5ee] border border-[#ebd9c8] text-[#8c6536]">
-                    <HiOutlineTruck className="h-4 w-4" />
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f8f3ed] text-[#8c6536]">
+                    <HiOutlineLocationMarker className="h-4.5 w-4.5" />
                   </span>
                   <h2 className="text-base font-bold text-stone-900">Delivery</h2>
                 </div>
@@ -771,10 +724,10 @@ export default function Checkout() {
             </section>
 
             {/* 3. Payment Method */}
-            <section className="space-y-4 pt-2">
+            <section className="space-y-4 border-t-[1.5px] border-dashed border-stone-400 pt-7">
               <div className="flex items-center gap-3.5">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#fbf5ee] border border-[#ebd9c8] text-[#8c6536]">
-                  <HiOutlineCreditCard className="h-4 w-4" />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f8f3ed] text-[#8c6536]">
+                  <HiOutlineCreditCard className="h-4.5 w-4.5" />
                 </span>
                 <div>
                   <h2 className="text-base font-bold text-stone-900">Payment Method</h2>
@@ -855,7 +808,7 @@ export default function Checkout() {
             </section>
 
             {/* Bottom Row / Submit */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4 border-t border-stone-100">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-6 border-t-[1.5px] border-dashed border-stone-400">
               <p className="flex items-center gap-1.5 text-xs text-stone-500">
                 <HiOutlineLockClosed className="h-4 w-4 shrink-0 text-[#8c6536]" />
                 <span>Your information is secure and encrypted</span>
@@ -1012,12 +965,12 @@ export default function Checkout() {
                     <HiOutlineTag className="h-4 w-4 text-[#8c6536]" />
                     <span>Apply Coupon Code</span>
                   </label>
-                  <div className="flex">
+                  <div className="flex items-center gap-2">
                     <input
-                      className={`h-10 min-w-0 flex-1 rounded-l-xl border border-r-0 bg-white px-3.5 text-xs text-stone-800 placeholder:text-stone-400 outline-none transition ${
+                      className={`h-10 min-w-0 flex-1 rounded-xl border bg-white px-3.5 text-xs text-stone-800 placeholder:text-stone-400 outline-none transition ${
                         couponError
                           ? 'border-red-400 focus:border-red-500 bg-red-50/20'
-                          : 'border-stone-200 focus:border-[#8c6536]'
+                          : 'border-stone-200 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]'
                       }`}
                       value={couponCode}
                       onChange={(event) => {
@@ -1037,7 +990,7 @@ export default function Checkout() {
                       type="button"
                       onClick={handleApplyCoupon}
                       disabled={couponLoading || !couponCode.trim()}
-                      className="h-10 rounded-r-xl border border-l-0 border-[#ebd9c8] bg-[#f0e3d2] px-5 text-xs font-semibold text-[#704d23] transition hover:bg-[#e6d5c0] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      className="h-10 px-5 rounded-xl bg-[#f2e6db] hover:bg-[#e8dacb] active:scale-[0.98] text-xs font-bold text-stone-900 transition disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center shrink-0 shadow-2xs"
                     >
                       {couponLoading ? 'Verifying...' : 'Apply'}
                     </button>
@@ -1060,9 +1013,18 @@ export default function Checkout() {
               </div>
               {appliedCoupon && (
                 <div className="flex justify-between text-emerald-700 font-medium">
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1.5 flex-wrap">
                     <HiOutlineTag className="h-3.5 w-3.5 text-emerald-600" />
                     <span>Coupon Savings ({appliedCoupon.coupon?.code || couponCode})</span>
+                    {appliedCoupon.discount?.type === 'Percentage' && Number(appliedCoupon.discount?.value) > 0 ? (
+                      <span className="text-[10.5px] font-semibold text-emerald-800 bg-emerald-100/70 px-1.5 py-0.5 rounded border border-emerald-200">
+                        {appliedCoupon.discount.value}% OFF
+                      </span>
+                    ) : appliedCoupon.discount?.type === 'Fixed' && Number(appliedCoupon.discount?.value) > 0 ? (
+                      <span className="text-[10.5px] font-semibold text-emerald-800 bg-emerald-100/70 px-1.5 py-0.5 rounded border border-emerald-200">
+                        ₹{Number(appliedCoupon.discount.value).toLocaleString('en-IN')} OFF
+                      </span>
+                    ) : null}
                   </span>
                   <span className="font-bold text-emerald-700">−{formatPrice(discountAmount)}</span>
                 </div>

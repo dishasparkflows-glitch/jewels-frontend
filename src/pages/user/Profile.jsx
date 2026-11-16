@@ -28,8 +28,11 @@ import {
   HiOutlineCalendar,
   HiOutlineEye,
   HiOutlineCheckCircle,
+  HiOutlineTag,
+  HiOutlineTruck,
 } from 'react-icons/hi';
 import { getImageUrl } from '../../utils/imageUrl';
+import CustomerTrackingModal from '../../components/common/CustomerTrackingModal';
 
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
@@ -85,6 +88,23 @@ const resolveItemImage = (item) => {
   return '';
 };
 
+const resolveProductLink = (item) => {
+  const prod = item?.productId;
+  const slug =
+    prod?.basicInfo?.slug ||
+    prod?.slug ||
+    item?.slug;
+  if (slug) return `/product/${encodeURIComponent(slug)}`;
+
+  const id =
+    prod?._id ||
+    (typeof prod === 'string' ? prod : null) ||
+    item?.id;
+  if (id) return `/product/${encodeURIComponent(id)}`;
+
+  return null;
+};
+
 const getOrderStatusBadge = (status = '') => {
   const s = String(status).toLowerCase();
   switch (s) {
@@ -118,6 +138,7 @@ const Profile = () => {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [trackingOrder, setTrackingOrder] = useState(null);
   const [reorderingId, setReorderingId] = useState(null);
   
   // Profile edit state
@@ -977,6 +998,7 @@ const Profile = () => {
                                   item.sku ||
                                   item.productId?.basicInfo?.sku ||
                                   item.productId?.ornate?.tagNo;
+                                const productLink = resolveProductLink(item);
 
                                 return (
                                   <div
@@ -984,32 +1006,67 @@ const Profile = () => {
                                     className="flex items-center justify-between gap-4"
                                   >
                                     <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-stone-50 border border-stone-200/80 p-1 flex items-center justify-center shrink-0 overflow-hidden">
-                                        {itemThumb ? (
-                                          <img
-                                            src={getImageUrl(itemThumb)}
-                                            alt={item.title || 'Product'}
-                                            className="w-full h-full object-contain"
-                                            onError={(e) => {
-                                              e.currentTarget.style.display = 'none';
-                                              if (e.currentTarget.parentElement) {
-                                                e.currentTarget.parentElement.innerHTML =
-                                                  '<span class="text-xl">💍</span>';
-                                              }
-                                            }}
-                                          />
-                                        ) : (
-                                          <span className="text-xl">💍</span>
-                                        )}
-                                      </div>
+                                      {productLink ? (
+                                        <Link
+                                          to={productLink}
+                                          className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-stone-50 border border-stone-200/80 p-1 flex items-center justify-center shrink-0 overflow-hidden hover:border-[#8b6f4e]/50 hover:shadow-2xs transition-all group cursor-pointer"
+                                          title="View Product Details"
+                                        >
+                                          {itemThumb ? (
+                                            <img
+                                              src={getImageUrl(itemThumb)}
+                                              alt={item.title || 'Product'}
+                                              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                              onError={(e) => {
+                                                e.currentTarget.style.display = 'none';
+                                                if (e.currentTarget.parentElement) {
+                                                  e.currentTarget.parentElement.innerHTML =
+                                                    '<span class="text-xl">💍</span>';
+                                                }
+                                              }}
+                                            />
+                                          ) : (
+                                            <span className="text-xl">💍</span>
+                                          )}
+                                        </Link>
+                                      ) : (
+                                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-stone-50 border border-stone-200/80 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                                          {itemThumb ? (
+                                            <img
+                                              src={getImageUrl(itemThumb)}
+                                              alt={item.title || 'Product'}
+                                              className="w-full h-full object-contain"
+                                              onError={(e) => {
+                                                e.currentTarget.style.display = 'none';
+                                                if (e.currentTarget.parentElement) {
+                                                  e.currentTarget.parentElement.innerHTML =
+                                                    '<span class="text-xl">💍</span>';
+                                                }
+                                              }}
+                                            />
+                                          ) : (
+                                            <span className="text-xl">💍</span>
+                                          )}
+                                        </div>
+                                      )}
 
                                       <div className="min-w-0 flex-1 space-y-1.5">
-                                        <h4
-                                          className="font-bold text-stone-900 text-sm leading-snug truncate"
-                                          title={item.title || 'Jewellery Item'}
-                                        >
-                                          {item.title || 'Jewellery Item'}
-                                        </h4>
+                                        {productLink ? (
+                                          <Link
+                                            to={productLink}
+                                            className="font-bold text-stone-900 text-sm leading-snug truncate block hover:text-[#8b6f4e] transition-colors cursor-pointer"
+                                            title={item.title || 'Jewellery Item'}
+                                          >
+                                            {item.title || 'Jewellery Item'}
+                                          </Link>
+                                        ) : (
+                                          <h4
+                                            className="font-bold text-stone-900 text-sm leading-snug truncate"
+                                            title={item.title || 'Jewellery Item'}
+                                          >
+                                            {item.title || 'Jewellery Item'}
+                                          </h4>
+                                        )}
                                         <div className="flex items-center gap-2 flex-wrap text-xs">
                                           {item.selectedMetal && (
                                             <span className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 font-medium text-[11px]">
@@ -1045,6 +1102,16 @@ const Profile = () => {
 
                           {/* Card Footer: Actions */}
                           <div className="flex items-center justify-end gap-2.5 pt-1">
+                            {order.shiprocketInfo?.awbCode && (
+                              <button
+                                type="button"
+                                onClick={() => setTrackingOrder(order)}
+                                className="px-3.5 py-2 rounded-xl border border-amber-300/80 bg-amber-50 hover:bg-amber-100/70 text-amber-900 text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+                              >
+                                <HiOutlineTruck className="w-4 h-4 text-amber-700" />
+                                <span>Track Package</span>
+                              </button>
+                            )}
                             {['delivered', 'completed'].includes(status) && (
                               <button
                                 type="button"
@@ -1471,6 +1538,7 @@ const Profile = () => {
                         item.sku ||
                         item.productId?.basicInfo?.sku ||
                         item.productId?.ornate?.tagNo;
+                      const productLink = resolveProductLink(item);
 
                       return (
                         <div
@@ -1478,28 +1546,65 @@ const Profile = () => {
                           className="p-3 rounded-xl bg-stone-50 border border-stone-200/70 flex items-center justify-between gap-3"
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="w-12 h-12 rounded-lg bg-white border border-stone-200/80 p-0.5 flex items-center justify-center shrink-0 overflow-hidden">
-                              {itemThumb ? (
-                                <img
-                                  src={getImageUrl(itemThumb)}
-                                  alt={item.title || 'Product'}
-                                  className="w-full h-full object-contain"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                    if (e.currentTarget.parentElement) {
-                                      e.currentTarget.parentElement.innerHTML =
-                                        '<span class="text-sm">💍</span>';
-                                    }
-                                  }}
-                                />
-                              ) : (
-                                <span className="text-sm">💍</span>
-                              )}
-                            </div>
+                            {productLink ? (
+                              <Link
+                                to={productLink}
+                                onClick={() => setSelectedOrder(null)}
+                                className="w-12 h-12 rounded-lg bg-white border border-stone-200/80 p-0.5 flex items-center justify-center shrink-0 overflow-hidden hover:border-[#8b6f4e]/60 transition-colors group cursor-pointer"
+                                title="View Product Details"
+                              >
+                                {itemThumb ? (
+                                  <img
+                                    src={getImageUrl(itemThumb)}
+                                    alt={item.title || 'Product'}
+                                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                      if (e.currentTarget.parentElement) {
+                                        e.currentTarget.parentElement.innerHTML =
+                                          '<span class="text-sm">💍</span>';
+                                      }
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-sm">💍</span>
+                                )}
+                              </Link>
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-white border border-stone-200/80 p-0.5 flex items-center justify-center shrink-0 overflow-hidden">
+                                {itemThumb ? (
+                                  <img
+                                    src={getImageUrl(itemThumb)}
+                                    alt={item.title || 'Product'}
+                                    className="w-full h-full object-contain"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                      if (e.currentTarget.parentElement) {
+                                        e.currentTarget.parentElement.innerHTML =
+                                          '<span class="text-sm">💍</span>';
+                                      }
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-sm">💍</span>
+                                )}
+                              </div>
+                            )}
                             <div className="min-w-0 flex-1 space-y-1">
-                              <p className="font-semibold text-stone-900 text-xs leading-snug">
-                                {item.title}
-                              </p>
+                              {productLink ? (
+                                <Link
+                                  to={productLink}
+                                  onClick={() => setSelectedOrder(null)}
+                                  className="font-semibold text-stone-900 text-xs leading-snug hover:text-[#8b6f4e] transition-colors block truncate cursor-pointer"
+                                  title={item.title}
+                                >
+                                  {item.title}
+                                </Link>
+                              ) : (
+                                <p className="font-semibold text-stone-900 text-xs leading-snug truncate">
+                                  {item.title}
+                                </p>
+                              )}
                               <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-stone-500">
                                 {item.selectedMetal && (
                                   <span className="px-1.5 py-0.5 rounded bg-white text-stone-700 font-medium border border-stone-200">
@@ -1572,6 +1677,29 @@ const Profile = () => {
                       <span>₹{Number(selectedOrder.pricing.subtotal).toLocaleString('en-IN')}</span>
                     </div>
                   )}
+                  {(Number(selectedOrder.pricing?.discount) > 0 || selectedOrder.coupon?.code) && (
+                    <div className="flex items-center justify-between text-emerald-600 font-medium">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>Discount</span>
+                        {selectedOrder.coupon?.code && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono font-bold text-[10.5px] tracking-wide border border-emerald-300">
+                            <HiOutlineTag className="w-3 h-3 text-emerald-600" />
+                            <span>{selectedOrder.coupon.code}</span>
+                          </span>
+                        )}
+                        {selectedOrder.coupon?.discountType === 'Percentage' && Number(selectedOrder.coupon?.discountValue) > 0 ? (
+                          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/60 px-1.5 py-0.5 rounded border border-emerald-200">
+                            {selectedOrder.coupon.discountValue}% OFF
+                          </span>
+                        ) : selectedOrder.coupon?.discountType === 'Fixed' && Number(selectedOrder.coupon?.discountValue) > 0 ? (
+                          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/60 px-1.5 py-0.5 rounded border border-emerald-200">
+                            ₹{Number(selectedOrder.coupon.discountValue).toLocaleString('en-IN')} OFF
+                          </span>
+                        ) : null}
+                      </div>
+                      <span>-₹{Number(selectedOrder.pricing?.discount || selectedOrder.coupon?.discountAmount || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
                   {selectedOrder.pricing?.tax !== undefined && (
                     <div className="flex justify-between">
                       <span>Estimated Tax (GST 3%)</span>
@@ -1584,12 +1712,6 @@ const Profile = () => {
                       {selectedOrder.pricing?.shipping === 0 || !selectedOrder.pricing?.shipping ? 'FREE' : `₹${selectedOrder.pricing.shipping}`}
                     </span>
                   </div>
-                  {selectedOrder.pricing?.discount > 0 && (
-                    <div className="flex justify-between text-emerald-600 font-medium">
-                      <span>Discount</span>
-                      <span>-₹{Number(selectedOrder.pricing.discount).toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
                   <div className="flex justify-between text-stone-900 font-bold text-sm pt-2 border-t border-stone-200">
                     <span>Total Paid</span>
                     <span className="text-[#8b6f4e]">₹{Number(selectedOrder.pricing?.total ?? selectedOrder.totalAmount ?? 0).toLocaleString('en-IN')}</span>
@@ -1606,6 +1728,16 @@ const Profile = () => {
                 View Order Receipt →
               </Link>
               <div className="flex items-center gap-2">
+                {selectedOrder.shiprocketInfo?.awbCode && (
+                  <button
+                    type="button"
+                    onClick={() => setTrackingOrder(selectedOrder)}
+                    className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <HiOutlineTruck className="w-4 h-4 text-amber-700" />
+                    <span>Track Package</span>
+                  </button>
+                )}
                 {String(selectedOrder.orderStatus || '').toLowerCase() === 'delivered' && (
                   <button
                     type="button"
@@ -1632,6 +1764,13 @@ const Profile = () => {
           </div>
         </div>
       )}
+
+      {/* Customer Delivery Tracking Modal */}
+      <CustomerTrackingModal
+        isOpen={Boolean(trackingOrder)}
+        onClose={() => setTrackingOrder(null)}
+        order={trackingOrder}
+      />
     </div>
   );
 };

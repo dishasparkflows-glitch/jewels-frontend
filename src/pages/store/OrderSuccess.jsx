@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { HiOutlineCheckCircle, HiOutlineShoppingBag } from 'react-icons/hi';
+import { HiOutlineCheckCircle, HiOutlineShoppingBag, HiOutlineTag } from 'react-icons/hi';
 import { ordersAPI } from '../../api/services';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
 
@@ -76,24 +76,68 @@ export default function OrderSuccess() {
             <div className="p-6">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-400">Items Ordered</h3>
               <div className="mt-3 divide-y divide-stone-100">
-                {order.items?.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between py-3 text-sm">
-                    <div className="flex items-center gap-3">
-                      {item.image?.url && (
-                        <img
-                          src={item.image.url}
-                          alt={item.title}
-                          className="h-12 w-12 rounded object-contain bg-[#f8f6f3] p-1 border border-stone-100"
-                        />
-                      )}
-                      <div>
-                        <p className="font-medium text-stone-900">{item.title}</p>
-                        <p className="text-xs text-stone-500">Qty: {item.quantity}</p>
+                {order.items?.map((item, idx) => {
+                  const slug =
+                    item.productId?.basicInfo?.slug ||
+                    item.productId?.slug ||
+                    item.slug;
+                  const id =
+                    item.productId?._id ||
+                    (typeof item.productId === 'string' ? item.productId : null) ||
+                    item.id;
+                  const productLink = slug
+                    ? `/product/${encodeURIComponent(slug)}`
+                    : id
+                    ? `/product/${encodeURIComponent(id)}`
+                    : null;
+
+                  return (
+                    <div key={idx} className="flex items-center justify-between py-3 text-sm">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {productLink ? (
+                          <Link
+                            to={productLink}
+                            className="shrink-0 hover:opacity-85 transition-opacity"
+                            title="View Product Details"
+                          >
+                            {item.image?.url && (
+                              <img
+                                src={item.image.url}
+                                alt={item.title}
+                                className="h-12 w-12 rounded object-contain bg-[#f8f6f3] p-1 border border-stone-100"
+                              />
+                            )}
+                          </Link>
+                        ) : (
+                          item.image?.url && (
+                            <img
+                              src={item.image.url}
+                              alt={item.title}
+                              className="h-12 w-12 rounded object-contain bg-[#f8f6f3] p-1 border border-stone-100"
+                            />
+                          )
+                        )}
+                        <div className="min-w-0 flex-1">
+                          {productLink ? (
+                            <Link
+                              to={productLink}
+                              className="font-medium text-stone-900 hover:text-[#8b6f4e] transition-colors truncate block text-left"
+                              title={item.title}
+                            >
+                              {item.title}
+                            </Link>
+                          ) : (
+                            <p className="font-medium text-stone-900 truncate text-left">{item.title}</p>
+                          )}
+                          <p className="text-xs text-stone-500 text-left">Qty: {item.quantity}</p>
+                        </div>
                       </div>
+                      <span className="font-semibold text-stone-900 shrink-0 ml-3">
+                        {formatPrice(item.totalItemPrice || item.price * item.quantity)}
+                      </span>
                     </div>
-                    <span className="font-semibold text-stone-900">{formatPrice(item.totalItemPrice || item.price * item.quantity)}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="mt-6 border-t border-stone-100 pt-4 text-xs space-y-2">
@@ -101,10 +145,27 @@ export default function OrderSuccess() {
                   <span>Subtotal</span>
                   <span>{formatPrice(order.pricing?.subtotal || 0)}</span>
                 </div>
-                {order.pricing?.discount > 0 && (
-                  <div className="flex justify-between text-emerald-700">
-                    <span>Discount</span>
-                    <span>−{formatPrice(order.pricing.discount)}</span>
+                {(Number(order.pricing?.discount) > 0 || order.coupon?.code) && (
+                  <div className="flex items-center justify-between text-emerald-700">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span>Discount</span>
+                      {order.coupon?.code && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono font-bold text-[10.5px] tracking-wide border border-emerald-300">
+                          <HiOutlineTag className="w-3 h-3 text-emerald-600" />
+                          <span>{order.coupon.code}</span>
+                        </span>
+                      )}
+                      {order.coupon?.discountType === 'Percentage' && Number(order.coupon?.discountValue) > 0 ? (
+                        <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/60 px-1.5 py-0.5 rounded border border-emerald-200">
+                          {order.coupon.discountValue}% OFF
+                        </span>
+                      ) : order.coupon?.discountType === 'Fixed' && Number(order.coupon?.discountValue) > 0 ? (
+                        <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/60 px-1.5 py-0.5 rounded border border-emerald-200">
+                          ₹{Number(order.coupon.discountValue).toLocaleString('en-IN')} OFF
+                        </span>
+                      ) : null}
+                    </div>
+                    <span>−{formatPrice(order.pricing?.discount || order.coupon?.discountAmount || 0)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-stone-600">

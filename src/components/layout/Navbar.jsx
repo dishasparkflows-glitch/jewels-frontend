@@ -18,7 +18,6 @@ import {
   HiOutlineHeart,
   HiOutlinePhone,
   HiOutlineVideoCamera,
-  HiOutlineShieldCheck,
 } from 'react-icons/hi';
 import { IoDiamondOutline } from 'react-icons/io5';
 
@@ -169,7 +168,6 @@ const Navbar = () => {
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const isCheckout = location.pathname === '/checkout';
   const phoneNumber = String(
     storeSettings?.businessDetails?.mobileNumber ||
     '+91 84600-91955'
@@ -348,43 +346,16 @@ const Navbar = () => {
     }
   };
 
-  if (isCheckout) {
-    return (
-      <header className="sticky top-0 z-40 w-full bg-[#181614] border-b border-white/10 shadow-sm font-sans">
-        <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 group" title="Return to store">
-            {brandLogo.desktop ? (
-              <img
-                src={brandLogo.desktop}
-                alt={storeSettings.companyName || 'Neirah'}
-                className="h-7 sm:h-8 w-auto object-contain brightness-0 invert"
-              />
-            ) : (
-              <span className="font-serif text-xl sm:text-2xl font-light tracking-[0.2em] text-white uppercase flex items-center gap-1.5">
-                NEIRAH <span className="text-stone-400 text-xs font-normal tracking-[0.1em]">JEWELS</span>
-              </span>
-            )}
-          </Link>
-          <div className="flex items-center gap-2 text-xs font-medium text-stone-300">
-            <HiOutlineShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Secure Checkout</span>
-          </div>
-        </div>
-      </header>
-    );
-  }
-
   return (
     <header className="sticky top-0 z-40 w-full shadow-sm font-sans">
       {/* ─── Top announcement bar (Neirah Charcoal) ───────────── */}
-      {!isCheckout && (
-        <div
-          style={{
-            backgroundColor: 'var(--storefront-topbar-bg, #201e1b)',
-            color: 'var(--storefront-topbar-text, #ffffff)',
-          }}
-          className="text-[10px] sm:text-xs py-1.5 px-4 sm:px-6 lg:px-8 border-b border-black/10"
-        >
+      <div
+        style={{
+          backgroundColor: 'var(--storefront-topbar-bg, #201e1b)',
+          color: 'var(--storefront-topbar-text, #ffffff)',
+        }}
+        className="text-[10px] sm:text-xs py-1.5 px-4 sm:px-6 lg:px-8 border-b border-black/10"
+      >
           <div className="relative max-w-7xl 2xl:max-w-[1536px] mx-auto flex items-center justify-between min-h-[24px]">
             {/* Left: Virtual Appointment */}
             <div className="flex-1 flex items-center justify-start min-w-0 relative z-10">
@@ -446,7 +417,6 @@ const Navbar = () => {
             </div>
           </div>
         </div>
-      )}
 
       {/* ─── Main Header / Brand & Search Bar (#201e1b) ───────────── */}
       <div
@@ -456,7 +426,7 @@ const Navbar = () => {
         }}
         className="px-4 sm:px-6 lg:px-8 border-b border-white/5"
       >
-        <div className={`max-w-7xl 2xl:max-w-[1536px] mx-auto flex items-center justify-between gap-3 sm:gap-6 ${isCheckout ? 'h-14 sm:h-16' : 'h-14 sm:h-16 lg:h-[68px]'}`}>
+        <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto flex items-center justify-between gap-3 sm:gap-6 h-14 sm:h-16 lg:h-[68px]">
           {/* Mobile hamburger */}
           <div className="order-last flex items-center lg:order-none lg:hidden">
             <button
@@ -724,7 +694,6 @@ const Navbar = () => {
               <HiOutlineSearch className="w-[18px] h-[18px]" />
             </button>
 
-            {isCheckout && <span className="hidden items-center gap-1.5 rounded-full border border-white/15 px-2.5 py-1.5 text-[11px] text-white sm:inline-flex"><span aria-hidden="true">🇮🇳</span> INR <span aria-hidden="true">⌄</span></span>}
             {/* Wishlist Icon */}
             {user ? (
               <Link

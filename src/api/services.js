@@ -234,3 +234,11 @@ export const staticPagesAPI = {
   getBySlug: (slug) => getOnce(`/static-pages/slug/${slug}`),
 };
 
+// ─── Shiprocket Logistics ──────────────────────────
+export const shiprocketAPI = {
+  checkServiceability: (params) => api.get('/shiprocket/serviceability', { params }),
+  trackByAwb: (awb) => api.get(`/shiprocket/track/awb/${awb}`),
+  trackByOrderId: (orderId) => api.get(`/shiprocket/track/order/${orderId}`),
+};
+
+
