@@ -5,6 +5,7 @@ import { HiOutlineX } from 'react-icons/hi';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
+import { StoreSettingsProvider } from './contexts/StoreSettingsContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import ScrollToTop from './components/common/ScrollToTop';
 import AnalyticsTracker from './components/common/AnalyticsTracker';
@@ -38,12 +39,13 @@ const PageLoader = () => (
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <ScrollToTop />
-        <AnalyticsTracker />
-        <CartProvider>
-          <WishlistProvider>
+    <StoreSettingsProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <ScrollToTop />
+          <AnalyticsTracker />
+          <CartProvider>
+            <WishlistProvider>
             <Toaster
               position="top-right"
               containerStyle={{
@@ -148,6 +150,7 @@ function App() {
       </CartProvider>
       </BrowserRouter>
     </AuthProvider>
+    </StoreSettingsProvider>
   );
 }
 

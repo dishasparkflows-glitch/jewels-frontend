@@ -136,6 +136,7 @@ export const ordersAPI = {
   getMyOrders: (params) => api.get('/orders/my-orders', { params }),
   getById: (id) => api.get(`/orders/${id}`),
   getByNumber: (orderNumber) => api.get(`/orders/lookup/${encodeURIComponent(orderNumber)}`),
+  downloadInvoice: (id) => api.get(`/orders/${id}/invoice`, { responseType: 'blob' }),
   cancel: (id, reason) => api.post(`/orders/${id}/cancel`, { reason }),
 };
 

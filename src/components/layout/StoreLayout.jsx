@@ -4,9 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import Navbar from './Navbar';
 import Footer from './Footer';
 import LoginModal from '../auth/LoginModal';
-import { StoreSettingsProvider } from '../../contexts/StoreSettingsContext';
 
-const StoreContent = () => {
+const StoreLayout = () => {
   const { websiteConfig, themeStyle } = useStoreSettings();
   const { loginModalOpen, closeLoginModal } = useAuth();
   return (
@@ -20,7 +19,5 @@ const StoreContent = () => {
     </div>
   );
 };
-
-const StoreLayout = () => <StoreSettingsProvider><StoreContent /></StoreSettingsProvider>;
 
 export default StoreLayout;

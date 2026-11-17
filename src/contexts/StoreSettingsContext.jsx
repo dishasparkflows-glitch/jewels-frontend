@@ -3,7 +3,25 @@ import { commonAPI } from '../api/services';
 
 /* eslint-disable react/prop-types */
 
-const StoreSettingsContext = createContext(null);
+export const defaultStoreSettingsValue = {
+  settings: {},
+  footerSettings: {},
+  topAnnouncement: {
+    isEnabled: false,
+    displayDirection: 'horizontal',
+    autoplayInterval: 4000,
+    items: [],
+  },
+  websiteConfig: null,
+  navigation: [],
+  revision: 0,
+  theme: null,
+  themeStyle: {},
+  loading: false,
+  refreshBootstrap: async () => null,
+};
+
+const StoreSettingsContext = createContext(defaultStoreSettingsValue);
 const BOOTSTRAP_STORAGE_KEY = 'neirah_storefront_bootstrap_v1';
 
 function getInitialCachedBootstrap() {
@@ -212,6 +230,5 @@ export function StoreSettingsProvider({ children }) {
 // eslint-disable-next-line react-refresh/only-export-components
 export function useStoreSettings() {
   const context = useContext(StoreSettingsContext);
-  if (!context) throw new Error('useStoreSettings must be used within StoreSettingsProvider');
-  return context;
+  return context || defaultStoreSettingsValue;
 }

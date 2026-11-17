@@ -37,6 +37,7 @@ import {
 import { HiOutlineSquare3Stack3D } from 'react-icons/hi2';
 import { getImageUrl } from '../../utils/imageUrl';
 import CustomerTrackingModal from '../../components/common/CustomerTrackingModal';
+import { resolveMetalName, cleanAttribute } from '../../utils/metalColors';
 
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
@@ -232,6 +233,33 @@ const Profile = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [trackingOrder, setTrackingOrder] = useState(null);
   const [reorderingId, setReorderingId] = useState(null);
+  const [downloadingOrderId, setDownloadingOrderId] = useState(null);
+
+  // Download Invoice Handler
+  const handleDownloadInvoice = async (order) => {
+    const orderId = order?._id || order?.id;
+    if (!orderId) return;
+    try {
+      setDownloadingOrderId(orderId);
+      const res = await ordersAPI.downloadInvoice(orderId);
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const safeOrderNum = (order.orderNumber || 'ORD').replace(/[^a-zA-Z0-9_-]/g, '_');
+      link.setAttribute('download', `NEIRAH_INVOICE_${safeOrderNum}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Invoice downloaded successfully! 📄');
+    } catch (err) {
+      console.error('Invoice download failed:', err);
+      toast.error('Could not download invoice. Please try again.');
+    } finally {
+      setDownloadingOrderId(null);
+    }
+  };
 
   // Review state
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -1280,21 +1308,113 @@ const Profile = () => {
                                               {item.title || 'Jewellery Item'}
                                             </h4>
                                           )}
-                                          <div className="flex items-center gap-2 flex-wrap text-xs">
-                                            {item.selectedMetal && (
-                                              <span className="px-2.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#EFE8DD] text-stone-700 font-medium text-[11px]">
-                                                {item.selectedMetal}
-                                              </span>
-                                            )}
-                                            {itemSku && (
-                                              <span className="px-2.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#EFE8DD] text-stone-700 font-medium text-[11px]">
-                                                SKU: {itemSku}
-                                              </span>
-                                            )}
-                                            <span className="px-2.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#EFE8DD] text-stone-700 font-medium text-[11px]">
-                                              Qty: {item.quantity || 1}
-                                            </span>
-                                          </div>
+                                          {/* Attributes Grid & Details */}
+                                          {(() => {
+                                            const isSilver =
+                                              item.productType === 'silver' ||
+                                              item.productId?.basicInfo?.productType === 'silver' ||
+                                              Boolean(item.productId?.isOrnate) ||
+                                              Boolean(item.productId?.basicInfo?.isOrnate) ||
+                                              String(item.title || '').toLowerCase().startsWith('92.5') ||
+                                              String(item.selectedMetal || '').toLowerCase().includes('silver');
+
+                                            const attrs = item.selectedAttributes || {};
+                                            const rawDiamondType = isSilver ? '' : (attrs.diamondType || '');
+                                            const diamondType = cleanAttribute(rawDiamondType) || '';
+                                            const metalPurity = cleanAttribute(attrs.metalPurity) || (isSilver ? 'Silver' : '');
+                                            const metalColor = isSilver ? '' : (cleanAttribute(attrs.metalColor) || resolveMetalName(item.selectedMetal) || '');
+                                            const cleanPurity = metalPurity.replace(/\s*gold$/i, '').trim();
+                                            const rawMetal = item.selectedMetal
+                                              || (cleanPurity && metalColor ? `${cleanPurity} ${metalColor}` : [metalPurity, metalColor].filter(Boolean).join(' '))
+                                              || resolveMetalName(item.selectedMetal);
+                                            const metalDisplay = isSilver
+                                              ? 'Silver'
+                                              : (rawMetal ? rawMetal.replace(/^92\.5\s*/i, '').replace(/925\s*/i, '') : '');
+                                            const diamondShape = isSilver ? '' : (cleanAttribute(attrs.diamondShape) || '');
+                                            const diamondColor = isSilver ? '' : (cleanAttribute(attrs.diamondColor) || '');
+                                            const diamondClarity = isSilver ? '' : (cleanAttribute(attrs.diamondClarity) || '');
+                                            const clarityDisplay = diamondClarity || [diamondColor, diamondClarity].filter(Boolean).join(' ');
+                                            const caratWeight = isSilver ? null : (attrs.caratWeight != null ? attrs.caratWeight : null);
+                                            const sizeDisplay = cleanAttribute(attrs.size || item.selectedSize);
+                                            const hasRightCol = Boolean(metalColor || caratWeight != null || (metalDisplay && sizeDisplay));
+
+                                            let centerSummary = '';
+                                            if (!isSilver && (diamondType || caratWeight || clarityDisplay)) {
+                                              const parts = [];
+                                              if (caratWeight) parts.push(`${caratWeight} CT`);
+                                              if (clarityDisplay) parts.push(`Clarity: ${clarityDisplay}`);
+                                              const detailsStr = parts.length > 0 ? ` (${parts.join(', ')})` : '';
+                                              centerSummary = `Center: ${diamondType || 'Diamond'}${detailsStr}`;
+                                            }
+
+                                            const hasAttrs = Boolean(metalDisplay || metalColor || clarityDisplay || caratWeight != null || diamondShape || sizeDisplay);
+
+                                            return (
+                                              <div className="space-y-1 pt-0.5">
+                                                {hasAttrs && (
+                                                  <div className={`mt-1.5 ${hasRightCol ? 'grid grid-cols-2 gap-x-3' : 'flex'} text-[9px] sm:text-[10px] tracking-wide uppercase font-sans border-b border-[#EFE8DD] pb-1.5`}>
+                                                    {/* Left Column */}
+                                                    <div className={`${hasRightCol ? 'border-r border-[#EFE8DD] pr-2' : ''} space-y-0.5`}>
+                                                      {metalDisplay && (
+                                                        <p className="text-stone-600 font-semibold">
+                                                          METAL: <span className="text-stone-900 font-bold">{isSilver ? 'SILVER' : metalDisplay}</span>
+                                                        </p>
+                                                      )}
+                                                      {clarityDisplay && (
+                                                        <p className="text-stone-600 font-semibold">
+                                                          CLARITY: <span className="text-stone-900 font-bold">{clarityDisplay}</span>
+                                                        </p>
+                                                      )}
+                                                      {diamondShape && (
+                                                        <p className="text-stone-600 font-semibold">
+                                                          SHAPE: <span className="text-stone-900 font-bold">{diamondShape}</span>
+                                                        </p>
+                                                      )}
+                                                    </div>
+                                                    {/* Right Column */}
+                                                    {hasRightCol && (
+                                                      <div className="pl-1 space-y-0.5">
+                                                        {metalColor && (
+                                                          <p className="text-stone-600 font-semibold">
+                                                            COLOR: <span className="text-stone-900 font-bold">{metalColor}</span>
+                                                          </p>
+                                                        )}
+                                                        {caratWeight != null && (
+                                                          <p className="text-stone-600 font-semibold">
+                                                            CARAT: <span className="text-stone-900 font-bold">{caratWeight}</span>
+                                                          </p>
+                                                        )}
+                                                        {sizeDisplay && (
+                                                          <p className="text-stone-600 font-semibold">
+                                                            SIZE: <span className="text-stone-900 font-bold">{sizeDisplay}</span>
+                                                          </p>
+                                                        )}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                )}
+
+                                                {/* Center Diamond Summary */}
+                                                {centerSummary && (
+                                                  <p className="text-[10px] text-stone-500 font-sans">
+                                                    {centerSummary}
+                                                  </p>
+                                                )}
+
+                                                {/* SKU & Quantity Badges */}
+                                                <div className="flex items-center gap-2 flex-wrap text-xs pt-0.5">
+                                                  {itemSku && (
+                                                    <span className="px-2.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#EFE8DD] text-stone-700 font-medium text-[11px]">
+                                                      SKU: {itemSku}
+                                                    </span>
+                                                  )}
+                                                  <span className="px-2.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#EFE8DD] text-stone-700 font-medium text-[11px]">
+                                                    Qty: {item.quantity || 1}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            );
+                                          })()}
                                         </div>
                                       </div>
 
@@ -1315,6 +1435,16 @@ const Profile = () => {
 
                             {/* Card Footer: Actions */}
                             <div className="flex items-center justify-end gap-2.5 sm:gap-3 pt-2">
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadInvoice(order)}
+                                disabled={downloadingOrderId === (order._id || order.id)}
+                                className="px-4 py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
+                                title="Download Official Tax Invoice (PDF)"
+                              >
+                                <HiOutlineDocumentText className="w-4 h-4 text-[#7A5B3A]" />
+                                <span>{downloadingOrderId === (order._id || order.id) ? 'Downloading...' : 'Download Invoice'}</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => setTrackingOrder(order)}
