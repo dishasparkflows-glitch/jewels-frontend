@@ -9,7 +9,7 @@ export default function FilterGroup({ title, children, defaultOpen = false }) {
         <HiOutlinePlus className="h-3.5 w-3.5 text-stone-400 group-open/filter:hidden shrink-0" />
         <HiOutlineMinus className="hidden h-3.5 w-3.5 text-stone-400 group-open/filter:block shrink-0" />
       </summary>
-      <div className="space-y-2.5 pt-3.5 pb-1 text-xs text-stone-600 max-h-64 overflow-y-auto pr-1">{children}</div>
+      <div className="space-y-2.5 pt-3.5 pb-1 text-xs text-stone-600">{children}</div>
     </details>
   );
 }

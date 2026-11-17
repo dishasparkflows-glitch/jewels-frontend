@@ -4,7 +4,6 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import {
   LuHeart,
-  LuMaximize,
   LuChevronLeft,
   LuChevronRight,
   LuX,
@@ -133,11 +132,11 @@ export default function ProductCard({ product }) {
   return (
     <div
       onClick={handleCardClick}
-      className="group cursor-pointer flex flex-col justify-between h-full bg-white p-2 sm:p-3.5 border border-gray-100 hover:shadow-md transition-all rounded-lg sm:rounded-xl"
+      className="group cursor-pointer flex flex-col justify-between h-full bg-white p-2 sm:p-2.5 border border-gray-100 hover:shadow-md transition-all rounded-lg sm:rounded-xl"
     >
       <div>
         {/* Product Image Area */}
-        <div className="relative aspect-square flex items-center justify-center bg-[#FAF8F5] mb-1.5 sm:mb-3 overflow-hidden group/img rounded-md sm:rounded-lg">
+        <div className="relative aspect-square flex items-center justify-center bg-[#FAF8F5] mb-1 sm:mb-2 overflow-hidden group/img rounded-md sm:rounded-lg">
           <ProductMediaImage
             src={activeImage}
             alt={title}
@@ -163,19 +162,6 @@ export default function ProductCard({ product }) {
               className={wished ? "text-black" : "text-gray-400 sm:w-3.5 sm:h-3.5"}
             />
           </button>
-
-          {/* Quick View Button (Bottom Left) */}
-          <div
-            className="hidden sm:flex absolute bottom-2 left-2 sm:bottom-3 sm:left-3 w-6 h-6 sm:w-7 sm:h-7 border-gray-200 border items-center justify-center rounded-sm bg-white hover:bg-black hover:text-white text-gray-500 hover:border-black transition-colors z-20 shadow-sm cursor-pointer"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setPreviewOpen(true);
-            }}
-            title="Quick view"
-          >
-            <LuMaximize size={11} className="sm:w-3 sm:h-3" />
-          </div>
 
           {/* Carousel Arrows */}
           {cardImages.length > 1 && (
@@ -219,7 +205,7 @@ export default function ProductCard({ product }) {
         {/* Product Title (Centered) */}
         <div className="text-center px-1">
           <h3
-            className="text-[11px] sm:text-[13px] text-gray-800 font-medium leading-[1.25] mb-1 min-h-[28px] sm:min-h-[34px] line-clamp-2 text-center"
+            className="text-[11px] sm:text-[12.5px] text-gray-800 font-medium leading-[1.25] mb-1 min-h-[26px] sm:min-h-[30px] line-clamp-2 text-center"
             title={title}
           >
             {title}
@@ -234,13 +220,13 @@ export default function ProductCard({ product }) {
           activeColorName={activeColorName}
           onSelectColor={selectColor}
           maxVisible={5}
-          className="flex justify-center items-center gap-1 sm:gap-1.5 mb-1 sm:mb-1.5 mt-0.5"
-          sizeClass="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5"
+          className="flex justify-center items-center gap-1 sm:gap-1.5 mb-1 sm:mb-1 mt-0.5"
+          sizeClass="w-2.5 h-2.5 sm:w-3 sm:h-3"
           extraBadgeClass="text-[10px] text-gray-400 self-center"
         />
 
         <div className="flex flex-wrap items-center justify-center gap-1.5 text-center">
-          <p className="text-[11px] sm:text-[14px] text-gray-900 font-bold tracking-tight">
+          <p className="text-[11px] sm:text-[13px] text-gray-900 font-bold tracking-tight">
             {hasRange ? (
               `${formatProductPrice(minPrice)} – ${formatProductPrice(maxPrice)}`
             ) : (
@@ -248,7 +234,7 @@ export default function ProductCard({ product }) {
             )}
           </p>
           {!hasRange && hasDiscount && (
-            <p className="text-[9px] sm:text-[11px] text-gray-400 line-through font-normal">
+            <p className="text-[9px] sm:text-[10.5px] text-gray-400 line-through font-normal">
               {formatProductPrice(mrp)}
             </p>
           )}

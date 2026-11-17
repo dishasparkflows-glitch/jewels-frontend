@@ -61,20 +61,39 @@ const Cart = () => {
         {/* Cart Item List */}
         <div className="lg:col-span-2 space-y-4">
           {cart.map((item) => {
+            const isSilver =
+              item.productType === 'silver' ||
+              item.basicInfo?.productType === 'silver' ||
+              Boolean(item.isOrnate) ||
+              Boolean(item.basicInfo?.isOrnate) ||
+              item.category === 'silver' ||
+              item.categorySlug === 'silver' ||
+              item.categorySlug === 'silver-collection' ||
+              item.category === 'Silver Collection' ||
+              item.category?.name === 'Silver Collection' ||
+              String(item.title || item.name || item.basicInfo?.title || '').toLowerCase().startsWith('92.5') ||
+              String(item.selectedMetal || '').toLowerCase().includes('silver');
+
             const attrs = item.selectedAttributes || {};
-            const diamondType = attrs.diamondType || '';
-            const metalPurity = attrs.metalPurity || '';
-            const metalColor = attrs.metalColor || resolveMetalName(item.selectedMetal) || '';
-            const metalDisplay = [metalPurity, metalColor].filter(Boolean).join(' ') || resolveMetalName(item.selectedMetal);
-            const diamondShape = attrs.diamondShape || '';
-            const diamondColor = attrs.diamondColor || '';
-            const diamondClarity = attrs.diamondClarity || '';
-            const clarityDisplay = [diamondColor, diamondClarity].filter(Boolean).join(' ');
-            const caratWeight = attrs.caratWeight != null ? attrs.caratWeight : null;
+            const diamondType = isSilver ? '' : (attrs.diamondType || '');
+            const metalPurity = cleanAttribute(attrs.metalPurity) || (isSilver ? 'Silver' : '');
+            const metalColor = isSilver ? '' : (cleanAttribute(attrs.metalColor) || resolveMetalName(item.selectedMetal) || '');
+            const cleanPurity = metalPurity.replace(/\s*gold$/i, '').trim();
+            const rawMetal = item.selectedMetal
+              || (cleanPurity && metalColor ? `${cleanPurity} ${metalColor}` : [metalPurity, metalColor].filter(Boolean).join(' '))
+              || resolveMetalName(item.selectedMetal);
+            const metalDisplay = isSilver
+              ? 'Silver'
+              : (rawMetal ? rawMetal.replace(/^92\.5\s*/i, '').replace(/925\s*/i, '') : '');
+            const diamondShape = isSilver ? '' : (cleanAttribute(attrs.diamondShape) || '');
+            const diamondColor = isSilver ? '' : (cleanAttribute(attrs.diamondColor) || '');
+            const diamondClarity = isSilver ? '' : (cleanAttribute(attrs.diamondClarity) || '');
+            const clarityDisplay = diamondClarity || [diamondColor, diamondClarity].filter(Boolean).join(' ');
+            const caratWeight = isSilver ? null : (attrs.caratWeight != null ? attrs.caratWeight : null);
             const sizeDisplay = cleanAttribute(attrs.size || item.selectedSize);
 
             let centerSummary = '';
-            if (diamondType || caratWeight || clarityDisplay) {
+            if (!isSilver && (diamondType || caratWeight || clarityDisplay)) {
               const parts = [];
               if (caratWeight) parts.push(`${caratWeight} CT`);
               if (clarityDisplay) parts.push(`Clarity: ${clarityDisplay}`);
@@ -118,7 +137,7 @@ const Cart = () => {
                 {(metalDisplay || metalColor || clarityDisplay || caratWeight != null || diamondShape || sizeDisplay) && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-stone-600 pt-1">
                     {metalDisplay && (
-                      <p><span className="text-[11px] font-semibold uppercase text-stone-500">Metal:</span> <span className="text-stone-800 font-medium">{metalDisplay}</span></p>
+                      <p><span className="text-[11px] font-semibold uppercase text-stone-500">Metal:</span> <span className="text-stone-800 font-medium">{isSilver ? 'Silver' : metalDisplay}</span></p>
                     )}
                     {metalColor && (
                       <p><span className="text-[11px] font-semibold uppercase text-stone-500">Color:</span> <span className="text-stone-800 font-medium">{metalColor}</span></p>

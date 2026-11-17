@@ -20,7 +20,10 @@ import {
   HiOutlineDocumentText,
   HiOutlineStar,
   HiSparkles,
+  HiOutlineCheckCircle,
+  HiOutlinePencilAlt,
 } from 'react-icons/hi';
+import { IoStar } from 'react-icons/io5';
 import {
   FaWhatsapp,
   FaFacebookF,
@@ -31,7 +34,7 @@ import {
   FaCheck,
 } from 'react-icons/fa6';
 import toast from 'react-hot-toast';
-import { productsAPI, couponsAPI } from '../../api/services';
+import { productsAPI, couponsAPI, reviewsAPI } from '../../api/services';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
@@ -40,6 +43,7 @@ import { getValidProductImages, getPrimaryProductImage, isOrnateImage } from '..
 import { trackProductView } from '../../config/firebase';
 import { useLiveViewers } from '../../hooks/useLiveViewers';
 import Dropdown from '../../components/common/Dropdown';
+import ProductCard from '../../components/product/ProductCard';
 import SimilarProductsDrawer from '../../components/store/SimilarProductsDrawer';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
 import {
@@ -300,6 +304,147 @@ export default function ProductDetail() {
     setTimeout(() => {
       setCopiedCode((prev) => (prev === code ? null : prev));
     }, 2500);
+  };
+
+  // ─── Customer Reviews State ───
+  const [productReviews, setProductReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewSort, setReviewSort] = useState('recent');
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [newReview, setNewReview] = useState({
+    rating: 5,
+    name: '',
+    email: '',
+    title: '',
+    comment: '',
+  });
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const fetchProductReviews = useCallback(async (prodId) => {
+    if (!prodId) return;
+    try {
+      setReviewsLoading(true);
+      const res = await reviewsAPI.getAll({ productId: prodId, status: 'approved' });
+      const items = res.data?.data?.items || res.data?.data || [];
+      setProductReviews(Array.isArray(items) ? items : []);
+    } catch (err) {
+      console.warn('Could not load reviews for product:', err);
+      setProductReviews([]);
+    } finally {
+      setReviewsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (product?._id) {
+      fetchProductReviews(product._id);
+    }
+  }, [product?._id, fetchProductReviews]);
+
+  useEffect(() => {
+    if (user) {
+      setNewReview((prev) => ({
+        ...prev,
+        name: prev.name || user.name || '',
+        email: prev.email || user.email || '',
+      }));
+    }
+  }, [user]);
+
+  const reviewStats = useMemo(() => {
+    const total = productReviews.length;
+    if (total === 0) {
+      return {
+        total: 0,
+        average: '5.0',
+        distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+        percentages: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      };
+    }
+    const sum = productReviews.reduce((acc, r) => acc + (Number(r.review?.rating) || 5), 0);
+    const avg = (sum / total).toFixed(1);
+    const dist = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    productReviews.forEach((r) => {
+      const star = Math.max(1, Math.min(5, Math.round(Number(r.review?.rating) || 5)));
+      dist[star] = (dist[star] || 0) + 1;
+    });
+    const pcts = {
+      5: Math.round(((dist[5] || 0) / total) * 100),
+      4: Math.round(((dist[4] || 0) / total) * 100),
+      3: Math.round(((dist[3] || 0) / total) * 100),
+      2: Math.round(((dist[2] || 0) / total) * 100),
+      1: Math.round(((dist[1] || 0) / total) * 100),
+    };
+    return {
+      total,
+      average: avg,
+      distribution: dist,
+      percentages: pcts,
+    };
+  }, [productReviews]);
+
+  const sortedReviews = useMemo(() => {
+    const list = [...productReviews];
+    if (reviewSort === 'recent') {
+      return list.sort((a, b) => new Date(b.review?.reviewDate || b.meta?.createdAt || 0) - new Date(a.review?.reviewDate || a.meta?.createdAt || 0));
+    }
+    if (reviewSort === 'highest') {
+      return list.sort((a, b) => (Number(b.review?.rating) || 5) - (Number(a.review?.rating) || 5));
+    }
+    if (reviewSort === 'lowest') {
+      return list.sort((a, b) => (Number(a.review?.rating) || 5) - (Number(b.review?.rating) || 5));
+    }
+    return list;
+  }, [productReviews, reviewSort]);
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!newReview.name.trim() || !newReview.title.trim() || !newReview.comment.trim()) {
+      toast.error('Please complete all required fields.');
+      return;
+    }
+    try {
+      setSubmittingReview(true);
+      const payload = {
+        customer: {
+          name: newReview.name.trim(),
+          email: newReview.email.trim(),
+        },
+        review: {
+          rating: Number(newReview.rating) || 5,
+          title: newReview.title.trim(),
+          comment: newReview.comment.trim(),
+          reviewDate: new Date().toISOString(),
+        },
+        productId: product._id,
+        status: 'approved',
+      };
+      await reviewsAPI.create(payload);
+      toast.success('Thank you! Your verified review has been published.');
+      setShowReviewModal(false);
+      setNewReview({
+        rating: 5,
+        name: user?.name || '',
+        email: user?.email || '',
+        title: '',
+        comment: '',
+      });
+      if (product?._id) {
+        fetchProductReviews(product._id);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not submit review. Please try again.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const formatReviewDate = (d) => {
+    if (!d) return '';
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   const { count: liveViewersCount, hasUpdated: liveViewersUpdated } = useLiveViewers(product?._id || id);
@@ -1351,12 +1496,29 @@ export default function ProductDetail() {
           setProduct(prodData);
           trackProductView(prodData);
 
-          // Use related products directly from product payload if provided
-          if (Array.isArray(prodData.relatedProducts) && prodData.relatedProducts.length > 0) {
-            setMostLikedProducts(prodData.relatedProducts.slice(0, 6));
-          } else {
-            setMostLikedProducts([]);
-          }
+          // Fetch most liked products from API
+          productsAPI
+            .getMostLiked({
+              limit: 6,
+              productId: prodData._id,
+            })
+            .then(({ data }) => {
+              const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+              if (list.length > 0) {
+                setMostLikedProducts(list);
+              } else if (Array.isArray(prodData.relatedProducts) && prodData.relatedProducts.length > 0) {
+                setMostLikedProducts(prodData.relatedProducts.slice(0, 6));
+              } else {
+                setMostLikedProducts([]);
+              }
+            })
+            .catch(() => {
+              if (Array.isArray(prodData.relatedProducts) && prodData.relatedProducts.length > 0) {
+                setMostLikedProducts(prodData.relatedProducts.slice(0, 6));
+              } else {
+                setMostLikedProducts([]);
+              }
+            });
 
           const activeSlug =
             prodData.basicInfo?.slug ||
@@ -1436,18 +1598,20 @@ export default function ProductDetail() {
     const quantity = 1;
     const totalItemPrice = price * quantity;
     const addedAt = new Date().toISOString();
-    const isGold = (product.productType === 'gold');
+    const isSilverProduct = (product?.productType === 'silver') || Boolean(product?.isOrnate) || /silver/i.test(product?.basicInfo?.title || '');
+    const isGold = !isSilverProduct && ((product?.productType === 'gold') || !product?.productType || /gold/i.test(product?.basicInfo?.title || ''));
 
     const selectedSizeObj = sortedSizes.find(
       (s) => String(s._id || s.id || s.name || s) === String(selectedSize)
     );
     const resolvedSizeName = selectedSizeObj ? selectedSizeObj.name : (selectedSize || '');
 
-    const resolvedDiamondTypeName =
-      (selectedVariant?.diamondTypeId && typeof selectedVariant.diamondTypeId === 'object' && selectedVariant.diamondTypeId.name) ||
-      (selectedVariant?.diamondType && typeof selectedVariant.diamondType === 'object' && selectedVariant.diamondType.name) ||
-      (product.representative?.diamondType && !isRawObjectId(product.representative?.diamondType) ? product.representative?.diamondType : null) ||
-      'Lab Grown Diamond';
+    const resolvedDiamondTypeName = isSilverProduct
+      ? ''
+      : ((selectedVariant?.diamondTypeId && typeof selectedVariant.diamondTypeId === 'object' && selectedVariant.diamondTypeId.name) ||
+        (selectedVariant?.diamondType && typeof selectedVariant.diamondType === 'object' && selectedVariant.diamondType.name) ||
+        (product.representative?.diamondType && !isRawObjectId(product.representative?.diamondType) ? product.representative?.diamondType : null) ||
+        'Lab Grown Diamond');
 
     const resolvedShapeName =
       (selectedVariant?.diamondShapeId && typeof selectedVariant.diamondShapeId === 'object' && selectedVariant.diamondShapeId.name) ||
@@ -1484,9 +1648,19 @@ export default function ProductDetail() {
       if (validEntries.length > 0) {
         selectedAttributes = Object.fromEntries(validEntries);
       }
+    } else {
+      const attrs = {
+        metalPurity: 'Silver',
+        metalColor: 'Silver',
+        size: resolvedSizeName || null,
+      };
+      const validEntries = Object.entries(attrs).filter(([, val]) => val !== null && val !== undefined && val !== '');
+      if (validEntries.length > 0) {
+        selectedAttributes = Object.fromEntries(validEntries);
+      }
     }
 
-    const selectedMetalStr = `${selectedPurity} ${selectedColor}`.trim();
+    const selectedMetalStr = isGold ? `${selectedPurity} ${selectedColor}`.trim() : 'Silver';
 
     const cartItem = {
       _id: product._id,
@@ -1746,22 +1920,29 @@ export default function ProductDetail() {
 
               const soldHours = spConfig.soldTimeHours || 3;
               const soldCount = Number(product?.demoMetrics?.soldCount ?? spConfig.defaultSoldCount ?? 24);
-              const reviewCount = Number(product?.demoMetrics?.reviewCount ?? spConfig.defaultReviewCount ?? 13);
+              const displayReviewCount = reviewStats.total > 0 ? reviewStats.total : Number(product?.demoMetrics?.reviewCount ?? spConfig.defaultReviewCount ?? 13);
 
-              if (soldCount <= 0 && reviewCount <= 0) return null;
+              if (soldCount <= 0 && displayReviewCount <= 0) return null;
 
               return (
                 <div className="space-y-1.5 sm:space-y-2 pt-0.5 pb-1 select-none">
                   {/* Reviews Star Rating Badge */}
-                  {showReviews && reviewCount > 0 && (
-                    <div className="flex items-center gap-1.5">
-                      <div className="flex items-center text-amber-400 text-xs sm:text-sm tracking-normal leading-none" aria-label="5 star rating">
+                  {showReviews && displayReviewCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const el = document.getElementById('customer-reviews');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                      className="flex items-center gap-1.5 hover:opacity-80 transition-opacity text-left cursor-pointer"
+                    >
+                      <div className="flex items-center text-amber-400 text-xs sm:text-sm tracking-normal leading-none" aria-label="star rating">
                         ★★★★★
                       </div>
                       <span className="text-xs sm:text-sm text-stone-600 font-medium">
-                        <strong className="font-semibold text-stone-900">{reviewCount}</strong> reviews
+                        <strong className="font-semibold text-stone-900">{displayReviewCount}</strong> reviews
                       </span>
-                    </div>
+                    </button>
                   )}
 
                   {/* Hourly Sold Counter Badge */}
@@ -1880,10 +2061,10 @@ export default function ProductDetail() {
                 AVAILABLE OFFERS (Luxury Ticket & Celestial Sparkle)
             ═══════════════════════════════════════════════════════════ */}
             {coupons && coupons.length > 0 && (
-              <div className="relative overflow-hidden rounded-2xl border border-[#E8DEC9] bg-gradient-to-br from-[#FCFAF6] via-[#FDFCF9] to-[#F7F2E8] p-3.5 sm:p-4 shadow-[0_2px_14px_rgba(139,111,78,0.06)] transition-all">
-              {/* Celestial 8-Point Diamond Starburst Watermark (Matches Neirah Screenshot) */}
+              <div className="relative overflow-hidden rounded-xl border border-[#E8DEC9] bg-gradient-to-br from-[#FCFAF6] via-[#FDFCF9] to-[#F7F2E8] p-2.5 sm:p-3 shadow-[0_2px_10px_rgba(139,111,78,0.05)] transition-all">
+              {/* Celestial 8-Point Diamond Starburst Watermark */}
               <svg
-                className="absolute -top-3 -right-3 w-20 h-20 text-[#C19B65]/35 pointer-events-none select-none"
+                className="absolute -top-2 -right-2 w-14 h-14 text-[#C19B65]/30 pointer-events-none select-none"
                 viewBox="0 0 100 100"
                 fill="none"
               >
@@ -1904,27 +2085,27 @@ export default function ProductDetail() {
                 className="flex items-center justify-between cursor-pointer select-none"
                 onClick={() => setOffersOpen((prev) => !prev)}
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-[#8b6f4e]/10 border border-[#8b6f4e]/20 flex items-center justify-center text-[#8b6f4e] shadow-2xs">
-                    <HiOutlineTag className="w-3.5 h-3.5 -rotate-12 stroke-[1.8]" />
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <div className="w-5 h-5 rounded-full bg-[#8b6f4e]/10 border border-[#8b6f4e]/20 flex items-center justify-center text-[#8b6f4e] shadow-2xs">
+                    <HiOutlineTag className="w-3 h-3 -rotate-12 stroke-[1.8]" />
                   </div>
-                  <span className="text-[11px] sm:text-[11.5px] font-semibold uppercase tracking-[0.16em] text-[#8b6f4e] font-poppins">
+                  <span className="text-[10px] sm:text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#8b6f4e] font-poppins">
                     AVAILABLE OFFERS
                   </span>
                   {coupons.length > 1 && (
-                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#8b6f4e]/12 text-[#8b6f4e]">
+                    <span className="px-1.5 py-0.5 rounded-full text-[8.5px] font-bold bg-[#8b6f4e]/12 text-[#8b6f4e]">
                       {coupons.length} Offers
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5 text-[#8b6f4e]">
-                  <span className="text-[10.5px] font-medium text-stone-500 hidden sm:inline">
+                <div className="flex items-center gap-1 text-[#8b6f4e]">
+                  <span className="text-[10px] font-medium text-stone-500 hidden sm:inline">
                     {offersOpen ? 'Hide' : 'View Offers'}
                   </span>
-                  <div className="w-5 h-5 rounded-md flex items-center justify-center hover:bg-[#8b6f4e]/10 transition-colors">
+                  <div className="w-4 h-4 rounded flex items-center justify-center hover:bg-[#8b6f4e]/10 transition-colors">
                     <HiChevronDown
-                      className={`w-4 h-4 transition-transform duration-200 ${
+                      className={`w-3.5 h-3.5 transition-transform duration-200 ${
                         offersOpen ? 'rotate-180' : ''
                       }`}
                     />
@@ -1935,7 +2116,7 @@ export default function ProductDetail() {
               {/* Offers List */}
               <div className={`accordion-collapse ${offersOpen ? 'open' : ''}`}>
                 <div className="accordion-collapse-inner">
-                  <div className="mt-3 space-y-2.5">
+                  <div className="mt-2 sm:mt-2.5 space-y-1.5 sm:space-y-2">
                     {coupons.map((c, idx) => {
                       const code = c.coupon?.code || c.code || '';
                       if (!code) return null;
@@ -1950,38 +2131,36 @@ export default function ProductDetail() {
                       return (
                         <div
                           key={c._id || code || idx}
-                          className="relative group bg-white/95 hover:bg-white rounded-xl border border-[#EDE3D3] hover:border-[#8b6f4e]/50 p-3 sm:p-3.5 transition-all duration-200 shadow-[0_2px_8px_rgba(139,111,78,0.04)] hover:shadow-[0_4px_14px_rgba(139,111,78,0.08)]"
+                          className="relative group bg-white/95 hover:bg-white rounded-lg border border-[#EDE3D3] hover:border-[#8b6f4e]/50 px-2.5 py-2 transition-all duration-200 shadow-2xs hover:shadow-xs"
                         >
                           {/* Perforated Voucher Ticket Notches (Left & Right) */}
-                          <div className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#f8f3ea] border-r border-[#EDE3D3] pointer-events-none" />
-                          <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#f8f3ea] border-l border-[#EDE3D3] pointer-events-none" />
+                          <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#f8f3ea] border-r border-[#EDE3D3] pointer-events-none" />
+                          <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#f8f3ea] border-l border-[#EDE3D3] pointer-events-none" />
 
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-1">
-                            {/* Left Details: Dashed Code Badge + Discount + Savings Tag */}
-                            <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 px-0.5">
+                            {/* Left Details: Dashed Code Badge + Discount */}
+                            <div className="flex items-center gap-2 flex-wrap">
                               {/* Dashed Code Badge */}
                               <button
                                 type="button"
                                 onClick={() => handleCopyCoupon(code)}
-                                className="group/badge relative flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-dashed border-[#C5A880] bg-[#FAF5EE] hover:bg-[#F3EAD9] text-[#785934] font-mono font-bold text-xs tracking-wider cursor-pointer hover:border-[#8b6f4e] transition-all select-all shadow-2xs"
+                                className="group/badge relative flex items-center gap-1 px-2 py-0.5 rounded border border-dashed border-[#C5A880] bg-[#FAF5EE] hover:bg-[#F3EAD9] text-[#785934] font-mono font-bold text-[11px] tracking-wider cursor-pointer hover:border-[#8b6f4e] transition-all select-all shadow-2xs"
                                 title="Click to copy coupon code"
                               >
                                 <span>{code}</span>
-                                <HiOutlineDuplicate className="w-3.5 h-3.5 text-[#8b6f4e] opacity-60 group-hover/badge:opacity-100 transition-opacity" />
+                                <HiOutlineDuplicate className="w-3 h-3 text-[#8b6f4e] opacity-60 group-hover/badge:opacity-100 transition-opacity" />
                               </button>
 
                               {/* Discount Highlight */}
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-[13px] sm:text-sm font-bold text-stone-900 tracking-tight font-poppins">
-                                  {discountText}
-                                </span>
-                              </div>
+                              <span className="text-xs sm:text-[12.5px] font-bold text-stone-900 tracking-tight font-poppins">
+                                {discountText}
+                              </span>
                             </div>
 
-                            {/* Right: Action Button & Minimum Order Condition */}
-                            <div className="flex items-center justify-between sm:justify-end gap-2.5 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-[#f2eae0]">
+                            {/* Right: Minimum Order & Action Button */}
+                            <div className="flex items-center justify-between sm:justify-end gap-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-[#f2eae0]">
                               {c.discount?.minimumOrderAmount > 0 && (
-                                <span className="text-[10px] text-stone-400 font-medium">
+                                <span className="text-[9.5px] text-stone-400 font-medium">
                                   Min. order ₹{Number(c.discount.minimumOrderAmount).toLocaleString('en-IN')}
                                 </span>
                               )}
@@ -1989,22 +2168,20 @@ export default function ProductDetail() {
                               <button
                                 type="button"
                                 onClick={() => handleCopyCoupon(code)}
-                                className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-200 cursor-pointer flex items-center gap-1.5 active:scale-95 ${
+                                className={`px-2.5 py-1 rounded-md text-[10.5px] font-semibold transition-all duration-200 cursor-pointer flex items-center gap-1 active:scale-95 ${
                                   isCopied
-                                    ? 'bg-[#162b20] text-white shadow-xs'
-                                    : 'btn-theme-primary shadow-xs'
+                                    ? 'bg-[#162b20] text-white shadow-2xs'
+                                    : 'btn-theme-primary shadow-2xs'
                                 }`}
                                 title={isCopied ? 'Code copied!' : 'Copy code to clipboard'}
                               >
                                 {isCopied ? (
                                   <>
-                                    <FaCheck className="w-3 h-3" />
+                                    <FaCheck className="w-2.5 h-2.5" />
                                     <span>Copied!</span>
                                   </>
                                 ) : (
-                                  <>
-                                    <span>Copy Code</span>
-                                  </>
+                                  <span>Copy Code</span>
                                 )}
                               </button>
                             </div>
@@ -2660,79 +2837,104 @@ export default function ProductDetail() {
           </div>
         </div>
 
+        {/* ─── CUSTOMER REVIEWS & RATINGS SECTION (Only displayed if product has reviews) ─── */}
+        {!reviewsLoading && sortedReviews.length > 0 && (
+          <section id="customer-reviews" className="pt-6 sm:pt-8 border-t border-stone-200 mt-6 sm:mt-8 scroll-mt-24">
+            <div className="max-w-7xl mx-auto">
+              {/* Section Header */}
+              <div className="text-center mb-5 sm:mb-6">
+                <h2 className="text-xs sm:text-sm font-bold uppercase tracking-[0.25em] text-stone-900 font-sans">
+                  CUSTOMER REVIEWS &amp; RATINGS
+                </h2>
+              </div>
+
+              {/* Reviews Cards Grid */}
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
+                  {sortedReviews.map((rev, idx) => {
+                    const reviewerName = rev.customer?.name || 'Verified Buyer';
+                    const rating = Number(rev.review?.rating || 5);
+                    const reviewTitle = rev.review?.title || '';
+                    const reviewComment = rev.review?.comment || '';
+                    const dateStr = formatReviewDate(rev.review?.reviewDate || rev.meta?.createdAt);
+
+                    return (
+                      <div
+                        key={rev._id || `rev_${idx}`}
+                        className="bg-[#FAF7F2] rounded-xl border border-[#EFE8DD] p-5 sm:p-6 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between space-y-3"
+                      >
+                        <div className="space-y-3">
+                          {/* Top: Customer Name & Date */}
+                          <div className="flex items-center justify-between gap-2">
+                            <h4 className="font-semibold text-stone-900 text-sm sm:text-[15px]">
+                              {reviewerName}
+                            </h4>
+                            <span className="text-xs sm:text-sm text-stone-500 font-normal shrink-0">
+                              {dateStr}
+                            </span>
+                          </div>
+
+                          {/* Star Rating */}
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <IoStar
+                                key={s}
+                                className={`w-4 h-4 ${s <= rating ? 'text-amber-500 fill-amber-500' : 'text-stone-300'}`}
+                              />
+                            ))}
+                          </div>
+
+                          {/* Review Title */}
+                          {reviewTitle && (
+                            <h5 className="font-bold text-stone-900 text-sm sm:text-[15px] leading-snug">
+                              {reviewTitle}
+                            </h5>
+                          )}
+
+                          {/* Review Comment */}
+                          <p className="text-xs sm:text-sm text-stone-700 leading-relaxed font-normal whitespace-pre-line">
+                            {reviewComment}
+                          </p>
+                        </div>
+
+                        {/* Review Image (if customer uploaded photo) */}
+                        {rev.image?.url && (
+                          <div className="pt-2">
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden border border-stone-200/80 bg-white cursor-pointer hover:opacity-90 transition-opacity">
+                              <img
+                                src={rev.image.url}
+                                alt={reviewTitle || 'Customer photo'}
+                                className="w-full h-full object-cover"
+                                onClick={() => window.open(rev.image.url, '_blank')}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ─── MOST LIKED PIECES ─── */}
         {mostLikedProducts.length > 0 && (
-          <div className="pt-16 sm:pt-20 border-t border-stone-100 mt-16">
-            <div className="mb-8 text-center sm:text-left">
-              <h2 className="text-xs font-bold uppercase tracking-[0.25em] text-stone-400">
+          <div className="pt-6 sm:pt-8 border-t border-stone-200 mt-6 sm:mt-8">
+            <div className="mb-5 sm:mb-6 text-center">
+              <h2 className="text-xs sm:text-sm font-bold uppercase tracking-[0.25em] text-stone-900 font-sans">
                 MOST LIKED PIECES
               </h2>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
-              {mostLikedProducts
-                .filter((item) => getPrimaryProductImage(item))
-                .map((item) => {
-                  const relImg = getPrimaryProductImage(item);
-                  const relPrice = item.pricing?.salePrice ?? item.pricing?.mrp;
-
-                  return (
-                    <div
-                      key={item._id || item.basicInfo?.slug}
-                      onClick={() => {
-                        const targetSlug =
-                          item.basicInfo?.slug ||
-                          (item.basicInfo?.title
-                            ? String(item.basicInfo.title)
-                                .toLowerCase()
-                                .trim()
-                                .replace(/[^\w\s-]/g, '')
-                                .replace(/\s+/g, '-')
-                            : '');
-                        if (targetSlug) {
-                          navigate(`/product/${encodeURIComponent(targetSlug)}`);
-                        }
-                      }}
-                      className="group bg-white rounded-2xl border border-stone-100/90 overflow-hidden shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
-                    >
-                      {/* Image container */}
-                      <div className="relative aspect-square bg-[#faf8f5] p-3 flex items-center justify-center overflow-hidden">
-                        <img
-                          src={relImg}
-                          alt={item.basicInfo?.title || ''}
-                          className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-                          loading="lazy"
-                        />
-
-                        {/* Quick wishlist button */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleWishlist(item);
-                          }}
-                          className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white/80 backdrop-blur-xs flex items-center justify-center text-stone-400 hover:text-red-500 transition-colors shadow-2xs cursor-pointer"
-                        >
-                          {isWishlisted(item._id) ? (
-                            <HiHeart className="w-4 h-4 text-red-500" />
-                          ) : (
-                            <HiOutlineHeart className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-
-                      {/* Title & Price */}
-                      <div className="p-3 text-center space-y-1">
-                        <h3 className="text-[11px] font-bold text-stone-800 line-clamp-2 uppercase tracking-tight leading-snug group-hover:text-[#8f6d43] transition-colors">
-                          {item.basicInfo?.title}
-                        </h3>
-                        <p className="text-xs font-bold text-stone-900 font-serif">
-                          {formatPrice(relPrice)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-3.5 md:gap-4">
+              {mostLikedProducts.map((item) => (
+                <ProductCard
+                  key={item._id || item.id || item.basicInfo?.slug || item.slug}
+                  product={item}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -3453,6 +3655,159 @@ export default function ProductDetail() {
                 </a>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Write a Review Modal ─── */}
+      {showReviewModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn"
+          onClick={() => setShowReviewModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-stone-200 space-y-5 animate-scaleUp max-h-[92vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#8f6d43]">
+                  Share Your Story
+                </span>
+                <h3 className="text-lg font-bold font-serif text-stone-900">
+                  Write a Customer Review
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReviewModal(false)}
+                className="w-8 h-8 rounded-lg border border-stone-200 flex items-center justify-center text-stone-400 hover:text-stone-700 cursor-pointer"
+              >
+                <HiOutlineX className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleReviewSubmit} className="space-y-4">
+              {/* Star Rating Select */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-stone-900">
+                  Overall Rating <span className="text-rose-500">*</span>
+                </label>
+                <div className="flex items-center gap-2 p-3 rounded-xl border border-stone-200 bg-stone-50/60">
+                  <div className="flex items-center gap-1.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        onClick={() => setNewReview({ ...newReview, rating: star })}
+                        className="p-1 cursor-pointer transition-transform hover:scale-110"
+                      >
+                        <IoStar
+                          className={`w-6 h-6 transition-colors ${
+                            star <= (hoverRating || newReview.rating)
+                              ? 'text-amber-400 fill-amber-400'
+                              : 'text-stone-200'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-xs font-bold text-stone-800 ml-2">
+                    {hoverRating || newReview.rating} of 5 Stars
+                  </span>
+                </div>
+              </div>
+
+              {/* Name & Email */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-stone-800">
+                    Your Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Priya Sharma"
+                    value={newReview.name}
+                    onChange={(e) => setNewReview({ ...newReview, name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-[13px] bg-white border border-stone-300 rounded-xl focus:outline-none focus:border-[#8f6d43] focus:ring-1 focus:ring-[#8f6d43]"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-stone-800">
+                    Email Address <span className="text-stone-400 font-normal">(Private)</span>
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="e.g. priya@example.com"
+                    value={newReview.email}
+                    onChange={(e) => setNewReview({ ...newReview, email: e.target.value })}
+                    className="w-full px-3.5 py-2.5 text-xs sm:text-[13px] bg-white border border-stone-300 rounded-xl focus:outline-none focus:border-[#8f6d43] focus:ring-1 focus:ring-[#8f6d43]"
+                  />
+                </div>
+              </div>
+
+              {/* Review Headline */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-stone-800">
+                  Review Headline <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Absolutely stunning sparkle and quality!"
+                  value={newReview.title}
+                  onChange={(e) => setNewReview({ ...newReview, title: e.target.value })}
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-[13px] bg-white border border-stone-300 rounded-xl focus:outline-none focus:border-[#8f6d43] focus:ring-1 focus:ring-[#8f6d43]"
+                />
+              </div>
+
+              {/* Review Body */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-stone-800">
+                  Your Review <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows="4"
+                  required
+                  placeholder="Share details about the craftsmanship, fit, sparkle, and your overall experience..."
+                  value={newReview.comment}
+                  onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-[13px] bg-white border border-stone-300 rounded-xl focus:outline-none focus:border-[#8f6d43] focus:ring-1 focus:ring-[#8f6d43] resize-y"
+                />
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  className="flex-1 py-3 px-5 rounded-xl bg-[#1f3a2b] hover:bg-[#15271d] text-white text-xs font-bold tracking-wider uppercase transition-colors shadow-sm cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+                >
+                  {submittingReview ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <span>Submit Review</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowReviewModal(false)}
+                  className="px-4 py-3 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-50 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

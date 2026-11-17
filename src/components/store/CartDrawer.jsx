@@ -24,10 +24,10 @@ export default function CartDrawer({ open, onClose }) {
 
   return (
     <Modal open={open} onClose={onClose} label="Shopping bag" className="cart-drawer">
-      <aside className="relative flex h-[100dvh] w-[min(100vw,480px)] flex-col bg-[#faf7f2] text-[#201e1b] shadow-2xl overflow-hidden font-sans">
+      <aside className="relative flex h-[100dvh] w-[min(100vw,480px)] flex-col bg-white text-[#201e1b] shadow-2xl overflow-hidden font-sans">
         
         {/* Subtle Luxury Floral Watermark at Bottom Right */}
-        <div className="pointer-events-none absolute -bottom-10 -right-10 opacity-[0.07] select-none overflow-hidden z-0">
+        <div className="pointer-events-none absolute -bottom-10 -right-10 opacity-[0.03] select-none overflow-hidden z-0">
           <svg width="280" height="280" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M100 20C80 60 40 80 0 100C40 120 80 140 100 180C120 140 160 120 200 100C160 80 120 60 100 20Z" fill="#9c774e" />
             <path d="M100 45C85 75 55 90 25 100C55 110 85 125 100 155C115 125 145 110 175 100C145 90 115 75 100 45Z" fill="#9c774e" />
@@ -36,7 +36,7 @@ export default function CartDrawer({ open, onClose }) {
         </div>
 
         {/* ─── Header: Your Bag | 1 item ─────────────────────────── */}
-        <header className="relative z-10 flex items-center justify-between border-b border-[#ebdcc8] px-6 py-5 bg-[#faf7f2]">
+        <header className="relative z-10 flex items-center justify-between border-b border-stone-200/80 px-6 py-5 bg-white">
           <div className="flex items-baseline gap-2">
             <h2 className="font-serif text-2xl font-normal text-stone-900">Your Bag</h2>
             <span className="text-stone-300 font-light select-none">|</span>
@@ -48,7 +48,7 @@ export default function CartDrawer({ open, onClose }) {
             type="button"
             onClick={onClose}
             aria-label="Close shopping bag"
-            className="rounded-full p-2 text-stone-500 hover:text-stone-900 hover:bg-[#f2e9dc] transition-colors cursor-pointer"
+            className="rounded-full p-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors cursor-pointer"
           >
             <HiOutlineX className="h-5 w-5" />
           </button>
@@ -56,28 +56,48 @@ export default function CartDrawer({ open, onClose }) {
 
         {/* ─── Cart Items List ────────────────────────────────────── */}
         {cart.length ? (
-          <ul className="relative z-10 flex-1 divide-y divide-[#ebdcc8] overflow-y-auto px-6 luxury-scrollbar">
+          <ul className="relative z-10 flex-1 divide-y divide-stone-100 overflow-y-auto px-6 luxury-scrollbar bg-white">
             {cart.map((item, index) => {
+              const isSilver =
+                item.productType === 'silver' ||
+                item.basicInfo?.productType === 'silver' ||
+                Boolean(item.isOrnate) ||
+                Boolean(item.basicInfo?.isOrnate) ||
+                item.category === 'silver' ||
+                item.categorySlug === 'silver' ||
+                item.categorySlug === 'silver-collection' ||
+                item.category === 'Silver Collection' ||
+                item.category?.name === 'Silver Collection' ||
+                String(item.title || item.basicInfo?.title || item.name || '').toLowerCase().startsWith('92.5') ||
+                String(item.selectedMetal || '').toLowerCase().includes('silver');
+
               const attrs = item.selectedAttributes || {};
-              const rawDiamondType = attrs.diamondType || 'LAB GROWN DIAMOND';
-              const diamondType = cleanAttribute(rawDiamondType) || 'LAB GROWN DIAMOND';
-              const metalPurity = cleanAttribute(attrs.metalPurity) || '';
-              const metalColor = cleanAttribute(attrs.metalColor) || resolveMetalName(item.selectedMetal) || '';
-              const metalDisplay = [metalPurity, metalColor].filter(Boolean).join(' ') || resolveMetalName(item.selectedMetal);
-              const diamondShape = cleanAttribute(attrs.diamondShape) || '';
-              const diamondColor = cleanAttribute(attrs.diamondColor) || '';
-              const diamondClarity = cleanAttribute(attrs.diamondClarity) || '';
-              const clarityDisplay = [diamondColor, diamondClarity].filter(Boolean).join(' ');
-              const caratWeight = attrs.caratWeight != null ? attrs.caratWeight : null;
+              const rawDiamondType = isSilver ? '' : (attrs.diamondType || '');
+              const diamondType = cleanAttribute(rawDiamondType) || '';
+              const metalPurity = cleanAttribute(attrs.metalPurity) || (isSilver ? 'Silver' : '');
+              const metalColor = isSilver ? '' : (cleanAttribute(attrs.metalColor) || resolveMetalName(item.selectedMetal) || '');
+              const cleanPurity = metalPurity.replace(/\s*gold$/i, '').trim();
+              const rawMetal = item.selectedMetal
+                || (cleanPurity && metalColor ? `${cleanPurity} ${metalColor}` : [metalPurity, metalColor].filter(Boolean).join(' '))
+                || resolveMetalName(item.selectedMetal);
+              const metalDisplay = isSilver
+                ? 'Silver'
+                : (rawMetal ? rawMetal.replace(/^92\.5\s*/i, '').replace(/925\s*/i, '') : '');
+              const diamondShape = isSilver ? '' : (cleanAttribute(attrs.diamondShape) || '');
+              const diamondColor = isSilver ? '' : (cleanAttribute(attrs.diamondColor) || '');
+              const diamondClarity = isSilver ? '' : (cleanAttribute(attrs.diamondClarity) || '');
+              const clarityDisplay = diamondClarity || [diamondColor, diamondClarity].filter(Boolean).join(' ');
+              const caratWeight = isSilver ? null : (attrs.caratWeight != null ? attrs.caratWeight : null);
               const sizeDisplay = cleanAttribute(attrs.size || item.selectedSize);
+              const hasRightCol = Boolean(metalColor || caratWeight != null || (metalDisplay && sizeDisplay));
 
               let centerSummary = '';
-              if (diamondType || caratWeight || clarityDisplay) {
+              if (!isSilver && (diamondType || caratWeight || clarityDisplay)) {
                 const parts = [];
                 if (caratWeight) parts.push(`${caratWeight} CT`);
                 if (clarityDisplay) parts.push(`Clarity: ${clarityDisplay}`);
                 const detailsStr = parts.length > 0 ? ` (${parts.join(', ')})` : '';
-                centerSummary = `Center: ${diamondType}${detailsStr}`;
+                centerSummary = `Center: ${diamondType || 'Diamond'}${detailsStr}`;
               }
 
               const displayName = item.title || item.basicInfo?.title || 'Fine Jewellery';
@@ -92,7 +112,7 @@ export default function CartDrawer({ open, onClose }) {
                   <Link
                     to={productLink}
                     onClick={onClose}
-                    className="h-24 w-24 sm:h-28 sm:w-28 shrink-0 bg-[#f4ece1] rounded-2xl p-2.5 border border-[#eae0d2] block cursor-pointer hover:opacity-95 transition-opacity overflow-hidden"
+                    className="h-24 w-24 sm:h-28 sm:w-28 shrink-0 bg-[#fbf9f6] rounded-2xl p-2.5 border border-stone-200/80 block cursor-pointer hover:opacity-95 transition-opacity overflow-hidden"
                     title={`View ${displayName}`}
                   >
                     <img
@@ -115,20 +135,20 @@ export default function CartDrawer({ open, onClose }) {
                     {/* Diamond Type Pill Badge */}
                     {diamondType && (
                       <div className="mt-1.5">
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold tracking-wider uppercase bg-[#f1e6d8] text-[#866543] border border-[#e5d5c0]">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold tracking-wider uppercase bg-[#faf5ee] text-[#8b6f4e] border border-[#e8d9c2]">
                           {diamondType}
                         </span>
                       </div>
                     )}
 
-                    {/* Attributes 2-Column Grid with Vertical Divider */}
+                    {/* Attributes Grid */}
                     {(metalDisplay || metalColor || clarityDisplay || caratWeight != null || diamondShape || sizeDisplay) && (
-                      <div className="mt-2 grid grid-cols-2 text-[9px] sm:text-[10px] tracking-wide uppercase font-sans border-b border-[#ebdcc8]/70 pb-2">
+                      <div className={`mt-2 ${hasRightCol ? 'grid grid-cols-2' : 'flex'} text-[9px] sm:text-[10px] tracking-wide uppercase font-sans border-b border-stone-200/70 pb-2`}>
                         {/* Left Column */}
-                        <div className="border-r border-[#ebdcc8] pr-2 space-y-1">
+                        <div className={`${hasRightCol ? 'border-r border-stone-200/70 pr-2' : ''} space-y-1`}>
                           {metalDisplay && (
                             <p className="text-stone-600 font-semibold">
-                              METAL: <span className="text-stone-900 font-bold">{metalDisplay}</span>
+                              METAL: <span className="text-stone-900 font-bold">{isSilver ? 'SILVER' : metalDisplay}</span>
                             </p>
                           )}
                           {clarityDisplay && (
@@ -149,23 +169,25 @@ export default function CartDrawer({ open, onClose }) {
                         </div>
 
                         {/* Right Column */}
-                        <div className="pl-2.5 space-y-1">
-                          {metalColor && (
-                            <p className="text-stone-600 font-semibold">
-                              COLOR: <span className="text-stone-900 font-bold">{metalColor}</span>
-                            </p>
-                          )}
-                          {caratWeight != null && (
-                            <p className="text-stone-600 font-semibold">
-                              CARAT: <span className="text-stone-900 font-bold">{caratWeight}</span>
-                            </p>
-                          )}
-                          {metalDisplay && sizeDisplay && (
-                            <p className="text-stone-600 font-semibold">
-                              SIZE: <span className="text-stone-900 font-bold">{sizeDisplay}</span>
-                            </p>
-                          )}
-                        </div>
+                        {hasRightCol && (
+                          <div className="pl-2.5 space-y-1">
+                            {metalColor && (
+                              <p className="text-stone-600 font-semibold">
+                                COLOR: <span className="text-stone-900 font-bold">{metalColor}</span>
+                              </p>
+                            )}
+                            {caratWeight != null && (
+                              <p className="text-stone-600 font-semibold">
+                                CARAT: <span className="text-stone-900 font-bold">{caratWeight}</span>
+                              </p>
+                            )}
+                            {metalDisplay && sizeDisplay && (
+                              <p className="text-stone-600 font-semibold">
+                                SIZE: <span className="text-stone-900 font-bold">{sizeDisplay}</span>
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -184,7 +206,7 @@ export default function CartDrawer({ open, onClose }) {
                     {/* Stepper + Remove row */}
                     <div className="mt-3 flex items-center justify-between gap-3">
                       {/* Rounded Pill Stepper */}
-                      <div className="inline-flex items-center rounded-full border border-[#d8c8b4] bg-white px-2.5 py-0.5 shadow-2xs">
+                      <div className="inline-flex items-center rounded-full border border-stone-200 bg-white px-2.5 py-0.5 shadow-2xs">
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
@@ -211,9 +233,9 @@ export default function CartDrawer({ open, onClose }) {
                         type="button"
                         onClick={() => removeFromCart(item.id)}
                         aria-label={`Remove ${displayName} from cart`}
-                        className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-widest text-[#8a7258] hover:text-[#6e5840] transition-colors cursor-pointer uppercase"
+                        className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-widest text-red-500 hover:text-red-700 transition-colors cursor-pointer uppercase group"
                       >
-                        <HiOutlineTrash className="h-4 w-4" />
+                        <HiOutlineTrash className="h-4 w-4 text-red-500 group-hover:text-red-700 transition-colors" />
                         <span>REMOVE</span>
                       </button>
                     </div>
@@ -227,7 +249,7 @@ export default function CartDrawer({ open, onClose }) {
         )}
 
         {/* ─── Footer: Subtotal + Checkout + Continue Shopping ────── */}
-        <footer className="relative z-10 border-t border-[#ebdcc8] bg-[#faf7f2] px-6 pb-6 pt-5 shadow-[0_-8px_24px_rgba(0,0,0,0.03)]">
+        <footer className="relative z-10 border-t border-stone-200/80 bg-white px-6 pb-6 pt-5 shadow-[0_-8px_24px_rgba(0,0,0,0.03)]">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-[0.16em] text-stone-800">
               SUBTOTAL

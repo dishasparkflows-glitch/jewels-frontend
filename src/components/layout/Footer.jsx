@@ -50,9 +50,12 @@ const Footer = () => {
 
   const { settings, footerSettings, navigation: bootstrapNavigation } = useStoreSettings();
 
-  const playStoreUrl = String(settings?.businessDetails?.playStoreUrl || '').trim();
-  const appStoreUrl = String(settings?.businessDetails?.appStoreUrl || '').trim();
-  const hasAppDownload = Boolean(playStoreUrl || appStoreUrl);
+  const playStoreUrl =
+    String(settings?.businessDetails?.playStoreUrl || '').trim() ||
+    'https://play.google.com/store';
+  const appStoreUrl =
+    String(settings?.businessDetails?.appStoreUrl || '').trim() ||
+    'https://apps.apple.com';
 
   const formattedCopyright = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -104,8 +107,15 @@ const Footer = () => {
 
   // Populate categories & navigation items from bootstrap context
   useEffect(() => {
+    const sortList = (list) =>
+      [...(list || [])].sort((a, b) => {
+        const diff = (Number(a.order) || 0) - (Number(b.order) || 0);
+        if (diff !== 0) return diff;
+        return String(a.name || a.title || '').localeCompare(String(b.name || b.title || ''));
+      });
+
     if (bootstrapNavigation && bootstrapNavigation.length > 0) {
-      setCategories(bootstrapNavigation);
+      setCategories(sortList(bootstrapNavigation));
       return;
     }
     let active = true;
@@ -116,7 +126,7 @@ const Footer = () => {
           ? res.data.data
           : (res?.data?.data?.items || []);
         if (Array.isArray(list)) {
-          setCategories(list);
+          setCategories(sortList(list));
         }
       })
       .catch((err) => {
@@ -139,7 +149,7 @@ const Footer = () => {
           backgroundColor: 'var(--storefront-footer-bg, #0F0D0B)',
           color: 'var(--storefront-footer-text, #C8B89E)',
         }}
-        className="pt-10 pb-8 px-4 relative overflow-hidden"
+        className="pt-9 pb-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
       >
         {/* Background Stylized Watermark (Matches neirah.in) */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none select-none">
@@ -150,15 +160,15 @@ const Footer = () => {
           />
         </div>
 
-        <div className="max-w-[1320px] mx-auto px-4 md:px-8 relative z-10">
+        <div className="w-full max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           {/* Grid matching active content */}
-          <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${hasAppDownload ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-8 lg:gap-8 mb-16`}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 lg:gap-8 mb-8">
             {/* Column 1: NEIRAH */}
             <div>
-              <h4 className="text-[16px] md:text-[17px] font-bold tracking-[0.1em] mb-6 uppercase text-[#F3EAD8]">
+              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase text-[#F3EAD8]">
                 NEIRAH
               </h4>
-              <ul className="space-y-3.5">
+              <ul className="space-y-2 sm:space-y-2.5">
                 {[
                   { name: 'Our Story', path: '/our-story' },
                   { name: 'Jewellery Care', path: '/jewellery-care' },
@@ -174,7 +184,7 @@ const Footer = () => {
                       <button
                         type="button"
                         onClick={() => window.dispatchEvent(new CustomEvent('open-virtual-appointment'))}
-                        className="text-[14px] sm:text-[15px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E] text-left cursor-pointer"
+                        className="text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E] text-left cursor-pointer"
                       >
                         {item.name}
                       </button>
@@ -182,7 +192,7 @@ const Footer = () => {
                       <Link
                         to={item.path}
                         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                        className="text-[14px] sm:text-[15px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E]"
+                        className="text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E]"
                       >
                         {item.name}
                       </Link>
@@ -194,10 +204,10 @@ const Footer = () => {
 
             {/* Column 2: OUR POLICIES (Matches neirah.in) */}
             <div>
-              <h4 className="text-[16px] md:text-[17px] font-bold tracking-[0.1em] mb-6 uppercase text-[#F3EAD8]">
+              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase text-[#F3EAD8]">
                 OUR POLICIES
               </h4>
-              <ul className="space-y-3.5">
+              <ul className="space-y-2 sm:space-y-2.5">
                 {[
                   { name: 'Shipping Policy', path: '/shipping-policy' },
                   { name: 'Return & Refund Policy', path: '/return-refund-policy' },
@@ -213,7 +223,7 @@ const Footer = () => {
                     <Link
                       to={item.path}
                       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                      className="text-[14px] sm:text-[15px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E]"
+                      className="text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E]"
                     >
                       {item.name}
                     </Link>
@@ -224,10 +234,10 @@ const Footer = () => {
 
             {/* Column 3: CATEGORY */}
             <div>
-              <h4 className="text-[16px] md:text-[17px] font-bold tracking-[0.1em] mb-6 uppercase text-[#F3EAD8]">
+              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase text-[#F3EAD8]">
                 CATEGORY
               </h4>
-              <ul className="space-y-3.5">
+              <ul className="space-y-2 sm:space-y-2.5">
                 {categories.length > 0 ? (
                   categories.map((cat) => {
                     const nameLower = (cat.name || cat.title || '').toLowerCase();
@@ -246,7 +256,7 @@ const Footer = () => {
                         <Link
                           to={path}
                           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                          className="text-[14px] sm:text-[15px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E]"
+                          className="text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E]"
                         >
                           {cat.name || cat.title}
                         </Link>
@@ -266,7 +276,7 @@ const Footer = () => {
                       <Link
                         to={item.path}
                         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                        className="text-[14px] sm:text-[15px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E]"
+                        className="text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E]"
                       >
                         {item.name}
                       </Link>
@@ -278,25 +288,25 @@ const Footer = () => {
 
             {/* Column 4: GET IN TOUCH */}
             <div>
-              <h4 className="text-[16px] md:text-[17px] font-bold tracking-[0.1em] mb-6 uppercase text-[#F3EAD8]">
+              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase text-[#F3EAD8]">
                 GET IN TOUCH
               </h4>
-              <div className="space-y-4">
+              <div className="space-y-2 sm:space-y-2.5">
                 {/* Phone */}
                 <a
                   href={`tel:${footerData.phone}`}
-                  className="flex items-center gap-3 text-[14px] sm:text-[15px] opacity-90 hover:opacity-100 group transition-all text-[#C8B89E]"
+                  className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 group transition-all text-[#C8B89E]"
                 >
-                  <HiOutlinePhone className="w-5 h-5 border border-white/20 p-1 rounded-sm group-hover:bg-white group-hover:text-[#8B6B42] shrink-0 transition-colors" />
+                  <HiOutlinePhone className="w-4 h-4 border border-white/20 p-0.5 rounded-xs group-hover:bg-white group-hover:text-[#8B6B42] shrink-0 transition-colors" />
                   <span>{footerData.phone}</span>
                 </a>
 
                 {/* Email */}
                 <a
                   href={`mailto:${footerData.email}`}
-                  className="flex items-center gap-3 text-[14px] sm:text-[15px] opacity-90 hover:opacity-100 group transition-all underline text-[#C8B89E]"
+                  className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 group transition-all underline text-[#C8B89E]"
                 >
-                  <HiOutlineMail className="w-5 h-5 border border-white/20 p-1 rounded-sm group-hover:bg-white group-hover:text-[#8B6B42] shrink-0 transition-colors" />
+                  <HiOutlineMail className="w-4 h-4 border border-white/20 p-0.5 rounded-xs group-hover:bg-white group-hover:text-[#8B6B42] shrink-0 transition-colors" />
                   <span>{footerData.email}</span>
                 </a>
 
@@ -309,26 +319,26 @@ const Footer = () => {
                   }
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-3 text-[14px] sm:text-[15px] opacity-90 hover:opacity-100 group transition-all underline text-[#C8B89E]"
+                  className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 group transition-all underline text-[#C8B89E]"
                 >
-                  <HiOutlineChatAlt2 className="w-5 h-5 border border-white/20 p-1 rounded-sm group-hover:bg-white group-hover:text-[#8B6B42] shrink-0 transition-colors" />
+                  <HiOutlineChatAlt2 className="w-4 h-4 border border-white/20 p-0.5 rounded-xs group-hover:bg-white group-hover:text-[#8B6B42] shrink-0 transition-colors" />
                   <span>Chat on WhatsApp</span>
                 </a>
 
                 {/* Address */}
-                <div className="flex gap-3 text-[13px] sm:text-[14px] opacity-85 leading-relaxed group text-[#C8B89E]">
-                  <HiOutlineLocationMarker className="w-5 h-5 shrink-0 border border-white/20 p-1 rounded-sm mt-0.5" />
+                <div className="flex gap-2 text-[12px] sm:text-[13px] opacity-80 leading-relaxed group text-[#C8B89E]">
+                  <HiOutlineLocationMarker className="w-4 h-4 shrink-0 border border-white/20 p-0.5 rounded-xs mt-0.5" />
                   <div className="whitespace-pre-line leading-relaxed">{footerData.address}</div>
                 </div>
               </div>
 
               {/* FOLLOW US */}
               {activeSocialLinks.length > 0 && (
-                <div className="mt-6">
-                  <h4 className="text-[14px] sm:text-[15px] font-bold tracking-[0.1em] mb-3 uppercase text-[#F3EAD8]">
+                <div className="mt-5">
+                  <h4 className="text-[13px] sm:text-[14px] font-bold tracking-[0.14em] mb-2.5 uppercase text-[#F3EAD8]">
                     FOLLOW US
                   </h4>
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
                     {activeSocialLinks.map(({ key, label, url, Icon }) => (
                       <a
                         key={key}
@@ -347,69 +357,71 @@ const Footer = () => {
               )}
             </div>
 
-            {/* Column 5: DOWNLOAD OUR MOBILE APP (Only displayed if provided by API without fallbacks) */}
-            {hasAppDownload && (
-              <div>
-                <h4 className="text-[16px] md:text-[17px] font-bold tracking-[0.1em] mb-6 uppercase text-[#F3EAD8]">
-                  DOWNLOAD OUR MOBILE APP
-                </h4>
-                <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-3">
-                  {/* Google Play */}
-                  {playStoreUrl && (
-                    <a
-                      href={playStoreUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 px-3.5 py-2.5 bg-black border border-gray-600 hover:border-gray-400 rounded-lg transition-all text-left cursor-pointer shrink-0"
-                    >
-                      <svg className="w-6 h-6 shrink-0" viewBox="0 0 512 512">
-                        <path fill="#410593" d="M92.1 40.7L276.8 225.5 92.1 410.3c-4.4-4.8-7.1-11.2-7.1-18.4V60.1c0-7.2 2.7-13.6 7.1-19.4z" />
-                        <path fill="#00e5ff" d="M366.1 176.2L120.2 34.2c-7.9-4.5-17.3-4.3-24.9.4l181.5 181.5 89.3-40z" />
-                        <path fill="#ff1053" d="M95.3 477.4c7.6 4.7 17 .4 24.9-4.1l245.9-142-89.3-39.9L95.3 477.4z" />
-                        <path fill="#ffc200" d="M428.4 235.1l-62.3-36-79.3 56.9 79.3 56.9 62.3-36c11.6-6.7 18.6-18.8 18.6-32s-7-25.2-18.6-31.8z" />
-                      </svg>
-                      <div className="flex flex-col">
-                        <span className="text-[9px] text-gray-300 font-medium uppercase leading-tight">GET IT ON</span>
-                        <span className="text-[14px] text-white font-bold leading-tight">Google Play</span>
-                      </div>
-                    </a>
-                  )}
+            {/* Column 5: DOWNLOAD OUR MOBILE APP */}
+            <div>
+              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase text-[#F3EAD8] leading-tight">
+                DOWNLOAD OUR<br className="hidden sm:inline" /> MOBILE APP
+              </h4>
+              <div className="flex flex-col gap-2.5">
+                {/* Google Play */}
+                <a
+                  href={playStoreUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2.5 px-3.5 py-2 bg-black border border-white/20 hover:border-white/50 rounded-lg transition-all text-left cursor-pointer w-fit min-w-[145px] max-w-[165px]"
+                >
+                  <svg
+                    style={{ width: '19px', height: '19px', minWidth: '19px', minHeight: '19px' }}
+                    className="w-[19px] h-[19px] shrink-0"
+                    viewBox="0 0 512 512"
+                  >
+                    <path fill="#410593" d="M92.1 40.7L276.8 225.5 92.1 410.3c-4.4-4.8-7.1-11.2-7.1-18.4V60.1c0-7.2 2.7-13.6 7.1-19.4z" />
+                    <path fill="#00e5ff" d="M366.1 176.2L120.2 34.2c-7.9-4.5-17.3-4.3-24.9.4l181.5 181.5 89.3-40z" />
+                    <path fill="#ff1053" d="M95.3 477.4c7.6 4.7 17 .4 24.9-4.1l245.9-142-89.3-39.9L95.3 477.4z" />
+                    <path fill="#ffc200" d="M428.4 235.1l-62.3-36-79.3 56.9 79.3 56.9 62.3-36c11.6-6.7 18.6-18.8 18.6-32s-7-25.2-18.6-31.8z" />
+                  </svg>
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-gray-300 font-medium uppercase leading-tight tracking-wider">GET IT ON</span>
+                    <span className="text-[12px] text-white font-bold leading-tight">Google Play</span>
+                  </div>
+                </a>
 
-                  {/* App Store */}
-                  {appStoreUrl && (
-                    <a
-                      href={appStoreUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 px-3.5 py-2.5 bg-black border border-gray-600 hover:border-gray-400 rounded-lg transition-all text-left cursor-pointer shrink-0"
-                    >
-                      <svg className="w-6 h-6 fill-current text-white shrink-0" viewBox="0 0 384 512">
-                        <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 52.3-13.7 69.5-34.3z" />
-                      </svg>
-                      <div className="flex flex-col">
-                        <span className="text-[9px] text-gray-300 font-medium uppercase leading-tight">DOWNLOAD ON THE</span>
-                        <span className="text-[14px] text-white font-bold leading-tight">App Store</span>
-                      </div>
-                    </a>
-                  )}
-                </div>
+                {/* App Store */}
+                <a
+                  href={appStoreUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2.5 px-3.5 py-2 bg-black border border-white/20 hover:border-white/50 rounded-lg transition-all text-left cursor-pointer w-fit min-w-[145px] max-w-[165px]"
+                >
+                  <svg
+                    style={{ width: '19px', height: '19px', minWidth: '19px', minHeight: '19px' }}
+                    className="w-[19px] h-[19px] fill-current text-white shrink-0"
+                    viewBox="0 0 384 512"
+                  >
+                    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 52.3-13.7 69.5-34.3z" />
+                  </svg>
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-gray-300 font-medium uppercase leading-tight tracking-wider">DOWNLOAD ON THE</span>
+                    <span className="text-[12px] text-white font-bold leading-tight">App Store</span>
+                  </div>
+                </a>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Bottom Dark Strip: Brand Logo, Copyright & Payment Badges (Matches neirah.in) */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8 pt-8 border-t border-white/10">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6 border-t border-white/10">
             {/* Logo */}
             <div className="flex items-center gap-2">
               <img
                 src="/images/logo.svg"
                 alt="Neirah"
-                className="h-12 brightness-0 invert opacity-90"
+                className="h-10 sm:h-11 brightness-0 invert opacity-90"
               />
             </div>
 
             {/* Copyright */}
-            <div className="text-[13px] sm:text-[14px] text-[#C8B89E] opacity-90 text-center">
+            <div className="text-[12px] sm:text-[13px] text-[#C8B89E] opacity-80 text-center">
               {formattedCopyright}
             </div>
 
@@ -417,27 +429,27 @@ const Footer = () => {
             <div className="flex items-center gap-2">
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg"
-                className="h-4 md:h-6 bg-white px-2 py-1 rounded shadow-xs"
+                className="h-5 md:h-7 bg-white px-2 py-1 rounded shadow-xs"
                 alt="PayPal"
               />
               <img
                 src="/images/visa.svg"
-                className="h-4 md:h-6 bg-white px-2 py-1 rounded shadow-xs"
+                className="h-5 md:h-7 bg-white px-2 py-1 rounded shadow-xs"
                 alt="Visa"
               />
               <img
                 src="/images/mastercard.svg"
-                className="h-4 md:h-6 bg-white px-2 py-1 rounded shadow-xs"
+                className="h-5 md:h-7 bg-white px-2 py-1 rounded shadow-xs"
                 alt="Mastercard"
               />
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/c/c7/Google_Pay_Logo_%282020%29.svg"
-                className="h-4 md:h-6 bg-white px-2 py-1 rounded shadow-xs"
+                className="h-5 md:h-7 bg-white px-2 py-1 rounded shadow-xs"
                 alt="GPay"
               />
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/b/b0/Apple_Pay_logo.svg"
-                className="h-4 md:h-6 bg-white px-2 py-1 rounded shadow-xs"
+                className="h-5 md:h-7 bg-white px-2 py-1 rounded shadow-xs"
                 alt="ApplePay"
               />
             </div>

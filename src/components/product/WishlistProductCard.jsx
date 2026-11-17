@@ -119,11 +119,12 @@ export default function WishlistProductCard({ item, onRemove }) {
             const isSilver =
               Boolean(cardData.isSilver) ||
               String(activeProduct?.productType || activeProduct?.representative?.productType || '').toLowerCase() === 'silver' ||
-              Boolean(activeProduct?.isOrnate || activeProduct?.representative?.isOrnate);
+              Boolean(activeProduct?.isOrnate || activeProduct?.representative?.isOrnate) ||
+              /silver|92\.5|925/i.test(activeProduct?.basicInfo?.title || activeProduct?.title || cardData?.name || '');
 
             const minPrice = Number(activeProduct?.pricing?.minPrice || cardData?.minPrice || 0);
             const maxPrice = Number(activeProduct?.pricing?.maxPrice || cardData?.maxPrice || 0);
-            const hasRange = minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
+            const hasRange = !isSilver && minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
 
             if (hasRange) {
               return (

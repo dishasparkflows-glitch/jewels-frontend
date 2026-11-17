@@ -33,6 +33,24 @@ const defaultCartValue = {
 
 const CartContext = createContext(defaultCartValue);
 
+const extractId = (val) => {
+  if (!val) return '';
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    return trimmed === '[object Object]' ? '' : trimmed;
+  }
+  if (typeof val === 'object') {
+    if (val._id) return extractId(val._id);
+    if (val.id) return extractId(val.id);
+    if (val.productId) return extractId(val.productId);
+    if (typeof val.toString === 'function') {
+      const s = val.toString().trim();
+      if (s && s !== '[object Object]') return s;
+    }
+  }
+  return '';
+};
+
 /**
  * Deduplicates and consolidates cart items by product ID.
  * Ensures the same product always increments quantity on a single card.
@@ -41,7 +59,7 @@ const consolidateItems = (items) => {
   if (!Array.isArray(items)) return [];
   const map = new Map();
   for (const item of items) {
-    const pId = String(item.productId || item.id || item._id || '');
+    const pId = extractId(item.productId) || extractId(item.id) || extractId(item._id) || '';
     if (!pId) continue;
     if (map.has(pId)) {
       const existing = map.get(pId);
@@ -135,9 +153,10 @@ export const CartProvider = ({ children }) => {
                   .replace(/[^\w\s-]/g, '')
                   .replace(/\s+/g, '-')
               : '');
+          const pId = extractId(i.productId) || extractId(i.id) || extractId(i._id) || '';
           return {
-            id: i.productId || i._id,
-            productId: i.productId,
+            id: pId,
+            productId: pId,
             _id: i._id,
             slug: itemSlug,
             name: i.title,
@@ -246,7 +265,12 @@ export const CartProvider = ({ children }) => {
       return;
     }
 
-    const productId = String(product.id || product._id || product.productId || '').trim();
+    const productId = extractId(product.id) || extractId(product._id) || extractId(product.productId) || '';
+    if (!productId) {
+      console.error('addToCart: Missing or invalid product id', product);
+      toast.error('Unable to add item: invalid product information');
+      return;
+    }
     const parsedQty = Math.max(1, parseInt(quantity, 10) || 1);
     const selectedMetal = resolveMetalName(options.selectedMetal || product.selectedMetal || '', product);
     const selectedSize = cleanAttribute(options.selectedSize || product.selectedSize || '');
@@ -384,9 +408,10 @@ export const CartProvider = ({ children }) => {
                   .replace(/[^\w\s-]/g, '')
                   .replace(/\s+/g, '-')
               : '');
+          const pId = extractId(i.productId) || extractId(i.id) || extractId(i._id) || '';
           return {
-            id: String(i.productId?._id || i.productId || i.id || i._id),
-            productId: String(i.productId?._id || i.productId || i.id || i._id),
+            id: pId,
+            productId: pId,
             _id: i._id,
             slug: itemSlug,
             name: i.title,
@@ -429,16 +454,19 @@ export const CartProvider = ({ children }) => {
 
   // Update item quantity
   const updateQuantity = async (id, quantity) => {
+    const targetId = extractId(id);
+    if (!targetId) return;
+
     const parsedQty = parseInt(quantity, 10);
     if (parsedQty <= 0) {
-      removeFromCart(id);
+      removeFromCart(targetId);
       return;
     }
 
     // Optimistic
     setCart((prev) => {
       const updated = prev.map((item) =>
-        String(item.id) === String(id) || String(item.productId) === String(id)
+        extractId(item.id) === targetId || extractId(item.productId) === targetId
           ? { ...item, quantity: parsedQty }
           : item
       );
@@ -449,7 +477,7 @@ export const CartProvider = ({ children }) => {
 
     // API call
     try {
-      const res = await cartAPI.updateQuantity(id, parsedQty);
+      const res = await cartAPI.updateQuantity(targetId, parsedQty);
       const data = res?.data?.data || res?.data;
       if (data && Array.isArray(data.items)) {
         setCartTotals({
@@ -467,8 +495,11 @@ export const CartProvider = ({ children }) => {
 
   // Remove item from cart
   const removeFromCart = async (id) => {
+    const targetId = extractId(id);
+    if (!targetId) return;
+
     const targetItem = cart.find(
-      (item) => String(item.id) === String(id) || String(item.productId) === String(id)
+      (item) => extractId(item.id) === targetId || extractId(item.productId) === targetId
     );
     if (targetItem) {
       trackRemoveFromCart(targetItem, targetItem.quantity || 1);
@@ -477,7 +508,7 @@ export const CartProvider = ({ children }) => {
     // Optimistic
     setCart((prev) => {
       const updated = prev.filter(
-        (item) => String(item.id) !== String(id) && String(item.productId) !== String(id)
+        (item) => extractId(item.id) !== targetId && extractId(item.productId) !== targetId
       );
       localStorage.setItem('jewels_cart', JSON.stringify(updated));
       setCartTotals(calculateTotals(updated));

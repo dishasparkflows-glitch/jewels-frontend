@@ -60,7 +60,9 @@ export function useProductCard(product, options = {}) {
     options.isSilver ??
     (Boolean(data.isSilver) ||
       String(product?.productType || product?.representative?.productType || '').toLowerCase() === 'silver' ||
-      isOrnate);
+      Boolean(product?.isOrnate || product?.representative?.isOrnate) ||
+      isOrnate ||
+      /silver|92\.5|925/i.test(product?.basicInfo?.title || product?.title || data?.name || ''));
 
   const isGroup = Boolean(product.isGroup);
 
@@ -160,7 +162,7 @@ export function useProductCard(product, options = {}) {
 
   const minPrice = Number(product?.pricing?.minPrice || product?.representative?.pricing?.minPrice || data?.minPrice || 0);
   const maxPrice = Number(product?.pricing?.maxPrice || product?.representative?.pricing?.maxPrice || data?.maxPrice || 0);
-  const hasRange = minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
+  const hasRange = !isSilver && minPrice > 0 && maxPrice > 0 && maxPrice > minPrice && (minPrice !== salePrice || maxPrice !== mrp);
 
   const isGold = product.productType === 'gold';
   const hasDiscount = !isGold && mrp && Number(mrp) > Number(salePrice);

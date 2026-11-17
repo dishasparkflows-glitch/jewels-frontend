@@ -187,7 +187,7 @@ export function getProductCardData(product) {
   const isSilver =
     productType === 'silver' ||
     Boolean(product?.isOrnate || rep.isOrnate) ||
-    /silver/i.test(product?.basicInfo?.title || '') ||
+    /silver|92\.5|925/i.test(product?.basicInfo?.title || rep.basicInfo?.title || '') ||
     /silver/i.test(product?.ornate?.metalName || rep.ornate?.metalName || '');
 
   const isGold =
@@ -214,8 +214,8 @@ export function getProductCardData(product) {
     prodPricing.cataloguePrice
   );
 
-  const minPrice = Number(prodPricing.minPrice || repPricing.minPrice || 0);
-  const maxPrice = Number(prodPricing.maxPrice || repPricing.maxPrice || 0);
+  const minPrice = isSilver ? (salePrice || 0) : Number(prodPricing.minPrice || repPricing.minPrice || 0);
+  const maxPrice = isSilver ? (salePrice || 0) : Number(prodPricing.maxPrice || repPricing.maxPrice || 0);
   const originalPrice = !isGold && mrp && Number(mrp) > Number(price) ? mrp : null;
   const name = product?.basicInfo?.title || rep.basicInfo?.title || 'Untitled product';
   const rawSlug = product?.basicInfo?.slug || rep.basicInfo?.slug;

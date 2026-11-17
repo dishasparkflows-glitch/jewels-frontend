@@ -2,19 +2,22 @@ import api from '../../api/axios';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { HiOutlineAdjustments, HiOutlineX, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi';
+import { HiOutlineAdjustments, HiOutlineX, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineTag, HiOutlineCheck } from 'react-icons/hi';
+import toast from 'react-hot-toast';
 import ProductCard from '../../components/product/ProductCard';
 import FilterSidebar from '../../components/product/FilterSidebar';
 import Dropdown from '../../components/common/Dropdown';
 import LuxuryDivider from '../../components/common/LuxuryDivider';
-import { categoriesAPI, productsAPI, bannersAPI } from '../../api/services';
+import { categoriesAPI, productsAPI, bannersAPI, couponsAPI } from '../../api/services';
 
 const slugify = (value = '') => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const aliases = { necklaces: 'pendant', bracelets: 'bangles-bracelets' };
 const getItems = (response) => Array.isArray(response?.data?.data) ? response.data.data : response?.data?.data?.items || [];
 
 export default function Shop({ defaultCategory = '' }) {
-  useStoreSettings();
+  const { settings, theme } = useStoreSettings();
+  const themeColor = settings?.themeColors?.buttonColor || settings?.buttonColor || theme?.colors?.primary || '#8b6f4e';
+  const themeTextColor = settings?.themeColors?.buttonTextColor || settings?.buttonTextColor || '#ffffff';
   const [params, setParams] = useSearchParams();
 
   const [categories, setCategories] = useState([]);
@@ -38,6 +41,83 @@ export default function Shop({ defaultCategory = '' }) {
   const titleParam = params.get('title') || '';
   const [featuredData, setFeaturedData] = useState(null);
   const [displayBanner, setDisplayBanner] = useState(null);
+  const [activeCoupons, setActiveCoupons] = useState([]);
+  const [couponIndex, setCouponIndex] = useState(0);
+  const [copiedCouponCode, setCopiedCouponCode] = useState(null);
+
+  // Fetch all active promotional coupons (displayed one by one)
+  useEffect(() => {
+    let current = true;
+    couponsAPI
+      .getLookup()
+      .then((res) => {
+        if (!current) return;
+        const list = Array.isArray(res?.data?.data)
+          ? res.data.data
+          : Array.isArray(res?.data)
+          ? res.data
+          : [];
+        setActiveCoupons(list);
+        setCouponIndex(0);
+      })
+      .catch(() => {
+        if (current) setActiveCoupons([]);
+      });
+    return () => {
+      current = false;
+    };
+  }, []);
+
+  // Auto-rotate multiple coupons every 5 seconds
+  useEffect(() => {
+    if (activeCoupons.length <= 1) return;
+    const timer = setInterval(() => {
+      setCouponIndex((prev) => (prev + 1) % activeCoupons.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [activeCoupons.length]);
+
+  const handleCopyCoupon = (code) => {
+    if (!code) return;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(code);
+    }
+    setCopiedCouponCode(code);
+    toast.success(`Coupon "${code}" copied to clipboard!`);
+    setTimeout(() => {
+      setCopiedCouponCode((prev) => (prev === code ? null : prev));
+    }, 2500);
+  };
+
+  const currentCoupon = activeCoupons[couponIndex] || null;
+
+  const getCouponDisplayText = (item) => {
+    if (!item) return { code: '', discountPhrase: '' };
+    const code = item.coupon?.code || item.code || '';
+    const desc = item.coupon?.description || item.description || '';
+    const discountType = item.discount?.type || 'Fixed';
+    const discountVal = item.discount?.value || 0;
+    const minOrder = item.discount?.minimumOrderAmount || 0;
+
+    let discountPhrase = '';
+    if (discountType === 'Fixed') {
+      discountPhrase = `GET ${discountVal} RS OFF`;
+    } else if (discountType === 'Percentage') {
+      discountPhrase = `GET ${discountVal}% OFF`;
+    } else if (desc) {
+      discountPhrase = desc.toUpperCase();
+    }
+
+    let minOrderPhrase = '';
+    if (minOrder && Number(minOrder) > 0) {
+      minOrderPhrase = ` ON ORDERS ABOVE ₹${Number(minOrder).toLocaleString('en-IN')}`;
+    }
+
+    return {
+      code,
+      discountPhrase: `${discountPhrase}${minOrderPhrase}`,
+    };
+  };
 
   // Fetch Category Display Banner when category is selected
   useEffect(() => {
@@ -149,7 +229,13 @@ export default function Shop({ defaultCategory = '' }) {
       .getNavigation()
       .then((catsRes) => {
         if (!current) return;
-        setCategories(getItems(catsRes));
+        const items = getItems(catsRes);
+        const sorted = [...(items || [])].sort((a, b) => {
+          const diff = (Number(a.order) || 0) - (Number(b.order) || 0);
+          if (diff !== 0) return diff;
+          return String(a.name || a.title || '').localeCompare(String(b.name || b.title || ''));
+        });
+        setCategories(sorted);
       })
       .catch(() => {})
       .finally(() => {
@@ -310,21 +396,13 @@ export default function Shop({ defaultCategory = '' }) {
     !!selectedGemstone ||
     !!selectedGemstoneShape;
 
-  // Formatted fallback title for featured slug (e.g. "necklace" -> "Necklace", "solitaire-jewellery" -> "Solitaire Jewellery")
-  const formattedFeaturedTitle =
-    featuredData?.name ||
-    (featuredParam && !/^[a-f0-9]{24}$/i.test(featuredParam)
-      ? featuredParam
-          .split('-')
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ')
-      : '');
+  const featuredTitle = featuredData?.name || titleParam || '';
 
   // Active chips array
   const activeChips = [];
   if (featuredParam) {
     activeChips.push({
-      label: titleParam || formattedFeaturedTitle || 'Showcase',
+      label: featuredTitle || 'Showcase',
       onRemove: () => updateFilters({ featured: '', title: '' }),
     });
   }
@@ -390,8 +468,8 @@ export default function Shop({ defaultCategory = '' }) {
 
   // Page title: When nothing in filter, display 'All Jewellery'
   const pageTitle =
+    featuredTitle ||
     titleParam ||
-    formattedFeaturedTitle ||
     category?.name ||
     (search ? `Search: "${search}"` : (selectedCollection || 'All Jewellery'));
 
@@ -419,14 +497,77 @@ export default function Shop({ defaultCategory = '' }) {
         </div>
       )}
 
+      {/* ─── Category Coupon Code Strip (Styled with active storefront theme) ─── */}
+      {currentCoupon && (
+        <div
+          style={{
+            backgroundColor: 'var(--btn-primary-bg, ' + themeColor + ')',
+            color: 'var(--btn-primary-text, ' + themeTextColor + ')',
+          }}
+          className="w-full py-1 sm:py-1.5 px-4 shadow-xs border-t border-b border-black/10 select-none flex items-center justify-center transition-colors"
+        >
+          <div className="max-w-7xl w-full mx-auto flex items-center justify-between sm:justify-center relative">
+            {activeCoupons.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setCouponIndex((prev) => (prev - 1 + activeCoupons.length) % activeCoupons.length)}
+                className="p-0.5 text-white/70 hover:text-white transition-colors mr-2 sm:absolute sm:left-4"
+                title="Previous coupon"
+                aria-label="Previous coupon"
+              >
+                <HiOutlineChevronLeft className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {(() => {
+              const { code, discountPhrase } = getCouponDisplayText(currentCoupon);
+              return (
+                <button
+                  type="button"
+                  onClick={() => handleCopyCoupon(code)}
+                  className="group inline-flex items-center justify-center gap-1.5 text-[9.5px] sm:text-[10.5px] md:text-[11px] tracking-[0.16em] uppercase font-normal text-white/95 hover:text-white transition-all cursor-pointer focus:outline-none leading-tight"
+                  title="Click to copy coupon code"
+                >
+                  <HiOutlineTag className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white/80 group-hover:scale-110 transition-transform flex-shrink-0" />
+                  <span className="truncate">
+                    USE CODE <strong className="font-bold underline decoration-dotted underline-offset-2 tracking-[0.18em] text-white group-hover:text-amber-100 transition-colors">'{code}'</strong> {discountPhrase}
+                  </span>
+                  {copiedCouponCode === code && (
+                    <span className="inline-flex items-center gap-0.5 text-[9.5px] font-semibold bg-white text-stone-900 px-1.5 py-0.5 rounded-full ml-1.5 normal-case tracking-normal flex-shrink-0 shadow-xs">
+                      <HiOutlineCheck className="w-2.5 h-2.5 text-emerald-600" /> Copied!
+                    </span>
+                  )}
+                </button>
+              );
+            })()}
+
+            {activeCoupons.length > 1 && (
+              <button
+                type="button"
+                onClick={() => setCouponIndex((prev) => (prev + 1) % activeCoupons.length)}
+                className="p-0.5 text-white/70 hover:text-white transition-colors ml-2 sm:absolute sm:right-4"
+                title="Next coupon"
+                aria-label="Next coupon"
+              >
+                <HiOutlineChevronRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="px-4 pb-16 pt-4 sm:px-8 lg:px-12">
         <div className="mx-auto max-w-[1440px]">
         {/* ─── Category Header Title (Centered) ─── */}
-        <div className="py-4 sm:py-6 text-center">
-          <h1 className="font-serif text-3xl sm:text-4xl lg:text-[40px] text-stone-900 tracking-tight capitalize">
+        <div className="py-2.5 sm:py-3 text-center">
+          <h1 className="font-serif text-xl sm:text-2xl lg:text-[26px] text-stone-900 tracking-tight capitalize">
             {pageTitle}
           </h1>
-          <LuxuryDivider className="mt-2.5 sm:mt-3" />
+          <LuxuryDivider
+            lineWidth="w-10 sm:w-16"
+            starSize="w-2.5 h-2.5 sm:w-3 sm:h-3"
+            className="mt-1.5 sm:mt-2"
+          />
         </div>
 
         {/* ─── Top Meta Toolbar (Results Count & Sort) ─── */}
@@ -516,13 +657,13 @@ export default function Shop({ defaultCategory = '' }) {
 
             {/* Products Grid / Skeletons / Empty */}
             {loading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-x-2 sm:gap-x-4 gap-y-3 sm:gap-y-8">
-                {Array.from({ length: 6 }, (_, index) => (
-                  <div key={index} className="animate-pulse rounded-lg sm:rounded-xl border border-gray-100 bg-white p-2 sm:p-3.5">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-2 sm:gap-x-3.5 gap-y-3 sm:gap-y-6">
+                {Array.from({ length: 8 }, (_, index) => (
+                  <div key={index} className="animate-pulse rounded-lg sm:rounded-xl border border-gray-100 bg-white p-2 sm:p-2.5">
                     <div className="aspect-square rounded-md sm:rounded-lg bg-stone-100" />
-                    <div className="mt-3 h-3 w-4/5 bg-stone-100 rounded" />
-                    <div className="mt-2 h-3 w-1/2 bg-stone-100 rounded" />
-                    <div className="mt-3 h-4 w-1/3 bg-stone-100 rounded" />
+                    <div className="mt-2.5 h-3 w-4/5 bg-stone-100 rounded" />
+                    <div className="mt-1.5 h-3 w-1/2 bg-stone-100 rounded" />
+                    <div className="mt-2.5 h-3.5 w-1/3 bg-stone-100 rounded" />
                   </div>
                 ))}
               </div>
@@ -537,7 +678,7 @@ export default function Shop({ defaultCategory = '' }) {
                 </button>
               </div>
             ) : sortedDisplayedProducts.length ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-2 sm:gap-x-4 gap-y-3 sm:gap-y-8">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-2 sm:gap-x-3.5 gap-y-3 sm:gap-y-6">
                 {sortedDisplayedProducts.map((product) => (
                   <ProductCard key={product._id || product.id} product={product} />
                 ))}

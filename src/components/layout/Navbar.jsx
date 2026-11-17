@@ -25,18 +25,35 @@ import VirtualAppointmentModal from '../common/VirtualAppointmentModal';
 import CartDrawer from '../store/CartDrawer';
 
 const getSearchProductMeta = (item) => {
-  const title = item.basicInfo?.title || '';
+  const title = item.basicInfo?.title || item.title || item.name || '';
   const targetSlug =
     item.basicInfo?.slug ||
     item.slug ||
     (title ? title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
   const productHref = `/product/${encodeURIComponent(targetSlug)}`;
+  const isSilver =
+    String(item.productType || '').toLowerCase() === 'silver' ||
+    Boolean(item.isOrnate) ||
+    /silver|92\.5|925/i.test(title);
   const minPrice = Number(item.pricing?.minPrice || 0);
   const maxPrice = Number(item.pricing?.maxPrice || 0);
-  const hasRange = minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
+  const salePrice =
+    item.pricing?.salePrice ??
+    item.pricing?.calculatedPrice ??
+    item.pricing?.ornatePrice ??
+    item.pricing?.minPrice ??
+    item.salePrice ??
+    item.price ??
+    0;
+  const hasRange =
+    !isSilver &&
+    minPrice > 0 &&
+    maxPrice > 0 &&
+    maxPrice > minPrice &&
+    (minPrice !== item.pricing?.salePrice || maxPrice !== item.pricing?.mrp);
   const priceText = hasRange
     ? `${formatProductPrice(minPrice)} – ${formatProductPrice(maxPrice)}`
-    : (item.pricing?.salePrice || item.pricing?.minPrice ? formatProductPrice(item.pricing.salePrice || item.pricing.minPrice) : '');
+    : (salePrice ? formatProductPrice(salePrice) : '');
   const imgUrl = item.image || (Array.isArray(item.images) && item.images[0]) || '';
   return { title, targetSlug, productHref, priceText, imgUrl };
 };
@@ -298,16 +315,22 @@ const Navbar = () => {
   // Storefront navigation sourced primarily from fast bootstrap context
   useEffect(() => {
     const applyNav = (currentCategories) => {
-      if (!themeConfig?.navigation?.length) { setCategories(currentCategories); return; }
-      const byId = new Map(currentCategories.map((category) => [String(category._id), category]));
+      const sorted = [...(currentCategories || [])].sort((a, b) => {
+        const diff = (Number(a.order) || 0) - (Number(b.order) || 0);
+        if (diff !== 0) return diff;
+        return String(a.name || a.title || '').localeCompare(String(b.name || b.title || ''));
+      });
+      if (!themeConfig?.navigation?.length) { setCategories(sorted); return; }
+      const byId = new Map(sorted.map((category) => [String(category._id), category]));
       const themedCategories = themeConfig.navigation
         .filter((entry) => entry.visible !== false)
-        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0))
         .map((entry) => {
           const category = byId.get(String(entry.categoryId?._id || entry.categoryId));
-          return category ? { ...category, name: entry.displayName || category.name } : null;
+          return category ? { ...category, name: entry.displayName || category.name, order: entry.order ?? category.order } : null;
         })
-        .filter(Boolean);
+        .filter(Boolean)
+        .sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
       setCategories(themedCategories);
     };
 

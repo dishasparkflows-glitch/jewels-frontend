@@ -106,14 +106,14 @@ export default function SimilarProductsDrawer({
         </div>
 
         {/* Drawer Header */}
-        <header className="px-5 sm:px-8 pt-3 sm:pt-5 pb-3 sm:pb-4 flex items-center justify-between border-b border-stone-100">
-          <div className="flex items-center gap-2.5">
-            <HiSparkles className="w-5 h-5 text-[#8b6f4e] shrink-0" />
-            <h2 className="font-serif text-lg sm:text-2xl font-bold text-stone-900 tracking-wide">
+        <header className="relative px-12 sm:px-14 pt-3 sm:pt-5 pb-3 sm:pb-4 flex items-center justify-center border-b border-stone-100">
+          <div className="flex items-center justify-center gap-2 sm:gap-2.5 flex-wrap text-center">
+            <HiSparkles className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-[#8b6f4e] shrink-0" />
+            <h2 className="font-serif text-base sm:text-2xl font-bold text-stone-900 tracking-wide">
               View Similar Products
             </h2>
             {products.length > 0 && !loading && (
-              <span className="text-xs font-medium text-stone-500 bg-stone-100 px-2.5 py-0.5 rounded-full">
+              <span className="text-[11px] sm:text-xs font-medium text-stone-500 bg-stone-100 px-2 sm:px-2.5 py-0.5 rounded-full">
                 {products.length} {products.length === 1 ? 'piece' : 'pieces'}
               </span>
             )}
@@ -122,10 +122,10 @@ export default function SimilarProductsDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-900 flex items-center justify-center transition-colors cursor-pointer"
+            className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-900 flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Close similar products"
           >
-            <HiOutlineX className="w-5 h-5" />
+            <HiOutlineX className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
           </button>
         </header>
 

@@ -161,6 +161,7 @@ export const productsAPI = {
   getSearchStorefront: (params) => api.get('/products/search/storefront', { params }),
   getHomeProducts: (params) => getOnce('/products/home', { params }),
   getHomeStorefront: (params) => productsAPI.getHomeProducts(params),
+  getMostLiked: (params) => api.get('/products/most-liked', { params }),
   getById: (id) => getOnce(`/products/${id}`),
   getBySku: (code) => getOnce(`/products/sku/${encodeURIComponent(code)}`),
   getSimilar: (id, params) => api.get(`/products/${id}/similar`, { params }),
@@ -168,8 +169,9 @@ export const productsAPI = {
 
 // ─── Reviews ──────────────────────────────────────
 export const reviewsAPI = {
-  getAll: (params) => getOnce('/reviews', { params }),
-  getApproved: () => getOnce('/reviews?status=approved'),
+  getAll: (params) => api.get('/reviews', { params }),
+  getApproved: (params = {}) => api.get('/reviews', { params: { ...params, status: 'approved' } }),
+  create: (data) => api.post('/reviews', data),
 };
 
 // ─── Instagram Posts ──────────────────────────────

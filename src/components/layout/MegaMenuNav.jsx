@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { HiOutlineChevronDown } from 'react-icons/hi';
 import { getImageUrl } from '../../utils/imageUrl';
@@ -157,6 +157,15 @@ export default function MegaMenuNav({ categories, mobile = false, onNavigate, er
   const triggers = useRef({});
   const location = useLocation();
 
+  const sortedCategories = useMemo(() => {
+    if (!Array.isArray(categories)) return [];
+    return [...categories].sort((a, b) => {
+      const diff = (Number(a.order) || 0) - (Number(b.order) || 0);
+      if (diff !== 0) return diff;
+      return String(a.name || a.title || '').localeCompare(String(b.name || b.title || ''));
+    });
+  }, [categories]);
+
   useEffect(() => {
     setActiveId(null);
   }, [location.pathname, location.search]);
@@ -170,7 +179,7 @@ export default function MegaMenuNav({ categories, mobile = false, onNavigate, er
     return () => document.removeEventListener('pointerdown', outside);
   }, [activeId]);
 
-  const active = categories.find((category) => category._id === activeId);
+  const active = sortedCategories.find((category) => category._id === activeId);
   const close = () => {
     setActiveId(null);
     onNavigate?.();
@@ -204,7 +213,7 @@ export default function MegaMenuNav({ categories, mobile = false, onNavigate, er
 
       {mobile ? (
         <nav aria-label="Product categories" className="space-y-1">
-          {categories.map((category) => (
+          {sortedCategories.map((category) => (
             <div key={category._id} className="border-b border-white/10">
               <button
                 type="button"
@@ -233,7 +242,7 @@ export default function MegaMenuNav({ categories, mobile = false, onNavigate, er
       ) : (
         <>
           <nav aria-label="Product categories" className="mx-auto flex max-w-7xl 2xl:max-w-[1536px] flex-wrap items-center justify-center gap-x-8 px-4 sm:px-6 lg:px-8 xl:gap-x-12">
-            {categories.map((category) => (
+            {sortedCategories.map((category) => (
               <div
                 key={category._id}
                 className="flex items-center"

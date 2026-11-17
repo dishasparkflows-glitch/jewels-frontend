@@ -72,11 +72,26 @@ export const getValidProductImages = (product) => {
     });
   }
 
-  // 4. Fall back to a precomputed single thumbnail
-  if (valid.length === 0 && product.image && !isOrnateImage(product.image) && !isVideoMedia(product.image)) {
-    const url = typeof product.image === 'string' ? product.image : product.image?.url;
-    if (url && typeof url === 'string' && url.trim()) {
-      valid.push(url.trim());
+  // 3. Direct images array (from storefront API or custom upload)
+  if (valid.length === 0 && Array.isArray(product.images)) {
+    product.images.forEach((img) => {
+      if (!isOrnateImage(img) && !isVideoMedia(img)) {
+        const url = typeof img === 'string' ? img : img?.url;
+        if (url && typeof url === 'string' && url.trim()) {
+          valid.push(url.trim());
+        }
+      }
+    });
+  }
+
+  // 4. Fall back to a precomputed single thumbnail or firstPhoto
+  if (valid.length === 0) {
+    const single = product.image || product.firstPhoto || product.thumbnail;
+    if (single && !isOrnateImage(single) && !isVideoMedia(single)) {
+      const url = typeof single === 'string' ? single : single?.url;
+      if (url && typeof url === 'string' && url.trim()) {
+        valid.push(url.trim());
+      }
     }
   }
 

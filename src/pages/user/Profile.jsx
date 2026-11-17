@@ -2,10 +2,11 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
-import { usersAPI, addressesAPI, ordersAPI } from '../../api/services';
+import { usersAPI, addressesAPI, ordersAPI, reviewsAPI } from '../../api/services';
 import { toast } from 'react-hot-toast';
 import Dropdown from '../../components/common/Dropdown';
 import PhoneInput from '../../components/common/PhoneInput';
+import { FaStar, FaRegStar } from 'react-icons/fa6';
 import {
   HiOutlineUser,
   HiOutlineCube,
@@ -28,9 +29,12 @@ import {
   HiOutlineCalendar,
   HiOutlineEye,
   HiOutlineCheckCircle,
+  HiOutlineCheck,
   HiOutlineTag,
   HiOutlineTruck,
+  HiOutlineShoppingCart,
 } from 'react-icons/hi';
+import { HiOutlineSquare3Stack3D } from 'react-icons/hi2';
 import { getImageUrl } from '../../utils/imageUrl';
 import CustomerTrackingModal from '../../components/common/CustomerTrackingModal';
 
@@ -128,6 +132,94 @@ const getOrderStatusBadge = (status = '') => {
   }
 };
 
+const renderStatusBadge = (status = '') => {
+  const s = String(status).toLowerCase();
+  if (['delivered', 'completed'].includes(s)) {
+    return (
+      <span className="px-3.5 py-1 rounded-full text-xs font-medium bg-[#eaf7ee] text-[#1b7a3a] border border-[#c4e8ce]/80 inline-flex items-center gap-1.5 shadow-2xs">
+        <HiOutlineCheck className="w-3.5 h-3.5 stroke-[2.5]" />
+        <span>Delivered</span>
+      </span>
+    );
+  }
+  if (['shipped', 'out_for_delivery'].includes(s)) {
+    return (
+      <span className="px-3.5 py-1 rounded-full text-xs font-medium bg-[#e8f7fa] text-[#117688] border border-[#bee7ee]/80 inline-flex items-center gap-1.5 shadow-2xs">
+        <HiOutlineTruck className="w-3.5 h-3.5 text-[#117688]" />
+        <span className="capitalize">{s === 'out_for_delivery' ? 'Out for Delivery' : 'Shipped'}</span>
+      </span>
+    );
+  }
+  if (['processing', 'confirmed'].includes(s)) {
+    return (
+      <span className="px-3.5 py-1 rounded-full text-xs font-medium bg-[#eaf1fb] text-[#1e58a7] border border-[#c7dcf7]/80 inline-flex items-center gap-1.5 shadow-2xs">
+        <HiOutlineClock className="w-3.5 h-3.5 text-[#1e58a7]" />
+        <span className="capitalize">{s}</span>
+      </span>
+    );
+  }
+  if (['cancelled', 'rejected'].includes(s)) {
+    return (
+      <span className="px-3.5 py-1 rounded-full text-xs font-medium bg-[#fdeeed] text-[#9e2724] border border-[#f7c9c7]/80 inline-flex items-center gap-1.5 shadow-2xs">
+        <HiOutlineX className="w-3.5 h-3.5" />
+        <span className="capitalize">Cancelled</span>
+      </span>
+    );
+  }
+  return (
+    <span className="px-3.5 py-1 rounded-full text-xs font-medium bg-[#fdeee0] text-[#935418] border border-[#f3d7bc]/80 inline-flex items-center gap-1.5 shadow-2xs">
+      <HiOutlineClock className="w-3.5 h-3.5 text-[#935418]" />
+      <span className="capitalize">{status || 'Pending'}</span>
+    </span>
+  );
+};
+
+const getStatusBannerInfo = (status = '') => {
+  const s = String(status).toLowerCase();
+  if (['delivered', 'completed'].includes(s)) {
+    return {
+      title: 'Delivered',
+      description: 'Your order has been delivered successfully.',
+      icon: (
+        <div className="w-8 h-8 rounded-full bg-[#1b7a3a] text-white flex items-center justify-center shrink-0 shadow-xs">
+          <HiOutlineCheck className="w-4.5 h-4.5 stroke-[2.5]" />
+        </div>
+      ),
+    };
+  }
+  if (['shipped', 'out_for_delivery'].includes(s)) {
+    return {
+      title: s === 'out_for_delivery' ? 'Out for Delivery' : 'Shipped',
+      description: 'Your order is in transit and on its way to you.',
+      icon: (
+        <div className="w-8 h-8 rounded-full bg-[#117688] text-white flex items-center justify-center shrink-0 shadow-xs">
+          <HiOutlineTruck className="w-4.5 h-4.5" />
+        </div>
+      ),
+    };
+  }
+  if (['cancelled', 'rejected'].includes(s)) {
+    return {
+      title: 'Cancelled',
+      description: 'This order has been cancelled.',
+      icon: (
+        <div className="w-8 h-8 rounded-full bg-[#9e2724] text-white flex items-center justify-center shrink-0 shadow-xs">
+          <HiOutlineX className="w-4.5 h-4.5 stroke-[2.5]" />
+        </div>
+      ),
+    };
+  }
+  return {
+    title: status ? String(status).charAt(0).toUpperCase() + String(status).slice(1) : 'Processing',
+    description: 'Your order has been placed and is being prepared.',
+    icon: (
+      <div className="w-8 h-8 rounded-full bg-[#a36829] text-white flex items-center justify-center shrink-0 shadow-xs">
+        <HiOutlineClock className="w-4.5 h-4.5" />
+      </div>
+    ),
+  };
+};
+
 const Profile = () => {
   const { user, logout, updateUser } = useAuth();
   const { addToCart, openCartDrawer } = useCart();
@@ -140,6 +232,17 @@ const Profile = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [trackingOrder, setTrackingOrder] = useState(null);
   const [reorderingId, setReorderingId] = useState(null);
+
+  // Review state
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewOrder, setReviewOrder] = useState(null);
+  const [reviewItem, setReviewItem] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewHoverRating, setReviewHoverRating] = useState(0);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewedProductIds, setReviewedProductIds] = useState(new Set());
   
   // Profile edit state
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -222,17 +325,39 @@ const Profile = () => {
       let count = 0;
 
       for (const item of order.items) {
+        const prodObj = (typeof item.productId === 'object' && item.productId !== null)
+          ? item.productId
+          : null;
+        const resolvedId = String(
+          prodObj?._id ||
+          prodObj?.id ||
+          (typeof item.productId === 'string' ? item.productId : '') ||
+          item._id ||
+          item.id ||
+          ''
+        ).trim();
+
+        if (!resolvedId || resolvedId === '[object Object]') {
+          continue;
+        }
+
+        const itemThumb = resolveItemImage(item);
         const productPayload = {
-          _id: item.productId,
-          id: item.productId,
-          title: item.title,
-          name: item.title,
+          ...(prodObj || {}),
+          _id: resolvedId,
+          id: resolvedId,
+          productId: resolvedId,
+          title: item.title || prodObj?.basicInfo?.title || prodObj?.title || '',
+          name: item.title || prodObj?.basicInfo?.title || prodObj?.title || '',
           price: item.price,
           pricing: {
             salePrice: item.price,
             mrp: item.price,
           },
-          images: item.image ? [item.image] : [],
+          images: itemThumb ? [itemThumb] : (item.image ? [item.image] : []),
+          selectedMetal: item.selectedMetal || '',
+          selectedSize: item.selectedSize || '',
+          selectedAttributes: item.selectedAttributes || null,
         };
 
         const options = {
@@ -245,17 +370,21 @@ const Profile = () => {
         count += 1;
       }
 
-      toast.success(
-        count === 1
-          ? 'Item added back to your cart!'
-          : `${count} items added back to your cart!`,
-        { icon: '🛍️' }
-      );
+      if (count > 0) {
+        toast.success(
+          count === 1
+            ? 'Item added back to your cart!'
+            : `${count} items added back to your cart!`,
+          { icon: '🛍️' }
+        );
 
-      if (typeof openCartDrawer === 'function') {
-        openCartDrawer();
+        if (typeof openCartDrawer === 'function') {
+          openCartDrawer();
+        } else {
+          navigate('/cart');
+        }
       } else {
-        navigate('/cart');
+        toast.error('Could not find valid items to reorder.');
       }
     } catch (err) {
       console.error('Failed to reorder items:', err);
@@ -264,6 +393,85 @@ const Profile = () => {
       setReorderingId(null);
     }
   };
+
+  // Open review modal for an item
+  const openReviewModal = (item, order) => {
+    if (!item) return;
+    setReviewOrder(order || null);
+    setReviewItem(item);
+    setReviewRating(5);
+    setReviewHoverRating(0);
+    setReviewTitle('');
+    setReviewComment('');
+    setReviewModalOpen(true);
+  };
+
+  // Submit verified customer review
+  const handleReviewSubmit = async (e) => {
+    e?.preventDefault?.();
+    if (!reviewItem) return;
+
+    if (!reviewComment.trim()) {
+      toast.error('Please write a comment sharing your thoughts on the product.');
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+      const prodId = reviewItem.productId?._id || reviewItem.productId;
+      const customerName =
+        (user?.profile?.firstName || user?.profile?.lastName)
+          ? `${user.profile?.firstName || ''} ${user.profile?.lastName || ''}`.trim()
+          : (user?.name || reviewOrder?.customer?.firstName || 'Verified Customer');
+
+      const payload = {
+        productId: prodId || null,
+        customer: {
+          name: customerName,
+          email: user?.email || reviewOrder?.customer?.email || '',
+        },
+        review: {
+          title: reviewTitle.trim() || 'Verified Purchase Review',
+          rating: Number(reviewRating) || 5,
+          comment: reviewComment.trim(),
+          reviewDate: new Date(),
+        },
+        status: 'approved',
+      };
+
+      await reviewsAPI.create(payload);
+      toast.success('Thank you! Your verified review has been submitted successfully.');
+      if (prodId) {
+        setReviewedProductIds((prev) => new Set([...prev, String(prodId)]));
+      }
+      setReviewModalOpen(false);
+      setReviewItem(null);
+      setReviewOrder(null);
+    } catch (err) {
+      console.error('Failed to submit review:', err);
+      toast.error(err.response?.data?.message || 'Could not submit review. Please try again.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  // Load existing reviews for current customer email
+  useEffect(() => {
+    if (user?.email) {
+      reviewsAPI
+        .getAll({ 'customer.email': user.email, limit: 100 })
+        .then((res) => {
+          const items = res?.data?.data?.items || res?.data?.data || [];
+          if (Array.isArray(items)) {
+            const ids = items
+              .map((r) => String(r.productId?._id || r.productId))
+              .filter(Boolean);
+            setReviewedProductIds(new Set(ids));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user?.email]);
 
   useEffect(() => {
     if (user?._id) {
@@ -944,201 +1152,218 @@ const Profile = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="pb-1 border-b border-stone-200/60">
-                      <h2 className="font-serif text-lg font-normal text-stone-900">
+                  <div className="bg-[#FAF7F2] rounded-2xl border border-[#EFE8DD] p-5 sm:p-7 space-y-5">
+                    <div className="flex items-center justify-center gap-2.5 text-center">
+                      <HiOutlineCube className="w-5.5 h-5.5 text-[#6d4a27] shrink-0" />
+                      <h2
+                        style={{ fontFamily: '"Cormorant Garamond", Georgia, serif' }}
+                        className="text-xl sm:text-2xl font-medium sm:font-semibold text-[#1c1917] tracking-normal leading-snug"
+                      >
                         Order History ({orders.length})
                       </h2>
                     </div>
 
-                    {orders.map((order) => {
-                      const orderDate = formatOrderDate(order.meta?.createdAt || order.createdAt);
-                      const totalAmount = order.pricing?.total ?? order.totalAmount ?? 0;
-                      const status = String(order.orderStatus || 'pending').toLowerCase();
+                    <div className="space-y-4">
+                      {orders.map((order) => {
+                        const orderDate = formatOrderDate(order.meta?.createdAt || order.createdAt);
+                        const totalAmount = order.pricing?.total ?? order.totalAmount ?? 0;
+                        const status = String(order.orderStatus || 'pending').toLowerCase();
 
-                      return (
-                        <div
-                          key={order._id || order.id}
-                          className="bg-white rounded-2xl border border-stone-200/90 shadow-2xs hover:shadow-xs transition-all p-5 space-y-4"
-                        >
-                          {/* Top Header Row */}
-                          <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-stone-100">
-                            <div className="flex items-center gap-3 flex-wrap">
-                              <span className="font-mono font-medium text-xs text-stone-700 bg-stone-50 border border-stone-200/90 px-3.5 py-1 rounded-full shadow-2xs">
-                                {order.orderNumber || 'Order'}
-                              </span>
-                              {orderDate && (
-                                <span className="text-stone-500 font-medium flex items-center gap-1.5 text-xs">
-                                  <HiOutlineCalendar className="w-3.5 h-3.5 text-stone-400" />
-                                  {orderDate}
+                        const orderNumText = order.orderNumber
+                          ? order.orderNumber.startsWith('Order')
+                            ? order.orderNumber
+                            : `Order #${order.orderNumber}`
+                          : 'Order';
+
+                        return (
+                          <div
+                            key={order._id || order.id}
+                            className="bg-white rounded-2xl border border-[#EFE8DD] p-5 sm:p-6 space-y-4 shadow-2xs transition-all hover:shadow-xs"
+                          >
+                            {/* Top Header Row */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-stone-100">
+                              <div className="flex items-center gap-3.5 flex-wrap">
+                                <span className="font-mono font-semibold text-xs text-stone-800 bg-[#FAF7F2] border border-[#EFE8DD] px-3.5 py-1 rounded-full">
+                                  {orderNumText}
                                 </span>
-                              )}
+                                {orderDate && (
+                                  <span className="text-stone-700 font-normal flex items-center gap-1.5 text-xs">
+                                    <HiOutlineCalendar className="w-4 h-4 text-stone-500" />
+                                    {orderDate}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                {renderStatusBadge(status)}
+                                <span className="font-bold text-stone-900 text-base sm:text-lg ml-1">
+                                  ₹{Number(totalAmount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                                </span>
+                              </div>
                             </div>
 
-                            <div className="flex items-center gap-3">
-                              <span
-                                className={`px-3.5 py-1 rounded-full text-xs font-medium border capitalize ${getOrderStatusBadge(
-                                  status
-                                )}`}
-                              >
-                                {order.orderStatus || 'Pending'}
-                              </span>
-                              <span className="font-bold text-stone-900 text-base ml-1">
-                                ₹{Number(totalAmount).toLocaleString('en-IN')}
-                              </span>
-                            </div>
-                          </div>
+                            {/* Items in Order */}
+                            <div className="space-y-4">
+                              {Array.isArray(order.items) &&
+                                order.items.map((item, idx) => {
+                                  const itemThumb = resolveItemImage(item);
+                                  const itemSku =
+                                    item.sku ||
+                                    item.productId?.basicInfo?.sku ||
+                                    item.productId?.ornate?.tagNo;
+                                  const productLink = resolveProductLink(item);
 
-                          {/* Items in Order */}
-                          <div className="space-y-4">
-                            {Array.isArray(order.items) &&
-                              order.items.map((item, idx) => {
-                                const itemThumb = resolveItemImage(item);
-                                const itemSku =
-                                  item.sku ||
-                                  item.productId?.basicInfo?.sku ||
-                                  item.productId?.ornate?.tagNo;
-                                const productLink = resolveProductLink(item);
-
-                                return (
-                                  <div
-                                    key={item._id || idx}
-                                    className="flex items-center justify-between gap-4"
-                                  >
-                                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                                      {productLink ? (
-                                        <Link
-                                          to={productLink}
-                                          className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-stone-50 border border-stone-200/80 p-1 flex items-center justify-center shrink-0 overflow-hidden hover:border-[#8b6f4e]/50 hover:shadow-2xs transition-all group cursor-pointer"
-                                          title="View Product Details"
-                                        >
-                                          {itemThumb ? (
-                                            <img
-                                              src={getImageUrl(itemThumb)}
-                                              alt={item.title || 'Product'}
-                                              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                                              onError={(e) => {
-                                                e.currentTarget.style.display = 'none';
-                                                if (e.currentTarget.parentElement) {
-                                                  e.currentTarget.parentElement.innerHTML =
-                                                    '<span class="text-xl">💍</span>';
-                                                }
-                                              }}
-                                            />
-                                          ) : (
-                                            <span className="text-xl">💍</span>
-                                          )}
-                                        </Link>
-                                      ) : (
-                                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-stone-50 border border-stone-200/80 p-1 flex items-center justify-center shrink-0 overflow-hidden">
-                                          {itemThumb ? (
-                                            <img
-                                              src={getImageUrl(itemThumb)}
-                                              alt={item.title || 'Product'}
-                                              className="w-full h-full object-contain"
-                                              onError={(e) => {
-                                                e.currentTarget.style.display = 'none';
-                                                if (e.currentTarget.parentElement) {
-                                                  e.currentTarget.parentElement.innerHTML =
-                                                    '<span class="text-xl">💍</span>';
-                                                }
-                                              }}
-                                            />
-                                          ) : (
-                                            <span className="text-xl">💍</span>
-                                          )}
-                                        </div>
-                                      )}
-
-                                      <div className="min-w-0 flex-1 space-y-1.5">
+                                  return (
+                                    <div
+                                      key={item._id || idx}
+                                      className="flex items-center justify-between gap-4"
+                                    >
+                                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
                                         {productLink ? (
                                           <Link
                                             to={productLink}
-                                            className="font-bold text-stone-900 text-sm leading-snug truncate block hover:text-[#8b6f4e] transition-colors cursor-pointer"
-                                            title={item.title || 'Jewellery Item'}
+                                            className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-[#FAF7F2] border border-[#EFE8DD] p-1.5 flex items-center justify-center shrink-0 overflow-hidden hover:border-[#8b6f4e]/50 hover:shadow-2xs transition-all group cursor-pointer"
+                                            title="View Product Details"
                                           >
-                                            {item.title || 'Jewellery Item'}
+                                            {itemThumb ? (
+                                              <img
+                                                src={getImageUrl(itemThumb)}
+                                                alt={item.title || 'Product'}
+                                                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                                onError={(e) => {
+                                                  e.currentTarget.style.display = 'none';
+                                                  if (e.currentTarget.parentElement) {
+                                                    e.currentTarget.parentElement.innerHTML =
+                                                      '<span class="text-xl">💍</span>';
+                                                  }
+                                                }}
+                                              />
+                                            ) : (
+                                              <span className="text-xl">💍</span>
+                                            )}
                                           </Link>
                                         ) : (
-                                          <h4
-                                            className="font-bold text-stone-900 text-sm leading-snug truncate"
-                                            title={item.title || 'Jewellery Item'}
-                                          >
-                                            {item.title || 'Jewellery Item'}
-                                          </h4>
+                                          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-[#FAF7F2] border border-[#EFE8DD] p-1.5 flex items-center justify-center shrink-0 overflow-hidden">
+                                            {itemThumb ? (
+                                              <img
+                                                src={getImageUrl(itemThumb)}
+                                                alt={item.title || 'Product'}
+                                                className="w-full h-full object-contain"
+                                                onError={(e) => {
+                                                  e.currentTarget.style.display = 'none';
+                                                  if (e.currentTarget.parentElement) {
+                                                    e.currentTarget.parentElement.innerHTML =
+                                                      '<span class="text-xl">💍</span>';
+                                                  }
+                                                }}
+                                              />
+                                            ) : (
+                                              <span className="text-xl">💍</span>
+                                            )}
+                                          </div>
                                         )}
-                                        <div className="flex items-center gap-2 flex-wrap text-xs">
-                                          {item.selectedMetal && (
-                                            <span className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 font-medium text-[11px]">
-                                              {item.selectedMetal}
-                                            </span>
+
+                                        <div className="min-w-0 flex-1 space-y-1.5">
+                                          {productLink ? (
+                                            <Link
+                                              to={productLink}
+                                              className="font-bold text-stone-900 text-xs sm:text-sm leading-snug truncate block hover:text-[#8b6f4e] transition-colors cursor-pointer"
+                                              title={item.title || 'Jewellery Item'}
+                                            >
+                                              {item.title || 'Jewellery Item'}
+                                            </Link>
+                                          ) : (
+                                            <h4
+                                              className="font-bold text-stone-900 text-xs sm:text-sm leading-snug truncate"
+                                              title={item.title || 'Jewellery Item'}
+                                            >
+                                              {item.title || 'Jewellery Item'}
+                                            </h4>
                                           )}
-                                          {itemSku && (
-                                            <span className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 font-medium text-[11px]">
-                                              SKU: {itemSku}
+                                          <div className="flex items-center gap-2 flex-wrap text-xs">
+                                            {item.selectedMetal && (
+                                              <span className="px-2.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#EFE8DD] text-stone-700 font-medium text-[11px]">
+                                                {item.selectedMetal}
+                                              </span>
+                                            )}
+                                            {itemSku && (
+                                              <span className="px-2.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#EFE8DD] text-stone-700 font-medium text-[11px]">
+                                                SKU: {itemSku}
+                                              </span>
+                                            )}
+                                            <span className="px-2.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#EFE8DD] text-stone-700 font-medium text-[11px]">
+                                              Qty: {item.quantity || 1}
                                             </span>
-                                          )}
-                                          <span className="px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 font-medium text-[11px]">
-                                            Qty: {item.quantity || 1}
-                                          </span>
+                                          </div>
                                         </div>
                                       </div>
-                                    </div>
 
-                                    <div className="text-right shrink-0">
-                                      <div className="font-bold text-stone-900 text-sm sm:text-base">
-                                        ₹{Number(item.totalItemPrice || item.price || 0).toLocaleString('en-IN')}
-                                      </div>
-                                      {item.quantity > 1 && (
-                                        <div className="text-[11px] text-stone-400 mt-0.5">
-                                          ₹{Number(item.price || 0).toLocaleString('en-IN')} each
+                                      <div className="text-right shrink-0">
+                                        <div className="font-bold text-stone-900 text-sm sm:text-base">
+                                          ₹{Number(item.totalItemPrice || item.price || 0).toLocaleString('en-IN')}
                                         </div>
-                                      )}
+                                        {item.quantity > 1 && (
+                                          <div className="text-[11px] text-stone-400 mt-0.5">
+                                            ₹{Number(item.price || 0).toLocaleString('en-IN')} each
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                );
-                              })}
-                          </div>
+                                  );
+                                })}
+                            </div>
 
-                          {/* Card Footer: Actions */}
-                          <div className="flex items-center justify-end gap-2.5 pt-1">
-                            {order.shiprocketInfo?.awbCode && (
+                            {/* Card Footer: Actions */}
+                            <div className="flex items-center justify-end gap-2.5 sm:gap-3 pt-2">
                               <button
                                 type="button"
                                 onClick={() => setTrackingOrder(order)}
-                                className="px-3.5 py-2 rounded-xl border border-amber-300/80 bg-amber-50 hover:bg-amber-100/70 text-amber-900 text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+                                className="px-4 py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
                               >
-                                <HiOutlineTruck className="w-4 h-4 text-amber-700" />
+                                <HiOutlineCube className="w-4 h-4 text-[#7A5B3A]" />
                                 <span>Track Package</span>
                               </button>
-                            )}
-                            {['delivered', 'completed'].includes(status) && (
+                              {['delivered', 'completed'].includes(status) && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const target = order.items?.[0];
+                                    if (target) openReviewModal(target, order);
+                                  }}
+                                  className="px-4 py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
+                                >
+                                  <FaStar className="w-3.5 h-3.5 text-[#B88746]" />
+                                  <span>Write Review</span>
+                                </button>
+                              )}
+                              {['delivered', 'completed'].includes(status) && (
+                                <button
+                                  type="button"
+                                  disabled={reorderingId === (order._id || order.id)}
+                                  onClick={() => handleBuyAgain(order)}
+                                  className="px-5 py-2 rounded-xl border border-[#78552B] bg-[#78552B] hover:bg-[#644621] text-white text-xs font-semibold transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 disabled:opacity-60 whitespace-nowrap"
+                                >
+                                  <HiOutlineShoppingCart
+                                    className={`w-4 h-4 text-white ${
+                                      reorderingId === (order._id || order.id) ? 'animate-spin' : ''
+                                    }`}
+                                  />
+                                  <span>{reorderingId === (order._id || order.id) ? 'Adding…' : 'Buy Again'}</span>
+                                </button>
+                              )}
                               <button
                                 type="button"
-                                disabled={reorderingId === (order._id || order.id)}
-                                onClick={() => handleBuyAgain(order)}
-                                className="px-4 py-2 rounded-xl border border-[#8b6f4e] bg-[#8b6f4e] hover:bg-[#785e40] text-white text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95 disabled:opacity-60 disabled:cursor-wait"
+                                onClick={() => setSelectedOrder(order)}
+                                className="px-4 py-2 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-700 text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
                               >
-                                <HiOutlineRefresh
-                                  className={`w-3.5 h-3.5 ${
-                                    reorderingId === (order._id || order.id) ? 'animate-spin' : ''
-                                  }`}
-                                />
-                                {reorderingId === (order._id || order.id) ? 'Adding…' : 'Buy Again'}
+                                <HiOutlineEye className="w-4 h-4 text-stone-600" />
+                                <span>View Details</span>
                               </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setSelectedOrder(order)}
-                              className="px-4 py-2 rounded-xl border border-stone-300 hover:border-stone-400 bg-white hover:bg-stone-50 text-stone-700 text-xs font-semibold transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                            >
-                              <HiOutlineEye className="w-4 h-4 text-stone-500" />
-                              <span>View Details</span>
-                            </button>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1482,285 +1707,552 @@ const Profile = () => {
         </div>
       )}
       {/* ─── ORDER DETAILS MODAL ────────────────────────────────────── */}
-      {selectedOrder && (
+      {selectedOrder && (() => {
+        const statusBanner = getStatusBannerInfo(selectedOrder.orderStatus);
+        const orderDateStr = formatOrderDate(selectedOrder.meta?.createdAt || selectedOrder.createdAt);
+        return (
+          <div
+            onClick={() => setSelectedOrder(null)}
+            className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto cursor-pointer animate-fadeIn"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-2xl lg:max-w-3xl bg-[#fdfbf7] rounded-2xl shadow-2xl overflow-hidden animate-scale-in my-4 max-h-[92vh] flex flex-col cursor-default border border-[#e8ded0]"
+            >
+              {/* Modal Header */}
+              <div className="bg-[#291e16] text-white px-6 sm:px-7 py-4.5 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                    <HiOutlineCube className="w-5 h-5 sm:w-6 sm:h-6 text-[#d5c7b3]" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-base sm:text-lg font-medium text-white leading-tight">
+                      Order Details
+                    </h3>
+                    <p className="font-mono text-xs sm:text-sm font-semibold text-stone-300 tracking-wider">
+                      #{selectedOrder.orderNumber}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedOrder(null)}
+                  className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-stone-400 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Close modal"
+                >
+                  <HiOutlineX className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 custom-scrollbar">
+                {/* Status & Date Banner */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-[#faf6f0] border border-[#ebe1d3] flex items-center justify-between flex-wrap gap-4 relative overflow-hidden">
+                  {/* Subtle decorative floral watermark */}
+                  <svg
+                    className="pointer-events-none absolute -right-2 -bottom-4 w-28 h-28 text-[#8b6f4e] opacity-[0.09]"
+                    viewBox="0 0 100 100"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                  >
+                    <path d="M10 80 Q 40 40 85 15 M 40 40 Q 60 30 70 18 M 40 40 Q 50 60 70 65 M 25 55 Q 35 70 50 72 M 55 30 Q 70 32 78 22" />
+                    <circle cx="85" cy="15" r="2" fill="currentColor" />
+                    <circle cx="70" cy="18" r="2" fill="currentColor" />
+                    <circle cx="70" cy="65" r="2" fill="currentColor" />
+                  </svg>
+
+                  {/* Left: Status info */}
+                  <div className="flex items-center gap-3.5 relative z-10">
+                    {statusBanner.icon}
+                    <div>
+                      <h4 className="font-serif font-bold text-stone-900 text-sm sm:text-base leading-tight">
+                        {statusBanner.title}
+                      </h4>
+                      <p className="text-xs text-stone-500 mt-0.5 leading-snug">
+                        {statusBanner.description}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Vertical Divider */}
+                  <div className="h-10 w-[1px] bg-stone-200 hidden sm:block relative z-10" />
+
+                  {/* Right: Ordered on */}
+                  {orderDateStr && (
+                    <div className="flex items-center gap-3 relative z-10">
+                      <HiOutlineCalendar className="w-5 h-5 sm:w-6 sm:h-6 text-[#8b6f4e] shrink-0" />
+                      <div>
+                        <span className="block text-[11px] text-stone-400 font-medium leading-tight">
+                          Ordered On
+                        </span>
+                        <span className="text-xs sm:text-sm font-semibold text-stone-800 leading-tight">
+                          {orderDateStr}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Items Section */}
+                <div>
+                  <span className="text-xs uppercase font-serif font-bold tracking-wider text-stone-700 block mb-2.5">
+                    Items ({selectedOrder.items?.length || 0})
+                  </span>
+                  <div className="space-y-3 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
+                    {Array.isArray(selectedOrder.items) &&
+                      selectedOrder.items.map((item, idx) => {
+                        const itemThumb = resolveItemImage(item);
+                        const itemSku =
+                          item.sku ||
+                          item.productId?.basicInfo?.sku ||
+                          item.productId?.ornate?.tagNo;
+                        const productLink = resolveProductLink(item);
+
+                        return (
+                          <div
+                            key={item._id || idx}
+                            className="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#ebe1d3] flex items-center justify-between gap-4 shadow-[0_1px_4px_rgba(0,0,0,0.02)]"
+                          >
+                            <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                              {productLink ? (
+                                <Link
+                                  to={productLink}
+                                  onClick={() => setSelectedOrder(null)}
+                                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-[#faf8f5] border border-stone-200/80 p-1.5 flex items-center justify-center shrink-0 overflow-hidden hover:border-[#8b6f4e]/60 transition-colors group cursor-pointer"
+                                  title="View Product Details"
+                                >
+                                  {itemThumb ? (
+                                    <img
+                                      src={getImageUrl(itemThumb)}
+                                      alt={item.title || 'Product'}
+                                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        if (e.currentTarget.parentElement) {
+                                          e.currentTarget.parentElement.innerHTML =
+                                            '<span class="text-base sm:text-xl">💍</span>';
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <span className="text-base sm:text-xl">💍</span>
+                                  )}
+                                </Link>
+                              ) : (
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-[#faf8f5] border border-stone-200/80 p-1.5 flex items-center justify-center shrink-0 overflow-hidden">
+                                  {itemThumb ? (
+                                    <img
+                                      src={getImageUrl(itemThumb)}
+                                      alt={item.title || 'Product'}
+                                      className="w-full h-full object-contain"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        if (e.currentTarget.parentElement) {
+                                          e.currentTarget.parentElement.innerHTML =
+                                            '<span class="text-base sm:text-xl">💍</span>';
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <span className="text-base sm:text-xl">💍</span>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="min-w-0 flex-1 space-y-1.5">
+                                {productLink ? (
+                                  <Link
+                                    to={productLink}
+                                    onClick={() => setSelectedOrder(null)}
+                                    className="font-serif font-semibold text-stone-900 text-xs sm:text-sm leading-snug hover:text-[#8b6f4e] transition-colors block line-clamp-2 cursor-pointer"
+                                    title={item.title}
+                                  >
+                                    {item.title}
+                                  </Link>
+                                ) : (
+                                  <p className="font-serif font-semibold text-stone-900 text-xs sm:text-sm leading-snug line-clamp-2">
+                                    {item.title}
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                                  {item.selectedMetal && (
+                                    <span className="px-2.5 py-0.5 rounded-md bg-[#faf8f5] text-stone-700 font-medium border border-[#e5dcd0] text-[11px]">
+                                      {item.selectedMetal}
+                                    </span>
+                                  )}
+                                  {itemSku && (
+                                    <span className="px-2.5 py-0.5 rounded-md bg-[#faf8f5] text-stone-700 font-medium border border-[#e5dcd0] text-[11px]">
+                                      SKU: {itemSku}
+                                    </span>
+                                  )}
+                                  <span className="px-2.5 py-0.5 rounded-md bg-[#faf8f5] text-stone-600 font-medium border border-[#e5dcd0] text-[11px]">
+                                    Qty: {item.quantity || 1}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <div className="font-serif font-bold text-stone-900 text-sm sm:text-base">
+                                ₹{Number(item.totalItemPrice || item.price || 0).toLocaleString('en-IN')}
+                              </div>
+                              {item.quantity > 1 && (
+                                <div className="text-[10px] text-stone-400 mt-0.5">
+                                  ₹{Number(item.price || 0).toLocaleString('en-IN')} each
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* Delivery Address & Price Breakdown Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Delivery Address Card */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-[#faf6f0] border border-[#ebe1d3] space-y-2.5">
+                    <div className="flex items-center gap-2 text-stone-800">
+                      <HiOutlineLocationMarker className="w-4 h-4 text-[#8b6f4e]" />
+                      <span className="font-serif font-bold text-xs sm:text-sm">Delivery Address</span>
+                    </div>
+
+                    {selectedOrder.shippingAddress ? (
+                      <div className="space-y-2 text-xs">
+                        <div className="flex items-start gap-1.5">
+                          <span className="text-stone-400 text-sm mt-[-1px]">📍</span>
+                          <p className="font-semibold text-stone-900 text-xs sm:text-sm">
+                            {selectedOrder.shippingAddress.fullName || selectedOrder.customer?.firstName}
+                          </p>
+                        </div>
+                        <p className="pl-5 text-stone-600 text-xs leading-relaxed">
+                          {[
+                            selectedOrder.shippingAddress.addressLine,
+                            selectedOrder.shippingAddress.apartment,
+                            selectedOrder.shippingAddress.city,
+                            selectedOrder.shippingAddress.state,
+                            selectedOrder.shippingAddress.postalCode,
+                            selectedOrder.shippingAddress.country,
+                          ].filter(Boolean).join(', ')}
+                        </p>
+                        {(selectedOrder.shippingAddress.phone || selectedOrder.customer?.phone) && (
+                          <div className="flex items-center gap-2 pt-0.5 text-stone-700 pl-5">
+                            <HiOutlinePhone className="w-3.5 h-3.5 text-[#8b6f4e] shrink-0" />
+                            <span className="text-xs font-medium">
+                              {selectedOrder.shippingAddress.phone || selectedOrder.customer?.phone}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-stone-400 italic">No delivery address provided.</p>
+                    )}
+                  </div>
+
+                  {/* Price Breakdown Card */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-[#faf6f0] border border-[#ebe1d3] space-y-2">
+                    <div className="flex items-center gap-2 text-stone-800 mb-1">
+                      <HiOutlineSquare3Stack3D className="w-4 h-4 text-[#8b6f4e]" />
+                      <span className="font-serif font-bold text-xs sm:text-sm">Price Breakdown</span>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs text-stone-600">
+                      {selectedOrder.pricing?.subtotal !== undefined && (
+                        <div className="flex justify-between items-center">
+                          <span>Subtotal</span>
+                          <span className="font-medium text-stone-800">₹{Number(selectedOrder.pricing.subtotal).toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      {(Number(selectedOrder.pricing?.discount) > 0 || selectedOrder.coupon?.code) && (
+                        <div className="flex items-center justify-between text-emerald-700">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span>Discount</span>
+                            {selectedOrder.coupon?.code && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono font-bold text-[10px] tracking-wide border border-emerald-300">
+                                <HiOutlineTag className="w-3 h-3 text-emerald-600" />
+                                <span>{selectedOrder.coupon.code}</span>
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-medium">-₹{Number(selectedOrder.pricing?.discount || selectedOrder.coupon?.discountAmount || 0).toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      {selectedOrder.pricing?.tax !== undefined && (
+                        <div className="flex justify-between items-center">
+                          <span>Estimated Tax (GST 3%)</span>
+                          <span className="font-medium text-stone-800">₹{Number(selectedOrder.pricing.tax).toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <span>Shipping</span>
+                        <span className="text-emerald-700 font-semibold">
+                          {selectedOrder.pricing?.shipping === 0 || !selectedOrder.pricing?.shipping ? 'FREE' : `₹${selectedOrder.pricing.shipping}`}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2.5 border-t border-[#ebe1d3] mt-2">
+                        <span className="font-serif font-bold text-sm text-stone-900">Total Paid</span>
+                        <span className="font-serif font-bold text-base sm:text-lg text-[#7a5b3a]">
+                          ₹{Number(selectedOrder.pricing?.total ?? selectedOrder.totalAmount ?? 0).toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 sm:px-7 bg-[#fcfbfa] border-t border-[#ebe1d3] flex flex-wrap items-center justify-between gap-3 shrink-0 rounded-b-2xl">
+                <Link
+                  to={`/order-success?orderId=${selectedOrder._id || selectedOrder.id}&orderNumber=${encodeURIComponent(selectedOrder.orderNumber)}`}
+                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-[#8b6f4e] hover:text-[#755c3e] font-medium transition-colors cursor-pointer"
+                >
+                  <HiOutlineDocumentText className="w-4 h-4" />
+                  <span>View Order Receipt →</span>
+                </Link>
+                <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+                  {selectedOrder.shiprocketInfo?.awbCode && (
+                    <button
+                      type="button"
+                      onClick={() => setTrackingOrder(selectedOrder)}
+                      className="px-4 py-2 rounded-xl border border-[#dcc8b0] bg-[#faf6f0] hover:bg-[#f3eadf] text-[#7a5b3a] text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs whitespace-nowrap"
+                    >
+                      <HiOutlineCube className="w-4 h-4 text-[#7a5b3a]" />
+                      <span>Track Package</span>
+                    </button>
+                  )}
+                  {String(selectedOrder.orderStatus || '').toLowerCase() === 'delivered' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const target = selectedOrder.items?.[0];
+                        if (target) openReviewModal(target, selectedOrder);
+                      }}
+                      className="px-4 py-2 rounded-xl border border-[#dcc8b0] bg-[#faf6f0] hover:bg-[#f3eadf] text-[#7a5b3a] text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs whitespace-nowrap"
+                    >
+                      <FaStar className="w-3.5 h-3.5 text-[#a4784a]" />
+                      <span>Write Review</span>
+                    </button>
+                  )}
+                  {String(selectedOrder.orderStatus || '').toLowerCase() === 'delivered' && (
+                    <button
+                      type="button"
+                      disabled={reorderingId === (selectedOrder._id || selectedOrder.id)}
+                      onClick={() => {
+                        handleBuyAgain(selectedOrder);
+                        setSelectedOrder(null);
+                      }}
+                      className="px-4.5 py-2 rounded-xl border border-[#785736] bg-[#785736] hover:bg-[#67492c] text-white text-xs font-semibold transition-all inline-flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-wait shadow-2xs whitespace-nowrap"
+                    >
+                      <HiOutlineShoppingCart className={`w-4 h-4 ${reorderingId === (selectedOrder._id || selectedOrder.id) ? 'animate-spin' : ''}`} />
+                      <span>{reorderingId === (selectedOrder._id || selectedOrder.id) ? 'Adding…' : 'Buy Again'}</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOrder(null)}
+                    className="px-4.5 py-2 rounded-xl border border-stone-200 hover:border-stone-300 bg-white hover:bg-stone-50 text-stone-700 text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-2xs"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ─── WRITE A CUSTOMER REVIEW MODAL ───────────────────────── */}
+      {reviewModalOpen && reviewItem && (
         <div
-          onClick={() => setSelectedOrder(null)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setReviewModalOpen(false)}
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto cursor-pointer animate-fadeIn"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in max-h-[90vh] flex flex-col cursor-default"
+            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in my-6 cursor-default border border-stone-200"
           >
-            <div className="bg-[#22201e] text-white px-6 py-4 flex items-center justify-between shrink-0">
+            {/* Header */}
+            <div className="bg-[#22201e] text-white px-6 py-4 flex items-center justify-between">
               <div>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-[#d6c7b2] block">
-                  ORDER DETAILS
-                </span>
-                <h3 className="font-mono text-base font-bold text-white">
-                  {selectedOrder.orderNumber}
+                <h3 className="font-serif text-lg font-bold text-white tracking-wide">
+                  Write a Customer Review
                 </h3>
               </div>
               <button
-                onClick={() => setSelectedOrder(null)}
-                className="text-stone-400 hover:text-white cursor-pointer"
+                type="button"
+                onClick={() => setReviewModalOpen(false)}
+                className="text-stone-400 hover:text-white transition-colors cursor-pointer p-1"
+                aria-label="Close"
               >
                 <HiOutlineX className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs">
-              {/* Status & Date */}
-              <div className="p-3.5 rounded-xl bg-[#FAF7F2] border border-[#8b6f4e]/20 flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <span className="text-[10px] uppercase font-semibold text-stone-500 block">Status</span>
-                  <span className="font-bold text-stone-900 capitalize text-sm">
-                    {selectedOrder.orderStatus || 'Pending'}
-                  </span>
-                </div>
-                {(selectedOrder.meta?.createdAt || selectedOrder.createdAt) && (
-                  <div className="text-right text-[11px] text-stone-500">
-                    <span className="block text-[10px] uppercase font-semibold text-stone-400">Order Placed</span>
-                    {formatOrderDate(selectedOrder.meta?.createdAt || selectedOrder.createdAt)}
-                  </div>
-                )}
-              </div>
-
-              {/* Items */}
-              <div className="space-y-2">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-stone-400 block">
-                  Items ({selectedOrder.items?.length || 0})
-                </span>
-                <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                  {Array.isArray(selectedOrder.items) &&
-                    selectedOrder.items.map((item, idx) => {
-                      const itemThumb = resolveItemImage(item);
-                      const itemSku =
-                        item.sku ||
-                        item.productId?.basicInfo?.sku ||
-                        item.productId?.ornate?.tagNo;
-                      const productLink = resolveProductLink(item);
-
+            <form onSubmit={handleReviewSubmit} className="p-6 space-y-4 text-xs">
+              {/* If order has multiple items, allow switching */}
+              {Array.isArray(reviewOrder?.items) && reviewOrder.items.length > 1 && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-stone-700 block">
+                    Item Being Reviewed
+                  </label>
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    {reviewOrder.items.map((it, idx) => {
+                      const isSelected =
+                        (reviewItem?._id && it._id && reviewItem._id === it._id) ||
+                        (reviewItem?.sku && it.sku && reviewItem.sku === it.sku) ||
+                        reviewItem?.title === it.title;
                       return (
-                        <div
-                          key={item._id || idx}
-                          className="p-3 rounded-xl bg-stone-50 border border-stone-200/70 flex items-center justify-between gap-3"
+                        <button
+                          key={it._id || idx}
+                          type="button"
+                          onClick={() => setReviewItem(it)}
+                          className={`px-3 py-1.5 rounded-lg border text-xs shrink-0 flex items-center gap-1.5 cursor-pointer transition-all ${
+                            isSelected
+                              ? 'border-[#8b6f4e] bg-[#FAF7F2] text-[#8b6f4e] font-bold shadow-2xs ring-1 ring-[#8b6f4e]/30'
+                              : 'border-stone-200 bg-white text-stone-600 hover:bg-stone-50'
+                          }`}
                         >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            {productLink ? (
-                              <Link
-                                to={productLink}
-                                onClick={() => setSelectedOrder(null)}
-                                className="w-12 h-12 rounded-lg bg-white border border-stone-200/80 p-0.5 flex items-center justify-center shrink-0 overflow-hidden hover:border-[#8b6f4e]/60 transition-colors group cursor-pointer"
-                                title="View Product Details"
-                              >
-                                {itemThumb ? (
-                                  <img
-                                    src={getImageUrl(itemThumb)}
-                                    alt={item.title || 'Product'}
-                                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                      if (e.currentTarget.parentElement) {
-                                        e.currentTarget.parentElement.innerHTML =
-                                          '<span class="text-sm">💍</span>';
-                                      }
-                                    }}
-                                  />
-                                ) : (
-                                  <span className="text-sm">💍</span>
-                                )}
-                              </Link>
-                            ) : (
-                              <div className="w-12 h-12 rounded-lg bg-white border border-stone-200/80 p-0.5 flex items-center justify-center shrink-0 overflow-hidden">
-                                {itemThumb ? (
-                                  <img
-                                    src={getImageUrl(itemThumb)}
-                                    alt={item.title || 'Product'}
-                                    className="w-full h-full object-contain"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none';
-                                      if (e.currentTarget.parentElement) {
-                                        e.currentTarget.parentElement.innerHTML =
-                                          '<span class="text-sm">💍</span>';
-                                      }
-                                    }}
-                                  />
-                                ) : (
-                                  <span className="text-sm">💍</span>
-                                )}
-                              </div>
-                            )}
-                            <div className="min-w-0 flex-1 space-y-1">
-                              {productLink ? (
-                                <Link
-                                  to={productLink}
-                                  onClick={() => setSelectedOrder(null)}
-                                  className="font-semibold text-stone-900 text-xs leading-snug hover:text-[#8b6f4e] transition-colors block truncate cursor-pointer"
-                                  title={item.title}
-                                >
-                                  {item.title}
-                                </Link>
-                              ) : (
-                                <p className="font-semibold text-stone-900 text-xs leading-snug truncate">
-                                  {item.title}
-                                </p>
-                              )}
-                              <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-stone-500">
-                                {item.selectedMetal && (
-                                  <span className="px-1.5 py-0.5 rounded bg-white text-stone-700 font-medium border border-stone-200">
-                                    {item.selectedMetal}
-                                  </span>
-                                )}
-                                {itemSku && (
-                                  <span className="px-1.5 py-0.5 rounded bg-white text-stone-700 border border-stone-200 font-medium">
-                                    SKU: {itemSku}
-                                  </span>
-                                )}
-                                <span className="px-1.5 py-0.5 rounded bg-white text-stone-600 border border-stone-200">
-                                  Qty: {item.quantity || 1}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <div className="font-bold text-stone-900 text-xs">
-                              ₹{Number(item.totalItemPrice || item.price || 0).toLocaleString('en-IN')}
-                            </div>
-                            {item.quantity > 1 && (
-                              <div className="text-[10px] text-stone-400 mt-0.5">
-                                ₹{Number(item.price || 0).toLocaleString('en-IN')} each
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                          <span className="truncate max-w-[150px]">{it.title}</span>
+                        </button>
                       );
                     })}
-                </div>
-              </div>
-
-              {/* Shipping Address */}
-              {selectedOrder.shippingAddress && (
-                <div className="p-3.5 rounded-xl bg-stone-50 border border-stone-200/70 space-y-1">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-stone-400 block">
-                    Delivery Address
-                  </span>
-                  <p className="font-semibold text-stone-900 text-xs">
-                    {selectedOrder.shippingAddress.fullName || selectedOrder.customer?.firstName}
-                  </p>
-                  <p className="text-stone-600 text-xs">
-                    {[
-                      selectedOrder.shippingAddress.addressLine,
-                      selectedOrder.shippingAddress.apartment,
-                      selectedOrder.shippingAddress.city,
-                      selectedOrder.shippingAddress.state,
-                      selectedOrder.shippingAddress.postalCode,
-                      selectedOrder.shippingAddress.country,
-                    ].filter(Boolean).join(', ')}
-                  </p>
-                  {(selectedOrder.shippingAddress.phone || selectedOrder.customer?.phone) && (
-                    <p className="text-stone-500 text-[11px] pt-1">
-                      Phone: {selectedOrder.shippingAddress.phone || selectedOrder.customer?.phone}
-                    </p>
-                  )}
+                  </div>
                 </div>
               )}
 
-              {/* Price Breakdown */}
-              <div className="p-3.5 rounded-xl bg-stone-50 border border-stone-200/70 space-y-2">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-stone-400 block">
-                  Price Breakdown
-                </span>
-                <div className="space-y-1 text-xs text-stone-600">
-                  {selectedOrder.pricing?.subtotal !== undefined && (
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span>₹{Number(selectedOrder.pricing.subtotal).toLocaleString('en-IN')}</span>
-                    </div>
+              {/* Product Card Preview */}
+              <div className="p-3.5 rounded-xl bg-[#FAF7F2] border border-[#8b6f4e]/20 flex items-center gap-3.5">
+                <div className="w-14 h-14 rounded-lg bg-white border border-stone-200/80 p-0.5 flex items-center justify-center shrink-0 overflow-hidden">
+                  {resolveItemImage(reviewItem) ? (
+                    <img
+                      src={getImageUrl(resolveItemImage(reviewItem))}
+                      alt={reviewItem.title}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        if (e.currentTarget.parentElement) {
+                          e.currentTarget.parentElement.innerHTML = '<span class="text-lg">💍</span>';
+                        }
+                      }}
+                    />
+                  ) : (
+                    <span className="text-lg">💍</span>
                   )}
-                  {(Number(selectedOrder.pricing?.discount) > 0 || selectedOrder.coupon?.code) && (
-                    <div className="flex items-center justify-between text-emerald-600 font-medium">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span>Discount</span>
-                        {selectedOrder.coupon?.code && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 font-mono font-bold text-[10.5px] tracking-wide border border-emerald-300">
-                            <HiOutlineTag className="w-3 h-3 text-emerald-600" />
-                            <span>{selectedOrder.coupon.code}</span>
-                          </span>
-                        )}
-                        {selectedOrder.coupon?.discountType === 'Percentage' && Number(selectedOrder.coupon?.discountValue) > 0 ? (
-                          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/60 px-1.5 py-0.5 rounded border border-emerald-200">
-                            {selectedOrder.coupon.discountValue}% OFF
-                          </span>
-                        ) : selectedOrder.coupon?.discountType === 'Fixed' && Number(selectedOrder.coupon?.discountValue) > 0 ? (
-                          <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/60 px-1.5 py-0.5 rounded border border-emerald-200">
-                            ₹{Number(selectedOrder.coupon.discountValue).toLocaleString('en-IN')} OFF
-                          </span>
-                        ) : null}
-                      </div>
-                      <span>-₹{Number(selectedOrder.pricing?.discount || selectedOrder.coupon?.discountAmount || 0).toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                  {selectedOrder.pricing?.tax !== undefined && (
-                    <div className="flex justify-between">
-                      <span>Estimated Tax (GST 3%)</span>
-                      <span>₹{Number(selectedOrder.pricing.tax).toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span>Shipping</span>
-                    <span className="text-emerald-700 font-medium">
-                      {selectedOrder.pricing?.shipping === 0 || !selectedOrder.pricing?.shipping ? 'FREE' : `₹${selectedOrder.pricing.shipping}`}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-stone-900 font-bold text-sm pt-2 border-t border-stone-200">
-                    <span>Total Paid</span>
-                    <span className="text-[#8b6f4e]">₹{Number(selectedOrder.pricing?.total ?? selectedOrder.totalAmount ?? 0).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <h4 className="font-bold text-stone-900 text-xs leading-snug truncate" title={reviewItem.title}>
+                    {reviewItem.title}
+                  </h4>
+                  <div className="flex items-center gap-2 flex-wrap text-[11px] text-stone-500">
+                    {reviewItem.selectedMetal && (
+                      <span className="px-1.5 py-0.5 rounded bg-white text-stone-700 border border-stone-200">
+                        {reviewItem.selectedMetal}
+                      </span>
+                    )}
+                    {reviewOrder?.orderNumber && (
+                      <span className="font-mono text-stone-600">
+                        Order: {reviewOrder.orderNumber}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-4 bg-stone-50 border-t border-stone-100 flex items-center justify-between shrink-0">
-              <Link
-                to={`/order-success?orderId=${selectedOrder._id || selectedOrder.id}&orderNumber=${encodeURIComponent(selectedOrder.orderNumber)}`}
-                className="text-xs text-[#8b6f4e] hover:underline font-medium"
-              >
-                View Order Receipt →
-              </Link>
-              <div className="flex items-center gap-2">
-                {selectedOrder.shiprocketInfo?.awbCode && (
-                  <button
-                    type="button"
-                    onClick={() => setTrackingOrder(selectedOrder)}
-                    className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                  >
-                    <HiOutlineTruck className="w-4 h-4 text-amber-700" />
-                    <span>Track Package</span>
-                  </button>
-                )}
-                {String(selectedOrder.orderStatus || '').toLowerCase() === 'delivered' && (
-                  <button
-                    type="button"
-                    disabled={reorderingId === (selectedOrder._id || selectedOrder.id)}
-                    onClick={() => {
-                      handleBuyAgain(selectedOrder);
-                      setSelectedOrder(null);
-                    }}
-                    className="px-3.5 py-2 bg-[#8b6f4e] hover:bg-[#785e40] text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-wait shadow-2xs"
-                  >
-                    <HiOutlineRefresh className={`w-3.5 h-3.5 ${reorderingId === (selectedOrder._id || selectedOrder.id) ? 'animate-spin' : ''}`} />
-                    {reorderingId === (selectedOrder._id || selectedOrder.id) ? 'Adding…' : 'Buy Again'}
-                  </button>
-                )}
+              {/* Interactive Star Rating */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-stone-900 block">
+                  Overall Rating <span className="text-rose-500">*</span>
+                </label>
+                <div className="flex items-center justify-between p-3 rounded-xl border border-stone-200 bg-stone-50/70">
+                  <div className="flex items-center gap-1.5">
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const active = (reviewHoverRating || reviewRating) >= star;
+                      return (
+                        <button
+                          key={star}
+                          type="button"
+                          onMouseEnter={() => setReviewHoverRating(star)}
+                          onMouseLeave={() => setReviewHoverRating(0)}
+                          onClick={() => setReviewRating(star)}
+                          className="p-1 cursor-pointer transition-transform hover:scale-110 focus:outline-none"
+                          aria-label={`Rate ${star} star`}
+                        >
+                          <FaStar
+                            className={`w-6 h-6 transition-colors ${
+                              active ? 'text-amber-400 fill-amber-400' : 'text-stone-300'
+                            }`}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="text-xs font-semibold text-[#8b6f4e]">
+                    {(reviewHoverRating || reviewRating) === 5 && '5.0 — Excellent / Loved it!'}
+                    {(reviewHoverRating || reviewRating) === 4 && '4.0 — Very Good'}
+                    {(reviewHoverRating || reviewRating) === 3 && '3.0 — Average'}
+                    {(reviewHoverRating || reviewRating) === 2 && '2.0 — Fair'}
+                    {(reviewHoverRating || reviewRating) === 1 && '1.0 — Poor'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Review Headline / Title */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-stone-900 block">
+                  Review Title <span className="text-stone-400 font-normal">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={reviewTitle}
+                  onChange={(e) => setReviewTitle(e.target.value)}
+                  placeholder="e.g. Stunning diamond sparkle, timeless luxury!"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/30 transition-all text-xs"
+                />
+              </div>
+
+              {/* Review Comment / Story */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-stone-900 block">
+                  Detailed Review <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder="What did you love about this piece? Share details on the design, diamond brilliance, fit, and packaging to help other customers..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/30 transition-all text-xs resize-none"
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-100">
                 <button
                   type="button"
-                  onClick={() => setSelectedOrder(null)}
-                  className="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                  onClick={() => setReviewModalOpen(false)}
+                  disabled={submittingReview}
+                  className="px-4 py-2.5 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-50 font-medium transition cursor-pointer"
                 >
-                  Close
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReview || !reviewComment.trim()}
+                  className="px-6 py-2.5 rounded-xl btn-theme-primary bg-[#8b6f4e] hover:bg-[#785e40] text-white font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submittingReview ? (
+                    <>
+                      <HiOutlineRefresh className="w-4 h-4 animate-spin" />
+                      <span>Submitting…</span>
+                    </>
+                  ) : (
+                    <span>Submit Review</span>
+                  )}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}

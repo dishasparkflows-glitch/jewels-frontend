@@ -135,8 +135,11 @@ function FilterOptionsList({ filter, params, isOptionSelected, handleToggleOptio
         </div>
       )}
 
-      {/* 3. Scrollable Checkbox List */}
-      <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+      {/* 3. Checkbox List (Scrollbar removed for luxury styling) */}
+      <div
+        className="space-y-1.5 max-h-64 overflow-y-auto scrollbar-none no-scrollbar [&::-webkit-scrollbar]:hidden pr-0.5"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
         {displayedOptions.length === 0 ? (
           <div className="py-2 text-[11px] text-stone-400 italic">No matches found</div>
         ) : (
