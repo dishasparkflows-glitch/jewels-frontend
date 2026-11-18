@@ -198,7 +198,7 @@ const getStatusBannerInfo = (status = '') => {
 
 const Profile = () => {
   const { user, logout, updateUser } = useAuth();
-  const { addToCart, openCartDrawer } = useCart();
+  const { addToCart, openCartDrawer, orderCount, returnOrderCount } = useCart();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'orders' | 'returns' | 'addresses'
 
@@ -479,7 +479,6 @@ const Profile = () => {
   useEffect(() => {
     if (user?._id) {
       fetchAddresses();
-      fetchOrders();
     }
   }, [user?._id]);
 
@@ -487,7 +486,7 @@ const Profile = () => {
     if (user?._id && activeTab === 'orders') {
       fetchOrders();
     }
-  }, [activeTab]);
+  }, [user?._id, activeTab]);
 
   useEffect(() => {
     if (!selectedOrder) return;
@@ -778,9 +777,9 @@ const Profile = () => {
                   <HiOutlineCube className={`w-4 h-4 ${activeTab === 'orders' ? 'text-[#8b6f4e]' : 'text-stone-500'}`} />
                   <span>Orders</span>
                 </div>
-                {orders.length > 0 && (
+                {(orders.length > 0 || (orderCount || 0) > 0) && (
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#8b6f4e]/10 text-[#8b6f4e]">
-                    {orders.length}
+                    {orders.length > 0 ? orders.length : orderCount}
                   </span>
                 )}
               </button>
@@ -788,14 +787,21 @@ const Profile = () => {
               {/* Returns Tab */}
               <button
                 onClick={() => setActiveTab('returns')}
-                className={`flex items-center gap-3 px-4 py-3.5 text-left transition-colors ${
+                className={`flex items-center justify-between px-4 py-3.5 text-left transition-colors ${
                   activeTab === 'returns'
                     ? 'border-l-4 border-[#8b6f4e] bg-[#FAF7F2] font-medium text-[#8b6f4e]'
                     : 'text-stone-600 hover:bg-stone-50 hover:text-black border-l-4 border-transparent'
                 }`}
               >
-                <HiOutlineRefresh className={`w-4 h-4 ${activeTab === 'returns' ? 'text-[#8b6f4e]' : 'text-stone-500'}`} />
-                <span>Returns</span>
+                <div className="flex items-center gap-3">
+                  <HiOutlineRefresh className={`w-4 h-4 ${activeTab === 'returns' ? 'text-[#8b6f4e]' : 'text-stone-500'}`} />
+                  <span>Returns</span>
+                </div>
+                {(returnOrderCount || 0) > 0 && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#8b6f4e]/10 text-[#8b6f4e]">
+                    {returnOrderCount}
+                  </span>
+                )}
               </button>
 
               {/* Address Book Tab */}
@@ -1422,14 +1428,16 @@ const Profile = () => {
                                 <HiOutlineDocumentText className="w-4 h-4 text-[#7A5B3A]" />
                                 <span>{downloadingOrderId === (order._id || order.id) ? 'Downloading...' : 'Download Invoice'}</span>
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => setTrackingOrder(order)}
-                                className="px-4 py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
-                              >
-                                <HiOutlineCube className="w-4 h-4 text-[#7A5B3A]" />
-                                <span>Track Package</span>
-                              </button>
+                              {Boolean(order.shiprocketInfo?.awbCode) && (
+                                <button
+                                  type="button"
+                                  onClick={() => setTrackingOrder(order)}
+                                  className="px-4 py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
+                                >
+                                  <HiOutlineCube className="w-4 h-4 text-[#7A5B3A]" />
+                                  <span>Track Package</span>
+                                </button>
+                              )}
                               {['delivered', 'completed'].includes(status) && (
                                 <button
                                   type="button"

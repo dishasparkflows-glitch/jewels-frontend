@@ -13,14 +13,19 @@ export default function WishlistProductCard({ item, onRemove }) {
 
   const id = String(item.productId || item._id || item.id || '');
 
-  // If item doesn't have metalColors or colorImages, fetch from API
+  // Only fetch full product if we don't have basic card data at all
   useEffect(() => {
     let current = true;
-    const hasColors = (Array.isArray(item.metalColors) && item.metalColors.length > 0) ||
-      (Array.isArray(item.colorImages) && item.colorImages.length > 0) ||
-      (Array.isArray(item.metalColorIds) && item.metalColorIds.length > 0 && typeof item.metalColorIds[0] === 'object');
+    const hasBasicData = Boolean(
+      item.basicInfo?.title ||
+      item.title ||
+      item.pricing?.salePrice ||
+      item.pricing?.mrp ||
+      item.image ||
+      item.images
+    );
 
-    if (!hasColors && id && /^[a-f0-9]{24}$/i.test(id)) {
+    if (!hasBasicData && id && /^[a-f0-9]{24}$/i.test(id)) {
       productsAPI.getById(id)
         .then((res) => {
           if (current && res?.data?.data) {

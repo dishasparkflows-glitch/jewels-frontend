@@ -16,6 +16,9 @@ const defaultCartValue = {
   removeFromCart: async () => {},
   clearCart: async () => {},
   totalItems: 0,
+  orderCount: 0,
+  returnOrderCount: 0,
+  countsData: { cartCount: 0, wishlistCount: 0, orderCount: 0, returnOrderCount: 0 },
   subtotal: 0,
   shipping: 0,
   tax: 0,
@@ -120,6 +123,13 @@ export const CartProvider = ({ children }) => {
     total: 0,
   });
 
+  const [countsData, setCountsData] = useState({
+    cartCount: 0,
+    wishlistCount: 0,
+    orderCount: 0,
+    returnOrderCount: 0,
+  });
+
   // Calculate local fallback totals if needed
   const calculateTotals = useCallback((items) => {
     const totalItems = items.length;
@@ -206,6 +216,12 @@ export const CartProvider = ({ children }) => {
         ...prev,
         totalItems: count,
       }));
+      setCountsData({
+        cartCount: count,
+        wishlistCount: Number(data.wishlistCount || 0),
+        orderCount: Number(data.orderCount || 0),
+        returnOrderCount: Number(data.returnOrderCount || 0),
+      });
       return data;
     } catch (err) {
       console.warn('Failed to fetch badge counts:', err);
@@ -568,6 +584,9 @@ export const CartProvider = ({ children }) => {
         removeFromCart,
         clearCart,
         totalItems,
+        orderCount: countsData.orderCount,
+        returnOrderCount: countsData.returnOrderCount,
+        countsData,
         subtotal,
         shipping,
         tax,

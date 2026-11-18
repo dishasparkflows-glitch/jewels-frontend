@@ -306,6 +306,7 @@ export default function Shop({ defaultCategory = '' }) {
 
     const query = {
       status: 'approved',
+      forweb: true,
       page,
       limit,
       sort,
@@ -478,7 +479,7 @@ export default function Shop({ defaultCategory = '' }) {
       {/* ─── Top Category Banner Image (Exact Match: 100% full width, max-h-[360px], object-cover, bg-[#FAF7F2]) ─── */}
       {displayBanner && (
         <div className="w-full relative overflow-hidden bg-[#FAF7F2]">
-          {displayBanner.mediaType === 'video' ? (
+          {displayBanner.image?.mediaType === 'video' || displayBanner.mediaType === 'video' ? (
             <video
               src={displayBanner.video?.url || displayBanner.image?.url}
               autoPlay
@@ -497,21 +498,21 @@ export default function Shop({ defaultCategory = '' }) {
         </div>
       )}
 
-      {/* ─── Category Coupon Code Strip (Styled with active storefront theme) ─── */}
+      {/* ─── Category Coupon Code Strip (Styled with active storefront dark header theme) ─── */}
       {currentCoupon && (
         <div
           style={{
-            backgroundColor: 'var(--btn-primary-bg, ' + themeColor + ')',
-            color: 'var(--btn-primary-text, ' + themeTextColor + ')',
+            backgroundColor: 'var(--storefront-header-bg, #201e1b)',
+            color: 'var(--storefront-header-text, #ffffff)',
           }}
-          className="w-full py-1 sm:py-1.5 px-4 shadow-xs border-t border-b border-black/10 select-none flex items-center justify-center transition-colors"
+          className="w-full py-1 sm:py-1.5 px-4 shadow-xs border-t border-b border-white/10 select-none flex items-center justify-center transition-colors"
         >
           <div className="max-w-7xl w-full mx-auto flex items-center justify-between sm:justify-center relative">
             {activeCoupons.length > 1 && (
               <button
                 type="button"
                 onClick={() => setCouponIndex((prev) => (prev - 1 + activeCoupons.length) % activeCoupons.length)}
-                className="p-0.5 text-white/70 hover:text-white transition-colors mr-2 sm:absolute sm:left-4"
+                className="p-0.5 text-white/70 hover:text-[#d2b18a] transition-colors mr-2 sm:absolute sm:left-4"
                 title="Previous coupon"
                 aria-label="Previous coupon"
               >
@@ -528,13 +529,13 @@ export default function Shop({ defaultCategory = '' }) {
                   className="group inline-flex items-center justify-center gap-1.5 text-[9.5px] sm:text-[10.5px] md:text-[11px] tracking-[0.16em] uppercase font-normal text-white/95 hover:text-white transition-all cursor-pointer focus:outline-none leading-tight"
                   title="Click to copy coupon code"
                 >
-                  <HiOutlineTag className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white/80 group-hover:scale-110 transition-transform flex-shrink-0" />
+                  <HiOutlineTag className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#d2b18a] group-hover:scale-110 transition-transform flex-shrink-0" />
                   <span className="truncate">
-                    USE CODE <strong className="font-bold underline decoration-dotted underline-offset-2 tracking-[0.18em] text-white group-hover:text-amber-100 transition-colors">'{code}'</strong> {discountPhrase}
+                    USE CODE <strong className="font-bold underline decoration-dotted underline-offset-2 tracking-[0.18em] text-[#d2b18a] group-hover:text-amber-200 transition-colors">'{code}'</strong> {discountPhrase}
                   </span>
                   {copiedCouponCode === code && (
-                    <span className="inline-flex items-center gap-0.5 text-[9.5px] font-semibold bg-white text-stone-900 px-1.5 py-0.5 rounded-full ml-1.5 normal-case tracking-normal flex-shrink-0 shadow-xs">
-                      <HiOutlineCheck className="w-2.5 h-2.5 text-emerald-600" /> Copied!
+                    <span className="inline-flex items-center gap-0.5 text-[9.5px] font-semibold bg-[#d2b18a] text-stone-900 px-1.5 py-0.5 rounded-full ml-1.5 normal-case tracking-normal flex-shrink-0 shadow-xs">
+                      <HiOutlineCheck className="w-2.5 h-2.5 text-stone-900" /> Copied!
                     </span>
                   )}
                 </button>
@@ -545,7 +546,7 @@ export default function Shop({ defaultCategory = '' }) {
               <button
                 type="button"
                 onClick={() => setCouponIndex((prev) => (prev + 1) % activeCoupons.length)}
-                className="p-0.5 text-white/70 hover:text-white transition-colors ml-2 sm:absolute sm:right-4"
+                className="p-0.5 text-white/70 hover:text-[#d2b18a] transition-colors ml-2 sm:absolute sm:right-4"
                 title="Next coupon"
                 aria-label="Next coupon"
               >

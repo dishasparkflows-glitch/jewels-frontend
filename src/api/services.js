@@ -2,6 +2,7 @@ import api, { getOnce } from './axios';
 
 // ─── Auth ─────────────────────────────────────────
 export const authAPI = {
+  checkAvailability: (data) => api.post('/auth/check-availability', data),
   login: (data) => api.post('/auth/login', data),
   googleLogin: (credential) => api.post('/auth/google', { credential }),
   requestPasswordReset: (data) => api.post('/auth/forgot-password', data),
@@ -120,8 +121,10 @@ export const checkoutAPI = {
   getPaymentConfig: () => paymentsAPI.getConfig(),
   createOrder: (orderData) => ordersAPI.create(orderData),
   verifyRazorpay: (data) => paymentsAPI.verifyRazorpay(data),
-  sendOtp: (phone, purpose) => otpAPI.send({ phone, purpose }),
-  verifyOtp: (phone, otp, purpose) => otpAPI.verify({ phone, otp, purpose }),
+  sendOtp: (phone, purpose, countryCode = '+91') =>
+    otpAPI.send(typeof phone === 'object' ? phone : { phone, purpose, countryCode }),
+  verifyOtp: (phone, otp, purpose, countryCode = '+91') =>
+    otpAPI.verify(typeof phone === 'object' ? phone : { phone, otp, purpose, countryCode }),
 };
 
 // ─── OTP (Mobile Verification) ─────────────────────────
@@ -157,16 +160,16 @@ export const featuredAPI = {
 
 // ─── Products ─────────────────────────────────────
 export const productsAPI = {
-  getAll: (params) => getOnce('/products/storefront', { params }),
+  getAll: (params) => getOnce('/products/storefront', { params: { forweb: true, ...params } }),
   getStorefront: (params) => productsAPI.getAll(params),
-  getSearchStorefront: (params) => api.get('/products/search/storefront', { params }),
-  getHomeProducts: (params) => getOnce('/products/home', { params }),
+  getSearchStorefront: (params) => api.get('/products/search/storefront', { params: { forweb: true, ...params } }),
+  getHomeProducts: (params) => getOnce('/products/home', { params: { forweb: true, ...params } }),
   getHomeStorefront: (params) => productsAPI.getHomeProducts(params),
-  getHomeSections: (params) => getOnce('/products/home-sections', { params }),
-  getMostLiked: (params) => api.get('/products/most-liked', { params }),
+  getHomeSections: (params) => getOnce('/products/home-sections', { params: { forweb: true, ...params } }),
+  getMostLiked: (params) => api.get('/products/most-liked', { params: { forweb: true, ...params } }),
   getById: (id) => getOnce(`/products/${id}`),
   getBySku: (code) => getOnce(`/products/sku/${encodeURIComponent(code)}`),
-  getSimilar: (id, params) => api.get(`/products/${id}/similar`, { params }),
+  getSimilar: (id, params) => api.get(`/products/${id}/similar`, { params: { forweb: true, ...params } }),
 };
 
 // ─── Reviews ──────────────────────────────────────
@@ -227,9 +230,9 @@ export const blogCategoriesAPI = {
 };
 
 export const blogsAPI = {
-  getAll: (params) => getOnce('/blogs', { params }),
-  getBySlug: (slug) => getOnce(`/blogs/slug/${slug}`),
-  getRecent: (limit = 4) => getOnce(`/blogs/recent?limit=${limit}`),
+  getAll: (params, config = {}) => getOnce('/blogs', { params, ...config }),
+  getBySlug: (slug, config = {}) => getOnce(`/blogs/slug/${slug}`, config),
+  getRecent: (limit = 4, config = {}) => getOnce(`/blogs/recent?limit=${limit}`, config),
 };
 
 // ─── Static Pages ─────────────────────────────────

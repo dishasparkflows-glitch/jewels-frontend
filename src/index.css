@@ -72,6 +72,15 @@
   .luxury-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #8b6f4e;
   }
+
+  /* Hide scrollbar utility */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
 :root {
@@ -366,4 +375,19 @@ input.autofill-neutral:-webkit-autofill:active {
   box-shadow: 0 0 0 1000px #F8F7F5 inset !important;
   -webkit-text-fill-color: #292524 !important;
   transition: background-color 5000s ease-in-out 0s;
+}
+
+@keyframes luxuryFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: luxuryFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

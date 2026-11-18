@@ -45,6 +45,15 @@ export default function CustomerTrackingModal({
     }
   }, [isOpen, orderId, awbCode]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const scans = tracking?.scans || [];
@@ -62,8 +71,16 @@ export default function CustomerTrackingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden border border-stone-200 animate-scale-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer animate-fadeIn"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden border border-stone-200 animate-scale-in cursor-default"
+      >
         {/* Luxury Header */}
         <div className="bg-gradient-to-r from-[#1c1917] via-[#292524] to-[#1c1917] text-white p-5 flex items-center justify-between border-b border-amber-900/30">
           <div className="flex items-center gap-3">

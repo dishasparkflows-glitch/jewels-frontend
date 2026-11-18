@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { wishlistAPI } from '../api/services';
@@ -13,6 +13,7 @@ const defaultWishlistValue = {
   wishlistMap: {},
   wishlistCount: 0,
   loading: false,
+  isInitialLoaded: false,
   isWishlisted: () => false,
   toggleWishlist: async () => {},
   addToWishlist: async () => {},
@@ -27,6 +28,10 @@ export const WishlistProvider = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const inFlightPromiseRef = useRef(null);
+  const lastFetchTimeRef = useRef(0);
+  const wishlistItemsRef = useRef([]);
+
   const [wishlistItems, setWishlistItems] = useState(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!token) {
@@ -40,6 +45,21 @@ export const WishlistProvider = ({ children }) => {
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
+    }
+  });
+
+  useEffect(() => {
+    wishlistItemsRef.current = wishlistItems;
+  }, [wishlistItems]);
+
+  const [isInitialLoaded, setIsInitialLoaded] = useState(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!token) return true;
+    try {
+      const saved = localStorage.getItem('jewels_wishlist');
+      return Boolean(saved && JSON.parse(saved).length > 0);
+    } catch {
+      return false;
     }
   });
 
@@ -61,42 +81,75 @@ export const WishlistProvider = ({ children }) => {
   });
   const [loading, setLoading] = useState(false);
 
-  // Fetch wishlist from backend
-  const fetchWishlist = useCallback(async () => {
-    const token = localStorage.getItem('token');
+  // Fetch wishlist from backend with silent Stale-While-Revalidate caching
+  const fetchWishlist = useCallback(async (options = {}) => {
+    const { force = false, silent = false } = typeof options === 'boolean' ? { silent: options } : options;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!token && !user) {
-      return;
+      setIsInitialLoaded(true);
+      return [];
     }
 
-    try {
-      setLoading(true);
-      const res = await wishlistAPI.get();
-      const data = res?.data?.data || res?.data || {};
-      const rawProductList = Array.isArray(data.productIds) ? data.productIds : (Array.isArray(data.items) ? data.items : []);
-      const items = rawProductList.filter((item) => item && typeof item === 'object');
+    const now = Date.now();
+    // Throttle duplicate calls within 15s unless forced
+    if (!force && lastFetchTimeRef.current && (now - lastFetchTimeRef.current < 15000)) {
+      if (inFlightPromiseRef.current) return inFlightPromiseRef.current;
+      return wishlistItemsRef.current;
+    }
 
-      setWishlistItems(items);
-      try {
-        localStorage.setItem('jewels_wishlist', JSON.stringify(items));
-      } catch {}
+    if (inFlightPromiseRef.current) {
+      return inFlightPromiseRef.current;
+    }
 
-      const map = {};
-      if (Array.isArray(data.productIds)) {
-        data.productIds.forEach((id) => {
-          if (id) map[String(id._id || id)] = true;
-        });
+    const fetchPromise = (async () => {
+      // Never block or show full-screen skeletons if we already have items in memory
+      if (!silent && wishlistItemsRef.current.length === 0) {
+        setLoading(true);
       }
-      items.forEach((item) => {
-        if (item.productId) map[String(item.productId)] = true;
-        if (item._id) map[String(item._id)] = true;
-      });
-      setWishlistMap(map);
-      setWishlistCount(items.length);
-    } catch (err) {
-      console.warn('Failed to fetch wishlist from API:', err);
-    } finally {
-      setLoading(false);
-    }
+      try {
+        const res = await wishlistAPI.get();
+        const data = res?.data?.data || res?.data || {};
+        const rawProductList = Array.isArray(data.productIds) ? data.productIds : (Array.isArray(data.items) ? data.items : []);
+        const items = rawProductList.filter((item) => item && typeof item === 'object');
+
+        setWishlistItems((prev) => {
+          const prevKey = prev.map((i) => String(i._id || i.productId || i.id || '')).sort().join(',');
+          const newKey = items.map((i) => String(i._id || i.productId || i.id || '')).sort().join(',');
+          if (prevKey === newKey && prev.length === items.length && prev.length > 0) {
+            return prev;
+          }
+          try {
+            localStorage.setItem('jewels_wishlist', JSON.stringify(items));
+          } catch {}
+          return items;
+        });
+
+        const map = {};
+        if (Array.isArray(data.productIds)) {
+          data.productIds.forEach((id) => {
+            if (id) map[String(id._id || id)] = true;
+          });
+        }
+        items.forEach((item) => {
+          if (item.productId) map[String(item.productId)] = true;
+          if (item._id) map[String(item._id)] = true;
+        });
+        setWishlistMap(map);
+        setWishlistCount(items.length);
+        lastFetchTimeRef.current = Date.now();
+        setIsInitialLoaded(true);
+        return items;
+      } catch (err) {
+        console.warn('Failed to fetch wishlist from API:', err);
+        return wishlistItemsRef.current;
+      } finally {
+        setLoading(false);
+        inFlightPromiseRef.current = null;
+      }
+    })();
+
+    inFlightPromiseRef.current = fetchPromise;
+    return fetchPromise;
   }, [user]);
 
   const [wishlistCount, setWishlistCount] = useState(() => {
@@ -146,25 +199,34 @@ export const WishlistProvider = ({ children }) => {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user?._id, user?.id]);
 
-  // Sync count on mount or user/route change: only fetch full wishlist if directly on /wishlist page
+  const userId = user?._id || user?.id;
+
+  // Sync count & prefetch wishlist in the background on mount or user change
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    if (!token && !user) {
+    if (!token && !userId) {
       setWishlistItems([]);
       setWishlistMap({});
       setWishlistCount(0);
+      setIsInitialLoaded(true);
       try {
         localStorage.removeItem('jewels_wishlist');
       } catch {}
       return;
     }
     fetchWishlistCount();
+    // Silent prefetch so data is already loaded in memory before user clicks the heart icon!
+    fetchWishlist({ silent: true });
+  }, [userId, fetchWishlistCount, fetchWishlist]);
+
+  // When navigating directly to /wishlist, perform silent background revalidation
+  useEffect(() => {
     if (location.pathname === '/wishlist') {
-      fetchWishlist();
+      fetchWishlist({ silent: true });
     }
-  }, [fetchWishlistCount, fetchWishlist, user, location.pathname]);
+  }, [location.pathname, fetchWishlist]);
 
   // Check if a specific product is wishlisted
   const isWishlisted = useCallback(
@@ -361,6 +423,7 @@ export const WishlistProvider = ({ children }) => {
         wishlistCount,
         fetchWishlistCount,
         loading,
+        isInitialLoaded,
         isWishlisted,
         toggleWishlist,
         addToWishlist,

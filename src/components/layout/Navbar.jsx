@@ -146,7 +146,7 @@ const SearchProductCard = ({ item, variant = 'desktop', onSelect }) => {
 const Navbar = () => {
   const { user, logout, openLoginModal } = useAuth();
   const { totalItems, cartDrawerOpen, setCartDrawerOpen } = useCart();
-  const { wishlistCount } = useWishlist();
+  const { wishlistCount, refreshWishlist } = useWishlist();
   const [categories, setCategories] = useState([]);
   const collections = useMemo(() => {
     return (categories || [])
@@ -721,6 +721,8 @@ const Navbar = () => {
             {user ? (
               <Link
                 to="/wishlist"
+                onMouseEnter={() => refreshWishlist?.({ silent: true })}
+                onTouchStart={() => refreshWishlist?.({ silent: true })}
                 onClick={() => {
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
@@ -1008,6 +1010,8 @@ const Navbar = () => {
             {user ? (
               <Link
                 to="/wishlist"
+                onMouseEnter={() => refreshWishlist?.({ silent: true })}
+                onTouchStart={() => refreshWishlist?.({ silent: true })}
                 onClick={() => {
                   setMobileMenuOpen(false);
                   window.scrollTo({ top: 0, behavior: 'smooth' });

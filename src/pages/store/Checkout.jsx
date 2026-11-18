@@ -18,6 +18,8 @@ import {
   HiOutlineExclamationCircle,
   HiX,
   HiSparkles,
+  HiPlus,
+  HiMinus,
 } from 'react-icons/hi';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -473,7 +475,7 @@ export default function Checkout() {
     const otpToast = toast.loading('Sending verification code...');
 
     try {
-      const resp = await checkoutAPI.sendOtp(form.phone, 'order_verification');
+      const resp = await checkoutAPI.sendOtp(form.phone, 'order_verification', form.countryCode || '+91');
       const resData = resp?.data?.data || resp?.data;
       toast.dismiss(otpToast);
       if (resData?.devOtp) {
@@ -571,16 +573,6 @@ export default function Checkout() {
                   <h2 className="text-base font-bold text-stone-900">Delivery</h2>
                 </div>
                 <div className="flex items-center gap-2">
-                  {(isAddingNewAddress || addresses.length === 0) && (
-                    <button
-                      type="button"
-                      onClick={handleUseLocation}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#ebd9c8] bg-[#fdfbf9] text-xs font-medium text-[#8c6536] hover:bg-[#fbf5ee] transition cursor-pointer"
-                    >
-                      <HiOutlineLocationMarker className="h-3.5 w-3.5 text-[#8c6536]" />
-                      <span>Use Current Location</span>
-                    </button>
-                  )}
                   {addresses.length > 0 && (
                     <button
                       type="button"
@@ -906,7 +898,7 @@ export default function Checkout() {
           </div>
 
           {/* Right Column: Order Summary Card */}
-          <aside className="rounded-2xl border border-stone-200/90 bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-6 lg:sticky lg:top-24">
+          <aside className="rounded-2xl border border-stone-200/90 bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-6 lg:sticky lg:top-[164px] z-20">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-stone-100">
               <div className="flex items-center gap-2.5">
@@ -921,66 +913,146 @@ export default function Checkout() {
             </div>
 
             {/* Items List */}
-            <div className="max-h-[340px] space-y-4 overflow-y-auto pr-1">
-              {cart.map((item) => {
+            <div className="space-y-4 max-h-[420px] overflow-y-auto no-scrollbar">
+              {cart.map((item, index) => {
                 const image = item.image && !isOrnateImage(item.image) ? item.image : getPrimaryProductImage(item);
-                const cleanMetal = resolveMetalName(item.selectedMetal);
-                const cleanSize = cleanAttribute(item.selectedSize);
+                const isSilver =
+                  Boolean(item.isSilver) ||
+                  Boolean(item.isSilverProduct) ||
+                  Boolean(item.basicInfo?.isSilver) ||
+                  Boolean(item.basicInfo?.isSilverProduct) ||
+                  Boolean(item.isOrnate) ||
+                  Boolean(item.basicInfo?.isOrnate) ||
+                  item.category === 'silver' ||
+                  item.categorySlug === 'silver' ||
+                  item.categorySlug === 'silver-collection' ||
+                  item.category === 'Silver Collection' ||
+                  item.category?.name === 'Silver Collection' ||
+                  String(item.title || item.basicInfo?.title || item.name || '').toLowerCase().startsWith('92.5') ||
+                  String(item.selectedMetal || '').toLowerCase().includes('silver');
+
+                const attrs = item.selectedAttributes || {};
+                const rawDiamondType = isSilver ? '' : (attrs.diamondType || '');
+                const diamondType = cleanAttribute(rawDiamondType) || '';
+                const metalPurity = cleanAttribute(attrs.metalPurity) || (isSilver ? 'Silver' : '');
+                const metalColor = isSilver ? '' : (cleanAttribute(attrs.metalColor) || resolveMetalName(item.selectedMetal) || '');
+                const cleanPurity = metalPurity.replace(/\s*gold$/i, '').trim();
+                const rawMetal = item.selectedMetal
+                  || (cleanPurity && metalColor ? `${cleanPurity} ${metalColor}` : [metalPurity, metalColor].filter(Boolean).join(' '))
+                  || resolveMetalName(item.selectedMetal);
+                const metalDisplay = isSilver
+                  ? 'Silver'
+                  : (rawMetal ? rawMetal.replace(/^92\.5\s*/i, '').replace(/925\s*/i, '') : '');
+                const diamondShape = isSilver ? '' : (cleanAttribute(attrs.diamondShape) || '');
+                const diamondColor = isSilver ? '' : (cleanAttribute(attrs.diamondColor) || '');
+                const diamondClarity = isSilver ? '' : (cleanAttribute(attrs.diamondClarity) || '');
+                const clarityDisplay = diamondClarity || [diamondColor, diamondClarity].filter(Boolean).join(' ');
+                const caratWeight = isSilver ? null : (attrs.caratWeight != null ? attrs.caratWeight : null);
+                const sizeDisplay = cleanAttribute(attrs.size || item.selectedSize);
+
+                const attrParts = [];
+                if (metalDisplay) {
+                  attrParts.push(`METAL: ${isSilver ? 'SILVER' : metalDisplay}`);
+                }
+                if (metalColor) {
+                  attrParts.push(`COLOR: ${metalColor}`);
+                }
+                if (clarityDisplay) {
+                  attrParts.push(`CLARITY: ${clarityDisplay}`);
+                }
+                if (caratWeight != null && caratWeight !== '') {
+                  attrParts.push(`CARAT: ${caratWeight}`);
+                }
+                if (sizeDisplay) {
+                  attrParts.push(`SIZE: ${sizeDisplay}`);
+                }
+                if (diamondShape) {
+                  attrParts.push(`DIAMONDSHAPE: ${diamondShape}`);
+                }
+
+                if (attrParts.length === 0) {
+                  const fallbackMetal = resolveMetalName(item.selectedMetal);
+                  const fallbackSize = cleanAttribute(item.selectedSize);
+                  if (fallbackMetal) attrParts.push(`METAL: ${fallbackMetal}`);
+                  if (fallbackSize) attrParts.push(`SIZE: ${fallbackSize}`);
+                }
+
+                const displayName = item.name || item.title || item.basicInfo?.title || 'Jewellery item';
+                const targetIdentifier =
+                  item.slug ||
+                  item.basicInfo?.slug ||
+                  item.productId ||
+                  item.id ||
+                  displayName.toLowerCase().trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '');
+                const productLink = `/product/${encodeURIComponent(targetIdentifier)}`;
+
                 return (
                   <article
                     key={`${item.id}-${item.selectedMetal || ''}-${item.selectedSize || ''}`}
-                    className="flex gap-3.5"
+                    className={`flex gap-3.5 ${
+                      index < cart.length - 1 ? 'border-b border-dashed border-stone-300 pb-4' : 'pb-1'
+                    }`}
                   >
-                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-stone-100 bg-[#f7f3ee] p-1.5 flex items-center justify-center">
+                    <Link
+                      to={productLink}
+                      className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-stone-100 bg-[#f7f3ee] p-1.5 flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer"
+                      title={`View ${displayName}`}
+                    >
                       {image && (
                         <img
                           src={image}
-                          alt={item.name || item.title || 'Jewellery item'}
+                          alt={displayName}
                           className="h-full w-full object-contain"
                         />
                       )}
-                    </div>
+                    </Link>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="line-clamp-2 text-xs font-semibold uppercase leading-snug text-stone-900">
-                            {item.name || item.title}
-                          </p>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            <span className="rounded-full bg-[#fbf5ee] px-2 py-0.5 text-[9px] font-medium text-[#8c6536]">
-                              Premium
-                            </span>
-                          </div>
+                          <Link
+                            to={productLink}
+                            className="line-clamp-2 text-xs font-semibold uppercase leading-snug text-stone-900 hover:text-[#8c6536] transition-colors block cursor-pointer"
+                            title={`View ${displayName}`}
+                          >
+                            {displayName}
+                          </Link>
+                          {diamondType && (
+                            <div className="mt-1">
+                              <span className="inline-block px-2 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase bg-[#faf5ee] text-[#8b6f4e] border border-[#e8d9c2]">
+                                {diamondType}
+                              </span>
+                            </div>
+                          )}
+                          {attrParts.length > 0 && (
+                            <p className="mt-1 text-[10px] leading-relaxed text-stone-500 font-medium tracking-wide uppercase">
+                              {attrParts.join('  I  ')}
+                            </p>
+                          )}
                         </div>
                         <span className="shrink-0 text-xs font-bold text-stone-900">
                           {formatPrice(Number(item.price) * Number(item.quantity || 1))}
                         </span>
                       </div>
-                      {(cleanMetal || cleanSize) && (
-                        <p className="mt-1 text-[11px] text-stone-500">
-                          {[cleanMetal, cleanSize && `Size: ${cleanSize}`].filter(Boolean).join(' · ')}
-                        </p>
-                      )}
-                      <div className="mt-2 inline-flex items-center rounded-lg border border-stone-200 bg-white">
+                      <div className="mt-2 inline-flex items-center rounded-lg border border-stone-200 bg-white shadow-2xs">
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.id, (item.quantity || 1) - 1)}
                           disabled={(item.quantity || 1) <= 1}
-                          className="flex h-6 w-6 items-center justify-center text-xs font-semibold text-stone-600 transition hover:bg-stone-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                          className="flex h-6 w-6 items-center justify-center text-xs font-semibold text-stone-600 transition hover:bg-stone-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                           aria-label={`Decrease quantity of ${item.name || item.title}`}
                         >
-                          −
+                          <HiMinus className="h-3 w-3" />
                         </button>
-                        <span className="min-w-[24px] px-1 text-center text-xs font-bold text-stone-900">
+                        <span className="min-w-[24px] px-1 text-center text-xs font-bold text-stone-900 select-none">
                           {item.quantity || 1}
                         </span>
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1)}
-                          className="flex h-6 w-6 items-center justify-center text-xs font-semibold text-stone-600 transition hover:bg-stone-100"
+                          className="flex h-6 w-6 items-center justify-center text-xs font-semibold text-stone-600 transition hover:bg-stone-100 cursor-pointer"
                           aria-label={`Increase quantity of ${item.name || item.title}`}
                         >
-                          +
+                          <HiPlus className="h-3 w-3" />
                         </button>
                       </div>
                     </div>

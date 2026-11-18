@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { HiOutlineShieldCheck, HiOutlineExclamationCircle, HiX } from 'react-icons/hi';
 import toast from 'react-hot-toast';
-import { checkoutAPI } from '../../api/services';
+import { otpAPI } from '../../api/services';
 
 const maskPhone = (phone, countryCode = '+91') => {
   const digits = String(phone || '').replace(/\D/g, '');
@@ -20,6 +20,10 @@ export default function OtpVerificationModal({
   onClose,
   phone,
   countryCode = '+91',
+  purpose = 'order_verification',
+  title = 'Verify Mobile Number',
+  subtitle,
+  caption,
   onVerified,
   initialDevOtp = '',
 }) {
@@ -114,7 +118,7 @@ export default function OtpVerificationModal({
     setIsResending(true);
     setErrorMsg('');
     try {
-      const response = await checkoutAPI.sendOtp(phone, 'order_verification');
+      const response = await otpAPI.send({ phone, countryCode, purpose });
       const resData = response?.data?.data || response?.data;
       setTimeLeft(30);
       setDigits(['', '', '', '']);
@@ -144,7 +148,7 @@ export default function OtpVerificationModal({
     const toastId = toast.loading('Verifying OTP...');
 
     try {
-      const response = await checkoutAPI.verifyOtp(phone, otpString, 'order_verification');
+      const response = await otpAPI.verify({ phone, otp: otpString, purpose, countryCode });
       const data = response?.data?.data || response?.data;
       toast.success('Mobile number verified successfully!', { id: toastId });
       if (onVerified) {
@@ -163,7 +167,7 @@ export default function OtpVerificationModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn"
+      className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-fadeIn"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-verify-mobile-title"
@@ -192,10 +196,14 @@ export default function OtpVerificationModal({
 
         {/* Title & Subtitle */}
         <h2 id="modal-verify-mobile-title" className="text-lg font-bold text-stone-900 tracking-tight">
-          Verify Mobile Number
+          {title}
         </h2>
         <p className="mt-1 text-xs text-stone-500 font-medium">
-          OTP sent to <span className="font-semibold text-stone-700">{maskedNumber}</span>
+          {subtitle || (
+            <>
+              OTP sent to <span className="font-semibold text-stone-700">{maskedNumber}</span>
+            </>
+          )}
         </p>
 
         {/* Dev OTP Helper in development */}
@@ -288,7 +296,9 @@ export default function OtpVerificationModal({
 
         {/* Footer Caption */}
         <p className="mt-3.5 text-[11px] text-stone-400 font-medium">
-          Required for your security before order placement.
+          {caption || (purpose === 'registration'
+            ? 'Required for your security before account creation.'
+            : 'Required for your security before order placement.')}
         </p>
       </div>
     </div>

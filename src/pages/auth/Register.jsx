@@ -14,6 +14,8 @@ import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { getImageUrl } from '../../utils/imageUrl';
 import Modal from '../../components/common/Modal';
 import PhoneInput from '../../components/common/PhoneInput';
+import OtpVerificationModal from '../../components/store/OtpVerificationModal';
+import { authAPI, otpAPI } from '../../api/services';
 
 const Register = () => {
   const { register, loginWithGoogle } = useAuth();
@@ -24,6 +26,9 @@ const Register = () => {
   const [countryCode, setCountryCode] = useState('+91');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [devOtp, setDevOtp] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleReady, setGoogleReady] = useState(false);
@@ -67,24 +72,87 @@ const Register = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setErrorMessage('');
+
     const nameParts = form.fullName.trim().split(/\s+/).filter(Boolean);
     if (!nameParts.length) {
       toast.error('Please enter your full name');
       return;
     }
 
+    const email = form.email.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    const rawPhone = (form.phone || '').trim();
+    const cleanPhone = rawPhone.replace(/\D/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      toast.error('Please enter a valid 10-digit mobile number');
+      return;
+    }
+
+    if (!form.password || form.password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    setSendingOtp(true);
+    const toastId = toast.loading('Sending verification code...');
+    try {
+      // 1. Verify availability of email and phone before sending SMS
+      await authAPI.checkAvailability({ email, phone: cleanPhone });
+
+      // 2. Send OTP via SMS service
+      const formattedCountryCode = (countryCode || '+91').trim().startsWith('+')
+        ? (countryCode || '+91').trim()
+        : `+${(countryCode || '91').trim()}`;
+      const otpResp = await otpAPI.send({
+        phone: cleanPhone,
+        countryCode: formattedCountryCode,
+        purpose: 'registration',
+      });
+      const resData = otpResp?.data?.data || otpResp?.data;
+      if (resData?.devOtp) {
+        setDevOtp(resData.devOtp);
+      }
+      toast.success(`OTP sent to mobile number`, { id: toastId });
+      setShowOtpModal(true);
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Could not send verification code';
+      setErrorMessage(msg);
+      toast.error(msg, { id: toastId });
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleOtpVerified = async (verifyData) => {
+    setShowOtpModal(false);
     setLoading(true);
+    setErrorMessage('');
+
+    const nameParts = form.fullName.trim().split(/\s+/).filter(Boolean);
+    const rawPhone = (form.phone || '').trim();
+    const cleanPhone = rawPhone.replace(/\D/g, '');
+    const formattedCountryCode = (countryCode || '+91').trim().startsWith('+')
+      ? (countryCode || '+91').trim()
+      : `+${(countryCode || '91').trim()}`;
+
     try {
       await register({
         profile: {
           firstName: nameParts[0],
           lastName: nameParts.slice(1).join(' ') || 'Customer',
-          phone: `${countryCode} ${form.phone.trim()}`,
+          phone: cleanPhone,
+          countryCode: formattedCountryCode,
+          isPhoneVerified: true,
         },
         auth: {
           email: form.email.trim().toLowerCase(),
           password: form.password,
         },
+        verificationToken: verifyData?.verificationToken,
       });
       toast.success('Welcome to Neirah Jewellers!', { icon: '✨' });
       navigate(destination, { replace: true });
@@ -289,10 +357,10 @@ const Register = () => {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || sendingOtp}
               className="!mt-4 flex h-11 w-full items-center justify-center rounded-xl btn-theme-primary text-sm font-medium shadow-sm transition disabled:cursor-wait disabled:opacity-60 cursor-pointer"
             >
-              {loading ? 'Creating Account…' : 'Create Account'}
+              {sendingOtp ? 'Sending OTP…' : loading ? 'Creating Account…' : 'Create Account'}
             </button>
           </form>
 
@@ -322,6 +390,20 @@ const Register = () => {
           </div>
         </section>
       </div>
+
+      {showOtpModal && (
+        <OtpVerificationModal
+          isOpen={showOtpModal}
+          onClose={() => setShowOtpModal(false)}
+          phone={(form.phone || '').trim().replace(/\D/g, '')}
+          countryCode={countryCode || '+91'}
+          purpose="registration"
+          title="Verify Your Mobile Number"
+          caption="Required for your security before account creation."
+          onVerified={handleOtpVerified}
+          initialDevOtp={devOtp}
+        />
+      )}
     </Modal>
   );
 };

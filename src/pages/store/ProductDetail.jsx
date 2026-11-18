@@ -336,9 +336,13 @@ export default function ProductDetail() {
 
   useEffect(() => {
     if (product?._id) {
-      fetchProductReviews(product._id);
+      if (Array.isArray(product.reviews)) {
+        setProductReviews(product.reviews);
+      } else {
+        fetchProductReviews(product._id);
+      }
     }
-  }, [product?._id, fetchProductReviews]);
+  }, [product?._id, product?.reviews, fetchProductReviews]);
 
   useEffect(() => {
     if (user) {
@@ -1492,6 +1496,9 @@ export default function ProductDetail() {
         const prodData = res.data?.data || res.data;
         if (prodData) {
           setProduct(prodData);
+          if (Array.isArray(prodData.reviews)) {
+            setProductReviews(prodData.reviews);
+          }
           trackProductView(prodData);
 
           // Fetch most liked products from API

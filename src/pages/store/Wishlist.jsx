@@ -5,11 +5,21 @@ import WishlistProductCard from '../../components/product/WishlistProductCard';
 import { useWishlist } from '../../contexts/WishlistContext';
 
 export default function Wishlist() {
-  const { wishlistItems, wishlistCount, loading, removeFromWishlist, clearWishlist, refreshWishlist } = useWishlist();
+  const {
+    wishlistItems,
+    wishlistCount,
+    loading,
+    isInitialLoaded,
+    removeFromWishlist,
+    clearWishlist,
+    refreshWishlist,
+  } = useWishlist();
 
   useEffect(() => {
-    refreshWishlist();
+    refreshWishlist({ silent: true });
   }, [refreshWishlist]);
+
+  const showSkeleton = (!isInitialLoaded || loading) && wishlistItems.length === 0;
 
   return (
     <section className="min-h-[75vh] bg-white pt-3 sm:pt-5 pb-12 sm:pb-16">
@@ -36,7 +46,7 @@ export default function Wishlist() {
           )}
         </header>
 
-        {loading ? (
+        {showSkeleton ? (
           <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4" aria-label="Loading wishlist" aria-busy="true">
             {Array.from({ length: 4 }, (_, index) => <div key={index} className="animate-pulse"><div className="aspect-square bg-stone-100" /><div className="mx-auto mt-4 h-4 w-3/4 bg-stone-100" /><div className="mx-auto mt-3 h-4 w-1/3 bg-stone-100" /></div>)}
           </div>
