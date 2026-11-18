@@ -20,8 +20,6 @@ import {
   HiOutlineDocumentText,
   HiOutlineStar,
   HiSparkles,
-  HiOutlineCheckCircle,
-  HiOutlinePencilAlt,
 } from 'react-icons/hi';
 import { IoStar } from 'react-icons/io5';
 import {
@@ -309,7 +307,7 @@ export default function ProductDetail() {
   // ─── Customer Reviews State ───
   const [productReviews, setProductReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [reviewSort, setReviewSort] = useState('recent');
+  const [reviewSort] = useState('recent');
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
   const [newReview, setNewReview] = useState({
@@ -2326,9 +2324,6 @@ export default function ProductDetail() {
                   <div className="flex items-center gap-3.5 sm:gap-4 flex-wrap">
                     {colors.map((c) => {
                       const isSel = selectedColor?.toLowerCase() === c.name?.toLowerCase();
-                      const bg = c.colorCode && c.colorCodeEnd
-                        ? `linear-gradient(135deg, ${c.colorCode} 0%, ${c.colorCodeEnd} 100%)`
-                        : (c.colorCode || c.hex || '#e5e7eb');
 
                       return (
                         <button

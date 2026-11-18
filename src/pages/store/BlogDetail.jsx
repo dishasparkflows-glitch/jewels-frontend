@@ -4,7 +4,6 @@ import {
   HiOutlineClock,
   HiOutlineTag,
   HiOutlineArrowLeft,
-  HiOutlineShare,
   HiOutlineEye,
   HiOutlineChevronRight,
   HiOutlineLink,

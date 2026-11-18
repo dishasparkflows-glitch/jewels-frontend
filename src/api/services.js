@@ -162,6 +162,7 @@ export const productsAPI = {
   getSearchStorefront: (params) => api.get('/products/search/storefront', { params }),
   getHomeProducts: (params) => getOnce('/products/home', { params }),
   getHomeStorefront: (params) => productsAPI.getHomeProducts(params),
+  getHomeSections: (params) => getOnce('/products/home-sections', { params }),
   getMostLiked: (params) => api.get('/products/most-liked', { params }),
   getById: (id) => getOnce(`/products/${id}`),
   getBySku: (code) => getOnce(`/products/sku/${encodeURIComponent(code)}`),

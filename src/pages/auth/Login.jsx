@@ -28,7 +28,6 @@ const Login = () => {
   const [googleReady, setGoogleReady] = useState(false);
   const googleButtonRef = useRef(null);
   const googleInitializedRef = useRef(false);
-  const logoUrl = getImageUrl(settings.logoImage?.url || settings.mobileLogoImage?.url);
   const authBannerUrl = getImageUrl(settings?.loginModalImage?.url);
   const returnTo = location.state?.from;
 

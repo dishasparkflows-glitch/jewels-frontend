@@ -70,7 +70,7 @@ function ShapeSilhouette({ name = '', code = '' }) {
 /**
  * Filter Group Content with Search, Active Pills, and Visual Swatches
  */
-function FilterOptionsList({ filter, params, isOptionSelected, handleToggleOption }) {
+function FilterOptionsList({ filter, isOptionSelected, handleToggleOption }) {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Selected options for this group
@@ -358,7 +358,6 @@ export default function FilterSidebar({
                 >
                   <FilterOptionsList
                     filter={filter}
-                    params={params}
                     isOptionSelected={isOptionSelected}
                     handleToggleOption={handleToggleOption}
                   />

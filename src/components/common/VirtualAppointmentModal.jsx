@@ -120,7 +120,6 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
         appointment: {
           date: new Date(formData.appointmentDate),
           preferredTime: formData.preferredTime,
-          serviceType: 'Jewellery Viewing',
         },
       };
 

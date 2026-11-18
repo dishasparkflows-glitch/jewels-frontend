@@ -179,7 +179,7 @@ export default function Shop({ defaultCategory = '' }) {
       window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
       document.documentElement.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
       document.body.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    } catch (_) {
+    } catch {
       window.scrollTo(0, 0);
     }
   };

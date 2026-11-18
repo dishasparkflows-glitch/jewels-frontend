@@ -14,9 +14,7 @@ import {
   HiOutlineOfficeBuilding,
   HiOutlineShoppingBag,
   HiOutlineTag,
-  HiOutlineTruck,
   HiOutlineUser,
-  HiOutlineX,
   HiOutlineExclamationCircle,
   HiX,
   HiSparkles,
@@ -368,9 +366,84 @@ export default function Checkout() {
       const response = await checkoutAPI.createOrder(orderPayload);
       const data = unwrapResponse(response);
       const order = data?.order;
+      const payment = data?.payment;
 
       if (!order) {
         throw new Error('Could not create order.');
+      }
+
+      // If COD with no advance due or no online payment gateway session
+      if (!payment || (paymentMethod === 'cod' && (!codFee || codDueNow === 0))) {
+        toast.success('Order placed successfully!', { id: toastId });
+        if (clearCart) clearCart();
+        navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}`);
+        return;
+      }
+
+      if (payment.provider === 'ccavenue') {
+        toast.loading('Redirecting to CCAvenue secure gateway...', { id: toastId });
+        submitCCAvenueForm({
+          gatewayUrl: payment.gatewayUrl,
+          accessCode: payment.accessCode,
+          encRequest: payment.encRequest,
+        });
+        return;
+      }
+
+      if (payment.provider === 'razorpay') {
+        const isLoaded = await loadRazorpayScript();
+        if (!isLoaded) {
+          toast.error('Unable to load Razorpay checkout SDK. Please verify your connection.', { id: toastId });
+          setSubmitting(false);
+          return;
+        }
+
+        toast.dismiss(toastId);
+
+        const rzp = new window.Razorpay({
+          key: payment.keyId,
+          amount: Math.round(Number(payment.amount) * 100),
+          currency: payment.currency || 'INR',
+          name: 'Neirah Jewels',
+          description: `Order #${order.orderNumber}`,
+          order_id: payment.gatewayOrderId,
+          prefill: {
+            name: `${form.firstName} ${form.lastName}`.trim(),
+            email: form.email,
+            contact: `${form.countryCode || '+91'}${form.phone}`.replace(/[^0-9]/g, ''),
+          },
+          theme: {
+            color: '#8c6536',
+          },
+          handler: async (resp) => {
+            const verifyToast = toast.loading('Confirming payment...');
+            try {
+              await checkoutAPI.verifyRazorpay({
+                orderId: order._id,
+                orderNumber: order.orderNumber,
+                razorpayOrderId: resp.razorpay_order_id,
+                razorpayPaymentId: resp.razorpay_payment_id,
+                razorpaySignature: resp.razorpay_signature,
+              });
+              toast.success('Payment verified successfully!', { id: verifyToast });
+              if (clearCart) clearCart();
+              navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}`);
+            } catch (err) {
+              toast.error(err.response?.data?.message || 'Payment verification failed', { id: verifyToast });
+            } finally {
+              setSubmitting(false);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              toast.error('Payment cancelled or incomplete.');
+              setSubmitting(false);
+            },
+          },
+        });
+
+        rzp.open();
+        return;
       }
 
       toast.success('Order placed successfully!', { id: toastId });

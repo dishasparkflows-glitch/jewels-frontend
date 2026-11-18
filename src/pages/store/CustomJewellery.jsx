@@ -6,8 +6,6 @@ import {
   HiOutlineCloudUpload,
   HiOutlineX,
   HiCheckCircle,
-  HiOutlineSparkles,
-  HiOutlinePhotograph,
   HiOutlineUser,
   HiOutlineMail,
 } from 'react-icons/hi';
@@ -189,7 +187,7 @@ export default function CustomJewellery() {
           );
         };
         reader.readAsDataURL(file);
-      } catch (readErr) {
+      } catch {
         setImages((prev) =>
           prev.map((item, idx) =>
             idx === index

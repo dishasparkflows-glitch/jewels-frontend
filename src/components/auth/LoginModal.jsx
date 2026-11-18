@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { HiOutlineEye, HiOutlineEyeOff, HiOutlineLockClosed, HiOutlineMail } from 'react-icons/hi';
 import { FcGoogle } from 'react-icons/fc';
@@ -23,7 +23,6 @@ export default function LoginModal({ isOpen, onClose }) {
   const googleButtonRef = useRef(null);
   const googleInitializedRef = useRef(false);
 
-  const logoUrl = getImageUrl(settings.logoImage?.url || settings.mobileLogoImage?.url);
   const authBannerUrl = getImageUrl(settings?.loginModalImage?.url);
 
   const handleClose = useCallback(() => {

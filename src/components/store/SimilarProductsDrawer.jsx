@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
 import {
   HiOutlineX,
   HiChevronLeft,
@@ -16,7 +15,6 @@ export default function SimilarProductsDrawer({
   productId,
   currentProduct,
 }) {
-  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const scrollContainerRef = useRef(null);
@@ -42,12 +40,7 @@ export default function SimilarProductsDrawer({
 
   // Fetch similar products whenever drawer opens
   const fetchSimilar = useCallback(async () => {
-    const targetId =
-      productId ||
-      currentProduct?._id ||
-      currentProduct?.id ||
-      currentProduct?.basicInfo?.slug ||
-      currentProduct?.slug;
+    const targetId = productId || currentProduct?._id || currentProduct?.id;
 
     if (!targetId) return;
 

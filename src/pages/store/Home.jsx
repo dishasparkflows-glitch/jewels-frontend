@@ -58,6 +58,7 @@ const Home = () => {
   const [platinumProducts, setPlatinumProducts] = useState([]);
   const [silverProducts, setSilverProducts] = useState([]);
   const [trendingProducts, setTrendingProducts] = useState([]);
+  const [homeSections, setHomeSections] = useState([]);
   const mostLovedScrollRef = useRef(null);
   const [isMostLovedHovered, setIsMostLovedHovered] = useState(false);
 
@@ -446,6 +447,26 @@ const Home = () => {
     fetchHomeProducts();
   }, []);
 
+  // ─── FETCH DYNAMIC HOME SECTIONS (/api/products/home-sections) ─────
+  useEffect(() => {
+    let mounted = true;
+    const fetchHomeSections = async () => {
+      try {
+        const res = await productsAPI.getHomeSections();
+        const list = Array.isArray(res?.data?.data) ? res.data.data : [];
+        if (mounted) {
+          setHomeSections(list);
+        }
+      } catch (err) {
+        console.error('Failed to load dynamic home sections:', err);
+      }
+    };
+    fetchHomeSections();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Auto scroll for Most Loved on Neirah
   useEffect(() => {
     const list = goldProducts.length > 0 ? goldProducts : platinumProducts;
@@ -719,6 +740,46 @@ const Home = () => {
             </div>
           </div>
         )}
+
+        {/* Dynamic Curated Home Sections (from /api/products/home-sections) */}
+        {homeSections.map((sec) => (
+          <div key={sec._id || sec.sectionKey}>
+            <div className="text-center mb-6">
+              <h2 className="text-xl md:text-2xl text-gray-900 leading-tight capitalize">
+                {sec.title}
+              </h2>
+              {sec.subtitle && (
+                <p className="text-xs sm:text-sm text-stone-500 mt-1">
+                  {sec.subtitle}
+                </p>
+              )}
+            </div>
+
+            <div
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              className="flex gap-3 sm:gap-4 lg:gap-5 overflow-x-auto pb-4 no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-mandatory scroll-smooth"
+            >
+              {sec.products.map((product) => (
+                <div
+                  key={product.id || product._id}
+                  className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(50%-8px)] md:w-[calc(33.333%-11px)] lg:w-[calc(25%-15px)] xl:w-[calc(20%-16px)] snap-start"
+                >
+                  <HomeProductCard product={product} isSilver={product.isSilver} />
+                </div>
+              ))}
+            </div>
+
+            {/* DISCOVER Button */}
+            <div className="flex justify-center mt-6 sm:mt-8">
+              <Link
+                to={sec.buttonLink || (sec.sectionKey ? `/shop?section=${encodeURIComponent(sec.sectionKey)}` : '/shop')}
+                className="px-12 py-2.5 border border-gray-800 rounded text-[13px] uppercase hover:bg-black hover:text-white transition-all font-medium"
+              >
+                {sec.buttonText || 'DISCOVER'}
+              </Link>
+            </div>
+          </div>
+        ))}
       </section>
 
       {/* ─────────────────────────────────────────────────────────────────

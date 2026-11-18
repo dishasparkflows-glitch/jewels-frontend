@@ -6,7 +6,7 @@ import { usersAPI, addressesAPI, ordersAPI, reviewsAPI } from '../../api/service
 import { toast } from 'react-hot-toast';
 import Dropdown from '../../components/common/Dropdown';
 import PhoneInput from '../../components/common/PhoneInput';
-import { FaStar, FaRegStar } from 'react-icons/fa6';
+import { FaStar } from 'react-icons/fa6';
 import {
   HiOutlineUser,
   HiOutlineCube,
@@ -24,11 +24,9 @@ import {
   HiOutlineViewGrid,
   HiOutlinePlus,
   HiOutlineTrash,
-  HiOutlineShoppingBag,
   HiOutlineClock,
   HiOutlineCalendar,
   HiOutlineEye,
-  HiOutlineCheckCircle,
   HiOutlineCheck,
   HiOutlineTag,
   HiOutlineTruck,
@@ -108,29 +106,6 @@ const resolveProductLink = (item) => {
   if (id) return `/product/${encodeURIComponent(id)}`;
 
   return null;
-};
-
-const getOrderStatusBadge = (status = '') => {
-  const s = String(status).toLowerCase();
-  switch (s) {
-    case 'pending':
-    case 'placed':
-      return 'bg-[#fdeee0] text-[#935418] border border-[#f3d7bc]/70';
-    case 'confirmed':
-      return 'bg-[#eaf7ee] text-[#1b7a3a] border border-[#c4e8ce]/70';
-    case 'processing':
-      return 'bg-[#eaf1fb] text-[#1e58a7] border border-[#c7dcf7]/70';
-    case 'shipped':
-    case 'out_for_delivery':
-      return 'bg-[#e8f7fa] text-[#117688] border border-[#bee7ee]/70';
-    case 'delivered':
-      return 'bg-[#eaf7ee] text-[#1b7a3a] border border-[#c4e8ce]/70';
-    case 'cancelled':
-    case 'rejected':
-      return 'bg-[#fdeeed] text-[#9e2724] border border-[#f7c9c7]/70';
-    default:
-      return 'bg-stone-100 text-stone-700 border border-stone-200';
-  }
 };
 
 const renderStatusBadge = (status = '') => {
@@ -270,7 +245,7 @@ const Profile = () => {
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
-  const [reviewedProductIds, setReviewedProductIds] = useState(new Set());
+  const [, setReviewedProductIds] = useState(new Set());
   
   // Profile edit state
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -578,12 +553,14 @@ const Profile = () => {
     try {
       setSaving(true);
       const res = await usersAPI.updateMe({
-        firstName: profileForm.firstName,
-        lastName: profileForm.lastName,
-        phone: profileForm.phone,
-        countryCode: profileForm.countryCode || '+91',
-        location: profileForm.location,
-        bio: profileForm.bio,
+        profile: {
+          firstName: profileForm.firstName,
+          lastName: profileForm.lastName,
+          phone: profileForm.phone,
+          countryCode: profileForm.countryCode || '+91',
+          location: profileForm.location,
+          bio: profileForm.bio,
+        },
       });
       const updated = res?.data?.data || res?.data;
       if (updated) {

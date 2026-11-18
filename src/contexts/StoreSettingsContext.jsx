@@ -29,7 +29,7 @@ function getInitialCachedBootstrap() {
   try {
     const raw = sessionStorage.getItem(BOOTSTRAP_STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch (_) {
+  } catch {
     return null;
   }
 }
@@ -69,7 +69,7 @@ export function StoreSettingsProvider({ children }) {
 
     try {
       sessionStorage.setItem(BOOTSTRAP_STORAGE_KEY, JSON.stringify(data));
-    } catch (_) {}
+    } catch {}
   }, []);
 
   const refreshBootstrap = useCallback(async (options = { fresh: true }) => {
@@ -119,7 +119,7 @@ export function StoreSettingsProvider({ children }) {
           // Admin updated something! Silently fetch fresh bootstrap data
           await refreshBootstrap({ fresh: true });
         }
-      } catch (_) {
+      } catch {
         // Silently ignore revision ping failures
       } finally {
         isChecking = false;
