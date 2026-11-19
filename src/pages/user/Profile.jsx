@@ -1712,25 +1712,8 @@ const Profile = () => {
                 </div>
               </div>
 
-              {/* City & State */}
+              {/* State & City */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-stone-800 mb-1.5">
-                    City <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative flex items-center rounded-xl border border-[#e5ded5] hover:border-[#bdae99] focus-within:border-[#9e7a46] focus-within:ring-2 focus-within:ring-[#9e7a46]/10 transition-all bg-white shadow-2xs">
-                    <HiOutlineOfficeBuilding className="w-4 h-4 text-stone-600 ml-3.5 shrink-0" />
-                    <input
-                      type="text"
-                      value={addressForm.city}
-                      onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
-                      required
-                      placeholder="City"
-                      className="w-full pl-3 pr-4 py-2.5 text-xs sm:text-sm text-stone-900 bg-transparent focus:outline-none placeholder:text-stone-400"
-                    />
-                  </div>
-                </div>
-
                 <div>
                   <label className="block text-xs font-semibold text-stone-800 mb-1.5">
                     State <span className="text-red-500">*</span>
@@ -1746,6 +1729,23 @@ const Profile = () => {
                     buttonClassName="w-full flex items-center justify-between gap-2 pl-3.5 pr-4 py-2.5 rounded-xl border border-[#e5ded5] bg-white text-xs sm:text-sm text-stone-900 hover:border-[#bdae99] focus:outline-none focus:border-[#9e7a46] focus:ring-2 focus:ring-[#9e7a46]/10 transition-all cursor-pointer shadow-2xs"
                     menuClassName="z-[100] shadow-xl border border-stone-200"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-stone-800 mb-1.5">
+                    City <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative flex items-center rounded-xl border border-[#e5ded5] hover:border-[#bdae99] focus-within:border-[#9e7a46] focus-within:ring-2 focus-within:ring-[#9e7a46]/10 transition-all bg-white shadow-2xs">
+                    <HiOutlineOfficeBuilding className="w-4 h-4 text-stone-600 ml-3.5 shrink-0" />
+                    <input
+                      type="text"
+                      value={addressForm.city}
+                      onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+                      required
+                      placeholder="City"
+                      className="w-full pl-3 pr-4 py-2.5 text-xs sm:text-sm text-stone-900 bg-transparent focus:outline-none placeholder:text-stone-400"
+                    />
+                  </div>
                 </div>
               </div>
 

@@ -151,14 +151,15 @@ const Home = () => {
             title: contentOf(banner).title || banner.title || '',
             subtitle: contentOf(banner).subtitle || banner.subtitle || '',
             images: (Array.isArray(banner.collectionImages) && banner.collectionImages.length
-              ? banner.collectionImages
-              : (banner.image?.url ? [banner.image] : [])).map((image) => {
+              ? [...banner.collectionImages].sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0))
+              : (banner.image?.url ? [banner.image] : [])).map((image, idx) => {
                 const category = image.categoryId || banner.display?.categoryId;
                 const categoryKey = category?.slug || category?._id || (typeof category === 'string' ? category : '');
                 return {
                   url: image.url || '',
                   categoryName: category?.name || '',
                   link: categoryKey ? `/shop?category=${encodeURIComponent(categoryKey)}` : banner.link || '/shop',
+                  order: image.order !== undefined && image.order !== null ? Number(image.order) : idx + 1,
                 };
               }).filter((img) => img.url),
             ...mediaOf(banner),
@@ -788,7 +789,10 @@ const Home = () => {
       {effectiveCollectionBanners.length > 0 && (
         <section style={sectionStyle('collections')} className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto space-y-8 px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           {effectiveCollectionBanners.map((collection) => {
-            const [image1, image2, image3, image4] = collection.images || [];
+            const sortedImages = [...(collection.images || [])].sort(
+              (a, b) => Number(a.order ?? 0) - Number(b.order ?? 0)
+            );
+            const [image1, image2, image3, image4] = sortedImages;
             if (!image1 || !image2 || !image3 || !image4) return null;
             const tileClass = 'group relative block overflow-hidden rounded-2xl sm:rounded-[22px] bg-stone-100 shadow-2xs hover:shadow-md transition-shadow duration-300';
             const tileImageClass = 'h-full w-full object-cover rounded-2xl sm:rounded-[22px] transition-transform duration-700 group-hover:scale-[1.02]';

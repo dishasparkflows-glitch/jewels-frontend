@@ -158,6 +158,7 @@ export default function Shop({ defaultCategory = '' }) {
   }, [featuredParam]);
 
   const menuItem = params.get('menuItem') || '';
+  const promoBanner = params.get('promoBanner') || '';
   const shopFor = params.get('shopFor') || '';
   const search = params.get('search') || '';
   const minPrice = params.get('minPrice') || '';
@@ -267,6 +268,7 @@ export default function Shop({ defaultCategory = '' }) {
             'title',
             'category',
             'menuItem',
+            'promoBanner',
             'search',
             'sort',
             'page',
@@ -315,6 +317,7 @@ export default function Shop({ defaultCategory = '' }) {
     };
     if (featuredParam) query.featured = featuredParam;
     if (categoryId || categoryParam) query.category = categoryId || categoryParam;
+    if (promoBanner) query.promoBanner = promoBanner;
     if (menuItem) query.menuItem = menuItem;
     if (shopFor) query.shopFor = shopFor;
     if (search) query.search = search;
@@ -353,6 +356,7 @@ export default function Shop({ defaultCategory = '' }) {
     featuredParam,
     categoryId,
     categoryParam,
+    promoBanner,
     menuItem,
     search,
     minPrice,
@@ -383,6 +387,7 @@ export default function Shop({ defaultCategory = '' }) {
   const filtersActive =
     !!featuredParam ||
     !!categoryParam ||
+    !!promoBanner ||
     !!menuItem ||
     !!search ||
     !!minPrice ||
@@ -410,7 +415,14 @@ export default function Shop({ defaultCategory = '' }) {
   if (category?.name) {
     activeChips.push({
       label: category.name,
-      onRemove: () => updateFilters({ category: '', menuItem: '', title: '' }),
+      onRemove: () => updateFilters({ category: '', menuItem: '', promoBanner: '', title: '' }),
+    });
+  }
+  if (promoBanner) {
+    const bannerObj = (category?.promoBanners || []).find((b) => String(b._id) === String(promoBanner));
+    activeChips.push({
+      label: bannerObj?.title ? `Promo: ${bannerObj.title}` : 'Promo Banner',
+      onRemove: () => updateFilters({ promoBanner: '' }),
     });
   }
   if (search) {
@@ -623,7 +635,7 @@ export default function Shop({ defaultCategory = '' }) {
               params={params}
               onFilterChange={(key, value, isCategory) => {
                 if (isCategory) {
-                  updateFilters({ category: value, menuItem: '' });
+                  updateFilters({ category: value, menuItem: '', promoBanner: '' });
                 } else {
                   updateFilters({ [key]: value });
                 }

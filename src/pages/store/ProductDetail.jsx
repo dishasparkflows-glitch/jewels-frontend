@@ -1244,6 +1244,10 @@ export default function ProductDetail() {
     return match || raw[0] || null;
   }, [product, selectedPurity, selectedColor, selectedCarat, selectedQuality, isCenterDriven]);
 
+  const displayedSku = useMemo(() => {
+    return selectedVariant?.sku || product?.basicInfo?.sku || product?.sku || product?.ornate?.tagNo || '';
+  }, [selectedVariant, product]);
+
   // isGold and isSilver are declared above
   // Derive base metal weight before size adjustment
   const rawBaseMetalWeight = useMemo(() => {
@@ -1910,10 +1914,19 @@ export default function ProductDetail() {
           ═══════════════════════════════════════════════════════════ */}
           <div className="lg:col-span-5 space-y-6">
             {/* Title & Brand */}
-            <div className="space-y-1">
-              <h1 className="text-xl sm:text-2xl text-gray-900 mb-2 font-medium leading-tight tracking-[0.02em] font-poppins">
+            <div className="space-y-1.5">
+              <h1 className="text-xl sm:text-2xl text-gray-900 font-medium leading-tight tracking-[0.02em] font-poppins">
                 {product.basicInfo?.title || ''}
               </h1>
+
+              {/* SKU Reference */}
+              {displayedSku && (
+                <div className="pt-0.5 pb-1">
+                  <span className="text-[11px] sm:text-xs text-stone-500 font-medium tracking-wide">
+                    SKU: <span className="font-semibold text-stone-700 tracking-wider font-mono">{displayedSku}</span>
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* ─── Social Proof & Urgency (Reviews & Sold Counter) ─── */}
@@ -2298,25 +2311,6 @@ export default function ProductDetail() {
                       </div>
                     </div>
                   )}
-
-                  {/* 4. Solitaire Center Diamond Carat Weight Dropdown (Matches Screenshot 2) */}
-                  {isCenterDriven && carats.length > 0 && (
-                    <div className="space-y-1.5">
-                      <label htmlFor="carat-select" className="block text-[11px] font-bold text-stone-700">
-                        Total Center Diamond Weight
-                      </label>
-                      <Dropdown
-                        id="carat-select"
-                        direction="down"
-                        value={selectedCarat}
-                        onChange={(val) => setSelectedCarat(Number(val))}
-                        options={carats.map((ct) => ({ value: ct, label: `${ct} CT` }))}
-                        placeholder="Select Carat"
-                        buttonClassName="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8f6d43] flex items-center justify-between cursor-pointer"
-                        menuClassName="z-[50]"
-                      />
-                    </div>
-                  )}
                 </>
               )}
 
@@ -2397,7 +2391,7 @@ export default function ProductDetail() {
                 </div>
               )}
 
-              {/* 5. Size Selection (If Applicable) */}
+              {/* 3. Size Selection (If Applicable) */}
               {sortedSizes.length > 0 && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
@@ -2440,6 +2434,25 @@ export default function ProductDetail() {
                   >
                     SIZE CHART
                   </button>
+                </div>
+              )}
+
+              {/* 4. Solitaire Center Diamond Carat Weight Dropdown */}
+              {isCenterDriven && carats.length > 0 && (
+                <div className="space-y-1.5">
+                  <label htmlFor="carat-select" className="block text-[11px] font-bold text-stone-700">
+                    Total Center Diamond Weight
+                  </label>
+                  <Dropdown
+                    id="carat-select"
+                    direction="down"
+                    value={selectedCarat}
+                    onChange={(val) => setSelectedCarat(Number(val))}
+                    options={carats.map((ct) => ({ value: ct, label: `${ct} CT` }))}
+                    placeholder="Select Carat"
+                    buttonClassName="w-full h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs font-semibold text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8f6d43] flex items-center justify-between cursor-pointer"
+                    menuClassName="z-[50]"
+                  />
                 </div>
               )}
             </div>

@@ -702,20 +702,8 @@ export default function Checkout() {
                     />
                   </div>
 
-                  {/* Row 3: City, State, PIN code */}
+                  {/* Row 3: State, City, PIN code */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="relative">
-                      <HiOutlineOfficeBuilding className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
-                      <input
-                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
-                        autoComplete="address-level2"
-                        placeholder="City *"
-                        value={form.city}
-                        onChange={updateField('city')}
-                        required
-                      />
-                    </div>
-
                     <div className="relative">
                       <Dropdown
                         value={form.state}
@@ -726,6 +714,18 @@ export default function Checkout() {
                         searchPlaceholder="Search state..."
                         buttonClassName="h-11 w-full rounded-xl border border-stone-200 bg-white px-3.5 text-xs sm:text-sm text-stone-900 outline-none transition hover:border-stone-300 flex items-center justify-between"
                         menuClassName="z-[50]"
+                      />
+                    </div>
+
+                    <div className="relative">
+                      <HiOutlineOfficeBuilding className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                      <input
+                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                        autoComplete="address-level2"
+                        placeholder="City *"
+                        value={form.city}
+                        onChange={updateField('city')}
+                        required
                       />
                     </div>
 
