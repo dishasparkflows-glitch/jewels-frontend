@@ -54,18 +54,23 @@
     background: #64748b;
   }
 
-  /* Custom Luxury Scrollbar for Dropdowns and Menus */
+  /* Custom Luxury Scrollbar for Dropdowns, Menus and Lists */
+  .luxury-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #bfae9b #f7f3ec;
+  }
+
   .luxury-scrollbar::-webkit-scrollbar {
-    width: 5px;
+    width: 6px;
   }
 
   .luxury-scrollbar::-webkit-scrollbar-track {
-    background: #faf7f2;
+    background: #f7f3ec;
     border-radius: 9999px;
   }
 
   .luxury-scrollbar::-webkit-scrollbar-thumb {
-    background: #d6cbbf;
+    background: #bfae9b;
     border-radius: 9999px;
   }
 
@@ -380,11 +385,9 @@ input.autofill-neutral:-webkit-autofill:active {
 @keyframes luxuryFadeIn {
   0% {
     opacity: 0;
-    transform: translateY(6px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 

@@ -2,7 +2,7 @@ import api from '../../api/axios';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { HiOutlineAdjustments, HiOutlineX, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineTag, HiOutlineCheck } from 'react-icons/hi';
+import { HiOutlineAdjustments, HiOutlineX, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineTag, HiOutlineCheck, HiOutlineInformationCircle } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import ProductCard from '../../components/product/ProductCard';
 import FilterSidebar from '../../components/product/FilterSidebar';
@@ -591,9 +591,9 @@ export default function Shop({ defaultCategory = '' }) {
             </span>
             <span
               title="Count of jewellery matching current selection"
-              className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-[10px] text-stone-400 hover:text-stone-700 cursor-help"
+              className="inline-flex items-center justify-center text-stone-400 hover:text-stone-700 cursor-help transition-colors"
             >
-              ⓘ
+              <HiOutlineInformationCircle className="w-4 h-4" />
             </span>
           </div>
 

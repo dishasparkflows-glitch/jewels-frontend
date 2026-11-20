@@ -125,12 +125,13 @@ const Home = () => {
           const url = m?.url || (typeof m === 'string' ? m : '');
           const isVid = m?.mediaType === 'video' || b.mediaType === 'video' || (url && /\.(mp4|webm|mov|m4v)(?:[?#]|$)/i.test(url));
           const mType = isVid ? 'video' : 'image';
+          const mobImg = b.mobileImage?.url || (typeof b.mobileImage === 'string' ? b.mobileImage : '');
           return {
             image: !isVid ? url : '',
             video: isVid ? url : '',
             mediaUrl: url,
             mediaType: mType,
-            mobileImage: b.mobileImage?.url || '',
+            mobileImage: mobImg,
           };
         };
 
@@ -139,6 +140,8 @@ const Home = () => {
         setHeroBanners(
           heroList.map((banner) => ({
             _id: banner._id,
+            title: contentOf(banner).title || banner.title || '',
+            link: banner.link || banner.appStoreUrl || '',
             ...mediaOf(banner),
           }))
         );
@@ -555,33 +558,105 @@ const Home = () => {
   return (
     <div className="flex flex-col bg-white text-stone-900 font-sans antialiased overflow-x-hidden" style={{ minHeight: '100%', backgroundColor: themeConfig?.colors?.background || undefined, color: themeConfig?.colors?.text || undefined, fontFamily: themeConfig?.typography?.bodyFont || undefined }}>
       {/* ─────────────────────────────────────────────────────────────────
-          1. HERO BANNER (Selected from the shared active-banners response)
+          1. HERO BANNER (Full responsive images, never cropped)
       ─────────────────────────────────────────────────────────────────── */}
       {effectiveHeroBanners.length > 0 && currentHero && (
-        <section style={sectionStyle('hero')} className="relative isolate min-h-[280px] sm:min-h-[420px] lg:min-h-[560px] overflow-hidden bg-[#d6bea1] text-[#29231d]">
-          {currentHero.mediaType === 'video' || (currentHero.video && !currentHero.image) ? (
-            <video src={getMediaUrl(currentHero.video || currentHero.mediaUrl)} className="absolute inset-0 h-full w-full object-cover" autoPlay loop muted playsInline />
-          ) : (
-            currentHero.image && <picture><source media="(max-width: 767px)" srcSet={getMediaUrl(currentHero.mobileImage || currentHero.image)} /><img src={getMediaUrl(currentHero.image)} alt="" className="absolute inset-0 h-full w-full object-cover" /></picture>
-          )}
+        <section style={sectionStyle('hero')} className="relative isolate w-full overflow-hidden bg-[#FAF6F0] text-[#29231d]">
+          {/* Banner Media Container: Maintains full image aspect ratio on all devices so images are NEVER cut off */}
+          <div className="relative w-full">
+            {currentHero.link ? (
+              <Link to={currentHero.link} className="block w-full">
+                {currentHero.mediaType === 'video' || (currentHero.video && !currentHero.image) ? (
+                  <video
+                    src={getMediaUrl(currentHero.video || currentHero.mediaUrl)}
+                    className="w-full h-auto block max-h-[85vh] object-contain"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                  />
+                ) : (
+                  currentHero.image && (
+                    <picture className="block w-full">
+                      {currentHero.mobileImage && (
+                        <source media="(max-width: 767px)" srcSet={getMediaUrl(currentHero.mobileImage)} />
+                      )}
+                      <img
+                        src={getMediaUrl(currentHero.image)}
+                        alt={currentHero.title || 'Hero Banner'}
+                        className="w-full h-auto block object-contain select-none"
+                        loading="eager"
+                      />
+                    </picture>
+                  )
+                )}
+              </Link>
+            ) : (
+              <div className="block w-full">
+                {currentHero.mediaType === 'video' || (currentHero.video && !currentHero.image) ? (
+                  <video
+                    src={getMediaUrl(currentHero.video || currentHero.mediaUrl)}
+                    className="w-full h-auto block max-h-[85vh] object-contain"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                  />
+                ) : (
+                  currentHero.image && (
+                    <picture className="block w-full">
+                      {currentHero.mobileImage && (
+                        <source media="(max-width: 767px)" srcSet={getMediaUrl(currentHero.mobileImage)} />
+                      )}
+                      <img
+                        src={getMediaUrl(currentHero.image)}
+                        alt={currentHero.title || 'Hero Banner'}
+                        className="w-full h-auto block object-contain select-none"
+                        loading="eager"
+                      />
+                    </picture>
+                  )
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Carousel Chevrons (only shown when multiple API banners exist) */}
           {effectiveHeroBanners.length > 1 && (
             <>
               <button
+                type="button"
                 onClick={() => setActiveHeroIdx((prev) => (prev - 1 + effectiveHeroBanners.length) % effectiveHeroBanners.length)}
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center transition-all z-20 cursor-pointer"
+                className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center transition-all z-20 cursor-pointer shadow-md"
                 aria-label="Previous hero banner"
               >
-                <HiOutlineChevronLeft className="w-5 h-5" />
+                <HiOutlineChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button
+                type="button"
                 onClick={() => setActiveHeroIdx((prev) => (prev + 1) % effectiveHeroBanners.length)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center transition-all z-20 cursor-pointer"
+                className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center transition-all z-20 cursor-pointer shadow-md"
                 aria-label="Next hero banner"
               >
-                <HiOutlineChevronRight className="w-5 h-5" />
+                <HiOutlineChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
+
+              {/* Dots indicator at bottom */}
+              <div className="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
+                {effectiveHeroBanners.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setActiveHeroIdx(idx)}
+                    className={`transition-all rounded-full ${
+                      idx === activeHeroIdx
+                        ? 'w-5 sm:w-6 h-1.5 sm:h-2 bg-white shadow-sm'
+                        : 'w-1.5 sm:w-2 h-1.5 sm:h-2 bg-white/50 hover:bg-white/80'
+                    }`}
+                    aria-label={`Go to slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
             </>
           )}
         </section>
@@ -797,7 +872,7 @@ const Home = () => {
             const tileClass = 'group relative block overflow-hidden rounded-2xl sm:rounded-[22px] bg-stone-100 shadow-2xs hover:shadow-md transition-shadow duration-300';
             const tileImageClass = 'h-full w-full object-cover rounded-2xl sm:rounded-[22px] transition-transform duration-700 group-hover:scale-[1.02]';
             return (
-              <div key={collection.id} className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5" style={{ aspectRatio: '2 / 1' }}>
+              <div key={collection.id} className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 lg:aspect-[2/1]">
                 {/* Left column: 2 squares on top + 1 wide (2:1) on bottom */}
                 <div className="grid grid-cols-2 grid-rows-[1fr_auto] gap-4 lg:gap-5 h-full">
                   <Link to={image1.link} className={`${tileClass} aspect-square`} aria-label={`${collection.title} image 1`}>
@@ -810,8 +885,8 @@ const Home = () => {
                     <img src={getMediaUrl(image3.url)} alt={image3.categoryName || `${collection.title} 3`} loading="lazy" className={tileImageClass} />
                   </Link>
                 </div>
-                {/* Right column: single tall image filling full height */}
-                <Link to={image4.link} className={`${tileClass} h-full`} aria-label={`${collection.title} image 4`}>
+                {/* Right column: single tall image filling full height on desktop, matching wide banner on mobile */}
+                <Link to={image4.link} className={`${tileClass} aspect-[2/1] lg:aspect-auto lg:h-full`} aria-label={`${collection.title} image 4`}>
                   <img src={getMediaUrl(image4.url)} alt={image4.categoryName || `${collection.title} 4`} loading="lazy" className={tileImageClass} />
                 </Link>
               </div>

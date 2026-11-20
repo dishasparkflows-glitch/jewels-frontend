@@ -18,6 +18,10 @@ import {
   HiOutlineHeart,
   HiOutlinePhone,
   HiOutlineVideoCamera,
+  HiOutlineCube,
+  HiOutlineLocationMarker,
+  HiOutlineChevronRight,
+  HiOutlineLogout,
 } from 'react-icons/hi';
 import { IoDiamondOutline } from 'react-icons/io5';
 
@@ -543,7 +547,10 @@ const Navbar = () => {
 
             {/* Desktop Instant Search Dropdown (Matches Screenshot) */}
             {showSearchDropdown && searchQuery.trim().length >= 2 && (
-              <div className="absolute left-1/2 -translate-x-1/2 top-full mt-3 w-[780px] lg:w-[890px] xl:w-[980px] max-w-[calc(100vw-2rem)] bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-stone-200/90 p-5 z-50 text-left animate-fadeIn">
+              <div
+                style={{ transform: 'translateX(-50%)' }}
+                className="absolute left-1/2 -translate-x-1/2 top-full mt-3 w-[780px] lg:w-[890px] xl:w-[980px] max-w-[calc(100vw-2rem)] bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-stone-200/90 p-5 z-50 text-left animate-fadeIn"
+              >
                 {/* Top Tab Bar: All (128) | Products (128) | Collections (4) | Categories (6) | View all -> */}
                 <div className="flex items-center justify-between border-b border-stone-100 pb-3 mb-4">
                       <div className="flex items-center gap-5 sm:gap-7 text-xs sm:text-sm">
@@ -753,38 +760,90 @@ const Navbar = () => {
                 <div className="relative" ref={userDropdownRef}>
                   <button
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                    className="flex items-center gap-2 p-1.5 rounded-full hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-2 p-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+                    title="Account"
+                    aria-label="Account menu"
                   >
-                    <div className="w-7 h-7 rounded-full bg-[#60574d] border border-stone-600 flex items-center justify-center text-white font-medium text-xs">
-                      {user.profile?.firstName?.[0] || 'U'}
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#8b6f4e] hover:bg-[#785e40] text-white flex items-center justify-center font-serif font-bold text-xs sm:text-[13px] shadow-xs transition-colors">
+                      {user.profile?.firstName?.[0]?.toUpperCase() || user.auth?.email?.[0]?.toUpperCase() || 'U'}
                     </div>
                   </button>
 
                   {userDropdownOpen && (
-                    <div
-                      style={{ backgroundColor: 'var(--storefront-header-bg, #201e1b)' }}
-                      className="absolute right-0 mt-2 w-52 border border-stone-800 rounded-xl shadow-2xl py-2 z-50 text-xs"
-                    >
-                      <div className="px-4 py-2 border-b border-stone-800">
-                        <p className="font-semibold text-white truncate">{user.profile?.firstName} {user.profile?.lastName}</p>
-                        <p className="text-stone-400 truncate">{user.auth?.email}</p>
+                    <div className="absolute right-0 top-full mt-3 w-72 sm:w-80 bg-[#fdfbf7] border border-[#eadfc9] rounded-2xl shadow-2xl p-3 z-50 animate-fadeIn">
+                      {/* Speech bubble pointer arrow */}
+                      <div className="absolute -top-[7px] right-3.5 w-3.5 h-3.5 bg-[#fdfbf7] border-t border-l border-[#eadfc9] rotate-45 rounded-tl-[2px]" />
+
+                      {/* User Header */}
+                      <div className="flex items-center gap-3 p-1 pb-3 border-b border-[#f0eae1] select-none">
+                        <div className="w-11 h-11 rounded-full bg-[#eedac3] border border-[#d6be9f] flex items-center justify-center text-[#785b3a] font-serif text-lg font-bold shrink-0 shadow-2xs">
+                          {user.profile?.firstName?.[0]?.toUpperCase() || user.auth?.email?.[0]?.toUpperCase() || 'U'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-stone-900 text-sm tracking-tight truncate">
+                            {[user.profile?.firstName, user.profile?.lastName].filter(Boolean).join(' ') || 'Valued Customer'}
+                          </p>
+                          <p className="text-xs text-stone-500 font-normal truncate mt-0.5">
+                            {user.auth?.email || ''}
+                          </p>
+                        </div>
                       </div>
-                      <Link
-                        to="/profile"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className="block px-4 py-2 text-stone-300 hover:bg-white/5 hover:text-white"
-                      >
-                        My Account & Orders
-                      </Link>
-                      <button
-                        onClick={() => {
-                          logout();
-                          setUserDropdownOpen(false);
-                        }}
-                        className="w-full text-left px-4 py-2 text-rose-400 hover:bg-white/5 transition-colors"
-                      >
-                        Sign Out
-                      </button>
+
+                      {/* Menu List */}
+                      <div className="py-1.5 space-y-0.5">
+                        <Link
+                          to="/profile"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[#f3ede3]/80 text-stone-700 hover:text-stone-950 transition-colors group cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <HiOutlineUser className="w-[18px] h-[18px] text-stone-600 group-hover:text-[#8b6f4e] transition-colors stroke-[1.8]" />
+                            <span className="text-[13px] font-medium">My Account & Orders</span>
+                          </div>
+                          <HiOutlineChevronRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-stone-700 group-hover:translate-x-0.5 transition-all" />
+                        </Link>
+
+                        <Link
+                          to="/profile?tab=orders"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[#f3ede3]/80 text-stone-700 hover:text-stone-950 transition-colors group cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <HiOutlineCube className="w-[18px] h-[18px] text-stone-600 group-hover:text-[#8b6f4e] transition-colors stroke-[1.8]" />
+                            <span className="text-[13px] font-medium">Orders</span>
+                          </div>
+                          <HiOutlineChevronRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-stone-700 group-hover:translate-x-0.5 transition-all" />
+                        </Link>
+
+                        <Link
+                          to="/profile?tab=addresses"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[#f3ede3]/80 text-stone-700 hover:text-stone-950 transition-colors group cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <HiOutlineLocationMarker className="w-[18px] h-[18px] text-stone-600 group-hover:text-[#8b6f4e] transition-colors stroke-[1.8]" />
+                            <span className="text-[13px] font-medium">Addresses</span>
+                          </div>
+                          <HiOutlineChevronRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-stone-700 group-hover:translate-x-0.5 transition-all" />
+                        </Link>
+
+
+                      </div>
+
+                      {/* Sign Out Button */}
+                      <div className="pt-1 border-t border-[#f0eae1]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            logout();
+                            setUserDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#fdf2f1] hover:bg-[#fae6e4] text-[#c2413a] font-semibold text-[13px] transition-colors cursor-pointer border border-[#f7d6d3]"
+                        >
+                          <HiOutlineLogout className="w-4 h-4 text-[#c2413a] stroke-[2]" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

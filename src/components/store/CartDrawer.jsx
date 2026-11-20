@@ -7,7 +7,8 @@ import EmptyCartView from './EmptyCartView';
 import { formatPrice } from '../../utils/currency';
 import { getImageUrl } from '../../utils/imageUrl';
 import { getPrimaryProductImage } from '../../utils/productImages';
-import { resolveMetalName, cleanAttribute } from '../../utils/metalColors';
+import { getItemSpecs } from '../../utils/productSpecs';
+import ItemSpecsDisplay from '../common/ItemSpecsDisplay';
 
 /* eslint-disable react/prop-types */
 
@@ -58,52 +59,8 @@ export default function CartDrawer({ open, onClose }) {
         {cart.length ? (
           <ul className="relative z-10 flex-1 divide-y divide-stone-100 overflow-y-auto px-6 luxury-scrollbar bg-white">
             {cart.map((item, index) => {
-              const isSilver =
-                item.productType === 'silver' ||
-                item.basicInfo?.productType === 'silver' ||
-                Boolean(item.isOrnate) ||
-                Boolean(item.basicInfo?.isOrnate) ||
-                item.category === 'silver' ||
-                item.categorySlug === 'silver' ||
-                item.categorySlug === 'silver-collection' ||
-                item.category === 'Silver Collection' ||
-                item.category?.name === 'Silver Collection' ||
-                String(item.title || item.basicInfo?.title || item.name || '').toLowerCase().startsWith('92.5') ||
-                String(item.selectedMetal || '').toLowerCase().includes('silver');
-
-              const attrs = item.selectedAttributes || {};
-              const rawDiamondType = isSilver ? '' : (attrs.diamondType || '');
-              const diamondType = cleanAttribute(rawDiamondType) || '';
-              const metalPurity = cleanAttribute(attrs.metalPurity) || (isSilver ? 'Silver' : '');
-              const metalColor = isSilver ? '' : (cleanAttribute(attrs.metalColor) || resolveMetalName(item.selectedMetal) || '');
-              const cleanPurity = metalPurity.replace(/\s*gold$/i, '').trim();
-              const rawMetal = item.selectedMetal
-                || (cleanPurity && metalColor ? `${cleanPurity} ${metalColor}` : [metalPurity, metalColor].filter(Boolean).join(' '))
-                || resolveMetalName(item.selectedMetal);
-              const metalDisplay = isSilver
-                ? 'Silver'
-                : (rawMetal ? rawMetal.replace(/^92\.5\s*/i, '').replace(/925\s*/i, '') : '');
-              const diamondShape = isSilver ? '' : (cleanAttribute(attrs.diamondShape) || '');
-              const diamondColor = isSilver ? '' : (cleanAttribute(attrs.diamondColor) || '');
-              const diamondClarity = isSilver ? '' : (cleanAttribute(attrs.diamondClarity) || '');
-              const clarityDisplay = diamondClarity || [diamondColor, diamondClarity].filter(Boolean).join(' ');
-              const caratWeight = isSilver ? null : (attrs.caratWeight != null ? attrs.caratWeight : null);
-              const sizeDisplay = cleanAttribute(attrs.size || item.selectedSize);
-              const hasRightCol = Boolean(metalColor || caratWeight != null || (metalDisplay && sizeDisplay));
-
-              let centerSummary = '';
-              if (!isSilver && (diamondType || caratWeight || clarityDisplay)) {
-                const parts = [];
-                if (caratWeight) parts.push(`${caratWeight} CT`);
-                if (clarityDisplay) parts.push(`Clarity: ${clarityDisplay}`);
-                const detailsStr = parts.length > 0 ? ` (${parts.join(', ')})` : '';
-                centerSummary = `Center: ${diamondType || 'Diamond'}${detailsStr}`;
-              }
-
-              const displayName = item.title || item.basicInfo?.title || 'Fine Jewellery';
-              const targetIdentifier = item.slug || item.basicInfo?.slug || item.productId || item.id || (displayName ? displayName.toLowerCase().trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') : '');
-              const productLink = `/product/${encodeURIComponent(targetIdentifier)}`;
-
+              const specs = getItemSpecs(item);
+              const { displayName, productLink } = specs;
               const itemKey = `${item.id || item.productId || index}-${item.selectedMetal || ''}-${item.selectedSize || ''}`;
 
               return (
@@ -132,71 +89,8 @@ export default function CartDrawer({ open, onClose }) {
                       {displayName}
                     </Link>
 
-                    {/* Diamond Type Pill Badge */}
-                    {diamondType && (
-                      <div className="mt-1.5">
-                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold tracking-wider uppercase bg-[#faf5ee] text-[#8b6f4e] border border-[#e8d9c2]">
-                          {diamondType}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Attributes Grid */}
-                    {(metalDisplay || metalColor || clarityDisplay || caratWeight != null || diamondShape || sizeDisplay) && (
-                      <div className={`mt-2 ${hasRightCol ? 'grid grid-cols-2' : 'flex'} text-[9px] sm:text-[10px] tracking-wide uppercase font-sans border-b border-stone-200/70 pb-2`}>
-                        {/* Left Column */}
-                        <div className={`${hasRightCol ? 'border-r border-stone-200/70 pr-2' : ''} space-y-1`}>
-                          {metalDisplay && (
-                            <p className="text-stone-600 font-semibold">
-                              METAL: <span className="text-stone-900 font-bold">{isSilver ? 'SILVER' : metalDisplay}</span>
-                            </p>
-                          )}
-                          {clarityDisplay && (
-                            <p className="text-stone-600 font-semibold">
-                              CLARITY: <span className="text-stone-900 font-bold">{clarityDisplay}</span>
-                            </p>
-                          )}
-                          {diamondShape && (
-                            <p className="text-stone-600 font-semibold">
-                              DIAMOND SHAPE: <span className="text-stone-900 font-bold">{diamondShape}</span>
-                            </p>
-                          )}
-                          {!metalDisplay && sizeDisplay && (
-                            <p className="text-stone-600 font-semibold">
-                              SIZE: <span className="text-stone-900 font-bold">{sizeDisplay}</span>
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Right Column */}
-                        {hasRightCol && (
-                          <div className="pl-2.5 space-y-1">
-                            {metalColor && (
-                              <p className="text-stone-600 font-semibold">
-                                COLOR: <span className="text-stone-900 font-bold">{metalColor}</span>
-                              </p>
-                            )}
-                            {caratWeight != null && (
-                              <p className="text-stone-600 font-semibold">
-                                CARAT: <span className="text-stone-900 font-bold">{caratWeight}</span>
-                              </p>
-                            )}
-                            {metalDisplay && sizeDisplay && (
-                              <p className="text-stone-600 font-semibold">
-                                SIZE: <span className="text-stone-900 font-bold">{sizeDisplay}</span>
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Center Diamond Summary */}
-                    {centerSummary && (
-                      <p className="mt-1.5 text-[10px] text-stone-500 font-sans">
-                        {centerSummary}
-                      </p>
-                    )}
+                    {/* Shared Specs Display */}
+                    <ItemSpecsDisplay specs={specs} />
 
                     {/* Price */}
                     <p className="mt-2 font-sans text-xs sm:text-sm font-bold text-stone-900">

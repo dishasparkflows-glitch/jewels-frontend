@@ -8,7 +8,7 @@ import {
   HiOutlineLockClosed,
 } from 'react-icons/hi';
 import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
-import { resolveMetalName, cleanAttribute } from '../../utils/metalColors';
+import { getItemSpecs } from '../../utils/productSpecs';
 
 import EmptyCartView from '../../components/store/EmptyCartView';
 import { formatPrice } from '../../utils/currency';
@@ -61,48 +61,19 @@ const Cart = () => {
         {/* Cart Item List */}
         <div className="lg:col-span-2 space-y-4">
           {cart.map((item) => {
-            const isSilver =
-              item.productType === 'silver' ||
-              item.basicInfo?.productType === 'silver' ||
-              Boolean(item.isOrnate) ||
-              Boolean(item.basicInfo?.isOrnate) ||
-              item.category === 'silver' ||
-              item.categorySlug === 'silver' ||
-              item.categorySlug === 'silver-collection' ||
-              item.category === 'Silver Collection' ||
-              item.category?.name === 'Silver Collection' ||
-              String(item.title || item.name || item.basicInfo?.title || '').toLowerCase().startsWith('92.5') ||
-              String(item.selectedMetal || '').toLowerCase().includes('silver');
-
-            const attrs = item.selectedAttributes || {};
-            const diamondType = isSilver ? '' : (attrs.diamondType || '');
-            const metalPurity = cleanAttribute(attrs.metalPurity) || (isSilver ? 'Silver' : '');
-            const metalColor = isSilver ? '' : (cleanAttribute(attrs.metalColor) || resolveMetalName(item.selectedMetal) || '');
-            const cleanPurity = metalPurity.replace(/\s*gold$/i, '').trim();
-            const rawMetal = item.selectedMetal
-              || (cleanPurity && metalColor ? `${cleanPurity} ${metalColor}` : [metalPurity, metalColor].filter(Boolean).join(' '))
-              || resolveMetalName(item.selectedMetal);
-            const metalDisplay = isSilver
-              ? 'Silver'
-              : (rawMetal ? rawMetal.replace(/^92\.5\s*/i, '').replace(/925\s*/i, '') : '');
-            const diamondShape = isSilver ? '' : (cleanAttribute(attrs.diamondShape) || '');
-            const diamondColor = isSilver ? '' : (cleanAttribute(attrs.diamondColor) || '');
-            const diamondClarity = isSilver ? '' : (cleanAttribute(attrs.diamondClarity) || '');
-            const clarityDisplay = diamondClarity || [diamondColor, diamondClarity].filter(Boolean).join(' ');
-            const caratWeight = isSilver ? null : (attrs.caratWeight != null ? attrs.caratWeight : null);
-            const sizeDisplay = cleanAttribute(attrs.size || item.selectedSize);
-
-            let centerSummary = '';
-            if (!isSilver && (diamondType || caratWeight || clarityDisplay)) {
-              const parts = [];
-              if (caratWeight) parts.push(`${caratWeight} CT`);
-              if (clarityDisplay) parts.push(`Clarity: ${clarityDisplay}`);
-              const detailsStr = parts.length > 0 ? ` (${parts.join(', ')})` : '';
-              centerSummary = `Center: ${diamondType || 'Diamond'}${detailsStr}`;
-            }
-
-            const targetIdentifier = item.slug || item.productId || item.id || (item.name ? item.name.toLowerCase().trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') : '');
-            const productLink = `/product/${encodeURIComponent(targetIdentifier)}`;
+            const specs = getItemSpecs(item);
+            const {
+              isSilver,
+              diamondType,
+              metalDisplay,
+              metalColor,
+              clarityDisplay,
+              diamondShape,
+              caratWeight,
+              sizeDisplay,
+              hasSpecs,
+              productLink,
+            } = specs;
 
             return (
             <div
@@ -134,7 +105,7 @@ const Cart = () => {
                 </Link>
 
                 {/* Attributes 2-Column Grid */}
-                {(metalDisplay || metalColor || clarityDisplay || caratWeight != null || diamondShape || sizeDisplay) && (
+                {hasSpecs && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-stone-600 pt-1">
                     {metalDisplay && (
                       <p><span className="text-[11px] font-semibold uppercase text-stone-500">Metal:</span> <span className="text-stone-800 font-medium">{isSilver ? 'Silver' : metalDisplay}</span></p>
@@ -155,10 +126,6 @@ const Cart = () => {
                       <p><span className="text-[11px] font-semibold uppercase text-stone-500">Size:</span> <span className="text-stone-800 font-medium">{sizeDisplay}</span></p>
                     )}
                   </div>
-                )}
-
-                {centerSummary && (
-                  <p className="text-xs text-stone-400 italic pt-0.5">{centerSummary}</p>
                 )}
 
                 <p className="text-sm font-semibold text-[#2c2722] pt-1">

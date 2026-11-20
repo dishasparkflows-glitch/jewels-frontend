@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import { usersAPI, addressesAPI, ordersAPI, reviewsAPI } from '../../api/services';
@@ -35,7 +35,8 @@ import {
 import { HiOutlineSquare3Stack3D } from 'react-icons/hi2';
 import { getImageUrl } from '../../utils/imageUrl';
 import CustomerTrackingModal from '../../components/common/CustomerTrackingModal';
-import { resolveMetalName, cleanAttribute } from '../../utils/metalColors';
+import { getItemSpecs } from '../../utils/productSpecs';
+import ItemSpecsDisplay from '../../components/common/ItemSpecsDisplay';
 
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
@@ -200,7 +201,18 @@ const Profile = () => {
   const { user, logout, updateUser } = useAuth();
   const { addToCart, openCartDrawer, orderCount, returnOrderCount } = useCart();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'orders' | 'returns' | 'addresses'
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const validTabs = ['profile', 'orders', 'returns', 'addresses'];
+  const [activeTab, setActiveTab] = useState(
+    tabParam && validTabs.includes(tabParam) ? tabParam : 'profile'
+  );
+
+  useEffect(() => {
+    if (tabParam && validTabs.includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
 
   // Orders state
   const [orders, setOrders] = useState([]);
@@ -1293,96 +1305,11 @@ const Profile = () => {
                                           )}
                                           {/* Attributes Grid & Details */}
                                           {(() => {
-                                            const isSilver =
-                                              item.productType === 'silver' ||
-                                              item.productId?.basicInfo?.productType === 'silver' ||
-                                              Boolean(item.productId?.isOrnate) ||
-                                              Boolean(item.productId?.basicInfo?.isOrnate) ||
-                                              String(item.title || '').toLowerCase().startsWith('92.5') ||
-                                              String(item.selectedMetal || '').toLowerCase().includes('silver');
-
-                                            const attrs = item.selectedAttributes || {};
-                                            const rawDiamondType = isSilver ? '' : (attrs.diamondType || '');
-                                            const diamondType = cleanAttribute(rawDiamondType) || '';
-                                            const metalPurity = cleanAttribute(attrs.metalPurity) || (isSilver ? 'Silver' : '');
-                                            const metalColor = isSilver ? '' : (cleanAttribute(attrs.metalColor) || resolveMetalName(item.selectedMetal) || '');
-                                            const cleanPurity = metalPurity.replace(/\s*gold$/i, '').trim();
-                                            const rawMetal = item.selectedMetal
-                                              || (cleanPurity && metalColor ? `${cleanPurity} ${metalColor}` : [metalPurity, metalColor].filter(Boolean).join(' '))
-                                              || resolveMetalName(item.selectedMetal);
-                                            const metalDisplay = isSilver
-                                              ? 'Silver'
-                                              : (rawMetal ? rawMetal.replace(/^92\.5\s*/i, '').replace(/925\s*/i, '') : '');
-                                            const diamondShape = isSilver ? '' : (cleanAttribute(attrs.diamondShape) || '');
-                                            const diamondColor = isSilver ? '' : (cleanAttribute(attrs.diamondColor) || '');
-                                            const diamondClarity = isSilver ? '' : (cleanAttribute(attrs.diamondClarity) || '');
-                                            const clarityDisplay = diamondClarity || [diamondColor, diamondClarity].filter(Boolean).join(' ');
-                                            const caratWeight = isSilver ? null : (attrs.caratWeight != null ? attrs.caratWeight : null);
-                                            const sizeDisplay = cleanAttribute(attrs.size || item.selectedSize);
-                                            const hasRightCol = Boolean(metalColor || caratWeight != null || (metalDisplay && sizeDisplay));
-
-                                            let centerSummary = '';
-                                            if (!isSilver && (diamondType || caratWeight || clarityDisplay)) {
-                                              const parts = [];
-                                              if (caratWeight) parts.push(`${caratWeight} CT`);
-                                              if (clarityDisplay) parts.push(`Clarity: ${clarityDisplay}`);
-                                              const detailsStr = parts.length > 0 ? ` (${parts.join(', ')})` : '';
-                                              centerSummary = `Center: ${diamondType || 'Diamond'}${detailsStr}`;
-                                            }
-
-                                            const hasAttrs = Boolean(metalDisplay || metalColor || clarityDisplay || caratWeight != null || diamondShape || sizeDisplay);
+                                            const specs = getItemSpecs(item);
 
                                             return (
                                               <div className="space-y-1 pt-0.5">
-                                                {hasAttrs && (
-                                                  <div className={`mt-1.5 ${hasRightCol ? 'grid grid-cols-2 gap-x-3' : 'flex'} text-[9px] sm:text-[10px] tracking-wide uppercase font-sans border-b border-[#EFE8DD] pb-1.5`}>
-                                                    {/* Left Column */}
-                                                    <div className={`${hasRightCol ? 'border-r border-[#EFE8DD] pr-2' : ''} space-y-0.5`}>
-                                                      {metalDisplay && (
-                                                        <p className="text-stone-600 font-semibold">
-                                                          METAL: <span className="text-stone-900 font-bold">{isSilver ? 'SILVER' : metalDisplay}</span>
-                                                        </p>
-                                                      )}
-                                                      {clarityDisplay && (
-                                                        <p className="text-stone-600 font-semibold">
-                                                          CLARITY: <span className="text-stone-900 font-bold">{clarityDisplay}</span>
-                                                        </p>
-                                                      )}
-                                                      {diamondShape && (
-                                                        <p className="text-stone-600 font-semibold">
-                                                          SHAPE: <span className="text-stone-900 font-bold">{diamondShape}</span>
-                                                        </p>
-                                                      )}
-                                                    </div>
-                                                    {/* Right Column */}
-                                                    {hasRightCol && (
-                                                      <div className="pl-1 space-y-0.5">
-                                                        {metalColor && (
-                                                          <p className="text-stone-600 font-semibold">
-                                                            COLOR: <span className="text-stone-900 font-bold">{metalColor}</span>
-                                                          </p>
-                                                        )}
-                                                        {caratWeight != null && (
-                                                          <p className="text-stone-600 font-semibold">
-                                                            CARAT: <span className="text-stone-900 font-bold">{caratWeight}</span>
-                                                          </p>
-                                                        )}
-                                                        {sizeDisplay && (
-                                                          <p className="text-stone-600 font-semibold">
-                                                            SIZE: <span className="text-stone-900 font-bold">{sizeDisplay}</span>
-                                                          </p>
-                                                        )}
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                )}
-
-                                                {/* Center Diamond Summary */}
-                                                {centerSummary && (
-                                                  <p className="text-[10px] text-stone-500 font-sans">
-                                                    {centerSummary}
-                                                  </p>
-                                                )}
+                                                <ItemSpecsDisplay specs={specs} />
 
                                                 {/* SKU & Quantity Badges */}
                                                 <div className="flex items-center gap-2 flex-wrap text-xs pt-0.5">

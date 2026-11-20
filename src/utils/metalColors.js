@@ -44,3 +44,6 @@ export const cleanAttribute = (val) => {
   if (isRawObjectId(str)) return '';
   return str;
 };
+
+export { isSilverProduct } from './productType';
+export { getItemSpecs } from './productSpecs';

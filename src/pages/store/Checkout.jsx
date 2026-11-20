@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -16,17 +16,20 @@ import {
   HiOutlineTag,
   HiOutlineUser,
   HiOutlineExclamationCircle,
+  HiOutlineInformationCircle,
   HiX,
   HiSparkles,
   HiPlus,
   HiMinus,
+  HiChevronDown,
 } from 'react-icons/hi';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { checkoutAPI, addressesAPI } from '../../api/services';
 import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 import { trackBeginCheckout } from '../../config/firebase';
-import { resolveMetalName, cleanAttribute } from '../../utils/metalColors';
+import { getItemSpecs } from '../../utils/productSpecs';
+import ItemSpecsDisplay from '../../components/common/ItemSpecsDisplay';
 import Dropdown from '../../components/common/Dropdown';
 import PhoneInput from '../../components/common/PhoneInput';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
@@ -115,6 +118,33 @@ export default function Checkout() {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [devOtp, setDevOtp] = useState('');
   const [isSendingOtp, setIsSendingOtp] = useState(false);
+
+  // Scroll detection for order summary items
+  const itemsListRef = useRef(null);
+  const [canScrollMore, setCanScrollMore] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = itemsListRef.current;
+    if (!el) return;
+    const hasMore = el.scrollHeight - el.scrollTop - el.clientHeight > 20;
+    setCanScrollMore(hasMore);
+  }, []);
+
+  useEffect(() => {
+    checkScroll();
+    const timer = setTimeout(checkScroll, 300);
+    window.addEventListener('resize', checkScroll);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, [cart, checkScroll]);
+
+  const scrollToMore = () => {
+    if (itemsListRef.current) {
+      itemsListRef.current.scrollBy({ top: 180, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     if (cart && cart.length > 0) {
@@ -913,102 +943,40 @@ export default function Checkout() {
             </div>
 
             {/* Items List */}
-            <div className="space-y-4 max-h-[420px] overflow-y-auto no-scrollbar">
-              {cart.map((item, index) => {
-                const image = item.image && !isOrnateImage(item.image) ? item.image : getPrimaryProductImage(item);
-                const isSilver =
-                  Boolean(item.isSilver) ||
-                  Boolean(item.isSilverProduct) ||
-                  Boolean(item.basicInfo?.isSilver) ||
-                  Boolean(item.basicInfo?.isSilverProduct) ||
-                  Boolean(item.isOrnate) ||
-                  Boolean(item.basicInfo?.isOrnate) ||
-                  item.category === 'silver' ||
-                  item.categorySlug === 'silver' ||
-                  item.categorySlug === 'silver-collection' ||
-                  item.category === 'Silver Collection' ||
-                  item.category?.name === 'Silver Collection' ||
-                  String(item.title || item.basicInfo?.title || item.name || '').toLowerCase().startsWith('92.5') ||
-                  String(item.selectedMetal || '').toLowerCase().includes('silver');
+            <div className="relative">
+              <div
+                ref={itemsListRef}
+                onScroll={checkScroll}
+                className="space-y-4 max-h-[420px] overflow-y-auto luxury-scrollbar pr-2 pb-1"
+              >
+                {cart.map((item, index) => {
+                  const image = item.image && !isOrnateImage(item.image) ? item.image : getPrimaryProductImage(item);
+                  const specs = getItemSpecs(item);
+                  const { displayName, productLink } = specs;
+                  const itemKey = `${item.id || item.productId || index}-${item.selectedMetal || ''}-${item.selectedSize || ''}`;
 
-                const attrs = item.selectedAttributes || {};
-                const rawDiamondType = isSilver ? '' : (attrs.diamondType || '');
-                const diamondType = cleanAttribute(rawDiamondType) || '';
-                const metalPurity = cleanAttribute(attrs.metalPurity) || (isSilver ? 'Silver' : '');
-                const metalColor = isSilver ? '' : (cleanAttribute(attrs.metalColor) || resolveMetalName(item.selectedMetal) || '');
-                const cleanPurity = metalPurity.replace(/\s*gold$/i, '').trim();
-                const rawMetal = item.selectedMetal
-                  || (cleanPurity && metalColor ? `${cleanPurity} ${metalColor}` : [metalPurity, metalColor].filter(Boolean).join(' '))
-                  || resolveMetalName(item.selectedMetal);
-                const metalDisplay = isSilver
-                  ? 'Silver'
-                  : (rawMetal ? rawMetal.replace(/^92\.5\s*/i, '').replace(/925\s*/i, '') : '');
-                const diamondShape = isSilver ? '' : (cleanAttribute(attrs.diamondShape) || '');
-                const diamondColor = isSilver ? '' : (cleanAttribute(attrs.diamondColor) || '');
-                const diamondClarity = isSilver ? '' : (cleanAttribute(attrs.diamondClarity) || '');
-                const clarityDisplay = diamondClarity || [diamondColor, diamondClarity].filter(Boolean).join(' ');
-                const caratWeight = isSilver ? null : (attrs.caratWeight != null ? attrs.caratWeight : null);
-                const sizeDisplay = cleanAttribute(attrs.size || item.selectedSize);
-
-                const attrParts = [];
-                if (metalDisplay) {
-                  attrParts.push(`METAL: ${isSilver ? 'SILVER' : metalDisplay}`);
-                }
-                if (metalColor) {
-                  attrParts.push(`COLOR: ${metalColor}`);
-                }
-                if (clarityDisplay) {
-                  attrParts.push(`CLARITY: ${clarityDisplay}`);
-                }
-                if (caratWeight != null && caratWeight !== '') {
-                  attrParts.push(`CARAT: ${caratWeight}`);
-                }
-                if (sizeDisplay) {
-                  attrParts.push(`SIZE: ${sizeDisplay}`);
-                }
-                if (diamondShape) {
-                  attrParts.push(`DIAMONDSHAPE: ${diamondShape}`);
-                }
-
-                if (attrParts.length === 0) {
-                  const fallbackMetal = resolveMetalName(item.selectedMetal);
-                  const fallbackSize = cleanAttribute(item.selectedSize);
-                  if (fallbackMetal) attrParts.push(`METAL: ${fallbackMetal}`);
-                  if (fallbackSize) attrParts.push(`SIZE: ${fallbackSize}`);
-                }
-
-                const displayName = item.name || item.title || item.basicInfo?.title || 'Jewellery item';
-                const targetIdentifier =
-                  item.slug ||
-                  item.basicInfo?.slug ||
-                  item.productId ||
-                  item.id ||
-                  displayName.toLowerCase().trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '');
-                const productLink = `/product/${encodeURIComponent(targetIdentifier)}`;
-
-                return (
-                  <article
-                    key={`${item.id}-${item.selectedMetal || ''}-${item.selectedSize || ''}`}
-                    className={`flex gap-3.5 ${
-                      index < cart.length - 1 ? 'border-b border-dashed border-stone-300 pb-4' : 'pb-1'
-                    }`}
-                  >
-                    <Link
-                      to={productLink}
-                      className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-stone-100 bg-[#f7f3ee] p-1.5 flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer"
-                      title={`View ${displayName}`}
+                  return (
+                    <article
+                      key={itemKey}
+                      className={`flex gap-3.5 ${
+                        index < cart.length - 1 ? 'border-b border-dashed border-stone-300 pb-4' : 'pb-1'
+                      }`}
                     >
-                      {image && (
-                        <img
-                          src={image}
-                          alt={displayName}
-                          className="h-full w-full object-contain"
-                        />
-                      )}
-                    </Link>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
+                      <Link
+                        to={productLink}
+                        className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-stone-100 bg-[#f7f3ee] p-1.5 flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer"
+                        title={`View ${displayName}`}
+                      >
+                        {image && (
+                          <img
+                            src={image}
+                            alt={displayName}
+                            className="h-full w-full object-contain"
+                          />
+                        )}
+                      </Link>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
                           <Link
                             to={productLink}
                             className="line-clamp-2 text-xs font-semibold uppercase leading-snug text-stone-900 hover:text-[#8c6536] transition-colors block cursor-pointer"
@@ -1016,24 +984,15 @@ export default function Checkout() {
                           >
                             {displayName}
                           </Link>
-                          {diamondType && (
-                            <div className="mt-1">
-                              <span className="inline-block px-2 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase bg-[#faf5ee] text-[#8b6f4e] border border-[#e8d9c2]">
-                                {diamondType}
-                              </span>
-                            </div>
-                          )}
-                          {attrParts.length > 0 && (
-                            <p className="mt-1 text-[10px] leading-relaxed text-stone-500 font-medium tracking-wide uppercase">
-                              {attrParts.join('  I  ')}
-                            </p>
-                          )}
+                          <span className="shrink-0 text-xs font-bold text-stone-900">
+                            {formatPrice(Number(item.price) * Number(item.quantity || 1))}
+                          </span>
                         </div>
-                        <span className="shrink-0 text-xs font-bold text-stone-900">
-                          {formatPrice(Number(item.price) * Number(item.quantity || 1))}
-                        </span>
-                      </div>
-                      <div className="mt-2 inline-flex items-center rounded-lg border border-stone-200 bg-white shadow-2xs">
+
+                        {/* Shared Specs Display */}
+                        <ItemSpecsDisplay specs={specs} />
+
+                        <div className="mt-2 inline-flex items-center rounded-lg border border-stone-200 bg-white shadow-2xs">
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.id, (item.quantity || 1) - 1)}
@@ -1060,6 +1019,21 @@ export default function Checkout() {
                 );
               })}
             </div>
+
+            {/* Scroll Indicator Cue: Lets user know there are more products/details below */}
+            {canScrollMore && (
+              <div
+                onClick={scrollToMore}
+                className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-white via-white/85 to-transparent flex items-end justify-center pb-0.5 cursor-pointer z-10 select-none group"
+                title="Scroll for more product details"
+              >
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#f8f4ee]/95 border border-[#e6dacb] text-[10px] font-semibold text-[#8c6536] shadow-xs group-hover:bg-[#f2e8dc] transition-all">
+                  <span>Scroll for more details</span>
+                  <HiChevronDown className="w-3 h-3 animate-bounce" />
+                </span>
+              </div>
+            )}
+          </div>
 
             {/* Coupon Code */}
             <div className="border-t border-stone-100 pt-4">
@@ -1175,8 +1149,14 @@ export default function Checkout() {
                 </div>
               )}
               <div className="flex justify-between text-stone-600">
-                <span className="flex items-center gap-1">
-                  Shipping <span className="text-stone-400" title="Free standard delivery">ⓘ</span>
+                <span className="flex items-center gap-1.5">
+                  <span>Shipping</span>
+                  <span
+                    title="Free standard delivery"
+                    className="inline-flex items-center text-stone-400 hover:text-stone-600 cursor-help transition-colors"
+                  >
+                    <HiOutlineInformationCircle className="w-4 h-4" />
+                  </span>
                 </span>
                 <span className="font-semibold text-stone-900">
                   {shipping === 0 ? 'Free Shipping' : formatPrice(shipping)}
