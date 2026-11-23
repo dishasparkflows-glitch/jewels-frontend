@@ -162,18 +162,65 @@ export default function ProductAccordions({
                           <td className="py-1 px-1 text-right font-normal text-stone-900">{formatBreakdownValue(breakdown.metalCost)}</td>
                         </tr>
 
+                        {/* GEMSTONES (Center & Side Colorstone) */}
+                        {(breakdown.hasColorStone || breakdown.hasSideColorStone) && (
+                          <>
+                            <tr>
+                              <td colSpan={4} className="pt-3.5 pb-1.5 px-1 text-[10.5px] font-bold tracking-wider text-stone-900 uppercase">
+                                GEMSTONES
+                              </td>
+                            </tr>
+                            {breakdown.hasColorStone && (
+                              <tr>
+                                <td className="py-1 px-1 font-normal text-stone-800">
+                                  {breakdown.hasSideColorStone ? 'Center Labgrown Gemstone' : 'Labgrown Gemstone'}
+                                </td>
+                                <td className="py-1 px-1 text-center font-normal text-stone-700">
+                                  {breakdown.colorStoneRate ? `₹${Number(breakdown.colorStoneRate).toLocaleString('en-IN')}/ct` : '-'}
+                                </td>
+                                <td className="py-1 px-1 text-center font-normal text-stone-700">
+                                  {formatBreakdownWeight(breakdown.colorStoneWeight, 'cts')}
+                                </td>
+                                <td className="py-1 px-1 text-right font-normal text-stone-900">
+                                  {formatBreakdownValue(breakdown.colorStoneCost)}
+                                </td>
+                              </tr>
+                            )}
+                            {breakdown.hasSideColorStone && (
+                              <tr>
+                                <td className="py-1 px-1 font-normal text-stone-800">
+                                  Side Labgrown Gemstone
+                                </td>
+                                <td className="py-1 px-1 text-center font-normal text-stone-700">
+                                  {breakdown.sideColorStoneRate ? `₹${Number(breakdown.sideColorStoneRate).toLocaleString('en-IN')}/ct` : '-'}
+                                </td>
+                                <td className="py-1 px-1 text-center font-normal text-stone-700">
+                                  {formatBreakdownWeight(breakdown.sideColorStoneWeight, 'cts')}
+                                </td>
+                                <td className="py-1 px-1 text-right font-normal text-stone-900">
+                                  {formatBreakdownValue(breakdown.sideColorStoneCost)}
+                                </td>
+                              </tr>
+                            )}
+                          </>
+                        )}
+
                         {/* DIAMONDS */}
-                        <tr>
-                          <td colSpan={4} className="pt-3.5 pb-1.5 px-1 text-[10.5px] font-bold tracking-wider text-stone-900 uppercase">
-                            DIAMONDS
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="py-1 px-1 font-normal text-stone-800">{breakdown.diamondLabel}</td>
-                          <td className="py-1 px-1 text-center text-stone-400">-</td>
-                          <td className="py-1 px-1 text-center font-normal text-stone-700">{formatBreakdownWeight(breakdown.diamondCarat, 'cts')}</td>
-                          <td className="py-1 px-1 text-right font-normal text-stone-900">{formatBreakdownValue(breakdown.diamondCost)}</td>
-                        </tr>
+                        {(!breakdown.hasColorStone || breakdown.hasDiamond || Number(breakdown.diamondCost) > 0) && (
+                          <>
+                            <tr>
+                              <td colSpan={4} className="pt-3.5 pb-1.5 px-1 text-[10.5px] font-bold tracking-wider text-stone-900 uppercase">
+                                DIAMONDS
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="py-1 px-1 font-normal text-stone-800">{breakdown.diamondLabel}</td>
+                              <td className="py-1 px-1 text-center text-stone-400">-</td>
+                              <td className="py-1 px-1 text-center font-normal text-stone-700">{formatBreakdownWeight(breakdown.diamondCarat, 'cts')}</td>
+                              <td className="py-1 px-1 text-right font-normal text-stone-900">{formatBreakdownValue(breakdown.diamondCost)}</td>
+                            </tr>
+                          </>
+                        )}
 
                         {/* MAKING CHARGES */}
                         <tr>

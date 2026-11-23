@@ -315,9 +315,26 @@ export default function ProductDetail() {
   }, [product?.productSpecifications]);
 
 
-  // Determine whether this product is Case 1 (Center Diamond Driven) or Case 2 (Side Diamond Driven)
+  // Center Stone: Diamond vs Colorstone detection
+  const isColorStone = useMemo(() => {
+    if (product?.stoneConfigType === 'colorStone') return true;
+    if (Array.isArray(product?.colorStoneRows) && product.colorStoneRows.length > 0) return true;
+    const variants = Array.isArray(product?.variants) ? product.variants : [];
+    return variants.some((v) => Number(v.colorStoneWeight || 0) > 0 || Number(v.colorStoneCost || 0) > 0);
+  }, [product]);
+
+  // Side Stone: Side Colorstone detection
+  const hasSideColorStone = useMemo(() => {
+    if (product?.sideStoneConfigType === 'sideColorStone' || product?.sideStoneConfigType === 'both') return true;
+    if (Array.isArray(product?.sideColorStoneRows) && product.sideColorStoneRows.length > 0) return true;
+    const variants = Array.isArray(product?.variants) ? product.variants : [];
+    return variants.some((v) => Number(v.sideColorStoneWeight || 0) > 0 || Number(v.sideColorStoneCost || 0) > 0);
+  }, [product]);
+
+  // Determine whether this product is Case 1 (Center Driven) or Case 2 (Side Driven)
   const isCenterDriven = useMemo(() => {
     if (!product) return false;
+    if (isColorStone) return true;
     // Explicit 0 center diamonds configured in admin panel
     if (Array.isArray(product.centerDiamondRows) && product.centerDiamondRows.length === 0) {
       return false;
@@ -329,7 +346,7 @@ export default function ProductDetail() {
     // Only center-driven if variants actually have configured center diamond weight AND positive center cost
     const hasCenterWeights = variants.some((v) => Number(v.centerDiamondWeight) > 0 && Number(v.centerDiamondCost || 0) > 0);
     return Boolean(hasCenterWeights);
-  }, [product]);
+  }, [product, isColorStone]);
 
   // Extract dimensions available across variants
   const { purities, colors, carats, qualities, diamondType } = useMemo(() => {
@@ -358,8 +375,8 @@ export default function ProductDetail() {
 
       // Only add to carat dropdown if this is a center diamond driven product or variant has genuine center diamond weight
       const ct = isCenterDriven
-        ? Number(v.centerDiamondWeight || v.caratWeight || 0)
-        : Number(v.centerDiamondWeight || 0);
+        ? Number(v.centerDiamondWeight || v.colorStoneWeight || v.caratWeight || 0)
+        : Number(v.centerDiamondWeight || v.colorStoneWeight || 0);
       if (ct > 0) ctSet.add(ct);
 
       const col = referenceName(v.diamondColor || v.diamondColorId) || v.diamondColor || '';
@@ -371,6 +388,15 @@ export default function ProductDetail() {
       const dt = referenceName(v.diamondType || v.diamondTypeId);
       if (dt) dType = dt;
     });
+
+    if (isColorStone && Array.isArray(product?.colorStoneRows)) {
+      product.colorStoneRows.forEach((r) => {
+        const ct = Number(r.caratWeight || 0);
+        if (ct > 0) ctSet.add(ct);
+        const dt = referenceName(r.diamondTypeId || r.diamondType);
+        if (dt) dType = dt;
+      });
+    }
 
     if (Array.isArray(product?.metalPurityIds)) {
       product.metalPurityIds.forEach((p) => {
@@ -474,7 +500,7 @@ export default function ProductDetail() {
     if (isCenterDriven && carats.length && !selectedCarat) {
       setSelectedCarat(carats[0]);
     }
-    if (qualities.length && !selectedQuality) {
+    if (!isColorStone && qualities.length && !selectedQuality) {
       // Default to F-G VS or first quality
       const defaultQ =
         qualities.find((q) => {
@@ -483,7 +509,7 @@ export default function ProductDetail() {
         }) || qualities[0];
       setSelectedQuality(defaultQ);
     }
-  }, [product, isGold, isCenterDriven, purities, colors, carats, qualities, selectedPurity, selectedColor, selectedCarat, selectedQuality]);
+  }, [product, isGold, isCenterDriven, isColorStone, purities, colors, carats, qualities, selectedPurity, selectedColor, selectedCarat, selectedQuality]);
 
   // Swatches for the combined Metal (Purity + Color) selector matching Neirah standard
   const { metalSwatches, purityGroups } = useMemo(() => {
@@ -805,7 +831,7 @@ export default function ProductDetail() {
         c.toLowerCase() === selectedColor.toLowerCase() ||
         (c && selectedColor && (c.toLowerCase().includes(selectedColor.toLowerCase()) || selectedColor.toLowerCase().includes(c.toLowerCase())));
       const matchCt = !selectedCarat || ct === Number(selectedCarat);
-      const matchQ = isQualityMatch(v, selectedQuality);
+      const matchQ = isColorStone ? true : isQualityMatch(v, selectedQuality);
 
       return matchP && matchC && (isCenterDriven ? matchCt : true) && matchQ;
     });
@@ -815,11 +841,11 @@ export default function ProductDetail() {
     // 2. Partial match: purity + carat + quality
     match = raw.find((v) => {
       const p = referenceName(v.metalPurity || v.metalPurityId) || v.purity || '';
-      const ct = Number(v.centerDiamondWeight || v.caratWeight || 0);
+      const ct = Number(v.centerDiamondWeight || v.colorStoneWeight || v.caratWeight || 0);
 
       const matchP = !selectedPurity || normPurity(p) === normPurity(selectedPurity);
       const matchCt = !selectedCarat || ct === Number(selectedCarat);
-      const matchQ = isQualityMatch(v, selectedQuality);
+      const matchQ = isColorStone ? true : isQualityMatch(v, selectedQuality);
 
       return matchP && (isCenterDriven ? matchCt : true) && matchQ;
     });
@@ -833,7 +859,7 @@ export default function ProductDetail() {
     });
 
     return match || raw[0] || null;
-  }, [product, selectedPurity, selectedColor, selectedCarat, selectedQuality, isCenterDriven]);
+  }, [product, selectedPurity, selectedColor, selectedCarat, selectedQuality, isCenterDriven, isColorStone]);
 
   const displayedSku = useMemo(() => {
     return product?.basicInfo?.sku || '';
@@ -972,25 +998,42 @@ export default function ProductDetail() {
     const weightMultiplier = rawBaseMetalWeight > 0 ? (metalWeight / rawBaseMetalWeight) : 1;
     const labourCharge = Math.round(baseLabourCharge * weightMultiplier * 100) / 100;
 
+    const colorStoneCost = Number(v.colorStoneCost || 0);
+    const colorStoneWeight = Number(
+      v.colorStoneWeight || (isColorStone ? (v.caratWeight || selectedCarat || 0) : 0)
+    );
+    const colorStoneRate = Number(v.colorStoneRate || 3000);
+
+    const sideColorStoneCost = Number(v.sideColorStoneCost || 0);
+    const sideColorStoneWeight = Number(v.sideColorStoneWeight || 0);
+    const sideColorStoneRate = Number(v.sideColorStoneRate || 3000);
+
+    const hasCenterColor = Boolean(isColorStone || colorStoneCost > 0 || colorStoneWeight > 0);
+    const hasSideColor = Boolean(hasSideColorStone || sideColorStoneCost > 0 || sideColorStoneWeight > 0);
+
     const diamondQuality = selectedQuality || (v.diamondColor && v.diamondClarity ? `${referenceName(v.diamondColor)} / ${referenceName(v.diamondClarity)}` : '');
-    const diamondCarat = Number(
-      (Number(v.centerDiamondWeight || 0) + Number(v.sideDiamondWeight || 0)) ||
-      v.sideDiamondWeight ||
-      v.centerDiamondWeight ||
-      v.caratWeight ||
-      selectedCarat ||
-      0
-    );
+    const diamondCarat = isColorStone
+      ? Number(v.sideDiamondWeight || 0)
+      : Number(
+          (Number(v.centerDiamondWeight || 0) + Number(v.sideDiamondWeight || 0)) ||
+          v.sideDiamondWeight ||
+          v.centerDiamondWeight ||
+          v.caratWeight ||
+          selectedCarat ||
+          0
+        );
 
-    let diamondCost = Number(
-      v.diamondCost ||
-      (Number(v.centerDiamondCost || 0) + Number(v.sideDiamondCost || 0)) ||
-      v.sideDiamondCost ||
-      v.centerDiamondCost ||
-      0
-    );
+    let diamondCost = isColorStone
+      ? Number(v.sideDiamondCost || 0)
+      : Number(
+          v.diamondCost ||
+          (Number(v.centerDiamondCost || 0) + Number(v.sideDiamondCost || 0)) ||
+          v.sideDiamondCost ||
+          v.centerDiamondCost ||
+          0
+        );
 
-    if (!diamondCost && Array.isArray(product?.sideDiamondRows) && product.sideDiamondRows.length > 0) {
+    if (!isColorStone && !diamondCost && Array.isArray(product?.sideDiamondRows) && product.sideDiamondRows.length > 0) {
       const matchedSideRow = product.sideDiamondRows.find((r) => {
         const colId = String(r.diamondColorId?._id || r.diamondColorId || '');
         const claId = String(r.diamondClarityId?._id || r.diamondClarityId || '');
@@ -1008,7 +1051,11 @@ export default function ProductDetail() {
       }
     }
 
-    const baseMetalCost = Math.max(0, computedSubtotal - (diamondCost + labourCharge + certificateCharge));
+    const totalStonesCost = isColorStone
+      ? (diamondCost + colorStoneCost + sideColorStoneCost)
+      : (diamondCost + sideColorStoneCost);
+
+    const baseMetalCost = Math.max(0, computedSubtotal - (totalStonesCost + labourCharge + certificateCharge));
     const effectiveMetalRate = metalRate > 0 ? metalRate : (rawBaseMetalWeight > 0 ? (baseMetalCost / rawBaseMetalWeight) : 0);
 
     let metalCost = Number(v.metalCost || product?.ornate?.goldAmt || 0);
@@ -1016,7 +1063,7 @@ export default function ProductDetail() {
       metalCost = Math.round(metalWeight * effectiveMetalRate * 100) / 100;
     }
 
-    const calculatedSubtotal = Math.round((metalCost + diamondCost + labourCharge + certificateCharge) * 100) / 100;
+    const calculatedSubtotal = Math.round((metalCost + totalStonesCost + labourCharge + certificateCharge) * 100) / 100;
     const finalSubtotal = calculatedSubtotal > 0 ? calculatedSubtotal : computedSubtotal;
     const finalGst = Math.round((finalSubtotal * gstPct) * 100) / 100;
     const finalGrandTotal = Math.round((finalSubtotal + finalGst) * 100) / 100;
@@ -1026,9 +1073,18 @@ export default function ProductDetail() {
       metalRate: effectiveMetalRate,
       metalWeight,
       metalCost,
-      diamondLabel: diamondQuality ? `Diamond (${diamondQuality})` : 'Diamond',
+      diamondLabel: diamondQuality ? `Diamond (${diamondQuality})` : (isColorStone ? 'Side Diamond' : 'Diamond'),
       diamondCarat,
       diamondCost,
+      hasDiamond: Boolean(diamondCost > 0 || diamondCarat > 0),
+      hasColorStone: hasCenterColor,
+      colorStoneCost,
+      colorStoneWeight,
+      colorStoneRate,
+      hasSideColorStone: hasSideColor,
+      sideColorStoneCost,
+      sideColorStoneWeight,
+      sideColorStoneRate,
       labourCharge,
       certificateCharge,
       subtotal: finalSubtotal,
@@ -1046,6 +1102,8 @@ export default function ProductDetail() {
     rawBaseMetalWeight,
     sizeAdjustedMetalWeight,
     metalDisplayName,
+    isColorStone,
+    hasSideColorStone,
   ]);
 
 
@@ -1164,20 +1222,20 @@ export default function ProductDetail() {
       : (selectedVariant?.diamondTypeId?.name ||
         selectedVariant?.diamondType?.name ||
         diamondType ||
-        'Lab Grown Diamond');
+        (isColorStone ? 'Lab Grown Gemstone' : 'Lab Grown Diamond'));
 
     const resolvedShapeName =
       selectedVariant?.diamondShapeId?.name ||
       selectedVariant?.diamondShape?.name ||
       '';
 
-    const resolvedClarityName = selectedQuality ||
-      selectedVariant?.diamondClarityId?.name ||
-      '';
+    const resolvedClarityName = isColorStone
+      ? ''
+      : (selectedQuality || selectedVariant?.diamondClarityId?.name || '');
 
-    const resolvedColorName =
-      selectedVariant?.diamondColorId?.name ||
-      '';
+    const resolvedColorName = isColorStone
+      ? ''
+      : (selectedVariant?.diamondColorId?.name || '');
 
     let selectedAttributes = null;
     if (isGold) {
@@ -1188,8 +1246,12 @@ export default function ProductDetail() {
         diamondShape: cleanAttribute(resolvedShapeName),
         diamondClarity: cleanAttribute(resolvedClarityName),
         diamondColor: cleanAttribute(resolvedColorName),
-        caratWeight: Number(selectedVariant?.caratWeight || selectedCarat || 0) || null,
+        caratWeight: Number(selectedVariant?.colorStoneWeight || selectedVariant?.caratWeight || selectedCarat || 0) || null,
         size: resolvedSizeName || null,
+        colorStoneCost: Number(selectedVariant?.colorStoneCost || 0) || undefined,
+        colorStoneWeight: Number(selectedVariant?.colorStoneWeight || 0) || undefined,
+        sideColorStoneCost: Number(selectedVariant?.sideColorStoneCost || 0) || undefined,
+        sideColorStoneWeight: Number(selectedVariant?.sideColorStoneWeight || 0) || undefined,
         metalPurityId: selectedVariant?.metalPurityId?._id || selectedVariant?.metalPurityId || product.metalPurityIds?.[0]?._id || product.metalPurityIds?.[0] || null,
         metalColorId: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId?.id || selectedVariant?.metalColorId || product.metalColors?.[0]?.id || product.metalColors?.[0]?._id || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null,
         diamondTypeId: selectedVariant?.diamondTypeId?._id || selectedVariant?.diamondTypeId || null,
@@ -1556,23 +1618,24 @@ export default function ProductDetail() {
             <div className="space-y-4 pt-1">
               {isGold && (
                 <>
-                  {/* 1. Diamond Type Selector */}
+                  {/* 1. Diamond Type / Gemstone Type Selector */}
                   <div className="space-y-1.5">
                     <label className="block text-[11px] font-bold text-stone-700">
-                      Diamond Type: <span className="font-semibold text-stone-900">{diamondType}</span>
+                      {isColorStone ? 'Gemstone Type:' : 'Diamond Type:'}{' '}
+                      <span className="font-semibold text-stone-900">{diamondType || (isColorStone ? 'Lab Grown Gemstone' : 'Lab Grown Diamond')}</span>
                     </label>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         className="px-3.5 py-1.5 rounded-lg text-xs font-bold tracking-wide uppercase bg-[#1f3a2b] text-white shadow-xs cursor-default"
                       >
-                        {diamondType}
+                        {diamondType || (isColorStone ? 'Lab Grown Gemstone' : 'Lab Grown Diamond')}
                       </button>
                     </div>
                   </div>
 
-                  {/* 2. Diamond Quality Selector (Grid Format matching Screenshot 2) */}
-                  {qualities.length > 0 && (
+                  {/* 2. Diamond Quality Selector (Grid Format matching Screenshot 2 - Hidden for Colorstone) */}
+                  {!isColorStone && qualities.length > 0 && (
                     <div className="space-y-2">
                       <label className="block text-[11px] font-bold text-stone-700">
                         Diamond Quality: <span className="font-semibold text-stone-900">{selectedQuality.replace(' · ', ' ')}</span>
@@ -1774,11 +1837,11 @@ export default function ProductDetail() {
                 </div>
               )}
 
-              {/* 4. Solitaire Center Diamond Carat Weight Dropdown */}
+              {/* 4. Center Stone Carat Weight Dropdown */}
               {isCenterDriven && carats.length > 0 && (
                 <div className="space-y-1.5">
                   <label htmlFor="carat-select" className="block text-[11px] font-bold text-stone-700">
-                    Total Center Diamond Weight
+                    {isColorStone ? 'Total Center Gemstone Weight' : 'Total Center Diamond Weight'}
                   </label>
                   <Dropdown
                     id="carat-select"

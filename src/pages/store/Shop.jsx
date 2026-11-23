@@ -500,9 +500,9 @@ export default function Shop({ defaultCategory = '' }) {
       {/* ─── Top Category Banner Image (Exact Match: 100% full width, max-h-[360px], object-cover, bg-[#FAF7F2]) ─── */}
       {displayBanner && (
         <div className="w-full relative overflow-hidden bg-[#FAF7F2]">
-          {displayBanner.image?.mediaType === 'video' || displayBanner.mediaType === 'video' ? (
+          {displayBanner.image?.mediaType === 'video' ? (
             <video
-              src={displayBanner.video?.url || displayBanner.image?.url}
+              src={displayBanner.image?.url}
               autoPlay
               loop
               muted
@@ -511,9 +511,9 @@ export default function Shop({ defaultCategory = '' }) {
             />
           ) : (
             <img
-              src={displayBanner.image?.url || displayBanner.video?.url}
+              src={displayBanner.image?.url}
               className="w-full h-auto block max-h-[360px] object-cover"
-              alt={displayBanner.title || category?.name || pageTitle || 'Category Banner'}
+              alt={displayBanner.content?.title || category?.name || pageTitle || 'Category Banner'}
             />
           )}
         </div>
