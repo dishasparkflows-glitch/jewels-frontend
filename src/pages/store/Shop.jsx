@@ -171,6 +171,7 @@ export default function Shop({ defaultCategory = '' }) {
   const selectedStockStatus = params.get('stockStatus') || '';
   const selectedGemstone = params.get('gemstone') || params.get('stone_names') || '';
   const selectedGemstoneShape = params.get('gemstoneShape') || params.get('stone_shapes') || '';
+  const selectedBirthMonth = params.get('birthMonth') || '';
   const sort = params.get('sort') || 'newest';
   const page = Math.max(1, Number(params.get('page')) || 1);
   const limit = [12, 24, 48].includes(Number(params.get('limit'))) ? Number(params.get('limit')) : 12;
@@ -274,6 +275,7 @@ export default function Shop({ defaultCategory = '' }) {
             'page',
             'minPrice',
             'maxPrice',
+            'birthMonth',
             ...filterList.map((f) => f.key),
           ]);
           const next = new URLSearchParams(params);
@@ -331,6 +333,9 @@ export default function Shop({ defaultCategory = '' }) {
     if (selectedStockStatus) query.stockStatus = selectedStockStatus;
     if (selectedGemstone) query.gemstone = selectedGemstone;
     if (selectedGemstoneShape) query.gemstoneShape = selectedGemstoneShape;
+    if (selectedBirthMonth) {
+      query.birthMonth = selectedBirthMonth.split(',').map((s) => s.trim()).filter(Boolean);
+    }
 
     productsAPI
       .getAll(query)
@@ -374,6 +379,7 @@ export default function Shop({ defaultCategory = '' }) {
     selectedStockStatus,
     selectedGemstone,
     selectedGemstoneShape,
+    selectedBirthMonth,
   ]);
 
   function updateFilters(changes) {
@@ -400,7 +406,8 @@ export default function Shop({ defaultCategory = '' }) {
     !!selectedMetal ||
     !!selectedStockStatus ||
     !!selectedGemstone ||
-    !!selectedGemstoneShape;
+    !!selectedGemstoneShape ||
+    !!selectedBirthMonth;
 
   const featuredTitle = featuredData?.name || titleParam || '';
 
@@ -439,6 +446,7 @@ export default function Shop({ defaultCategory = '' }) {
   }
 
   const multiFilterKeys = [
+    'birthMonth',
     'shopFor',
     'diamondType',
     'clarity',
@@ -456,7 +464,7 @@ export default function Shop({ defaultCategory = '' }) {
     const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
     parts.forEach((val) => {
       activeChips.push({
-        label: val,
+        label: key === 'birthMonth' ? `Month: ${val}` : val,
         onRemove: () => {
           const nextParts = parts.filter((p) => p !== val);
           updateFilters({ [key]: nextParts.join(',') });
@@ -484,6 +492,7 @@ export default function Shop({ defaultCategory = '' }) {
     featuredTitle ||
     titleParam ||
     category?.name ||
+    (selectedBirthMonth ? `Birthstone: ${selectedBirthMonth}` : '') ||
     (search ? `Search: "${search}"` : (selectedCollection || 'All Jewellery'));
 
   return (

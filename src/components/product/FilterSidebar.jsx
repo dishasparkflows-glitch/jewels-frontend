@@ -88,13 +88,15 @@ function FilterOptionsList({ filter, isOptionSelected, handleToggleOption }) {
     const q = searchTerm.toLowerCase().trim();
     return filter.options.filter((opt) => {
       const name = (opt.name || opt.value || '').toLowerCase();
-      return name.includes(q);
+      const stone = (opt.stoneName || '').toLowerCase();
+      return name.includes(q) || stone.includes(q);
     });
   }, [filter.options, searchTerm]);
 
   const showSearch =
     filter.key === 'gemstone' ||
     filter.key === 'gemstoneShape' ||
+    filter.key === 'birthMonth' ||
     filter.options.length > 7;
 
   return (
@@ -180,8 +182,22 @@ function FilterOptionsList({ filter, isOptionSelected, handleToggleOption }) {
                     <ShapeSilhouette name={optName} code={opt.code || optVal} />
                   )}
 
+                  {/* Birthstone Gem Swatch / Image */}
+                  {filter.key === 'birthMonth' && opt.imageUrl && (
+                    <img
+                      src={opt.imageUrl}
+                      alt={optName}
+                      className="w-4 h-4 rounded-full object-contain mix-blend-multiply shrink-0 group-hover/item:scale-110 transition-transform"
+                    />
+                  )}
+
                   <span className={isChecked ? 'font-semibold text-stone-900' : 'text-stone-700'}>
                     {optName}
+                    {filter.key === 'birthMonth' && opt.stoneName && (
+                      <span className="text-[10px] text-stone-400 font-normal ml-1.5 capitalize">
+                        ({opt.stoneName.toLowerCase()})
+                      </span>
+                    )}
                   </span>
                 </span>
 

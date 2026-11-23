@@ -109,6 +109,7 @@ export default function Checkout() {
   const [savingAddress, setSavingAddress] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('online');
   const [paymentProvider, setPaymentProvider] = useState('razorpay');
+  const [testPhoneNumbers, setTestPhoneNumbers] = useState([]);
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponLoading, setCouponLoading] = useState(false);
@@ -185,6 +186,9 @@ export default function Checkout() {
         const config = unwrapResponse(response);
         if (config?.defaultProvider) {
           setPaymentProvider(config.defaultProvider);
+        }
+        if (Array.isArray(config?.testPhoneNumbers)) {
+          setTestPhoneNumbers(config.testPhoneNumbers);
         }
       })
       .catch((err) => {
@@ -281,7 +285,37 @@ export default function Checkout() {
   };
 
   const discountAmount = Number(appliedCoupon?.discountAmount || 0);
-  const finalTotal = Math.max(0, Number(total || subtotal + shipping + tax) - discountAmount);
+  const calculatedTotal = Math.max(0, Number(total || subtotal + shipping + tax) - discountAmount);
+
+  // Check if current logged in user or phone number matches test numbers in env
+  const isTestUser = useMemo(() => {
+    const list = [
+      ...(testPhoneNumbers || []),
+      ...(import.meta.env.VITE_TEST_PAYMENT_PHONE_NUMBERS
+        ? (() => {
+            try {
+              const raw = String(import.meta.env.VITE_TEST_PAYMENT_PHONE_NUMBERS).trim();
+              if (raw.startsWith('[')) return JSON.parse(raw);
+              return raw.split(',');
+            } catch {
+              return String(import.meta.env.VITE_TEST_PAYMENT_PHONE_NUMBERS).split(',');
+            }
+          })()
+        : []),
+    ]
+      .map((p) => String(p).replace(/[^0-9]/g, '').slice(-10))
+      .filter(Boolean);
+
+    if (list.length === 0) return false;
+
+    const userPhone = String(user?.profile?.phone || form.phone || '')
+      .replace(/[^0-9]/g, '')
+      .slice(-10);
+
+    return Boolean(userPhone && list.includes(userPhone));
+  }, [testPhoneNumbers, user, form.phone]);
+
+  const finalTotal = isTestUser && calculatedTotal > 0 ? 1 : calculatedTotal;
   const totalQuantity = cart.reduce((sum, item) => sum + Number(item.quantity || 1), 0);
   const codDueNow = Math.min(finalTotal, Number(codFee?.calculatedCharge || 0));
   const codRemaining = Math.max(0, finalTotal - codDueNow);
@@ -1232,11 +1266,21 @@ export default function Checkout() {
               <div>
                 <h3 className="text-base font-bold text-stone-900">Total</h3>
                 <p className="text-[11px] text-stone-400">Inclusive of all taxes</p>
+                {isTestUser && (
+                  <span className="inline-block mt-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    ⚡ Test Payment Mode (₹1)
+                  </span>
+                )}
               </div>
               <div className="text-right">
                 <span className="text-xl sm:text-2xl font-bold font-sans text-stone-900">
                   {formatPrice(finalTotal)}
                 </span>
+                {isTestUser && calculatedTotal > 1 && (
+                  <span className="block text-[11px] text-stone-400 line-through">
+                    {formatPrice(calculatedTotal)}
+                  </span>
+                )}
               </div>
             </div>
           </aside>

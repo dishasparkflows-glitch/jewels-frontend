@@ -32,6 +32,7 @@ import {
   HiOutlineTruck,
   HiOutlineShoppingCart,
   HiOutlineArrowLeft,
+  HiOutlineDotsVertical,
 } from 'react-icons/hi';
 import { HiOutlineSquare3Stack3D } from 'react-icons/hi2';
 import { getImageUrl } from '../../utils/imageUrl';
@@ -46,6 +47,13 @@ const INDIAN_STATES = [
   'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Andaman and Nicobar Islands', 'Chandigarh',
   'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
 ];
+
+const getAddressTypeIcon = (type) => {
+  const t = (type || 'home').toLowerCase();
+  if (t === 'office') return <HiOutlineOfficeBuilding className="w-4 h-4 text-stone-400" />;
+  if (t === 'other') return <HiOutlineLocationMarker className="w-4 h-4 text-stone-400" />;
+  return <HiOutlineHome className="w-4 h-4 text-stone-400" />;
+};
 
 const formatOrderDate = (dateVal) => {
   if (!dateVal) return '';
@@ -951,53 +959,65 @@ const Profile = () => {
                   </div>
 
                   {/* Two Address Columns */}
-                  <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {/* Default Billing Address */}
-                    <div className="space-y-1.5 text-xs sm:text-sm text-stone-700">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-stone-800 uppercase tracking-wider">
-                          DEFAULT BILLING ADDRESS
-                        </span>
-                        <button
-                          onClick={() => openAddressModal('billing')}
-                          className="inline-flex items-center gap-1 text-xs text-[#8b6f4e] hover:text-[#745735] font-medium transition-colors"
-                        >
-                          <span>Edit</span>
-                          <HiOutlinePencilAlt className="w-3.5 h-3.5" />
-                        </button>
+                  <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Default Billing Address Box */}
+                    <div className="border border-stone-200/90 rounded-2xl p-4 sm:p-5 bg-white space-y-2 text-xs sm:text-sm text-stone-700 shadow-2xs hover:border-[#8b6f4e]/40 transition-colors">
+                      <div className="flex items-center justify-between pb-1">
+                        <div className="flex items-center gap-2">
+                          <HiOutlineHome className="w-5 h-5 text-stone-700 shrink-0" />
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#faf2e5] text-[#5c3715] tracking-normal select-none">
+                            Default Billing Address
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openAddressModal('billing')}
+                            className="inline-flex items-center gap-1 text-xs text-stone-600 hover:text-[#8b6f4e] font-medium transition-colors cursor-pointer"
+                          >
+                            <HiOutlinePencilAlt className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                        </div>
                       </div>
-                      <p className="font-normal text-stone-900">{billingAddress.fullName || userFullName || 'Disha Customer'}</p>
+                      <p className="font-bold text-stone-900 text-sm">{billingAddress.fullName || userFullName || 'Disha Radadiya'}</p>
                       <p className="text-stone-600 leading-relaxed">{bAddr.addressLine || 'No address set'}</p>
-                      {bAddr.city && (
+                      {(bAddr.city || bAddr.state || bAddr.pincode) && (
                         <p className="text-stone-600">
-                          {[bAddr.city, bAddr.state, bAddr.pincode].filter(Boolean).join(', ')}
+                          {[bAddr.city, bAddr.state ? `${bAddr.state}${bAddr.pincode ? ` – ${bAddr.pincode}` : ''}` : bAddr.pincode].filter(Boolean).join(', ')}
                         </p>
                       )}
-                      {bAddr.phone && <p className="text-stone-600 pt-1">{bAddr.phone}</p>}
+                      {bAddr.phone && <p className="text-stone-700 font-medium pt-0.5">{bAddr.phone}</p>}
                     </div>
 
-                    {/* Default Shipping Address */}
-                    <div className="space-y-1.5 text-xs sm:text-sm text-stone-700">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-stone-800 uppercase tracking-wider">
-                          DEFAULT SHIPPING ADDRESS
-                        </span>
-                        <button
-                          onClick={() => openAddressModal('shipping')}
-                          className="inline-flex items-center gap-1 text-xs text-[#8b6f4e] hover:text-[#745735] font-medium transition-colors"
-                        >
-                          <span>Edit</span>
-                          <HiOutlinePencilAlt className="w-3.5 h-3.5" />
-                        </button>
+                    {/* Default Shipping Address Box */}
+                    <div className="border border-stone-200/90 rounded-2xl p-4 sm:p-5 bg-white space-y-2 text-xs sm:text-sm text-stone-700 shadow-2xs hover:border-[#8b6f4e]/40 transition-colors">
+                      <div className="flex items-center justify-between pb-1">
+                        <div className="flex items-center gap-2">
+                          <HiOutlineHome className="w-5 h-5 text-stone-700 shrink-0" />
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#faf2e5] text-[#5c3715] tracking-normal select-none">
+                            Default Shipping Address
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openAddressModal('shipping')}
+                            className="inline-flex items-center gap-1 text-xs text-stone-600 hover:text-[#8b6f4e] font-medium transition-colors cursor-pointer"
+                          >
+                            <HiOutlinePencilAlt className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                        </div>
                       </div>
-                      <p className="font-normal text-stone-900">{shippingAddress.fullName || userFullName || 'Disha Customer'}</p>
+                      <p className="font-bold text-stone-900 text-sm">{shippingAddress.fullName || userFullName || 'Disha Radadiya'}</p>
                       <p className="text-stone-600 leading-relaxed">{sAddr.addressLine || 'No address set'}</p>
-                      {sAddr.city && (
+                      {(sAddr.city || sAddr.state || sAddr.pincode) && (
                         <p className="text-stone-600">
-                          {[sAddr.city, sAddr.state, sAddr.pincode].filter(Boolean).join(', ')}
+                          {[sAddr.city, sAddr.state ? `${sAddr.state}${sAddr.pincode ? ` – ${sAddr.pincode}` : ''}` : sAddr.pincode].filter(Boolean).join(', ')}
                         </p>
                       )}
-                      {sAddr.phone && <p className="text-stone-600 pt-1">{sAddr.phone}</p>}
+                      {sAddr.phone && <p className="text-stone-700 font-medium pt-0.5">{sAddr.phone}</p>}
                     </div>
                   </div>
                 </div>
@@ -1014,53 +1034,65 @@ const Profile = () => {
                       DEFAULT ADDRESSES
                     </span>
                   </div>
-                  <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {/* Default Billing Address */}
-                    <div className="space-y-2 text-xs sm:text-sm text-stone-700">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-stone-800 uppercase tracking-wider">
-                          DEFAULT BILLING ADDRESS
-                        </span>
-                        <button
-                          onClick={() => openAddressModal('billing')}
-                          className="inline-flex items-center gap-1 text-xs text-[#8b6f4e] hover:text-[#745735] font-medium transition-colors"
-                        >
-                          <span>Edit</span>
-                          <HiOutlinePencilAlt className="w-3.5 h-3.5" />
-                        </button>
+                  <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Default Billing Address Box */}
+                    <div className="border border-stone-200/90 rounded-2xl p-4 sm:p-5 bg-white space-y-2 text-xs sm:text-sm text-stone-700 shadow-2xs hover:border-[#8b6f4e]/40 transition-colors">
+                      <div className="flex items-center justify-between pb-1">
+                        <div className="flex items-center gap-2">
+                          <HiOutlineHome className="w-5 h-5 text-stone-700 shrink-0" />
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#faf2e5] text-[#5c3715] tracking-normal select-none">
+                            Default Billing Address
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openAddressModal('billing')}
+                            className="inline-flex items-center gap-1 text-xs text-stone-600 hover:text-[#8b6f4e] font-medium transition-colors cursor-pointer"
+                          >
+                            <HiOutlinePencilAlt className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                        </div>
                       </div>
-                      <p className="font-normal text-stone-900">{billingAddress.fullName || userFullName || 'Disha Customer'}</p>
+                      <p className="font-bold text-stone-900 text-sm">{billingAddress.fullName || userFullName || 'Disha Radadiya'}</p>
                       <p className="text-stone-600 leading-relaxed">{bAddr.addressLine || 'No address set'}</p>
-                      {bAddr.city && (
+                      {(bAddr.city || bAddr.state || bAddr.pincode) && (
                         <p className="text-stone-600">
-                          {[bAddr.city, bAddr.state, bAddr.pincode].filter(Boolean).join(', ')}
+                          {[bAddr.city, bAddr.state ? `${bAddr.state}${bAddr.pincode ? ` – ${bAddr.pincode}` : ''}` : bAddr.pincode].filter(Boolean).join(', ')}
                         </p>
                       )}
-                      {bAddr.phone && <p className="text-stone-600 pt-1">{bAddr.phone}</p>}
+                      {bAddr.phone && <p className="text-stone-700 font-medium pt-0.5">{bAddr.phone}</p>}
                     </div>
 
-                    {/* Default Shipping Address */}
-                    <div className="space-y-2 text-xs sm:text-sm text-stone-700">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-stone-800 uppercase tracking-wider">
-                          DEFAULT SHIPPING ADDRESS
-                        </span>
-                        <button
-                          onClick={() => openAddressModal('shipping')}
-                          className="inline-flex items-center gap-1 text-xs text-[#8b6f4e] hover:text-[#745735] font-medium transition-colors"
-                        >
-                          <span>Edit</span>
-                          <HiOutlinePencilAlt className="w-3.5 h-3.5" />
-                        </button>
+                    {/* Default Shipping Address Box */}
+                    <div className="border border-stone-200/90 rounded-2xl p-4 sm:p-5 bg-white space-y-2 text-xs sm:text-sm text-stone-700 shadow-2xs hover:border-[#8b6f4e]/40 transition-colors">
+                      <div className="flex items-center justify-between pb-1">
+                        <div className="flex items-center gap-2">
+                          <HiOutlineHome className="w-5 h-5 text-stone-700 shrink-0" />
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#faf2e5] text-[#5c3715] tracking-normal select-none">
+                            Default Shipping Address
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openAddressModal('shipping')}
+                            className="inline-flex items-center gap-1 text-xs text-stone-600 hover:text-[#8b6f4e] font-medium transition-colors cursor-pointer"
+                          >
+                            <HiOutlinePencilAlt className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                        </div>
                       </div>
-                      <p className="font-normal text-stone-900">{shippingAddress.fullName || userFullName || 'Disha Customer'}</p>
+                      <p className="font-bold text-stone-900 text-sm">{shippingAddress.fullName || userFullName || 'Disha Radadiya'}</p>
                       <p className="text-stone-600 leading-relaxed">{sAddr.addressLine || 'No address set'}</p>
-                      {sAddr.city && (
+                      {(sAddr.city || sAddr.state || sAddr.pincode) && (
                         <p className="text-stone-600">
-                          {[sAddr.city, sAddr.state, sAddr.pincode].filter(Boolean).join(', ')}
+                          {[sAddr.city, sAddr.state ? `${sAddr.state}${sAddr.pincode ? ` – ${sAddr.pincode}` : ''}` : sAddr.pincode].filter(Boolean).join(', ')}
                         </p>
                       )}
-                      {sAddr.phone && <p className="text-stone-600 pt-1">{sAddr.phone}</p>}
+                      {sAddr.phone && <p className="text-stone-700 font-medium pt-0.5">{sAddr.phone}</p>}
                     </div>
                   </div>
                 </div>
@@ -1092,36 +1124,42 @@ const Profile = () => {
                               key={addrItem._id || idx}
                               className="border border-stone-200 rounded-xl p-4 space-y-2 text-xs sm:text-sm text-stone-700 bg-white"
                             >
-                              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
-                                {addr.type ? addr.type.toUpperCase() : `ADDRESS ${idx + 1}`}
-                              </span>
+                              <div className="flex items-center justify-between pb-1 border-b border-stone-100">
+                                <div className="flex items-center gap-1.5 text-stone-500">
+                                  <span title={addr.type ? addr.type.toUpperCase() : 'HOME'}>
+                                    {getAddressTypeIcon(addr.type)}
+                                  </span>
+                                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">
+                                    {addr.type ? addr.type.toUpperCase() : `ADDRESS ${idx + 1}`}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => openAddressModal('edit-additional', addrItem)}
+                                    className="p-1 text-stone-500 hover:text-[#8b6f4e] hover:bg-stone-50 rounded transition-colors cursor-pointer"
+                                    title="Edit address"
+                                    aria-label="Edit address"
+                                  >
+                                    <HiOutlinePencilAlt className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteAddress(addrItem._id)}
+                                    className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                                    title="Delete address"
+                                    aria-label="Delete address"
+                                  >
+                                    <HiOutlineTrash className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
                               <p className="font-normal text-stone-900">{userFullName}</p>
                               <p className="text-stone-600 text-xs leading-relaxed">{addr.addressLine}</p>
                               <p className="text-stone-600 text-xs">
                                 {addr.city}, {addr.state} {addr.pincode}
                               </p>
                               <p className="text-stone-600 text-xs pt-1">{addr.phone}</p>
-
-                              <div className="flex items-center gap-4 pt-3 border-t border-stone-100 text-xs">
-                                <button
-                                  type="button"
-                                  onClick={() => openAddressModal('edit-additional', addrItem)}
-                                  className="inline-flex items-center gap-1.5 text-stone-600 hover:text-[#8b6f4e] font-medium transition-colors"
-                                  title="Edit address"
-                                >
-                                  <HiOutlinePencilAlt className="w-3.5 h-3.5" />
-                                  <span>Edit</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteAddress(addrItem._id)}
-                                  className="inline-flex items-center gap-1.5 text-rose-500 hover:text-rose-700 font-medium transition-colors"
-                                  title="Delete address"
-                                >
-                                  <HiOutlineTrash className="w-3.5 h-3.5" />
-                                  <span>Delete</span>
-                                </button>
-                              </div>
                             </div>
                           );
                         })}
@@ -1550,10 +1588,10 @@ const Profile = () => {
           <div
             ref={modalRef}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[540px] bg-white rounded-2xl shadow-2xl animate-scale-in my-6 relative cursor-default"
+            className="w-full max-w-[540px] bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in my-6 relative cursor-default"
           >
             {/* Dark Header */}
-            <div className="bg-[#262320] text-white px-7 py-5 flex items-center justify-between rounded-t-2xl">
+            <div className="bg-[#262320] text-white px-7 py-5 flex items-center justify-between">
               <h3 className="font-serif text-2xl font-normal text-white tracking-wide">
                 {addressModalType === 'add-additional' && 'Add New Address'}
                 {addressModalType === 'edit-additional' && 'Edit Address'}

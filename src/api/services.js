@@ -248,4 +248,12 @@ export const shiprocketAPI = {
   trackByOrderId: (orderId) => api.get(`/shiprocket/track/order/${orderId}`),
 };
 
+// ─── Birthstones ────────────────────────────────────
+export const birthstoneAPI = {
+  getAll: (params) => getOnce('/birthstones', { params }),
+  getLookup: () => getOnce('/birthstones/lookup'),
+  getByMonth: (month) => getOnce(`/birthstones/month/${month}`),
+};
+
+
 

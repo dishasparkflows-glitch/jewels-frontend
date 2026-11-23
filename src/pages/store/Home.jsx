@@ -1,4 +1,5 @@
 import HomeProductCard from '../../components/product/HomeProductCard';
+import BirthstonesSection from '../../components/home/BirthstonesSection';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -178,12 +179,10 @@ const Home = () => {
         );
         if (customBannerData && (customBannerData.media?.url || customBannerData.image?.url || customBannerData.media || customBannerData.image)) {
           setCustomBanner({
-            title: contentOf(customBannerData).title && contentOf(customBannerData).title !== 'Customize Banner'
-              ? contentOf(customBannerData).title
-              : 'Custom Jewellery, Crafted for You',
-            subtitle: contentOf(customBannerData).subtitle || 'Bring your vision to life with a one-of-a-kind piece, designed and handcrafted to reflect your unique style.',
+            title: contentOf(customBannerData).title || customBannerData.title || '',
+            subtitle: contentOf(customBannerData).subtitle || '',
             image: customBannerData.media?.url || customBannerData.image?.url || (typeof (customBannerData.media || customBannerData.image) === 'string' ? (customBannerData.media || customBannerData.image) : ''),
-            buttonText: contentOf(customBannerData).buttonText || 'CUSTOMIZE NOW',
+            buttonText: contentOf(customBannerData).buttonText || '',
             link: customBannerData.link || '/custom-jewellery',
           });
         } else {
@@ -194,14 +193,12 @@ const Home = () => {
         const mobileBanner = allBanners.find((b) => typeOf(b) === 'mobileappbanner');
         if (mobileBanner && (mobileBanner.media?.url || mobileBanner.image?.url || mobileBanner.media || mobileBanner.image)) {
           setMobileAppBanner({
-            title: contentOf(mobileBanner).title && contentOf(mobileBanner).title !== 'App Banner'
-              ? contentOf(mobileBanner).title
-              : "Discover NEIRAH's exquisite\njewelry collection anytime.\nanywhere",
-            subtitle: contentOf(mobileBanner).subtitle || 'Download the NEIRAH App\ntoday on',
+            title: contentOf(mobileBanner).title || mobileBanner.title || '',
+            subtitle: contentOf(mobileBanner).subtitle || '',
             image: mobileBanner.media?.url || mobileBanner.image?.url || (typeof (mobileBanner.media || mobileBanner.image) === 'string' ? (mobileBanner.media || mobileBanner.image) : ''),
             link: mobileBanner.link || '',
-            appStoreUrl: mobileBanner.appStoreUrl || storeSettings?.appStoreUrl || 'https://www.apple.com/app-store/',
-            googlePlayUrl: mobileBanner.googlePlayUrl || storeSettings?.googlePlayUrl || 'https://play.google.com/store',
+            appStoreUrl: mobileBanner.appStoreUrl || storeSettings?.appStoreUrl || '',
+            googlePlayUrl: mobileBanner.googlePlayUrl || storeSettings?.googlePlayUrl || '',
           });
         } else {
           setMobileAppBanner(null);
@@ -211,12 +208,11 @@ const Home = () => {
         const appointmentBanner = allBanners.find((b) => typeOf(b) === 'bookappointbanner');
         if (appointmentBanner && (appointmentBanner.media?.url || appointmentBanner.image?.url || appointmentBanner.media || appointmentBanner.image)) {
           setBookAppointBanner({
-            title: contentOf(appointmentBanner).title && contentOf(appointmentBanner).title !== 'Appointment Banner'
-              ? contentOf(appointmentBanner).title
-              : 'Book A Virtual Appointment',
-            subtitle: contentOf(appointmentBanner).subtitle || 'Book a personalized appointment to explore designs that match your style. Let our experts guide you in finding or creating something truly special.',
+            title: contentOf(appointmentBanner).title || appointmentBanner.title || '',
+            subtitle: contentOf(appointmentBanner).subtitle || '',
             image: appointmentBanner.media?.url || appointmentBanner.image?.url || (typeof (appointmentBanner.media || appointmentBanner.image) === 'string' ? (appointmentBanner.media || appointmentBanner.image) : ''),
-            buttonText: contentOf(appointmentBanner).buttonText || 'SCHEDULE APPOINTMENT',
+            buttonText: contentOf(appointmentBanner).buttonText || '',
+            link: appointmentBanner.link || '',
           });
         } else {
           setBookAppointBanner(null);
@@ -936,53 +932,61 @@ const Home = () => {
         <section style={sectionStyle('customBanner')} className="pt-6 sm:pt-10 relative overflow-hidden">
           {/* Desktop view */}
           <div className="hidden md:block relative w-full">
-            <img
-              src={getMediaUrl(customBanner.image)}
-              alt={customBanner.title || 'Custom Jewellery Journey'}
-              className="w-full h-auto block"
-            />
-            <div className="absolute z-10 left-[5%] lg:left-[6%] xl:left-[8%] top-1/2 -translate-y-1/2 w-[38%] lg:w-[35%] xl:w-[34%] border border-[#E8E0D8]/40 rounded-[12px] lg:rounded-[18px] xl:rounded-[24px] bg-[#F0EBE4]/95 backdrop-blur-md p-[3%] xl:p-[2.5%] text-[#1A1815] shadow-lg transition-all duration-300">
-              <h2 className="unna-font font-serif text-[18px] lg:text-2xl xl:text-3xl font-normal mb-[3%] leading-tight text-[#1A1815]">
-                {customBanner.title}
-              </h2>
-              <p className="text-[11px] lg:text-xs xl:text-sm mb-[6%] font-normal text-[#6B6460] leading-relaxed">
-                {customBanner.subtitle}
-              </p>
-              <div>
-                <Link
-                  to={customBanner.link && customBanner.link !== '/custom' ? customBanner.link : '/custom-jewellery'}
-                  className="inline-block w-auto bg-[#F4594B] text-white px-6 py-2.5 text-[10px] lg:text-[11px] xl:text-[12px] font-bold tracking-[0.2em] uppercase rounded-xl shadow-md hover:bg-[#F4594B]/95 hover:transform hover:-translate-y-0.5 transition-all duration-300"
-                >
-                  {customBanner.buttonText || 'CUSTOMIZE NOW'}
-                </Link>
-              </div>
-            </div>
+            {customBanner.link?.startsWith('http') ? (
+              <a
+                href={customBanner.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full h-full cursor-pointer"
+              >
+                <img
+                  src={getMediaUrl(customBanner.image)}
+                  alt={customBanner.title || 'Custom Jewellery Journey'}
+                  className="w-full h-auto block"
+                />
+              </a>
+            ) : (
+              <Link
+                to={customBanner.link && customBanner.link !== '/custom' ? customBanner.link : '/custom-jewellery'}
+                className="block w-full h-full cursor-pointer"
+              >
+                <img
+                  src={getMediaUrl(customBanner.image)}
+                  alt={customBanner.title || 'Custom Jewellery Journey'}
+                  className="w-full h-auto block"
+                />
+              </Link>
+            )}
           </div>
 
           {/* Mobile view */}
           <div className="block md:hidden px-3 sm:px-4">
             <div className="relative w-full h-[220px] sm:h-[260px] rounded-[20px] sm:rounded-[24px] overflow-hidden border border-[#E8E0D8]/80 shadow-md bg-[#FAF6F0]">
-              <img
-                src={getMediaUrl(customBanner.image)}
-                alt={customBanner.title || 'Custom Jewellery Journey'}
-                className="absolute inset-0 w-full h-full object-cover object-[80%_center]"
-              />
-              <div className="absolute z-10 left-3 sm:left-4 top-1/2 -translate-y-1/2 w-[58%] sm:w-[50%] bg-[#F0EBE4]/95 backdrop-blur-md rounded-xl sm:rounded-2xl border border-[#E8E0D8]/80 p-3 sm:p-4 shadow-lg transition-all">
-                <h2 className="unna-font font-serif text-xs sm:text-base font-normal text-[#1A1815] mb-1 sm:mb-1.5 leading-tight">
-                  {customBanner.title}
-                </h2>
-                <p className="text-[8px] sm:text-[10px] text-[#6B6460] font-normal leading-relaxed line-clamp-2 sm:line-clamp-3 mb-2 sm:mb-2.5">
-                  {customBanner.subtitle}
-                </p>
-                <div>
-                  <Link
-                    to={customBanner.link && customBanner.link !== '/custom' ? customBanner.link : '/custom-jewellery'}
-                    className="inline-block w-auto bg-[#F4594B] text-white px-3 sm:px-4 py-1.5 sm:py-2 text-[8px] sm:text-[9px] font-bold tracking-[0.2em] uppercase rounded-lg shadow-md hover:bg-[#F4594B]/95 transition-all"
-                  >
-                    {customBanner.buttonText || 'CUSTOMIZE NOW'}
-                  </Link>
-                </div>
-              </div>
+              {customBanner.link?.startsWith('http') ? (
+                <a
+                  href={customBanner.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full h-full cursor-pointer"
+                >
+                  <img
+                    src={getMediaUrl(customBanner.image)}
+                    alt={customBanner.title || 'Custom Jewellery Journey'}
+                    className="w-full h-full object-cover object-[80%_center]"
+                  />
+                </a>
+              ) : (
+                <Link
+                  to={customBanner.link && customBanner.link !== '/custom' ? customBanner.link : '/custom-jewellery'}
+                  className="block w-full h-full cursor-pointer"
+                >
+                  <img
+                    src={getMediaUrl(customBanner.image)}
+                    alt={customBanner.title || 'Custom Jewellery Journey'}
+                    className="w-full h-full object-cover object-[80%_center]"
+                  />
+                </Link>
+              )}
             </div>
           </div>
         </section>
@@ -1096,24 +1100,30 @@ const Home = () => {
               )}
 
               {/* Clickable hotspots for Google Play and App Store buttons in banner artwork */}
-              <div className="absolute right-4 sm:right-8 md:right-12 lg:right-16 bottom-5 sm:bottom-7 lg:bottom-9 z-10 flex items-center gap-2 sm:gap-3">
-                <a
-                  href={mobileAppBanner.googlePlayUrl || 'https://play.google.com/store'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-28 sm:w-32 lg:w-36 h-9 sm:h-10 lg:h-12 cursor-pointer"
-                  title="Get it on Google Play"
-                  aria-label="Google Play"
-                />
-                <a
-                  href={mobileAppBanner.appStoreUrl || 'https://www.apple.com/app-store/'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-28 sm:w-32 lg:w-36 h-9 sm:h-10 lg:h-12 cursor-pointer"
-                  title="Download on the App Store"
-                  aria-label="App Store"
-                />
-              </div>
+              {(mobileAppBanner.googlePlayUrl || mobileAppBanner.appStoreUrl) && (
+                <div className="absolute right-4 sm:right-8 md:right-12 lg:right-16 bottom-5 sm:bottom-7 lg:bottom-9 z-10 flex items-center gap-2 sm:gap-3">
+                  {mobileAppBanner.googlePlayUrl && (
+                    <a
+                      href={mobileAppBanner.googlePlayUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-28 sm:w-32 lg:w-36 h-9 sm:h-10 lg:h-12 cursor-pointer"
+                      title="Get it on Google Play"
+                      aria-label="Google Play"
+                    />
+                  )}
+                  {mobileAppBanner.appStoreUrl && (
+                    <a
+                      href={mobileAppBanner.appStoreUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-28 sm:w-32 lg:w-36 h-9 sm:h-10 lg:h-12 cursor-pointer"
+                      title="Download on the App Store"
+                      aria-label="App Store"
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Mobile view */}
@@ -1174,64 +1184,98 @@ const Home = () => {
       </section>
 
       {/* ─────────────────────────────────────────────────────────────────
+          9.5. MAKE BIRTHDAYS MORE COLOURFUL (Birthstones Carousel)
+      ─────────────────────────────────────────────────────────────────── */}
+      <BirthstonesSection style={sectionStyle('birthstones')} />
+
+      {/* ─────────────────────────────────────────────────────────────────
           10. BOOK A VIRTUAL APPOINTMENT BANNER (Direct from /api/banners/lookup)
       ─────────────────────────────────────────────────────────────────── */}
       {bookAppointBanner?.image && (
         <section style={sectionStyle('appointment')} className="pt-10 sm:pt-16 relative overflow-hidden">
           {/* Desktop view */}
           <div className="hidden md:block relative w-full aspect-[2400/720]">
-            <div className="absolute inset-0 z-0 w-full h-full">
-              <img
-                src={getMediaUrl(bookAppointBanner.image)}
-                alt={bookAppointBanner.title || 'Book A Virtual Appointment'}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/10 pointer-events-none" />
-            </div>
-            <div className="absolute z-10 left-[5%] lg:left-[6%] xl:left-[8%] top-1/2 -translate-y-1/2 w-[44%] lg:w-[42%] xl:w-[46%] border border-[#E8E0D8]/40 rounded-[12px] lg:rounded-[18px] xl:rounded-[24px] bg-[#F0EBE4]/95 backdrop-blur-md p-[3%] xl:p-[2.5%] text-[#1A1815] shadow-lg transition-all duration-300">
-              <h2 className="unna-font font-serif text-[18px] lg:text-3xl xl:text-4xl font-normal mb-[3%] leading-tight text-[#1A1815]">
-                {bookAppointBanner.title}
-              </h2>
-              <p className="text-[11px] lg:text-sm xl:text-base mb-[5%] font-normal text-[#6B6460] leading-relaxed">
-                {bookAppointBanner.subtitle}
-              </p>
-              <div>
-                <button
-                  type="button"
-                  onClick={openAppointmentModal}
-                  className="inline-block w-auto bg-[#F4594B] text-white px-7 py-3 text-[10px] lg:text-[12px] xl:text-[13px] font-bold tracking-[0.2em] uppercase rounded-xl shadow-md hover:bg-[#F4594B]/95 hover:transform hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
+            {bookAppointBanner.link ? (
+              bookAppointBanner.link.startsWith('http') ? (
+                <a
+                  href={bookAppointBanner.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full h-full cursor-pointer"
                 >
-                  {bookAppointBanner.buttonText || 'SCHEDULE APPOINTMENT'}
-                </button>
+                  <img
+                    src={getMediaUrl(bookAppointBanner.image)}
+                    alt={bookAppointBanner.title || 'Book A Virtual Appointment'}
+                    className="w-full h-full object-cover"
+                  />
+                </a>
+              ) : (
+                <Link
+                  to={bookAppointBanner.link}
+                  className="block w-full h-full cursor-pointer"
+                >
+                  <img
+                    src={getMediaUrl(bookAppointBanner.image)}
+                    alt={bookAppointBanner.title || 'Book A Virtual Appointment'}
+                    className="w-full h-full object-cover"
+                  />
+                </Link>
+              )
+            ) : (
+              <div
+                onClick={openAppointmentModal}
+                className="w-full h-full cursor-pointer"
+              >
+                <img
+                  src={getMediaUrl(bookAppointBanner.image)}
+                  alt={bookAppointBanner.title || 'Book A Virtual Appointment'}
+                  className="w-full h-full object-cover"
+                />
               </div>
-            </div>
+            )}
           </div>
 
           {/* Mobile view */}
           <div className="block md:hidden px-3 sm:px-4">
             <div className="relative w-full h-[220px] sm:h-[260px] rounded-[20px] sm:rounded-[24px] overflow-hidden border border-[#E8E0D8]/80 shadow-md bg-[#FAF6F0]">
-              <img
-                src={getMediaUrl(bookAppointBanner.image)}
-                alt={bookAppointBanner.title || 'Book A Virtual Appointment'}
-                className="absolute inset-0 w-full h-full object-cover object-[75%_center]"
-              />
-              <div className="absolute z-10 left-3 sm:left-4 top-1/2 -translate-y-1/2 w-[58%] sm:w-[50%] bg-[#F0EBE4]/95 backdrop-blur-md rounded-xl sm:rounded-2xl border border-[#E8E0D8]/80 p-3 sm:p-4 shadow-lg transition-all">
-                <h2 className="unna-font font-serif text-xs sm:text-base font-normal text-[#1A1815] mb-1 sm:mb-1.5 leading-tight">
-                  {bookAppointBanner.title}
-                </h2>
-                <p className="text-[8px] sm:text-[10px] text-[#6B6460] font-normal leading-relaxed line-clamp-2 sm:line-clamp-3 mb-2 sm:mb-2.5">
-                  {bookAppointBanner.subtitle}
-                </p>
-                <div>
-                  <button
-                    type="button"
-                    onClick={openAppointmentModal}
-                    className="inline-block w-auto bg-[#F4594B] text-white px-3 sm:px-4 py-1.5 sm:py-2 text-[8px] sm:text-[9px] font-bold tracking-wider uppercase rounded-md sm:rounded-lg shadow-sm hover:bg-[#F4594B]/95 active:scale-95 transition-all cursor-pointer"
+              {bookAppointBanner.link ? (
+                bookAppointBanner.link.startsWith('http') ? (
+                  <a
+                    href={bookAppointBanner.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full h-full cursor-pointer"
                   >
-                    {bookAppointBanner.buttonText || 'SCHEDULE APPOINTMENT'}
-                  </button>
+                    <img
+                      src={getMediaUrl(bookAppointBanner.image)}
+                      alt={bookAppointBanner.title || 'Book A Virtual Appointment'}
+                      className="w-full h-full object-cover"
+                    />
+                  </a>
+                ) : (
+                  <Link
+                    to={bookAppointBanner.link}
+                    className="block w-full h-full cursor-pointer"
+                  >
+                    <img
+                      src={getMediaUrl(bookAppointBanner.image)}
+                      alt={bookAppointBanner.title || 'Book A Virtual Appointment'}
+                      className="w-full h-full object-cover"
+                    />
+                  </Link>
+                )
+              ) : (
+                <div
+                  onClick={openAppointmentModal}
+                  className="w-full h-full cursor-pointer"
+                >
+                  <img
+                    src={getMediaUrl(bookAppointBanner.image)}
+                    alt={bookAppointBanner.title || 'Book A Virtual Appointment'}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </section>
