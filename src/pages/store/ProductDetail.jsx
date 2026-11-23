@@ -839,7 +839,11 @@ export default function ProductDetail() {
     }
     if (qualities.length && !selectedQuality) {
       // Default to F-G VS or first quality
-      const defaultQ = qualities.find((q) => q.includes('F-G') && q.includes('VS')) || qualities[0];
+      const defaultQ =
+        qualities.find((q) => {
+          const tokens = q.split(/\s*·\s*/).map((t) => t.trim());
+          return tokens.includes('F-G') && tokens.includes('VS');
+        }) || qualities[0];
       setSelectedQuality(defaultQ);
     }
   }, [product, isGold, isCenterDriven, purities, colors, carats, qualities, selectedPurity, selectedColor, selectedCarat, selectedQuality]);
@@ -1193,24 +1197,55 @@ export default function ProductDetail() {
     const raw = Array.isArray(product?.variants) ? product.variants : [];
     if (!raw.length) return null;
 
+    const normPurity = (str) =>
+      String(str || '')
+        .toLowerCase()
+        .replace(/kt\b/gi, 'k')
+        .replace(/\s*gold/gi, '')
+        .trim();
+
+    const normQuality = (str) =>
+      String(str || '')
+        .toLowerCase()
+        .replace(/\s*·\s*/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const isQualityMatch = (v, targetQuality) => {
+      if (!targetQuality) return true;
+      const col = referenceName(v.diamondColor || v.diamondColorId) || v.diamondColor || '';
+      const cla = referenceName(v.diamondClarity || v.diamondClarityId) || v.diamondClarity || '';
+      const q = [col, cla].filter(Boolean).join(' · ');
+
+      if (q && normQuality(q) === normQuality(targetQuality)) {
+        return true;
+      }
+      if (v.combination) {
+        const tokens = v.combination.split(/\s*·\s*/).map((t) => t.trim().toLowerCase());
+        const requiredParts = targetQuality.split(/\s*·\s*/).map((p) => p.trim().toLowerCase());
+        return requiredParts.every((part) => tokens.includes(part));
+      }
+      return false;
+    };
+
     // 1. Exact match across all active dimensions
     let match = raw.find((v) => {
       const p = referenceName(v.metalPurity || v.metalPurityId) || v.purity || '';
       const c = referenceName(v.metalColorId) || referenceName(v.metalColor) || '';
       const ct = Number(v.centerDiamondWeight || v.caratWeight || 0);
-      const col = referenceName(v.diamondColor || v.diamondColorId) || v.diamondColor || '';
-      const cla = referenceName(v.diamondClarity || v.diamondClarityId) || v.diamondClarity || '';
-      const q = [col, cla].filter(Boolean).join(' · ');
 
-      const matchP = !selectedPurity || p === selectedPurity ||
+      const matchP =
+        !selectedPurity ||
+        normPurity(p) === normPurity(selectedPurity) ||
         (p && selectedPurity && (p.toLowerCase().includes(selectedPurity.toLowerCase()) || selectedPurity.toLowerCase().includes(p.toLowerCase())));
       // Allow matching if variant has no explicit metalColorId (purity rates apply across colors)
-      const matchC = !selectedColor || !c ||
+      const matchC =
+        !selectedColor ||
+        !c ||
         c.toLowerCase() === selectedColor.toLowerCase() ||
         (c && selectedColor && (c.toLowerCase().includes(selectedColor.toLowerCase()) || selectedColor.toLowerCase().includes(c.toLowerCase())));
       const matchCt = !selectedCarat || ct === Number(selectedCarat);
-      const matchQ = !selectedQuality || q === selectedQuality ||
-        (v.combination && selectedQuality.split(' · ').every((part) => v.combination.includes(part)));
+      const matchQ = isQualityMatch(v, selectedQuality);
 
       return matchP && matchC && (isCenterDriven ? matchCt : true) && matchQ;
     });
@@ -1221,14 +1256,10 @@ export default function ProductDetail() {
     match = raw.find((v) => {
       const p = referenceName(v.metalPurity || v.metalPurityId) || v.purity || '';
       const ct = Number(v.centerDiamondWeight || v.caratWeight || 0);
-      const col = referenceName(v.diamondColor || v.diamondColorId) || v.diamondColor || '';
-      const cla = referenceName(v.diamondClarity || v.diamondClarityId) || v.diamondClarity || '';
-      const q = [col, cla].filter(Boolean).join(' · ');
 
-      const matchP = !selectedPurity || p === selectedPurity;
+      const matchP = !selectedPurity || normPurity(p) === normPurity(selectedPurity);
       const matchCt = !selectedCarat || ct === Number(selectedCarat);
-      const matchQ = !selectedQuality || q === selectedQuality ||
-        (v.combination && selectedQuality.split(' · ').every((part) => v.combination.includes(part)));
+      const matchQ = isQualityMatch(v, selectedQuality);
 
       return matchP && (isCenterDriven ? matchCt : true) && matchQ;
     });
@@ -1238,15 +1269,15 @@ export default function ProductDetail() {
     // 3. Fallback: purity only
     match = raw.find((v) => {
       const p = referenceName(v.metalPurity || v.metalPurityId) || v.purity || '';
-      return !selectedPurity || p === selectedPurity;
+      return !selectedPurity || normPurity(p) === normPurity(selectedPurity);
     });
 
     return match || raw[0] || null;
   }, [product, selectedPurity, selectedColor, selectedCarat, selectedQuality, isCenterDriven]);
 
   const displayedSku = useMemo(() => {
-    return selectedVariant?.sku || product?.basicInfo?.sku || product?.sku || product?.ornate?.tagNo || '';
-  }, [selectedVariant, product]);
+    return product?.basicInfo?.sku || '';
+  }, [product]);
 
   // isGold and isSilver are declared above
   // Derive base metal weight before size adjustment
@@ -1675,6 +1706,7 @@ export default function ProductDetail() {
       _id: product._id,
       productId: product._id,
       title: product.basicInfo?.title,
+      sku: product.basicInfo?.sku || '',
       price,
       totalItemPrice,
       addedAt,

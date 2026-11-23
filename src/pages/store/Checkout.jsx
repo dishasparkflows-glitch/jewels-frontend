@@ -146,6 +146,33 @@ export default function Checkout() {
     }
   };
 
+  // Scroll detection for saved delivery addresses
+  const addressesListRef = useRef(null);
+  const [canScrollAddresses, setCanScrollAddresses] = useState(false);
+
+  const checkAddressesScroll = useCallback(() => {
+    const el = addressesListRef.current;
+    if (!el) return;
+    const hasMore = el.scrollHeight - el.scrollTop - el.clientHeight > 15;
+    setCanScrollAddresses(hasMore);
+  }, []);
+
+  useEffect(() => {
+    checkAddressesScroll();
+    const timer = setTimeout(checkAddressesScroll, 300);
+    window.addEventListener('resize', checkAddressesScroll);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', checkAddressesScroll);
+    };
+  }, [addresses, isAddingNewAddress, checkAddressesScroll]);
+
+  const scrollToMoreAddresses = () => {
+    if (addressesListRef.current) {
+      addressesListRef.current.scrollBy({ top: 150, behavior: 'smooth' });
+    }
+  };
+
   useEffect(() => {
     if (cart && cart.length > 0) {
       trackBeginCheckout(cart, total);
@@ -640,43 +667,69 @@ export default function Checkout() {
 
               {/* Saved Address Cards or Address Inputs */}
               {addresses.length > 0 && !isAddingNewAddress ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  {addresses.map((addressItem) => {
-                    const isSelected = selectedAddressId === String(addressItem._id);
-                    const addr = addressItem.address || addressItem;
-                    const fullName = addressItem.fullName || `${addressItem.firstName || user?.profile?.firstName || ''} ${addressItem.lastName || user?.profile?.lastName || ''}`.trim() || 'Saved Address';
-                    const addressLines = [addr.addressLine, addr.street].filter(Boolean).join(', ');
-                    const cityStatePin = [addr.city, addr.state, addr.pincode || addr.postalCode].filter(Boolean).join(' ');
+                <div className="relative">
+                  <div
+                    ref={addressesListRef}
+                    onScroll={checkAddressesScroll}
+                    className={`pt-1 ${
+                      addresses.length > 4
+                        ? 'max-h-[295px] sm:max-h-[305px] overflow-y-auto luxury-scrollbar pr-1.5'
+                        : ''
+                    }`}
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {addresses.map((addressItem) => {
+                        const isSelected = selectedAddressId === String(addressItem._id);
+                        const addr = addressItem.address || addressItem;
+                        const fullName = addressItem.fullName || `${addressItem.firstName || user?.profile?.firstName || ''} ${addressItem.lastName || user?.profile?.lastName || ''}`.trim() || 'Saved Address';
+                        const addressLines = [addr.addressLine, addr.street].filter(Boolean).join(', ');
+                        const cityStatePin = [addr.city, addr.state, addr.pincode || addr.postalCode].filter(Boolean).join(' ');
 
-                    return (
-                      <div
-                        key={addressItem._id}
-                        onClick={() => {
-                          setSelectedAddressId(String(addressItem._id));
-                          applySavedAddress(addressItem);
-                        }}
-                        className={`relative rounded-xl p-4 transition cursor-pointer border ${
-                          isSelected
-                            ? 'border-2 border-[#8c6536] bg-[#faf6f0]'
-                            : 'border-stone-200 bg-white hover:border-stone-300'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-1 text-xs text-stone-600">
-                            <p className="font-bold text-sm text-stone-900 capitalize">{fullName}</p>
-                            <p className="leading-relaxed line-clamp-2">{addressLines}</p>
-                            <p>{cityStatePin}</p>
-                            <p className="pt-1 font-medium text-stone-800">Ph: {addr.phone || form.phone}</p>
+                        return (
+                          <div
+                            key={addressItem._id}
+                            onClick={() => {
+                              setSelectedAddressId(String(addressItem._id));
+                              applySavedAddress(addressItem);
+                            }}
+                            className={`relative rounded-xl p-4 transition cursor-pointer border ${
+                              isSelected
+                                ? 'border-2 border-[#8c6536] bg-[#faf6f0]'
+                                : 'border-stone-200 bg-white hover:border-stone-300'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-1 text-xs text-stone-600">
+                                <p className="font-bold text-sm text-stone-900 capitalize">{fullName}</p>
+                                <p className="leading-relaxed line-clamp-2">{addressLines}</p>
+                                <p>{cityStatePin}</p>
+                                <p className="pt-1 font-medium text-stone-800">Ph: {addr.phone || form.phone}</p>
+                              </div>
+                              <div className={`mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                isSelected ? 'border-[#8c6536]' : 'border-stone-300'
+                              }`}>
+                                {isSelected && <span className="h-2 w-2 rounded-full bg-[#8c6536]" />}
+                              </div>
+                            </div>
                           </div>
-                          <div className={`mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                            isSelected ? 'border-[#8c6536]' : 'border-stone-300'
-                          }`}>
-                            {isSelected && <span className="h-2 w-2 rounded-full bg-[#8c6536]" />}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Scroll Indicator Cue: when there are more than 4 addresses */}
+                  {addresses.length > 4 && canScrollAddresses && (
+                    <div
+                      onClick={scrollToMoreAddresses}
+                      className="absolute -bottom-1 left-0 right-0 h-9 bg-gradient-to-t from-white via-white/85 to-transparent flex items-end justify-center pb-0.5 cursor-pointer z-10 select-none group"
+                      title="Scroll for more saved addresses"
+                    >
+                      <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-[#f8f4ee]/95 border border-[#e6dacb] text-[10px] font-semibold text-[#8c6536] shadow-xs group-hover:bg-[#f2e8dc] transition-all">
+                        <span>Scroll for more addresses ({addresses.length} saved)</span>
+                        <HiChevronDown className="w-3 h-3 animate-bounce" />
+                      </span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3 pt-1">

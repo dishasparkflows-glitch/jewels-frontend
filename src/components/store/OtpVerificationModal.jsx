@@ -289,9 +289,16 @@ export default function OtpVerificationModal({
           type="button"
           onClick={handleVerify}
           disabled={isVerifying || otpString.length !== 4}
-          className="w-full rounded-xl bg-[#6f5e53] hover:bg-[#5e4e44] py-3.5 text-xs font-bold tracking-wider text-white uppercase transition shadow-md hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:scale-[0.99]"
+          className="w-full rounded-xl bg-[#8c6536] hover:bg-[#75522b] py-3.5 text-xs font-bold tracking-wider text-white uppercase transition shadow-md hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:scale-[0.99] flex items-center justify-center gap-2"
         >
-          {isVerifying ? 'VERIFYING...' : 'VERIFY'}
+          {isVerifying ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>VERIFYING...</span>
+            </>
+          ) : (
+            <span>VERIFY</span>
+          )}
         </button>
 
         {/* Footer Caption */}

@@ -31,6 +31,7 @@ import {
   HiOutlineTag,
   HiOutlineTruck,
   HiOutlineShoppingCart,
+  HiOutlineArrowLeft,
 } from 'react-icons/hi';
 import { HiOutlineSquare3Stack3D } from 'react-icons/hi2';
 import { getImageUrl } from '../../utils/imageUrl';
@@ -364,6 +365,7 @@ const Profile = () => {
           productId: resolvedId,
           title: item.title || prodObj?.basicInfo?.title || prodObj?.title || '',
           name: item.title || prodObj?.basicInfo?.title || prodObj?.title || '',
+          sku: item.sku || prodObj?.basicInfo?.sku || '',
           price: item.price,
           pricing: {
             salePrice: item.price,
@@ -1133,9 +1135,10 @@ const Profile = () => {
                   <button
                     type="button"
                     onClick={() => setActiveTab('profile')}
-                    className="text-xs font-semibold uppercase tracking-wider text-stone-600 hover:text-[#8b6f4e] transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg border border-[#d6c7b2] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] hover:text-[#745735] text-xs font-semibold uppercase tracking-wider transition-all shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
                   >
-                    BACK
+                    <HiOutlineArrowLeft className="w-4 h-4" />
+                    <span>Back</span>
                   </button>
                 </div>
               </div>
@@ -1232,8 +1235,7 @@ const Profile = () => {
                                   const itemThumb = resolveItemImage(item);
                                   const itemSku =
                                     item.sku ||
-                                    item.productId?.basicInfo?.sku ||
-                                    item.productId?.ornate?.tagNo;
+                                    item.productId?.basicInfo?.sku || '';
                                   const productLink = resolveProductLink(item);
 
                                   return (
@@ -1846,8 +1848,7 @@ const Profile = () => {
                         const itemThumb = resolveItemImage(item);
                         const itemSku =
                           item.sku ||
-                          item.productId?.basicInfo?.sku ||
-                          item.productId?.ornate?.tagNo;
+                          item.productId?.basicInfo?.sku || '';
                         const productLink = resolveProductLink(item);
 
                         return (

@@ -58,6 +58,7 @@ export default function HomeProductCard({ product, isSilver: isSilverProp }) {
         {
           id: data.id,
           productId: data.id,
+          sku: product.basicInfo?.sku || '',
           title,
           price,
           totalItemPrice: price,

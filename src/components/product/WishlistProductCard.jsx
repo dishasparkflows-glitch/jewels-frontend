@@ -134,6 +134,7 @@ export default function WishlistProductCard({ item, onRemove }) {
           _id: id,
           id,
           productId: id,
+          sku: activeProduct?.basicInfo?.sku || '',
           title: name,
           name,
           price: unitPrice,
