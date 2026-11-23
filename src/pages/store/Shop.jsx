@@ -481,8 +481,8 @@ export default function Shop({ defaultCategory = '' }) {
     const isPriceSorted = sort === 'price-low' || sort === 'price-high';
     if (isPriceSorted) return displayedProducts;
     return [...displayedProducts].sort((a, b) => {
-      const isGoldA = (a.productType || a.representative?.productType || '').toLowerCase() === 'gold' ? 0 : 1;
-      const isGoldB = (b.productType || b.representative?.productType || '').toLowerCase() === 'gold' ? 0 : 1;
+      const isGoldA = (a.productType || '').toLowerCase() === 'gold' ? 0 : 1;
+      const isGoldB = (b.productType || '').toLowerCase() === 'gold' ? 0 : 1;
       return isGoldA - isGoldB;
     });
   }, [displayedProducts, sort]);

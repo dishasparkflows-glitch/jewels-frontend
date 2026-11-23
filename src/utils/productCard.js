@@ -174,21 +174,15 @@ export function getProductCardData(product) {
     image: c.image || images[0] || '',
   }));
 
-  const rep = product?.representative || {};
-  const repPricing = rep.pricing || {};
   const prodPricing = product?.pricing || {};
 
-  const productType = String(
-    product?.productType ||
-    rep.productType ||
-    ''
-  ).toLowerCase();
+  const productType = String(product?.productType || '').toLowerCase();
 
   const isSilver =
     productType === 'silver' ||
-    Boolean(product?.isOrnate || rep.isOrnate) ||
-    /silver|92\.5|925/i.test(product?.basicInfo?.title || rep.basicInfo?.title || '') ||
-    /silver/i.test(product?.ornate?.metalName || rep.ornate?.metalName || '');
+    Boolean(product?.isOrnate) ||
+    /silver|92\.5|925/i.test(product?.basicInfo?.title || '') ||
+    /silver/i.test(product?.ornate?.metalName || '');
 
   const isGold =
     productType === 'gold' ||
@@ -196,16 +190,13 @@ export function getProductCardData(product) {
 
   const salePrice = firstPrice(
     prodPricing.salePrice,
-    repPricing.salePrice,
     prodPricing.calculatedPrice,
-    repPricing.calculatedPrice,
     prodPricing.ornatePrice,
     prodPricing.costPrice
   );
 
   const mrp = firstPrice(
-    prodPricing.mrp,
-    repPricing.mrp
+    prodPricing.mrp
   );
 
   const price = salePrice || firstPrice(

@@ -53,14 +53,13 @@ export function useProductCard(product, options = {}) {
 
   const isOrnate =
     Boolean(product.isOrnate) ||
-    String(product?.productType || '').toLowerCase() === 'ornate' ||
-    Boolean(product?.representative?.isOrnate);
+    String(product?.productType || '').toLowerCase() === 'ornate';
 
   const isSilver =
     options.isSilver ??
     (Boolean(data.isSilver) ||
-      String(product?.productType || product?.representative?.productType || '').toLowerCase() === 'silver' ||
-      Boolean(product?.isOrnate || product?.representative?.isOrnate) ||
+      String(product?.productType || '').toLowerCase() === 'silver' ||
+      Boolean(product?.isOrnate) ||
       isOrnate ||
       /silver|92\.5|925/i.test(product?.basicInfo?.title || product?.title || data?.name || ''));
 
@@ -68,8 +67,7 @@ export function useProductCard(product, options = {}) {
 
   const rawSlug =
     product.basicInfo?.slug ||
-    data.slug ||
-    product.representative?.basicInfo?.slug;
+    data.slug;
 
   const title =
     (isGroup && product.groupName) ||
@@ -151,17 +149,15 @@ export function useProductCard(product, options = {}) {
   const salePrice =
     data.salePrice ||
     product?.pricing?.salePrice ||
-    product?.representative?.pricing?.salePrice ||
     data.price;
 
   const mrp =
     data.mrp ||
     product?.pricing?.mrp ||
-    product?.representative?.pricing?.mrp ||
     data.originalPrice;
 
-  const minPrice = Number(product?.pricing?.minPrice || product?.representative?.pricing?.minPrice || data?.minPrice || 0);
-  const maxPrice = Number(product?.pricing?.maxPrice || product?.representative?.pricing?.maxPrice || data?.maxPrice || 0);
+  const minPrice = Number(product?.pricing?.minPrice || data?.minPrice || 0);
+  const maxPrice = Number(product?.pricing?.maxPrice || data?.maxPrice || 0);
   const hasRange = !isSilver && minPrice > 0 && maxPrice > 0 && maxPrice > minPrice && (minPrice !== salePrice || maxPrice !== mrp);
 
   const isGold = product.productType === 'gold';

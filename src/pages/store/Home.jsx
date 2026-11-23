@@ -43,11 +43,11 @@ const Home = () => {
   const activeTrustBadges = useMemo(() => {
     if (!Array.isArray(storeSettings?.trustBadges)) return [];
     return [...storeSettings.trustBadges]
-      .filter((badge) => badge?.title && badge.title.trim())
+      .filter((badge) => badge?.title?.trim())
       .sort((a, b) => (Number(a?.order) || 0) - (Number(b?.order) || 0));
   }, [storeSettings?.trustBadges]);
 
-  // ─── 100% Dynamic API State (No Static Fallback Content) ────────────
+  // ─── Dynamic API State ──────────────────────────────────────────────
   const [heroBanners, setHeroBanners] = useState([]);
   const [activeHeroIdx, setActiveHeroIdx] = useState(0);
 
@@ -70,38 +70,35 @@ const Home = () => {
   const [isGiftsHovered, setIsGiftsHovered] = useState(false);
 
   const [mobileAppBanner, setMobileAppBanner] = useState(null);
-
   const [bookAppointBanner, setBookAppointBanner] = useState(null);
-
   const [customBanner, setCustomBanner] = useState(null);
 
   const [reviews, setReviews] = useState([]);
-
-  const displayReviews = useMemo(() => {
-    if (!Array.isArray(reviews)) return [];
-    return reviews.slice(0, 4);
-  }, [reviews]);
+  const displayReviews = useMemo(() => reviews.slice(0, 4), [reviews]);
 
   const [instagramPosts, setInstagramPosts] = useState([]);
   const [storeCategories, setStoreCategories] = useState([]);
 
-  const effectiveHeroBanners = heroBanners;
-  const effectiveCollectionBanners = collectionBanners;
-  const themeCategoryItems = (themeConfig?.categoryAppearances || [])
-    .filter((entry) => entry.visible !== false)
-    .sort((a, b) => (a.order || 0) - (b.order || 0))
-    .map((entry) => {
-      const categoryId = String(entry.categoryId?._id || entry.categoryId || '');
-      const category = storeCategories.find((item) => item._id === categoryId);
-      return {
-        _id: categoryId,
-        name: entry.displayName || category?.name || '',
-        image: entry.icon?.url || category?.icon?.url || '',
-        link: category ? `/shop?category=${encodeURIComponent(category.slug || category._id)}` : `/shop?category=${encodeURIComponent(categoryId)}`,
-      };
-    })
-    .filter((item) => item.name && item.image);
-  const effectiveCategoryItems = celebrateItems.length ? celebrateItems : themeCategoryItems;
+  const themeCategoryItems = useMemo(() => {
+    return (themeConfig?.categoryAppearances || [])
+      .filter((entry) => entry.visible !== false)
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map((entry) => {
+        const categoryId = String(entry.categoryId?._id || entry.categoryId || '');
+        const category = storeCategories.find((item) => item._id === categoryId);
+        return {
+          _id: categoryId,
+          name: entry.displayName || category?.name || '',
+          image: entry.icon?.url || category?.icon?.url || '',
+          link: category
+            ? `/shop?category=${encodeURIComponent(category.slug || category._id)}`
+            : `/shop?category=${encodeURIComponent(categoryId)}`,
+        };
+      })
+      .filter((item) => item.name && item.image);
+  }, [themeConfig?.categoryAppearances, storeCategories]);
+
+  const effectiveCategoryItems = celebrateItems.length > 0 ? celebrateItems : themeCategoryItems;
 
   const sectionConfig = themeConfig?.sections || [];
   const sectionStyle = (key) => {
@@ -111,7 +108,7 @@ const Home = () => {
     };
   };
 
-  // ─── Direct Call Banner API (Single web call, filtered by display.type) ───
+  // ─── 1. BANNERS API (Single web call, filtered by display.type) ─────
   useEffect(() => {
     let mounted = true;
     bannersAPI.getActive({ platform: 'web' })
@@ -119,223 +116,186 @@ const Home = () => {
         if (!mounted) return;
         const allBanners = Array.isArray(webRes?.data?.data) ? webRes.data.data : [];
 
-        const typeOf = (b) => b.display?.type || b.type || '';
-        const contentOf = (b) => b.content || {};
-        const mediaOf = (b) => {
-          const m = b.media || b.image;
-          const url = m?.url || (typeof m === 'string' ? m : '');
-          const isVid = m?.mediaType === 'video' || b.mediaType === 'video' || (url && /\.(mp4|webm|mov|m4v)(?:[?#]|$)/i.test(url));
-          const mType = isVid ? 'video' : 'image';
-          const mobImg = b.mobileImage?.url || (typeof b.mobileImage === 'string' ? b.mobileImage : '');
-          return {
-            image: !isVid ? url : '',
-            video: isVid ? url : '',
-            mediaUrl: url,
-            mediaType: mType,
-            mobileImage: mobImg,
-          };
-        };
-
         // 1. Hero banners
-        const heroList = allBanners.filter((b) => typeOf(b) === 'herobanner');
+        const heroList = allBanners.filter((b) => b.display?.type === 'herobanner');
         setHeroBanners(
-          heroList.map((banner) => ({
-            _id: banner._id,
-            title: contentOf(banner).title || banner.title || '',
-            link: banner.link || banner.appStoreUrl || '',
-            ...mediaOf(banner),
-          }))
+          heroList.map((banner) => {
+            const url = banner.image?.url || '';
+            const isVid = banner.image?.mediaType === 'video' || /\.(mp4|webm|mov|m4v)(?:[?#]|$)/i.test(url);
+            return {
+              _id: banner._id,
+              title: banner.content?.title || '',
+              link: banner.link || banner.appStoreUrl || '',
+              image: !isVid ? url : '',
+              video: isVid ? url : '',
+              mediaType: isVid ? 'video' : 'image',
+              mobileImage: banner.mobileImage?.url || '',
+            };
+          })
         );
 
         // 2. Curated collection banners
-        const collectionList = allBanners.filter((b) => typeOf(b) === 'collectionbanner');
+        const collectionList = allBanners.filter((b) => b.display?.type === 'collectionbanner');
         setCollectionBanners(
           collectionList.map((banner) => ({
             id: banner._id,
-            title: contentOf(banner).title || banner.title || '',
-            subtitle: contentOf(banner).subtitle || banner.subtitle || '',
-            images: (Array.isArray(banner.collectionImages) && banner.collectionImages.length
-              ? [...banner.collectionImages].sort((a, b) => Number(a.order ?? 0) - Number(b.order ?? 0))
-              : (banner.image?.url ? [banner.image] : [])).map((image, idx) => {
-                const category = image.categoryId || banner.display?.categoryId;
-                const categoryKey = category?.slug || category?._id || (typeof category === 'string' ? category : '');
-                return {
-                  url: image.url || '',
-                  categoryName: category?.name || '',
-                  link: categoryKey ? `/shop?category=${encodeURIComponent(categoryKey)}` : banner.link || '/shop',
-                  order: image.order !== undefined && image.order !== null ? Number(image.order) : idx + 1,
-                };
-              }).filter((img) => img.url),
-            ...mediaOf(banner),
+            title: banner.content?.title || '',
+            subtitle: banner.content?.subtitle || '',
+            images: (banner.collectionImages || []).map((img, idx) => {
+              const cat = img.categoryId || banner.display?.categoryId;
+              const catKey = cat?.slug || cat?._id || '';
+              return {
+                url: img.url || '',
+                categoryName: cat?.name || '',
+                link: catKey ? `/shop?category=${encodeURIComponent(catKey)}` : banner.link || '/shop',
+                order: img.order ?? idx + 1,
+              };
+            }).filter((img) => img.url),
             link: banner.link || '/shop',
-            position: banner.display?.position || banner.position || 'none',
-            collectionGroup: banner.display?.collectionGroup || '',
           }))
         );
 
         // 3. Customize banner
-        const customBannerData = allBanners.find(
-          (b) => typeOf(b) === 'customizebanner' || b.display?.bannerKey === 'custom_jewellery'
+        const customData = allBanners.find((b) => b.display?.type === 'customizebanner');
+        setCustomBanner(
+          customData?.image?.url
+            ? {
+                title: customData.content?.title || '',
+                subtitle: customData.content?.subtitle || '',
+                image: customData.image.url,
+                buttonText: customData.content?.buttonText || '',
+                link: customData.link || '/custom-jewellery',
+              }
+            : null
         );
-        if (customBannerData && (customBannerData.media?.url || customBannerData.image?.url || customBannerData.media || customBannerData.image)) {
-          setCustomBanner({
-            title: contentOf(customBannerData).title || customBannerData.title || '',
-            subtitle: contentOf(customBannerData).subtitle || '',
-            image: customBannerData.media?.url || customBannerData.image?.url || (typeof (customBannerData.media || customBannerData.image) === 'string' ? (customBannerData.media || customBannerData.image) : ''),
-            buttonText: contentOf(customBannerData).buttonText || '',
-            link: customBannerData.link || '/custom-jewellery',
-          });
-        } else {
-          setCustomBanner(null);
-        }
 
-        // 4. Mobile app banner (filtered by display.type: mobileappbanner)
-        const mobileBanner = allBanners.find((b) => typeOf(b) === 'mobileappbanner');
-        if (mobileBanner && (mobileBanner.media?.url || mobileBanner.image?.url || mobileBanner.media || mobileBanner.image)) {
-          setMobileAppBanner({
-            title: contentOf(mobileBanner).title || mobileBanner.title || '',
-            subtitle: contentOf(mobileBanner).subtitle || '',
-            image: mobileBanner.media?.url || mobileBanner.image?.url || (typeof (mobileBanner.media || mobileBanner.image) === 'string' ? (mobileBanner.media || mobileBanner.image) : ''),
-            link: mobileBanner.link || '',
-            appStoreUrl: mobileBanner.appStoreUrl || storeSettings?.appStoreUrl || '',
-            googlePlayUrl: mobileBanner.googlePlayUrl || storeSettings?.googlePlayUrl || '',
-          });
-        } else {
-          setMobileAppBanner(null);
-        }
+        // 4. Mobile app banner
+        const mobileData = allBanners.find((b) => b.display?.type === 'mobileappbanner');
+        setMobileAppBanner(
+          mobileData?.image?.url
+            ? {
+                title: mobileData.content?.title || '',
+                subtitle: mobileData.content?.subtitle || '',
+                image: mobileData.image.url,
+                mobileImage: mobileData.mobileImage?.url || mobileData.image.url,
+                link: mobileData.link || '',
+                appStoreUrl: mobileData.appStoreUrl || storeSettings?.appStoreUrl || '',
+                googlePlayUrl: mobileData.googlePlayUrl || storeSettings?.googlePlayUrl || '',
+              }
+            : null
+        );
 
         // 5. Book appointment banner
-        const appointmentBanner = allBanners.find((b) => typeOf(b) === 'bookappointbanner');
-        if (appointmentBanner && (appointmentBanner.media?.url || appointmentBanner.image?.url || appointmentBanner.media || appointmentBanner.image)) {
-          setBookAppointBanner({
-            title: contentOf(appointmentBanner).title || appointmentBanner.title || '',
-            subtitle: contentOf(appointmentBanner).subtitle || '',
-            image: appointmentBanner.media?.url || appointmentBanner.image?.url || (typeof (appointmentBanner.media || appointmentBanner.image) === 'string' ? (appointmentBanner.media || appointmentBanner.image) : ''),
-            buttonText: contentOf(appointmentBanner).buttonText || '',
-            link: appointmentBanner.link || '',
-          });
-        } else {
-          setBookAppointBanner(null);
-        }
+        const appointData = allBanners.find((b) => b.display?.type === 'bookappointbanner');
+        setBookAppointBanner(
+          appointData?.image?.url
+            ? {
+                title: appointData.content?.title || '',
+                subtitle: appointData.content?.subtitle || '',
+                image: appointData.image.url,
+                buttonText: appointData.content?.buttonText || '',
+                link: appointData.link || '',
+              }
+            : null
+        );
       })
       .catch((err) => console.error('Failed to load banners:', err));
 
     return () => { mounted = false; };
   }, [storeSettings?.appStoreUrl, storeSettings?.googlePlayUrl]);
 
+  // ─── Category Lookup ───────────────────────────────────────────────
   useEffect(() => {
     let mounted = true;
     categoriesAPI.getLookup({ status: 'active' })
       .then((res) => {
-        const list = Array.isArray(res?.data?.data) ? res.data.data : [];
-        if (mounted) setStoreCategories(list);
+        if (mounted && Array.isArray(res?.data?.data)) {
+          setStoreCategories(res.data.data);
+        }
       })
       .catch(() => {});
     return () => { mounted = false; };
-  }, [themeConfig?.mediaOverrides]);
+  }, []);
 
-  // Carousel auto-slide when multiple banners exist
+  // Carousel auto-slide when multiple hero banners exist
   useEffect(() => {
-    if (effectiveHeroBanners.length <= 1) return;
+    if (heroBanners.length <= 1) return;
     const timer = setInterval(() => {
-      setActiveHeroIdx((prev) => (prev + 1) % effectiveHeroBanners.length);
+      setActiveHeroIdx((prev) => (prev + 1) % heroBanners.length);
     }, 6500);
     return () => clearInterval(timer);
-  }, [effectiveHeroBanners.length]);
+  }, [heroBanners.length]);
 
-  // ─── 2. FETCH ALL FEATURED SHOWCASES (Celebrate & Gifts via lightweight lookup API) ───
+  // ─── 2. FETCH FEATURED SHOWCASES (Celebrate & Gifts) ───────────────
   useEffect(() => {
     const fetchFeatured = async () => {
       try {
         const res = await featuredAPI.getLookup({ status: 'active' });
-        const list = Array.isArray(res?.data?.data) ? res.data.data : (res?.data?.data?.items || []);
-        if (Array.isArray(list)) {
-          const featuredSelections = themeConfig?.featuredSelections || [];
+        const list = Array.isArray(res?.data?.data) ? res.data.data : [];
+        if (!list.length) return;
 
-          // Helper to dynamically build link: If products exist -> /shop?featured=SLUG, else if category -> /shop?category=SLUG
-          const getFeaturedItemLink = (item) => {
-            const pIds = Array.isArray(item.productIds) ? item.productIds : [];
-            const hasProducts = pIds.length > 0;
-            const featuredSlug =
-              item.slug ||
-              (item.name
-                ? item.name
-                    .toLowerCase()
-                    .trim()
-                    .replace(/[\s\W-]+/g, '-')
-                    .replace(/^-+|-+$/g, '')
-                : '') ||
-              item._id;
+        const featuredSelections = themeConfig?.featuredSelections || [];
 
-            if (hasProducts) {
-              return `/shop?featured=${encodeURIComponent(featuredSlug)}`;
-            }
-
-            // Fallback: If productIds is empty, display category products
-            const cat = item.categoryId;
-            const catSlug = (cat && typeof cat === 'object') ? (cat.slug || cat._id || cat.name) : (cat || '');
-            const matched = (storeCategories || []).find((c) => String(c._id) === String(cat?._id || cat));
-            const finalSlug = matched?.slug || catSlug;
-
-            if (finalSlug) {
-              const q = new URLSearchParams();
-              q.set('category', finalSlug);
-              if (item.name && item.name.toLowerCase() !== finalSlug.toLowerCase()) {
-                q.set('title', item.name);
-              }
-              return `/shop?${q.toString()}`;
-            }
-
-            if (featuredSlug) {
-              return `/shop?featured=${encodeURIComponent(featuredSlug)}`;
-            }
-            return '/shop';
-          };
-
-          // Process Celebrate items
-          const celebrateSelections = featuredSelections.filter((s) => (s.display?.type || s.placement || 'Celebrate') === 'Celebrate' && s.visible !== false);
-          let rawCelebrate = list.filter((item) => (item.display?.type || item.placement || '').toLowerCase() === 'celebrate');
-          if (celebrateSelections.length > 0) {
-            const orderMap = new Map(celebrateSelections.map((s) => [String(s.featuredId?._id || s.featuredId || ''), s.order || 0]));
-            rawCelebrate = rawCelebrate
-              .filter((item) => orderMap.has(String(item._id)))
-              .sort((a, b) => (orderMap.get(String(a._id)) || 0) - (orderMap.get(String(b._id)) || 0));
+        const getFeaturedItemLink = (item) => {
+          if (Array.isArray(item.productIds) && item.productIds.length > 0) {
+            return `/shop?featured=${encodeURIComponent(item._id)}`;
           }
-          setCelebrateItems(rawCelebrate.map((item) => ({
-            _id: item._id,
-            slug: item.slug || '',
-            name: item.name || '',
-            image: item.image?.url || '',
-            productIds: item.productIds || [],
-            categoryId: item.categoryId || null,
-            link: getFeaturedItemLink(item),
-          })));
-
-          // Process Gifts items
-          const giftSelections = featuredSelections.filter((s) => (s.display?.type || s.placement || '').toLowerCase() === 'gifts' && s.visible !== false);
-          let rawGifts = list.filter((item) => (item.display?.type || item.placement || '').toLowerCase() === 'gifts');
-          if (giftSelections.length > 0) {
-            const orderMap = new Map(giftSelections.map((s) => [String(s.featuredId?._id || s.featuredId || ''), s.order || 0]));
-            rawGifts = rawGifts
-              .filter((item) => orderMap.has(String(item._id)))
-              .sort((a, b) => (orderMap.get(String(a._id)) || 0) - (orderMap.get(String(b._id)) || 0));
+          const cat = item.categoryId;
+          if (cat?.slug || cat?._id) {
+            return `/shop?category=${encodeURIComponent(cat.slug || cat._id)}`;
           }
-          setGiftItems(rawGifts.map((item) => ({
-            _id: item._id,
-            slug: item.slug || '',
-            name: item.name || '',
-            image: item.image?.url || '',
-            productIds: item.productIds || [],
-            categoryId: item.categoryId || null,
-            link: getFeaturedItemLink(item),
-          })));
+          return '/shop';
+        };
+
+        // Process Celebrate items
+        const celebrateSelections = featuredSelections.filter(
+          (s) => (s.display?.type || 'Celebrate') === 'Celebrate' && s.visible !== false
+        );
+        let rawCelebrate = list.filter((item) => item.display?.type === 'Celebrate');
+        if (celebrateSelections.length > 0) {
+          const orderMap = new Map(
+            celebrateSelections.map((s) => [String(s.featuredId?._id || s.featuredId || ''), s.order || 0])
+          );
+          rawCelebrate = rawCelebrate
+            .filter((item) => orderMap.has(String(item._id)))
+            .sort((a, b) => (orderMap.get(String(a._id)) || 0) - (orderMap.get(String(b._id)) || 0));
         }
+        setCelebrateItems(
+          rawCelebrate.map((item) => ({
+            _id: item._id,
+            name: item.name || '',
+            image: item.image?.url || '',
+            link: getFeaturedItemLink(item),
+          }))
+        );
+
+        // Process Gifts items
+        const giftSelections = featuredSelections.filter(
+          (s) => s.display?.type === 'Gifts' && s.visible !== false
+        );
+        let rawGifts = list.filter((item) => item.display?.type === 'Gifts');
+        if (giftSelections.length > 0) {
+          const orderMap = new Map(
+            giftSelections.map((s) => [String(s.featuredId?._id || s.featuredId || ''), s.order || 0])
+          );
+          rawGifts = rawGifts
+            .filter((item) => orderMap.has(String(item._id)))
+            .sort((a, b) => (orderMap.get(String(a._id)) || 0) - (orderMap.get(String(b._id)) || 0));
+        }
+        setGiftItems(
+          rawGifts.map((item) => ({
+            _id: item._id,
+            name: item.name || '',
+            image: item.image?.url || '',
+            link: getFeaturedItemLink(item),
+          }))
+        );
       } catch (err) {
         console.error('Failed to load featured showcases:', err);
       }
     };
     fetchFeatured();
-  }, [themeConfig?.mediaOverrides, themeConfig?.featuredSelections, storeCategories]);
+  }, [themeConfig?.featuredSelections]);
 
   const scrollCelebrate = useCallback((direction) => {
     const el = celebrateScrollRef.current;
@@ -350,7 +310,7 @@ const Home = () => {
     });
   }, []);
 
-  // Auto scroll for Celebrate With Neirah side by side
+  // Auto scroll for Celebrate With Neirah
   useEffect(() => {
     if (effectiveCategoryItems.length <= 1) return;
     let timer;
@@ -426,19 +386,12 @@ const Home = () => {
     const fetchHomeProducts = async () => {
       try {
         const res = await productsAPI.getHomeProducts();
-        const data = res?.data?.data || {};
-
-        if (data.sections) {
-          setGoldProducts(data.sections.gold || data.sections.mostLoved || []);
-          setPlatinumProducts(data.sections.platinum || []);
-          setSilverProducts(data.sections.silver || []);
-          setTrendingProducts(data.sections.trending || []);
-        } else if (Array.isArray(data.items)) {
-          const gold = data.items.filter((p) => p.productType === 'gold');
-          setGoldProducts(gold.length > 0 ? gold.slice(0, 8) : data.items.slice(0, 8));
-          setPlatinumProducts(data.items.slice(0, 8));
-          setSilverProducts(data.items.slice(8, 16));
-          setTrendingProducts(data.items.slice(16, 24));
+        const sections = res?.data?.data?.sections;
+        if (sections) {
+          setGoldProducts(sections.gold || sections.mostLoved || []);
+          setPlatinumProducts(sections.platinum || []);
+          setSilverProducts(sections.silver || []);
+          setTrendingProducts(sections.trending || []);
         }
       } catch (err) {
         console.error('Failed to load home products:', err);
@@ -453,9 +406,8 @@ const Home = () => {
     const fetchHomeSections = async () => {
       try {
         const res = await productsAPI.getHomeSections();
-        const list = Array.isArray(res?.data?.data) ? res.data.data : [];
-        if (mounted) {
-          setHomeSections(list);
+        if (mounted && Array.isArray(res?.data?.data)) {
+          setHomeSections(res.data.data);
         }
       } catch (err) {
         console.error('Failed to load dynamic home sections:', err);
@@ -494,25 +446,22 @@ const Home = () => {
     return () => clearInterval(timer);
   }, [goldProducts.length, platinumProducts.length, isMostLovedHovered]);
 
-
-  // ─── 9. FETCH REVIEWS (/api/reviews?status=approved) ─────────────────
+  // ─── 4. FETCH REVIEWS (/api/reviews?status=approved) ─────────────────
   useEffect(() => {
     const fetchReviews = async () => {
       try {
         const res = await reviewsAPI.getApproved();
-        const list = res?.data?.data?.items || res?.data?.data || [];
-        if (Array.isArray(list)) {
-          const formatted = list.map((r, idx) => ({
-            id: r._id || `rev-${idx}`,
-            clientName: r.customer?.name || r.clientName || 'Client',
-            location: '',
-            rating: r.review?.rating || r.rating || 5,
-            title: r.review?.title || r.title || '',
-            comment: r.review?.comment || r.comment || '',
-            image: r.image?.url || (typeof r.image === 'string' ? r.image : ''),
-          }));
-          setReviews(formatted);
-        }
+        const list = res?.data?.data?.items || [];
+        setReviews(
+          list.map((r) => ({
+            id: r._id,
+            clientName: r.customer?.name || 'Client',
+            rating: r.review?.rating || 5,
+            title: r.review?.title || '',
+            comment: r.review?.comment || '',
+            image: r.image?.url || '',
+          }))
+        );
       } catch (err) {
         console.error('Failed to load reviews:', err);
       }
@@ -520,24 +469,21 @@ const Home = () => {
     fetchReviews();
   }, []);
 
-  // ─── 10. FETCH INSTAGRAM POSTS (/api/instagram-posts/lookup) ─────────
+  // ─── 5. FETCH INSTAGRAM POSTS (/api/instagram-posts/lookup) ─────────
   useEffect(() => {
     const fetchInstagram = async () => {
       try {
         const res = await instagramAPI.getLookup();
-        const list = res?.data?.data || res?.data?.items || res?.data || [];
-        if (Array.isArray(list) && list.length > 0) {
-          const valid = list.filter((p) => p.url && p.url.trim());
-          if (valid.length > 0) {
-            setInstagramPosts(
-              valid.map((p, idx) => ({
-                _id: p._id || `insta-${idx}`,
-                url: p.url.trim(),
-                title: p.title || '',
-              }))
-            );
-          }
-        }
+        const list = Array.isArray(res?.data?.data) ? res.data.data : [];
+        setInstagramPosts(
+          list
+            .filter((p) => p.url?.trim())
+            .map((p) => ({
+              _id: p._id,
+              url: p.url.trim(),
+              title: p.title || '',
+            }))
+        );
       } catch (err) {
         console.error('Failed to load instagram posts:', err);
       }
@@ -549,80 +495,76 @@ const Home = () => {
     window.dispatchEvent(new CustomEvent('open-virtual-appointment'));
   };
 
-  const currentHero = effectiveHeroBanners[activeHeroIdx] || effectiveHeroBanners[0];
+  const instagramHandle = useMemo(() => {
+    const instaUrl = storeSettings?.socialMedia?.instagram || 'https://www.instagram.com/neirah.officials/';
+    try {
+      const handle = instaUrl.split('?')[0].replace(/\/+$/, '').split('/').filter(Boolean).pop();
+      return handle ? `@${handle}` : '@neirah.officials';
+    } catch {
+      return '@neirah.officials';
+    }
+  }, [storeSettings?.socialMedia?.instagram]);
+
+  const currentHero = heroBanners[activeHeroIdx] || heroBanners[0];
 
   return (
-    <div className="flex flex-col bg-white text-stone-900 font-sans antialiased overflow-x-hidden" style={{ minHeight: '100%', backgroundColor: themeConfig?.colors?.background || undefined, color: themeConfig?.colors?.text || undefined, fontFamily: themeConfig?.typography?.bodyFont || undefined }}>
+    <div
+      className="flex flex-col bg-white text-stone-900 font-sans antialiased overflow-x-hidden"
+      style={{
+        minHeight: '100%',
+        backgroundColor: themeConfig?.colors?.background || undefined,
+        color: themeConfig?.colors?.text || undefined,
+        fontFamily: themeConfig?.typography?.bodyFont || undefined,
+      }}
+    >
       {/* ─────────────────────────────────────────────────────────────────
-          1. HERO BANNER (Full responsive images, never cropped)
+          1. HERO BANNER
       ─────────────────────────────────────────────────────────────────── */}
-      {effectiveHeroBanners.length > 0 && currentHero && (
+      {heroBanners.length > 0 && currentHero && (
         <section style={sectionStyle('hero')} className="relative isolate w-full overflow-hidden bg-[#FAF6F0] text-[#29231d]">
-          {/* Banner Media Container: Maintains full image aspect ratio on all devices so images are NEVER cut off */}
           <div className="relative w-full">
-            {currentHero.link ? (
-              <Link to={currentHero.link} className="block w-full">
-                {currentHero.mediaType === 'video' || (currentHero.video && !currentHero.image) ? (
-                  <video
-                    src={getMediaUrl(currentHero.video || currentHero.mediaUrl)}
-                    className="w-full h-auto block max-h-[85vh] object-contain"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                  />
-                ) : (
-                  currentHero.image && (
-                    <picture className="block w-full">
-                      {currentHero.mobileImage && (
-                        <source media="(max-width: 767px)" srcSet={getMediaUrl(currentHero.mobileImage)} />
-                      )}
-                      <img
-                        src={getMediaUrl(currentHero.image)}
-                        alt={currentHero.title || 'Hero Banner'}
-                        className="w-full h-auto block object-contain select-none"
-                        loading="eager"
-                      />
-                    </picture>
-                  )
-                )}
-              </Link>
-            ) : (
-              <div className="block w-full">
-                {currentHero.mediaType === 'video' || (currentHero.video && !currentHero.image) ? (
-                  <video
-                    src={getMediaUrl(currentHero.video || currentHero.mediaUrl)}
-                    className="w-full h-auto block max-h-[85vh] object-contain"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                  />
-                ) : (
-                  currentHero.image && (
-                    <picture className="block w-full">
-                      {currentHero.mobileImage && (
-                        <source media="(max-width: 767px)" srcSet={getMediaUrl(currentHero.mobileImage)} />
-                      )}
-                      <img
-                        src={getMediaUrl(currentHero.image)}
-                        alt={currentHero.title || 'Hero Banner'}
-                        className="w-full h-auto block object-contain select-none"
-                        loading="eager"
-                      />
-                    </picture>
-                  )
-                )}
-              </div>
-            )}
+            {(() => {
+              const mediaContent = currentHero.mediaType === 'video' ? (
+                <video
+                  src={getMediaUrl(currentHero.video || currentHero.mediaUrl)}
+                  className="w-full h-auto block max-h-[85vh] object-contain"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                />
+              ) : (
+                currentHero.image && (
+                  <picture className="block w-full">
+                    {currentHero.mobileImage && (
+                      <source media="(max-width: 767px)" srcSet={getMediaUrl(currentHero.mobileImage)} />
+                    )}
+                    <img
+                      src={getMediaUrl(currentHero.image)}
+                      alt={currentHero.title || 'Hero Banner'}
+                      className="w-full h-auto block object-contain select-none"
+                      loading="eager"
+                    />
+                  </picture>
+                )
+              );
+
+              return currentHero.link ? (
+                <Link to={currentHero.link} className="block w-full">
+                  {mediaContent}
+                </Link>
+              ) : (
+                <div className="block w-full">{mediaContent}</div>
+              );
+            })()}
           </div>
 
-          {/* Carousel Chevrons (only shown when multiple API banners exist) */}
-          {effectiveHeroBanners.length > 1 && (
+          {/* Carousel Chevrons */}
+          {heroBanners.length > 1 && (
             <>
               <button
                 type="button"
-                onClick={() => setActiveHeroIdx((prev) => (prev - 1 + effectiveHeroBanners.length) % effectiveHeroBanners.length)}
+                onClick={() => setActiveHeroIdx((prev) => (prev - 1 + heroBanners.length) % heroBanners.length)}
                 className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center transition-all z-20 cursor-pointer shadow-md"
                 aria-label="Previous hero banner"
               >
@@ -630,7 +572,7 @@ const Home = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveHeroIdx((prev) => (prev + 1) % effectiveHeroBanners.length)}
+                onClick={() => setActiveHeroIdx((prev) => (prev + 1) % heroBanners.length)}
                 className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center transition-all z-20 cursor-pointer shadow-md"
                 aria-label="Next hero banner"
               >
@@ -639,7 +581,7 @@ const Home = () => {
 
               {/* Dots indicator at bottom */}
               <div className="absolute bottom-2 sm:bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
-                {effectiveHeroBanners.map((_, idx) => (
+                {heroBanners.map((_, idx) => (
                   <button
                     key={idx}
                     type="button"
@@ -659,7 +601,7 @@ const Home = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
-          2. CELEBRATE WITH NEIRAH (Dynamic from /api/featured?placement=Celebrate)
+          2. CELEBRATE WITH NEIRAH
       ─────────────────────────────────────────────────────────────────── */}
       {effectiveCategoryItems.length > 0 && (
         <section style={sectionStyle('categories')} className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
@@ -675,7 +617,6 @@ const Home = () => {
             onMouseEnter={() => setIsCelebrateHovered(true)}
             onMouseLeave={() => setIsCelebrateHovered(false)}
           >
-            {/* Left Chevron Button */}
             <button
               type="button"
               onClick={() => scrollCelebrate('prev')}
@@ -687,7 +628,6 @@ const Home = () => {
               <HiOutlineChevronLeft className="h-5 w-5" />
             </button>
 
-            {/* Scrollable Container */}
             <div
               ref={celebrateScrollRef}
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -721,7 +661,6 @@ const Home = () => {
               ))}
             </div>
 
-            {/* Right Chevron Button */}
             <button
               type="button"
               onClick={() => scrollCelebrate('next')}
@@ -737,7 +676,7 @@ const Home = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
-          3. PRODUCTS SECTION (Dynamic from /api/products/home)
+          3. PRODUCTS SECTION
       ─────────────────────────────────────────────────────────────────── */}
       <section style={sectionStyle('products')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-16">
         {/* Most Loved on Neirah - Gold Products Sub-Section */}
@@ -758,7 +697,7 @@ const Home = () => {
             >
               {(goldProducts.length > 0 ? goldProducts : platinumProducts).slice(0, 10).map((product) => (
                 <div
-                  key={product.id || product._id}
+                  key={product._id}
                   className="product-card-container flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(50%-8px)] md:w-[calc(33.333%-11px)] lg:w-[calc(25%-15px)] xl:w-[calc(20%-16px)] snap-start"
                 >
                   <HomeProductCard product={product} isSilver={false} />
@@ -766,7 +705,6 @@ const Home = () => {
               ))}
             </div>
 
-            {/* DISCOVER Button Matching Screenshot */}
             <div className="flex justify-center mt-6 sm:mt-8">
               <Link
                 to="/shop"
@@ -793,7 +731,7 @@ const Home = () => {
             >
               {silverProducts.slice(0, 10).map((product) => (
                 <div
-                  key={product.id || product._id}
+                  key={product._id}
                   className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(50%-8px)] md:w-[calc(33.333%-11px)] lg:w-[calc(25%-15px)] xl:w-[calc(20%-16px)] snap-start"
                 >
                   <HomeProductCard product={product} isSilver={true} />
@@ -801,7 +739,6 @@ const Home = () => {
               ))}
             </div>
 
-            {/* DISCOVER Button Matching Screenshot */}
             <div className="flex justify-center mt-6 sm:mt-8">
               <Link
                 to="/silver-collection"
@@ -813,7 +750,7 @@ const Home = () => {
           </div>
         )}
 
-        {/* Dynamic Curated Home Sections (from /api/products/home-sections) */}
+        {/* Dynamic Curated Home Sections */}
         {homeSections.map((sec) => (
           <div key={sec._id || sec.sectionKey}>
             <div className="text-center mb-6">
@@ -831,9 +768,9 @@ const Home = () => {
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               className="flex gap-3 sm:gap-4 lg:gap-5 overflow-x-auto pb-4 no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-mandatory scroll-smooth"
             >
-              {sec.products.map((product) => (
+              {sec.products?.map((product) => (
                 <div
-                  key={product.id || product._id}
+                  key={product._id}
                   className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(50%-8px)] md:w-[calc(33.333%-11px)] lg:w-[calc(25%-15px)] xl:w-[calc(20%-16px)] snap-start"
                 >
                   <HomeProductCard product={product} isSilver={product.isSilver} />
@@ -841,7 +778,6 @@ const Home = () => {
               ))}
             </div>
 
-            {/* DISCOVER Button */}
             <div className="flex justify-center mt-6 sm:mt-8">
               <Link
                 to={sec.buttonLink || (sec.sectionKey ? `/shop?section=${encodeURIComponent(sec.sectionKey)}` : '/shop')}
@@ -855,21 +791,17 @@ const Home = () => {
       </section>
 
       {/* ─────────────────────────────────────────────────────────────────
-          4. CURATED COLLECTION BANNERS (Dynamic Bento Grid from /api/banners)
+          4. CURATED COLLECTION BANNERS (Bento Grid)
       ─────────────────────────────────────────────────────────────────── */}
-      {effectiveCollectionBanners.length > 0 && (
+      {collectionBanners.length > 0 && (
         <section style={sectionStyle('collections')} className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto space-y-8 px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-          {effectiveCollectionBanners.map((collection) => {
-            const sortedImages = [...(collection.images || [])].sort(
-              (a, b) => Number(a.order ?? 0) - Number(b.order ?? 0)
-            );
-            const [image1, image2, image3, image4] = sortedImages;
+          {collectionBanners.map((collection) => {
+            const [image1, image2, image3, image4] = collection.images || [];
             if (!image1 || !image2 || !image3 || !image4) return null;
             const tileClass = 'group relative block overflow-hidden rounded-2xl sm:rounded-[22px] bg-stone-100 shadow-2xs hover:shadow-md transition-shadow duration-300';
             const tileImageClass = 'h-full w-full object-cover rounded-2xl sm:rounded-[22px] transition-transform duration-700 group-hover:scale-[1.02]';
             return (
               <div key={collection.id} className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 lg:aspect-[2/1]">
-                {/* Left column: 2 squares on top + 1 wide (2:1) on bottom */}
                 <div className="grid grid-cols-2 grid-rows-[1fr_auto] gap-4 lg:gap-5 h-full">
                   <Link to={image1.link} className={`${tileClass} aspect-square`} aria-label={`${collection.title} image 1`}>
                     <img src={getMediaUrl(image1.url)} alt={image1.categoryName || `${collection.title} 1`} loading="lazy" className={tileImageClass} />
@@ -881,7 +813,6 @@ const Home = () => {
                     <img src={getMediaUrl(image3.url)} alt={image3.categoryName || `${collection.title} 3`} loading="lazy" className={tileImageClass} />
                   </Link>
                 </div>
-                {/* Right column: single tall image filling full height on desktop, matching wide banner on mobile */}
                 <Link to={image4.link} className={`${tileClass} aspect-[2/1] lg:aspect-auto lg:h-full`} aria-label={`${collection.title} image 4`}>
                   <img src={getMediaUrl(image4.url)} alt={image4.categoryName || `${collection.title} 4`} loading="lazy" className={tileImageClass} />
                 </Link>
@@ -892,7 +823,7 @@ const Home = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
-          5. TRUST BADGES ROW (Dynamic from Settings)
+          5. TRUST BADGES ROW
       ─────────────────────────────────────────────────────────────────── */}
       {activeTrustBadges.length > 0 && (
         <section style={sectionStyle('trustBadges')} className="w-full max-w-7xl 2xl:max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
@@ -926,7 +857,7 @@ const Home = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
-          6. CUSTOM JEWELLERY BANNER (Direct from /api/banners/lookup)
+          6. CUSTOM JEWELLERY BANNER
       ─────────────────────────────────────────────────────────────────── */}
       {customBanner?.image && (
         <section style={sectionStyle('customBanner')} className="pt-6 sm:pt-10 relative overflow-hidden">
@@ -947,7 +878,7 @@ const Home = () => {
               </a>
             ) : (
               <Link
-                to={customBanner.link && customBanner.link !== '/custom' ? customBanner.link : '/custom-jewellery'}
+                to={customBanner.link}
                 className="block w-full h-full cursor-pointer"
               >
                 <img
@@ -977,7 +908,7 @@ const Home = () => {
                 </a>
               ) : (
                 <Link
-                  to={customBanner.link && customBanner.link !== '/custom' ? customBanner.link : '/custom-jewellery'}
+                  to={customBanner.link}
                   className="block w-full h-full cursor-pointer"
                 >
                   <img
@@ -993,7 +924,7 @@ const Home = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
-          7. GIFTS SECTION (Dynamic from /api/featured?placement=Gifts)
+          7. GIFTS SECTION
       ─────────────────────────────────────────────────────────────────── */}
       {giftItems.length > 0 && (
         <section style={sectionStyle('gifts')} className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
@@ -1009,7 +940,6 @@ const Home = () => {
             onMouseEnter={() => setIsGiftsHovered(true)}
             onMouseLeave={() => setIsGiftsHovered(false)}
           >
-            {/* Left Chevron Button */}
             <button
               type="button"
               onClick={() => scrollGifts('prev')}
@@ -1021,7 +951,6 @@ const Home = () => {
               <HiOutlineChevronLeft className="h-5 w-5" />
             </button>
 
-            {/* Scrollable Container */}
             <div
               ref={giftsScrollRef}
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -1055,7 +984,6 @@ const Home = () => {
               ))}
             </div>
 
-            {/* Right Chevron Button */}
             <button
               type="button"
               onClick={() => scrollGifts('next')}
@@ -1071,7 +999,7 @@ const Home = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
-          8. MOBILE APP BANNER (Direct from /api/banners/lookup)
+          8. MOBILE APP BANNER
       ─────────────────────────────────────────────────────────────────── */}
       {mobileAppBanner?.image && (
         <section style={sectionStyle('mobileApp')} className="pt-8 sm:pt-14">
@@ -1154,7 +1082,7 @@ const Home = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
-          9. TRENDING JEWELLERY SECTION (Dynamic from /api/products/home)
+          9. TRENDING JEWELLERY SECTION
       ─────────────────────────────────────────────────────────────────── */}
       <section style={sectionStyle('products')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h3 className="font-serif text-xl sm:text-2xl text-stone-900 font-normal mb-8">
@@ -1168,7 +1096,7 @@ const Home = () => {
           >
             {trendingProducts.map((product) => (
               <div
-                key={product.id || product._id}
+                key={product._id}
                 className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(50%-8px)] md:w-[calc(33.333%-11px)] lg:w-[calc(25%-15px)] xl:w-[calc(20%-16px)] snap-start"
               >
                 <HomeProductCard product={product} />
@@ -1189,7 +1117,7 @@ const Home = () => {
       <BirthstonesSection style={sectionStyle('birthstones')} />
 
       {/* ─────────────────────────────────────────────────────────────────
-          10. BOOK A VIRTUAL APPOINTMENT BANNER (Direct from /api/banners/lookup)
+          10. BOOK A VIRTUAL APPOINTMENT BANNER
       ─────────────────────────────────────────────────────────────────── */}
       {bookAppointBanner?.image && (
         <section style={sectionStyle('appointment')} className="pt-10 sm:pt-16 relative overflow-hidden">
@@ -1282,7 +1210,7 @@ const Home = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
-          11. WHAT OUR CLIENTS ARE SAYING (Dynamic from /api/reviews)
+          11. WHAT OUR CLIENTS ARE SAYING
       ─────────────────────────────────────────────────────────────────── */}
       {displayReviews.length > 0 && (
         <section style={sectionStyle('reviews')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
@@ -1294,12 +1222,11 @@ const Home = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {displayReviews.map((rev, idx) => (
+            {displayReviews.map((rev) => (
               <div
-                key={rev.id || idx}
+                key={rev.id}
                 className="bg-white rounded-2xl border border-stone-200/90 overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col"
               >
-                {/* Top Area: Image or Warm Champagne Container with Quote Icon */}
                 <div className="h-44 sm:h-48 bg-[#f5efe6] relative overflow-hidden flex items-center justify-center shrink-0">
                   {rev.image ? (
                     <img
@@ -1314,28 +1241,23 @@ const Home = () => {
                   )}
                 </div>
 
-                {/* Content Area */}
                 <div className="p-5 sm:p-6 flex flex-col flex-1 text-center justify-between">
-                  {/* 5 Stars */}
                   <div className="flex items-center justify-center gap-1 text-amber-400 mb-2.5">
                     {Array.from({ length: Number(rev.rating) || 5 }).map((_, i) => (
                       <HiStar key={i} className="w-4 h-4 fill-current" />
                     ))}
                   </div>
 
-                  {/* Review Headline / Title */}
                   {rev.title && (
                     <h3 className="font-bold text-stone-900 text-sm sm:text-[14px] leading-snug mb-2 line-clamp-2">
                       {rev.title}
                     </h3>
                   )}
 
-                  {/* Review Comment / Testimonial Text */}
                   <p className="text-xs sm:text-[13px] text-stone-600 leading-relaxed mb-4 flex-1 line-clamp-3">
                     {rev.comment}
                   </p>
 
-                  {/* Client Name */}
                   <div className="mt-auto pt-1">
                     <span className="font-bold text-xs sm:text-[13px] text-stone-900 tracking-wide block">
                       {rev.clientName}
@@ -1349,7 +1271,7 @@ const Home = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
-          12. FOLLOW US ON INSTAGRAM (Matches neirah.in)
+          12. FOLLOW US ON INSTAGRAM
       ─────────────────────────────────────────────────────────────────── */}
       <section style={sectionStyle('instagram')} className="pt-16 pb-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
@@ -1358,28 +1280,19 @@ const Home = () => {
               Follow Us on Instagram
             </h2>
             <a
-              href={storeSettings?.socialMedia?.instagram || "https://www.instagram.com/neirah.officials/"}
+              href={storeSettings?.socialMedia?.instagram || 'https://www.instagram.com/neirah.officials/'}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-gray-600 hover:text-[#8B6B42] hover:underline font-medium text-sm md:text-base transition-colors"
             >
-              {(() => {
-                const instaUrl = storeSettings?.socialMedia?.instagram || 'https://www.instagram.com/neirah.officials/';
-                try {
-                  const cleaned = instaUrl.split('?')[0].replace(/\/+$/, '');
-                  const handle = cleaned.split('/').filter(Boolean).pop();
-                  return handle ? `@${handle}` : '@neirah.officials';
-                } catch {
-                  return '@neirah.officials';
-                }
-              })()}
+              {instagramHandle}
             </a>
           </div>
 
           {instagramPosts.length > 0 ? (
             <div className="flex flex-row overflow-x-auto lg:grid lg:grid-cols-4 gap-6 justify-start lg:justify-items-center w-full pb-4 scroll-smooth snap-x snap-mandatory scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden px-2">
-              {instagramPosts.slice(0, 4).map((post, idx) => (
-                <div key={post._id || idx} className="snap-center shrink-0 flex justify-center w-auto lg:w-full">
+              {instagramPosts.slice(0, 4).map((post) => (
+                <div key={post._id} className="snap-center shrink-0 flex justify-center w-auto lg:w-full">
                   <div className="w-[280px] h-[380px] relative overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-shadow">
                     <div className="w-[329px] h-[435px] scale-[0.85] origin-top-left">
                       <InstagramEmbed url={post.url} width="100%" captioned={false} />

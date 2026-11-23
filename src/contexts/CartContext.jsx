@@ -5,7 +5,7 @@ import { cartAPI } from '../api/services';
 import { getPrimaryProductImage } from '../utils/productImages';
 import { trackAddToCart, trackRemoveFromCart } from '../config/firebase';
 import { useAuth } from './AuthContext';
-import { resolveMetalName, cleanAttribute } from '../utils/metalColors';
+import { resolveMetalName } from '../utils/metalColors';
 import { joinUserSocketRooms, onCartCountUpdate } from '../services/socket';
 
 /* eslint-disable react/prop-types, react-refresh/only-export-components */
@@ -38,20 +38,29 @@ const CartContext = createContext(defaultCartValue);
 
 const extractId = (val) => {
   if (!val) return '';
-  if (typeof val === 'string') {
-    const trimmed = val.trim();
-    return trimmed === '[object Object]' ? '' : trimmed;
-  }
-  if (typeof val === 'object') {
-    if (val._id) return extractId(val._id);
-    if (val.id) return extractId(val.id);
-    if (val.productId) return extractId(val.productId);
-    if (typeof val.toString === 'function') {
-      const s = val.toString().trim();
-      if (s && s !== '[object Object]') return s;
-    }
-  }
-  return '';
+  if (typeof val === 'string') return val.trim();
+  return String(val._id || val.id || val.productId || '').trim();
+};
+
+const formatCartItem = (i) => {
+  const pId = extractId(i.productId || i.id || i._id);
+  return {
+    id: pId,
+    productId: pId,
+    _id: i._id || pId,
+    sku: i.sku || '',
+    slug: i.slug || '',
+    name: i.title || i.name || '',
+    title: i.title || i.name || '',
+    price: Number(i.price) || 0,
+    originalPrice: i.originalPrice || null,
+    image: i.image || '',
+    category: i.category || '',
+    quantity: Number(i.quantity) || 1,
+    selectedMetal: i.selectedMetal || '',
+    selectedSize: i.selectedSize || '',
+    selectedAttributes: i.selectedAttributes || undefined,
+  };
 };
 
 /**
@@ -62,7 +71,7 @@ const consolidateItems = (items) => {
   if (!Array.isArray(items)) return [];
   const map = new Map();
   for (const item of items) {
-    const pId = extractId(item.productId) || extractId(item.id) || extractId(item._id) || '';
+    const pId = extractId(item.productId || item.id || item._id);
     if (!pId) continue;
     if (map.has(pId)) {
       const existing = map.get(pId);
@@ -97,14 +106,7 @@ export const CartProvider = ({ children }) => {
       const saved = localStorage.getItem('jewels_cart');
       if (!saved) return [];
       const parsed = JSON.parse(saved);
-      if (!Array.isArray(parsed)) return [];
-      const mapped = parsed.map((item) => ({
-        ...item,
-        category: (item.category && !/^[0-9a-fA-F]{24}$/.test(String(item.category).trim())) ? item.category : '',
-        selectedMetal: resolveMetalName(item.selectedMetal),
-        selectedSize: cleanAttribute(item.selectedSize),
-      }));
-      return consolidateItems(mapped);
+      return Array.isArray(parsed) ? consolidateItems(parsed) : [];
     } catch {
       return [];
     }
@@ -143,6 +145,20 @@ export const CartProvider = ({ children }) => {
     return { totalItems, subtotal, shipping, tax, total };
   }, []);
 
+  const updateCartFromResponse = useCallback((data) => {
+    if (!data || !Array.isArray(data.items)) return;
+    const consolidated = consolidateItems(data.items.map(formatCartItem));
+    setCart(consolidated);
+    setCartTotals({
+      totalItems: data.totalItems ?? consolidated.length,
+      subtotal: data.subtotal ?? calculateTotals(consolidated).subtotal,
+      shipping: data.shipping ?? 0,
+      tax: data.tax ?? 0,
+      total: data.total ?? calculateTotals(consolidated).total,
+    });
+    localStorage.setItem('jewels_cart', JSON.stringify(consolidated));
+  }, [calculateTotals]);
+
   // Fetch cart from backend API
   const fetchCart = useCallback(async () => {
     if (isFetchingCartRef.current) return;
@@ -151,48 +167,7 @@ export const CartProvider = ({ children }) => {
       setLoading(true);
       const res = await cartAPI.get();
       const data = res?.data?.data || res?.data || {};
-      if (Array.isArray(data.items)) {
-        const formattedItems = data.items.map((i) => {
-          const itemSlug =
-            i.slug ||
-            i.basicInfo?.slug ||
-            (i.title
-              ? String(i.title)
-                  .toLowerCase()
-                  .trim()
-                  .replace(/[^\w\s-]/g, '')
-                  .replace(/\s+/g, '-')
-              : '');
-          const pId = extractId(i.productId) || extractId(i.id) || extractId(i._id) || '';
-          return {
-            id: pId,
-            productId: pId,
-            _id: i._id,
-            sku: i.sku || i.basicInfo?.sku || i.productId?.basicInfo?.sku || '',
-            slug: itemSlug,
-            name: i.title,
-            title: i.title,
-            price: i.price,
-            originalPrice: i.originalPrice,
-            image: i.image?.url || i.image || '',
-            category: (i.category && !/^[0-9a-fA-F]{24}$/.test(String(i.category).trim())) ? i.category : '',
-            quantity: i.quantity,
-            selectedMetal: resolveMetalName(i.selectedMetal, i.productId),
-            selectedSize: cleanAttribute(i.selectedSize),
-            selectedAttributes: i.selectedAttributes || undefined,
-          };
-        });
-        const consolidated = consolidateItems(formattedItems);
-        setCart(consolidated);
-        setCartTotals({
-          totalItems: data.totalItems ?? consolidated.length,
-          subtotal: data.subtotal ?? calculateTotals(consolidated).subtotal,
-          shipping: data.shipping ?? 0,
-          tax: data.tax ?? 0,
-          total: data.total ?? calculateTotals(consolidated).total,
-        });
-        localStorage.setItem('jewels_cart', JSON.stringify(consolidated));
-      }
+      updateCartFromResponse(data);
     } catch (err) {
       console.warn('Failed to load cart from API, using local fallback:', err);
       setCart((currentCart) => {
@@ -203,7 +178,7 @@ export const CartProvider = ({ children }) => {
       setLoading(false);
       isFetchingCartRef.current = false;
     }
-  }, [calculateTotals]);
+  }, [calculateTotals, updateCartFromResponse]);
 
   // Fast counts fetcher (only asks for badge counts, never full cart)
   const fetchCounts = useCallback(async () => {
@@ -282,7 +257,7 @@ export const CartProvider = ({ children }) => {
       return;
     }
 
-    const productId = extractId(product.id) || extractId(product._id) || extractId(product.productId) || '';
+    const productId = extractId(product._id || product.id || product.productId);
     if (!productId) {
       console.error('addToCart: Missing or invalid product id', product);
       toast.error('Unable to add item: invalid product information');
@@ -290,26 +265,14 @@ export const CartProvider = ({ children }) => {
     }
     const parsedQty = Math.max(1, parseInt(quantity, 10) || 1);
     const selectedMetal = resolveMetalName(options.selectedMetal || product.selectedMetal || '', product);
-    const selectedSize = cleanAttribute(options.selectedSize || product.selectedSize || '');
+    const selectedSize = options.selectedSize || product.selectedSize || '';
     const title = product.basicInfo?.title || product.title || '';
-    const price = Number(product.price) || 0;
-    const image = product.image?.url || product.image || getPrimaryProductImage(product);
-
-    const totalItemPrice = options.totalItemPrice || product.totalItemPrice || (price * parsedQty);
-    const addedAt = options.addedAt || product.addedAt || new Date().toISOString();
-      const selectedAttributes = options.selectedAttributes || product.selectedAttributes || undefined;
-
-    const slug =
-      product.basicInfo?.slug ||
-      product.slug ||
-      product.representative?.basicInfo?.slug ||
-      (title
-        ? String(title)
-            .toLowerCase()
-            .trim()
-            .replace(/[^\w\s-]/g, '')
-            .replace(/\s+/g, '-')
-        : '');
+    const price = Number(product.price || product.pricing?.salePrice || 0);
+    const image = product.image || getPrimaryProductImage(product);
+    const totalItemPrice = options.totalItemPrice || (price * parsedQty);
+    const addedAt = options.addedAt || new Date().toISOString();
+    const selectedAttributes = options.selectedAttributes || product.selectedAttributes || undefined;
+    const slug = product.basicInfo?.slug || product.slug || '';
 
     // Increment request ID to track racing async requests
     const reqId = ++cartReqIdRef.current;
@@ -317,14 +280,14 @@ export const CartProvider = ({ children }) => {
     // 1. Optimistic local update
     setCart((prev) => {
       const existingIndex = prev.findIndex(
-        (item) => String(item.productId || item.id) === productId || String(item._id) === productId
+        (item) => item.productId === productId || item.id === productId || item._id === productId
       );
 
       let updated;
       if (existingIndex > -1) {
         updated = [...prev];
         const nextQty = (Number(updated[existingIndex].quantity) || 0) + parsedQty;
-        const currentUnitPrice = Number(price) || Number(updated[existingIndex].price) || 0;
+        const currentUnitPrice = price || Number(updated[existingIndex].price) || 0;
         updated[existingIndex] = {
           ...updated[existingIndex],
           quantity: nextQty,
@@ -332,7 +295,7 @@ export const CartProvider = ({ children }) => {
           totalItemPrice: currentUnitPrice * nextQty,
           slug: slug || updated[existingIndex].slug,
           selectedMetal: selectedMetal || updated[existingIndex].selectedMetal,
-          selectedSize: cleanAttribute(selectedSize) || updated[existingIndex].selectedSize,
+          selectedSize: selectedSize || updated[existingIndex].selectedSize,
           selectedAttributes: selectedAttributes || updated[existingIndex].selectedAttributes,
         };
       } else {
@@ -346,12 +309,12 @@ export const CartProvider = ({ children }) => {
             title,
             price,
             totalItemPrice,
-            originalPrice: product.originalPrice || null,
+            originalPrice: product.originalPrice || product.pricing?.mrp || null,
             image,
-            category: (product.category && !/^[0-9a-fA-F]{24}$/.test(String(product.category).trim())) ? product.category : '',
+            category: product.category || '',
             quantity: parsedQty,
             selectedMetal,
-            selectedSize: cleanAttribute(selectedSize),
+            selectedSize,
             selectedAttributes,
             addedAt,
           },
@@ -379,14 +342,8 @@ export const CartProvider = ({ children }) => {
         userId: currentUser?._id || currentUser?.id,
       };
 
-      if (selectedMetal) {
-        payload.selectedMetal = selectedMetal;
-      }
-      if (selectedSize) {
-        payload.selectedSize = selectedSize;
-      }
-
-      // Only attach selectedAttributes if it contains meaningful non-null values
+      if (selectedMetal) payload.selectedMetal = selectedMetal;
+      if (selectedSize) payload.selectedSize = selectedSize;
       if (selectedAttributes && typeof selectedAttributes === 'object') {
         const validEntries = Object.entries(selectedAttributes).filter(
           ([, val]) => val !== null && val !== undefined && val !== ''
@@ -397,13 +354,9 @@ export const CartProvider = ({ children }) => {
       }
 
       const res = await cartAPI.add(payload);
-      // If a newer add/update request has already been initiated, ignore this stale response
-      if (reqId !== cartReqIdRef.current) {
-        return;
-      }
+      if (reqId !== cartReqIdRef.current) return;
       const data = res?.data?.data || res?.data || {};
 
-      // Show success toast only AFTER backend confirms (unless silent)
       if (!options?.silent) {
         toast.success(`Added "${title}" to your bag!`, {
           icon: '🛍️',
@@ -415,51 +368,9 @@ export const CartProvider = ({ children }) => {
         });
       }
 
-      if (Array.isArray(data.items)) {
-        const formattedItems = data.items.map((i) => {
-          const itemSlug =
-            i.slug ||
-            i.basicInfo?.slug ||
-            (i.title
-              ? String(i.title)
-                  .toLowerCase()
-                  .trim()
-                  .replace(/[^\w\s-]/g, '')
-                  .replace(/\s+/g, '-')
-              : '');
-          const pId = extractId(i.productId) || extractId(i.id) || extractId(i._id) || '';
-          return {
-            id: pId,
-            productId: pId,
-            _id: i._id,
-            sku: i.sku || i.basicInfo?.sku || i.productId?.basicInfo?.sku || '',
-            slug: itemSlug,
-            name: i.title,
-            title: i.title,
-            price: i.price,
-            originalPrice: i.originalPrice,
-            image: i.image?.url || i.image || '',
-            category: (i.category && !/^[0-9a-fA-F]{24}$/.test(String(i.category).trim())) ? i.category : '',
-            quantity: i.quantity,
-            selectedMetal: resolveMetalName(i.selectedMetal, i.productId),
-            selectedSize: cleanAttribute(i.selectedSize),
-            selectedAttributes: i.selectedAttributes || selectedAttributes || undefined,
-          };
-        });
-        const consolidated = consolidateItems(formattedItems);
-        setCart(consolidated);
-        setCartTotals({
-          totalItems: data.totalItems ?? consolidated.length,
-          subtotal: data.subtotal ?? calculateTotals(consolidated).subtotal,
-          shipping: data.shipping ?? 0,
-          tax: data.tax ?? 0,
-          total: data.total ?? calculateTotals(consolidated).total,
-        });
-        localStorage.setItem('jewels_cart', JSON.stringify(consolidated));
-      }
+      updateCartFromResponse(data);
     } catch (err) {
       console.warn('Backend cart sync error:', err);
-      // Revert the optimistic update
       fetchCart();
       if (err.response?.status === 401) {
         setCartDrawerOpen(false);
@@ -499,15 +410,7 @@ export const CartProvider = ({ children }) => {
     try {
       const res = await cartAPI.updateQuantity(targetId, parsedQty);
       const data = res?.data?.data || res?.data;
-      if (data && Array.isArray(data.items)) {
-        setCartTotals({
-          totalItems: data.totalItems,
-          subtotal: data.subtotal,
-          shipping: data.shipping,
-          tax: data.tax,
-          total: data.total,
-        });
-      }
+      updateCartFromResponse(data);
     } catch (err) {
       console.warn('Backend update quantity error:', err);
     }
@@ -570,8 +473,7 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const totalItems =
-    cartTotals.totalItems || cart.length;
+  const totalItems = cartTotals.totalItems || cart.length;
   const subtotal =
     cartTotals.subtotal ||
     cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
