@@ -22,11 +22,9 @@ export default function BirthstonesSection({ style }) {
     let isMounted = true;
     (async () => {
       try {
-        const res = await birthstoneAPI.getAll({ status: 'active', limit: 20 });
+        const res = await birthstoneAPI.getLookup();
         const list = Array.isArray(res?.data?.data)
           ? res.data.data
-          : Array.isArray(res?.data?.items)
-          ? res.data.items
           : Array.isArray(res?.data)
           ? res.data
           : [];

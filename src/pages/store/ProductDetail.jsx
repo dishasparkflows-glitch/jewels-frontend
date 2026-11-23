@@ -809,7 +809,7 @@ export default function ProductDetail() {
   }, [product]);
 
   const isSilver = (product?.productType === 'silver') || Boolean(product?.isOrnate);
-  const isGold = !isSilver && ((product?.productType === 'gold') || !product?.productType || /gold/i.test(product?.basicInfo?.title || ''));
+  const isGold = !isSilver;
 
   // Auto-initialize options on product load
   useEffect(() => {
@@ -1286,10 +1286,9 @@ export default function ProductDetail() {
       selectedVariant?.metalWeight ||
       selectedVariant?.weight ||
       product?.specifications?.metalWeight ||
-      product?.ornate?.metalWeight ||
       0
     );
-  }, [selectedVariant, product?.specifications?.metalWeight, product?.ornate?.metalWeight]);
+  }, [selectedVariant, product?.specifications?.metalWeight]);
 
   // Numerically sorted sizes (e.g. 4 -> 4.5 -> 5 -> 5.5 -> 6 -> 10)
   const sortedSizes = useMemo(() => {
@@ -1315,7 +1314,6 @@ export default function ProductDetail() {
   const rawBaseVariantPrice = Number(
     selectedVariant?.price ||
     product?.pricing?.salePrice ||
-    product?.pricing?.calculatedPrice ||
     0
   );
 
@@ -1382,7 +1380,7 @@ export default function ProductDetail() {
     return Math.round(newSubtotal + newGst);
   }, [rawBaseVariantPrice, isGold, rawBaseMetalWeight, sizeAdjustedMetalWeight, product?.pricing, selectedVariant]);
 
-  const mrpPrice = [product?.pricing?.mrp].find((value) => Number(value) > 0) ?? currentPrice;
+  const mrpPrice = Number(product?.pricing?.mrp || 0) || currentPrice;
 
   // Itemized Transparent Price Breakdown (Matches Screenshot)
   const breakdown = useMemo(() => {
@@ -1392,8 +1390,6 @@ export default function ProductDetail() {
       currentPrice ||
       v.price ||
       product?.pricing?.salePrice ||
-      product?.pricing?.calculatedPrice ||
-      product?.pricing?.ornatePrice ||
       0
     );
 
@@ -1408,7 +1404,6 @@ export default function ProductDetail() {
       v.labourCharge ||
       v.computedMakingCharge ||
       product?.pricing?.baseLabourCharge ||
-      product?.ornate?.labourAmt ||
       0
     );
 
@@ -1424,7 +1419,6 @@ export default function ProductDetail() {
       v.centerDiamondWeight ||
       v.caratWeight ||
       selectedCarat ||
-      product?.ornate?.carat ||
       0
     );
 
@@ -1433,7 +1427,6 @@ export default function ProductDetail() {
       (Number(v.centerDiamondCost || 0) + Number(v.sideDiamondCost || 0)) ||
       v.sideDiamondCost ||
       v.centerDiamondCost ||
-      product?.ornate?.diamondAmt ||
       0
     );
 
@@ -1527,7 +1520,7 @@ export default function ProductDetail() {
         setProduct(null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        const res = await productsAPI.getBySku(identifier).catch(() => productsAPI.getById(identifier));
+        const res = await productsAPI.getBySku(identifier);
         const prodData = res.data?.data || res.data;
         if (prodData) {
           setProduct(prodData);
@@ -1560,15 +1553,7 @@ export default function ProductDetail() {
               }
             });
 
-          const activeSlug =
-            prodData.basicInfo?.slug ||
-            (prodData.basicInfo?.title
-              ? String(prodData.basicInfo.title)
-                  .toLowerCase()
-                  .trim()
-                  .replace(/[^\w\s-]/g, '')
-                  .replace(/\s+/g, '-')
-              : '');
+          const activeSlug = prodData.basicInfo?.slug || '';
           if (activeSlug && identifier && identifier !== activeSlug) {
             navigate(`/product/${encodeURIComponent(activeSlug)}`, { replace: true });
           }
@@ -1638,32 +1623,24 @@ export default function ProductDetail() {
     const quantity = 1;
     const totalItemPrice = price * quantity;
     const addedAt = new Date().toISOString();
-    const isSilverProduct = (product?.productType === 'silver') || Boolean(product?.isOrnate) || /silver/i.test(product?.basicInfo?.title || '');
-    const isGold = !isSilverProduct && ((product?.productType === 'gold') || !product?.productType || /gold/i.test(product?.basicInfo?.title || ''));
-
-    const selectedSizeObj = sortedSizes.find(
-      (s) => String(s._id || s.id || s.name || s) === String(selectedSize)
-    );
-    const resolvedSizeName = selectedSizeObj ? selectedSizeObj.name : (selectedSize || '');
-
-    const resolvedDiamondTypeName = isSilverProduct
+    const resolvedDiamondTypeName = isSilver
       ? ''
-      : ((selectedVariant?.diamondTypeId && typeof selectedVariant.diamondTypeId === 'object' && selectedVariant.diamondTypeId.name) ||
-        (selectedVariant?.diamondType && typeof selectedVariant.diamondType === 'object' && selectedVariant.diamondType.name) ||
-        (product.representative?.diamondType && !isRawObjectId(product.representative?.diamondType) ? product.representative?.diamondType : null) ||
+      : (selectedVariant?.diamondTypeId?.name ||
+        selectedVariant?.diamondType?.name ||
+        diamondType ||
         'Lab Grown Diamond');
 
     const resolvedShapeName =
-      (selectedVariant?.diamondShapeId && typeof selectedVariant.diamondShapeId === 'object' && selectedVariant.diamondShapeId.name) ||
-      (selectedVariant?.diamondShape && typeof selectedVariant.diamondShape === 'object' && selectedVariant.diamondShape.name) ||
+      selectedVariant?.diamondShapeId?.name ||
+      selectedVariant?.diamondShape?.name ||
       '';
 
     const resolvedClarityName = selectedQuality ||
-      (selectedVariant?.diamondClarityId && typeof selectedVariant.diamondClarityId === 'object' && selectedVariant.diamondClarityId.name) ||
+      selectedVariant?.diamondClarityId?.name ||
       '';
 
     const resolvedColorName =
-      (selectedVariant?.diamondColorId && typeof selectedVariant.diamondColorId === 'object' && selectedVariant.diamondColorId.name) ||
+      selectedVariant?.diamondColorId?.name ||
       '';
 
     let selectedAttributes = null;
@@ -1677,12 +1654,12 @@ export default function ProductDetail() {
         diamondColor: cleanAttribute(resolvedColorName),
         caratWeight: Number(selectedVariant?.caratWeight || selectedCarat || 0) || null,
         size: resolvedSizeName || null,
-        metalPurityId: selectedVariant?.metalPurityId?._id || (isRawObjectId(selectedVariant?.metalPurityId) ? selectedVariant.metalPurityId : null) || product.metalPurityIds?.[0]?._id || (isRawObjectId(product.metalPurityIds?.[0]) ? product.metalPurityIds[0] : null) || null,
-        metalColorId: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId?.id || (isRawObjectId(selectedVariant?.metalColorId) ? selectedVariant.metalColorId : null) || product.metalColors?.[0]?.id || product.metalColors?.[0]?._id || product.metalColorIds?.[0]?._id || (isRawObjectId(product.metalColorIds?.[0]) ? product.metalColorIds[0] : null) || null,
-        diamondTypeId: selectedVariant?.diamondTypeId?._id || (isRawObjectId(selectedVariant?.diamondTypeId) ? selectedVariant.diamondTypeId : null) || null,
-        diamondShapeId: selectedVariant?.diamondShapeId?._id || (isRawObjectId(selectedVariant?.diamondShapeId) ? selectedVariant.diamondShapeId : null) || null,
-        diamondClarityId: selectedVariant?.diamondClarityId?._id || (isRawObjectId(selectedVariant?.diamondClarityId) ? selectedVariant.diamondClarityId : null) || null,
-        diamondColorId: selectedVariant?.diamondColorId?._id || (isRawObjectId(selectedVariant?.diamondColorId) ? selectedVariant.diamondColorId : null) || null,
+        metalPurityId: selectedVariant?.metalPurityId?._id || selectedVariant?.metalPurityId || product.metalPurityIds?.[0]?._id || product.metalPurityIds?.[0] || null,
+        metalColorId: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId?.id || selectedVariant?.metalColorId || product.metalColors?.[0]?.id || product.metalColors?.[0]?._id || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null,
+        diamondTypeId: selectedVariant?.diamondTypeId?._id || selectedVariant?.diamondTypeId || null,
+        diamondShapeId: selectedVariant?.diamondShapeId?._id || selectedVariant?.diamondShapeId || null,
+        diamondClarityId: selectedVariant?.diamondClarityId?._id || selectedVariant?.diamondClarityId || null,
+        diamondColorId: selectedVariant?.diamondColorId?._id || selectedVariant?.diamondColorId || null,
       };
       const validEntries = Object.entries(attrs).filter(([, val]) => val !== null && val !== undefined && val !== '');
       if (validEntries.length > 0) {
@@ -2014,7 +1991,7 @@ export default function ProductDetail() {
                 <span className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight font-sans">
                   {formatPrice(currentPrice)}
                 </span>
-                {!isGold && Number(mrpPrice) > Number(currentPrice) && (
+                {Number(mrpPrice) > Number(currentPrice) && (
                   <span className="text-sm sm:text-base text-stone-400 line-through">
                     {formatPrice(mrpPrice)}
                   </span>

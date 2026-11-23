@@ -1,68 +1,35 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HiOutlineX, HiOutlineShoppingBag } from 'react-icons/hi';
 import { useCart } from '../../contexts/CartContext';
-import { productsAPI } from '../../api/services';
-import { getProductCardData, formatProductPrice } from '../../utils/productCard';
+import { formatProductPrice } from '../../utils/productCard';
 import { getImageUrl } from '../../utils/imageUrl';
-import { isSilverProduct } from '../../utils/productType';
 import ColorSwatches from './ColorSwatches';
 
 export default function WishlistProductCard({ item, onRemove }) {
-  const [fullProduct, setFullProduct] = useState(null);
   const [selectedColorName, setSelectedColorName] = useState(null);
   const [addingToCart, setAddingToCart] = useState(false);
   const { addToCart } = useCart();
 
-  const id = String(
-    (item.productId && typeof item.productId === 'object' ? item.productId._id : null) ||
-    (typeof item.productId === 'string' ? item.productId : null) ||
-    item._id ||
-    item.id ||
-    ''
-  );
+  if (!item) return null;
 
-  // Only fetch full product if we don't have basic card data at all
-  useEffect(() => {
-    let current = true;
-    const hasBasicData = Boolean(
-      item.basicInfo?.title ||
-      item.title ||
-      item.pricing?.salePrice ||
-      item.pricing?.mrp ||
-      item.image ||
-      item.images
-    );
-
-    if (!hasBasicData && id && /^[a-f0-9]{24}$/i.test(id)) {
-      productsAPI.getById(id)
-        .then((res) => {
-          if (current && res?.data?.data) {
-            setFullProduct(res.data.data);
-          }
-        })
-        .catch(() => {});
-    }
-    return () => { current = false; };
-  }, [id, item]);
-
-  const activeProduct = fullProduct || (item.productId && typeof item.productId === 'object' ? item.productId : item);
-  const cardData = getProductCardData(activeProduct);
-
-  const name =
-    activeProduct.basicInfo?.title ||
-    cardData.name ||
-    'Jewellery';
-
-  const slug =
-    activeProduct.basicInfo?.slug ||
-    cardData.slug ||
-    (name ? name.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : '');
-
+  const id = String(item._id || item.productId || '');
+  const name = item.basicInfo?.title || 'Jewellery';
+  const slug = item.basicInfo?.slug || '';
   const productPath = slug ? `/product/${encodeURIComponent(slug)}` : '/shop';
 
-  const colors = cardData.colors || [];
+  // Metal colors from backend
+  const colors = (item.metalColors || []).map((mc) => ({
+    id: mc._id || mc.name,
+    _id: mc._id,
+    name: mc.name,
+    hex: mc.hex || mc.colorCode,
+    colorCode: mc.colorCode,
+    colorCodeEnd: mc.colorCodeEnd,
+    firstPhoto: mc.firstPhoto,
+  }));
+
   const defaultColor = colors.find((c) => /yellow/i.test(c.name)) || colors[0];
   const activeColorName = selectedColorName || defaultColor?.name;
   const activeColor =
@@ -70,35 +37,21 @@ export default function WishlistProductCard({ item, onRemove }) {
     defaultColor ||
     colors[0];
 
-  // Resolve current image
+  // Resolve current image: active color image if available, otherwise primary item image
   const displayImage =
-    (activeColor?.image && getImageUrl(activeColor.image)) ||
-    (cardData.images[0] && getImageUrl(cardData.images[0])) ||
-    (typeof item.image === 'object' ? getImageUrl(item.image?.url) : getImageUrl(item.image)) ||
+    getImageUrl(activeColor?.firstPhoto) ||
+    getImageUrl(item.image) ||
     '/featured/ring.jpg';
 
-  const price = cardData.price || activeProduct.pricing?.salePrice || activeProduct.pricing?.calculatedPrice || activeProduct.pricing?.mrp;
-
-  const isSilver = isSilverProduct(activeProduct) || isSilverProduct(cardData);
-
-  const minPrice = Number(activeProduct?.pricing?.minPrice || cardData?.minPrice || 0);
-  const maxPrice = Number(activeProduct?.pricing?.maxPrice || cardData?.maxPrice || 0);
+  // Pricing from backend
+  const isSilver = item.productType === 'silver';
+  const minPrice = Number(item.pricing?.minPrice || 0);
+  const maxPrice = Number(item.pricing?.maxPrice || 0);
+  const salePrice = Number(item.pricing?.salePrice || minPrice || 0);
+  const mrp = Number(item.pricing?.mrp || 0);
   const hasRange = !isSilver && minPrice > 0 && maxPrice > 0 && maxPrice > minPrice;
-
-  const salePrice =
-    cardData.salePrice ||
-    activeProduct?.pricing?.salePrice ||
-    activeProduct?.representative?.pricing?.salePrice ||
-    price;
-
-  const mrp =
-    cardData.mrp ||
-    activeProduct?.pricing?.mrp ||
-    activeProduct?.representative?.pricing?.mrp ||
-    cardData.originalPrice;
-
-  const hasDiscount = mrp && Number(mrp) > Number(salePrice);
-  const unitPrice = Number(salePrice || minPrice || price || activeProduct?.pricing?.mrp || 0);
+  const hasDiscount = mrp > salePrice;
+  const unitPrice = salePrice || minPrice || mrp || 0;
 
   const handleAddToCart = async (e) => {
     if (e) {
@@ -109,14 +62,9 @@ export default function WishlistProductCard({ item, onRemove }) {
     setAddingToCart(true);
 
     try {
-      const activeColorId =
-        activeColor?._id ||
-        activeColor?.id ||
-        activeProduct?.metalColorIds?.[0]?._id ||
-        activeProduct?.metalColorIds?.[0] ||
-        null;
-
-      let selectedAttributes = activeProduct?.selectedAttributes ? { ...activeProduct.selectedAttributes } : {};
+      const activeColorId = activeColor?._id || activeColor?.id || null;
+      const selectedMetalStr = activeColorName || (isSilver ? 'Silver' : 'Gold');
+      const selectedAttributes = {};
       if (activeColorId) {
         selectedAttributes.metalColor = activeColorId;
       }
@@ -127,22 +75,18 @@ export default function WishlistProductCard({ item, onRemove }) {
         }
       }
 
-      const selectedMetalStr = activeColorName || (isSilver ? 'Silver' : 'Gold');
-
       await addToCart(
         {
           _id: id,
           id,
           productId: id,
-          sku: activeProduct?.basicInfo?.sku || '',
           title: name,
           name,
           price: unitPrice,
           totalItemPrice: unitPrice,
           quantity: 1,
           image: displayImage,
-          category: activeProduct?.category || activeProduct?.categoryIds?.[0]?.name || activeProduct?.categoryIds?.[0] || '',
-          productType: activeProduct?.productType || (isSilver ? 'silver' : 'jewellery'),
+          productType: item.productType || (isSilver ? 'silver' : 'jewellery'),
           selectedAttributes: Object.keys(selectedAttributes).length > 0 ? selectedAttributes : undefined,
           selectedMetal: selectedMetalStr,
         },
@@ -161,7 +105,7 @@ export default function WishlistProductCard({ item, onRemove }) {
 
   return (
     <article className="group min-w-0 flex flex-col justify-between text-center transition-all duration-300">
-      {/* ─── Image Box (Warm subtle background matching reference) ─── */}
+      {/* ─── Image Box ─── */}
       <div className="relative aspect-square bg-[#f6f2ec] rounded-2xl p-4 sm:p-5 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:shadow-sm">
         <Link
           to={productPath}
@@ -187,7 +131,7 @@ export default function WishlistProductCard({ item, onRemove }) {
         </button>
       </div>
 
-      {/* ─── Product Title ─── */}
+      {/* ─── Product Title & Info ─── */}
       <div className="pt-3 flex flex-col items-center">
         <Link
           to={productPath}
@@ -214,7 +158,7 @@ export default function WishlistProductCard({ item, onRemove }) {
             <span className="text-xs sm:text-[13px] font-bold text-stone-950">
               {formatProductPrice(minPrice)} – {formatProductPrice(maxPrice)}
             </span>
-          ) : isSilver ? (
+          ) : (
             <>
               <span className="text-xs sm:text-[13px] font-bold text-stone-950">
                 {formatProductPrice(salePrice) || 'Price unavailable'}
@@ -222,17 +166,6 @@ export default function WishlistProductCard({ item, onRemove }) {
               {hasDiscount && (
                 <span className="text-[11px] sm:text-xs text-stone-400 line-through font-normal">
                   {formatProductPrice(mrp)}
-                </span>
-              )}
-            </>
-          ) : (
-            <>
-              <span className="text-xs sm:text-[13px] font-bold text-stone-950">
-                {formatProductPrice(price) || 'Price unavailable'}
-              </span>
-              {cardData.originalPrice && Number(cardData.originalPrice) > Number(price) && (
-                <span className="text-[11px] sm:text-xs text-stone-400 line-through font-normal">
-                  {formatProductPrice(cardData.originalPrice)}
                 </span>
               )}
             </>

@@ -348,6 +348,8 @@ const Profile = () => {
       setReorderingId(order._id || order.id);
       let count = 0;
 
+      const isMultiItem = Array.isArray(order.items) && order.items.length > 1;
+
       for (const item of order.items) {
         const prodObj = (typeof item.productId === 'object' && item.productId !== null)
           ? item.productId
@@ -389,6 +391,7 @@ const Profile = () => {
           selectedMetal: item.selectedMetal || '',
           selectedSize: item.selectedSize || '',
           selectedAttributes: item.selectedAttributes || null,
+          silent: isMultiItem,
         };
 
         await addToCart(productPayload, item.quantity || 1, options);
@@ -396,12 +399,16 @@ const Profile = () => {
       }
 
       if (count > 0) {
-        toast.success(
-          count === 1
-            ? 'Item added back to your cart!'
-            : `${count} items added back to your cart!`,
-          { icon: '🛍️' }
-        );
+        if (count > 1) {
+          toast.success(`${count} items added back to your cart!`, {
+            icon: '🛍️',
+            style: {
+              background: '#22201e',
+              color: '#f5f0eb',
+              border: '1px solid rgba(198, 145, 60, 0.4)',
+            },
+          });
+        }
 
         if (typeof openCartDrawer === 'function') {
           openCartDrawer();

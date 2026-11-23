@@ -403,15 +403,17 @@ export const CartProvider = ({ children }) => {
       }
       const data = res?.data?.data || res?.data || {};
 
-      // Show success toast only AFTER backend confirms
-      toast.success(`Added "${title}" to your bag!`, {
-        icon: '🛍️',
-        style: {
-          background: '#22201e',
-          color: '#f5f0eb',
-          border: '1px solid rgba(198, 145, 60, 0.4)',
-        },
-      });
+      // Show success toast only AFTER backend confirms (unless silent)
+      if (!options?.silent) {
+        toast.success(`Added "${title}" to your bag!`, {
+          icon: '🛍️',
+          style: {
+            background: '#22201e',
+            color: '#f5f0eb',
+            border: '1px solid rgba(198, 145, 60, 0.4)',
+          },
+        });
+      }
 
       if (Array.isArray(data.items)) {
         const formattedItems = data.items.map((i) => {

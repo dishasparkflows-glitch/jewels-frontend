@@ -193,11 +193,6 @@ function FilterOptionsList({ filter, isOptionSelected, handleToggleOption }) {
 
                   <span className={isChecked ? 'font-semibold text-stone-900' : 'text-stone-700'}>
                     {optName}
-                    {filter.key === 'birthMonth' && opt.stoneName && (
-                      <span className="text-[10px] text-stone-400 font-normal ml-1.5 capitalize">
-                        ({opt.stoneName.toLowerCase()})
-                      </span>
-                    )}
                   </span>
                 </span>
 
