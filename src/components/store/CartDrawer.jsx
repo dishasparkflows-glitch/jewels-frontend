@@ -157,17 +157,29 @@ export default function CartDrawer({ open, onClose }) {
             Taxes and shipping calculated at checkout.
           </p>
 
-          <Link
-            to="/checkout"
-            onClick={onClose}
-            className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#9c774e] hover:bg-[#85633e] py-3.5 text-xs sm:text-sm font-bold uppercase tracking-[0.18em] text-white transition-all shadow-sm ${
-              cart.length ? '' : 'pointer-events-none opacity-40'
-            }`}
-            aria-disabled={!cart.length}
-          >
-            <span>PROCEED TO CHECKOUT</span>
-            <HiArrowRight className="h-4 w-4" />
-          </Link>
+          <div className="mt-4 space-y-2">
+            <Link
+              to="/checkout"
+              onClick={onClose}
+              className={`flex w-full items-center justify-center gap-2 rounded-xl bg-[#9c774e] hover:bg-[#85633e] py-3.5 text-xs sm:text-sm font-bold uppercase tracking-[0.18em] text-white transition-all shadow-sm ${
+                cart.length ? '' : 'pointer-events-none opacity-40'
+              }`}
+              aria-disabled={!cart.length}
+            >
+              <span>PROCEED TO CHECKOUT</span>
+              <HiArrowRight className="h-4 w-4" />
+            </Link>
+
+            <Link
+              to="/cart"
+              onClick={onClose}
+              className={`flex w-full items-center justify-center py-2.5 rounded-xl border border-stone-200 hover:border-stone-300 hover:bg-stone-50 text-xs font-bold uppercase tracking-[0.16em] text-stone-800 transition-colors ${
+                cart.length ? '' : 'pointer-events-none opacity-40'
+              }`}
+            >
+              VIEW FULL BAG
+            </Link>
+          </div>
 
           <button
             type="button"

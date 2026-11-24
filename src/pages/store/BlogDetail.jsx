@@ -172,24 +172,42 @@ export default function BlogDetail() {
           {title}
         </h1>
 
-        <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-stone-500 font-medium pt-2">
-          <span>By <strong className="text-stone-800 font-semibold">{blog.basicInfo?.author || blog.author || 'Neirah Editorial'}</strong></span>
-          <span>•</span>
-          <span className="flex items-center gap-1">
-            <HiOutlineClock className="w-3.5 h-3.5 text-[#8b6f4e]" />
-            {blog.basicInfo?.readTime || blog.readTime || '3 min read'}
-          </span>
-          <span>•</span>
-          <span>{publishDate}</span>
-          {blog.views > 0 && (
-            <>
-              <span>•</span>
-              <span className="flex items-center gap-1 text-stone-400">
-                <HiOutlineEye className="w-3.5 h-3.5" />
-                {blog.views} views
+        {/* Editorial Byline & Meta */}
+        <div className="pt-2 text-xs sm:text-[13px] text-stone-500">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-y-1.5 sm:gap-x-3 text-center">
+            {/* Author */}
+            <div className="inline-flex items-center gap-1.5">
+              <span className="text-stone-400 font-normal">By</span>
+              <span className="font-semibold text-stone-800 tracking-tight">
+                {blog.basicInfo?.author || blog.author || 'Neirah Editorial'}
               </span>
-            </>
-          )}
+            </div>
+
+            {/* Desktop divider */}
+            <span className="hidden sm:inline-block text-stone-300 select-none">•</span>
+
+            {/* Meta Details (Date, Read Time, Views) */}
+            <div className="inline-flex items-center gap-2 sm:gap-2.5 text-stone-500 flex-wrap justify-center">
+              {publishDate && <span>{publishDate}</span>}
+
+              <span className="text-stone-300 select-none">•</span>
+
+              <span className="inline-flex items-center gap-1 text-stone-600">
+                <HiOutlineClock className="w-3.5 h-3.5 text-[#8b6f4e] shrink-0" />
+                <span>{blog.basicInfo?.readTime || blog.readTime || '3 min read'}</span>
+              </span>
+
+              {blog.views > 0 && (
+                <>
+                  <span className="text-stone-300 select-none">•</span>
+                  <span className="inline-flex items-center gap-1 text-stone-400">
+                    <HiOutlineEye className="w-3.5 h-3.5 shrink-0" />
+                    <span>{blog.views} views</span>
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 

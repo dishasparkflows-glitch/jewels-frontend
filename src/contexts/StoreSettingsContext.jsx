@@ -170,6 +170,8 @@ export function StoreSettingsProvider({ children }) {
     const topBarText = colors.topBarTextColor || '#ffffff';
     const headerBg = colors.headerBgColor || '#201e1b';
     const headerText = colors.headerTextColor || '#ffffff';
+    const couponBg = colors.couponBgColor || '#201e1b';
+    const couponText = colors.couponTextColor || '#ffffff';
     const footerBg = colors.footerBgColor || '#0f0d0b';
     const footerText = colors.footerTextColor || '#c8b89e';
 
@@ -181,6 +183,8 @@ export function StoreSettingsProvider({ children }) {
     root.style.setProperty('--storefront-topbar-text', topBarText);
     root.style.setProperty('--storefront-header-bg', headerBg);
     root.style.setProperty('--storefront-header-text', headerText);
+    root.style.setProperty('--storefront-coupon-bg', couponBg);
+    root.style.setProperty('--storefront-coupon-text', couponText);
     root.style.setProperty('--storefront-footer-bg', footerBg);
     root.style.setProperty('--storefront-footer-text', footerText);
   }, [settings?.themeColors, theme?.colors?.primary]);

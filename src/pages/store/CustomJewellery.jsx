@@ -8,6 +8,7 @@ import {
   HiCheckCircle,
   HiOutlineUser,
   HiOutlineMail,
+  HiOutlinePhotograph,
 } from 'react-icons/hi';
 import { IoDiamondOutline, IoChatbubbleEllipsesOutline } from 'react-icons/io5';
 import { FiLayers } from 'react-icons/fi';
@@ -470,175 +471,205 @@ export default function CustomJewellery() {
           </div>
         ) : (
           /* ─── The Main Form (Matching Screenshot 1) ─── */
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* ── Row 1: Name* & Email* ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              {/* Name */}
-              <div>
-                <label
-                  htmlFor="custom-name"
-                  className="block text-xs font-semibold text-stone-800 mb-1.5"
-                >
-                  Name<span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#8b6f4e]">
-                    <HiOutlineUser className="w-4 h-4" />
+          <form onSubmit={handleSubmit} className="space-y-6 bg-white rounded-2xl sm:rounded-3xl border border-stone-200/90 shadow-sm p-5 sm:p-8 md:p-10">
+            {/* ── Section 1: Your Details ── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-1 text-[#8b6f4e]">
+                <HiOutlineUser className="w-5 h-5 text-[#8b6f4e]" />
+                <h3 className="text-sm sm:text-base font-bold text-stone-900 tracking-tight">
+                  Your Details
+                </h3>
+              </div>
+
+              {/* Row 1: Name & Email */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                {/* Name */}
+                <div>
+                  <label
+                    htmlFor="custom-name"
+                    className="block text-xs font-semibold text-stone-800 mb-1.5"
+                  >
+                    Name <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#8b6f4e]">
+                      <HiOutlineUser className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="custom-name"
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={handleChange('name')}
+                      placeholder="Enter your name"
+                      className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all shadow-2xs"
+                    />
                   </div>
-                  <input
-                    id="custom-name"
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={handleChange('name')}
-                    placeholder="Enter your name"
-                    className="w-full h-11 pl-10 pr-3.5 rounded-lg border border-stone-200 bg-white text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all"
-                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label
+                    htmlFor="custom-email"
+                    className="block text-xs font-semibold text-stone-800 mb-1.5"
+                  >
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#8b6f4e]">
+                      <HiOutlineMail className="w-4 h-4" />
+                    </div>
+                    <input
+                      id="custom-email"
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={handleChange('email')}
+                      placeholder="Enter your email"
+                      className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all shadow-2xs"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Email */}
-              <div>
-                <label
-                  htmlFor="custom-email"
-                  className="block text-xs font-semibold text-stone-800 mb-1.5"
-                >
-                  Email<span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#8b6f4e]">
-                    <HiOutlineMail className="w-4 h-4" />
-                  </div>
-                  <input
-                    id="custom-email"
-                    type="email"
+              {/* Row 2: Phone Number & Stone Type */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                {/* Phone number */}
+                <div>
+                  <label
+                    htmlFor="custom-phone"
+                    className="block text-xs font-semibold text-stone-800 mb-1.5"
+                  >
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <PhoneInput
+                    id="custom-phone"
+                    value={formData.phone}
+                    onChange={(val) => setFormData((prev) => ({ ...prev, phone: val }))}
+                    countryCode={countryCode}
+                    onCountryCodeChange={setCountryCode}
+                    placeholder="Enter phone number"
                     required
-                    value={formData.email}
-                    onChange={handleChange('email')}
-                    placeholder="Enter your email"
-                    className="w-full h-11 pl-10 pr-3.5 rounded-lg border border-stone-200 bg-white text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all"
+                    size="md"
+                    className="rounded-xl border-stone-200 shadow-2xs"
+                  />
+                </div>
+
+                {/* Stone type */}
+                <div>
+                  <label
+                    htmlFor="custom-stone-type"
+                    className="block text-xs font-semibold text-stone-800 mb-1.5"
+                  >
+                    Stone Type <span className="text-red-500">*</span>
+                  </label>
+                  <Dropdown
+                    id="custom-stone-type"
+                    value={formData.stoneType}
+                    onChange={(val) => setFormData((prev) => ({ ...prev, stoneType: val }))}
+                    options={stoneOptions}
+                    placeholder="Select option"
+                    prefixIcon={<IoDiamondOutline className="w-4 h-4 text-[#8b6f4e]" />}
+                    size="md"
+                    showDivider={false}
+                    buttonClassName="w-full flex items-center justify-between h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm text-stone-900 hover:border-stone-300 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all cursor-pointer shadow-2xs"
                   />
                 </div>
               </div>
             </div>
 
-            {/* ── Row 2: Phone Number & Stone Type* ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              {/* Phone number */}
-              <div>
-                <label
-                  htmlFor="custom-phone"
-                  className="block text-xs font-semibold text-stone-800 mb-1.5"
-                >
-                  Phone number<span className="text-red-500">*</span>
-                </label>
-                <PhoneInput
-                  id="custom-phone"
-                  value={formData.phone}
-                  onChange={(val) => setFormData((prev) => ({ ...prev, phone: val }))}
-                  countryCode={countryCode}
-                  onCountryCodeChange={setCountryCode}
-                  placeholder="Enter phone number"
-                  required
-                  size="md"
-                  className="rounded-lg border-stone-200"
-                />
+            {/* ── Section 2: Design Preferences ── */}
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center gap-2 pb-1 text-[#8b6f4e]">
+                <IoDiamondOutline className="w-5 h-5 text-[#8b6f4e]" />
+                <h3 className="text-sm sm:text-base font-bold text-stone-900 tracking-tight">
+                  Design Preferences
+                </h3>
               </div>
 
-              {/* Stone type */}
+              {/* Jewellery Type (Select one or more) as Pills */}
               <div>
-                <label
-                  htmlFor="custom-stone-type"
-                  className="block text-xs font-semibold text-stone-800 mb-1.5"
-                >
-                  Stone type<span className="text-red-500">*</span>
+                <label className="block text-xs font-semibold text-stone-800 mb-2">
+                  Jewellery Type <span className="text-red-500">*</span> <span className="text-stone-400 font-normal">(Select one or more)</span>
                 </label>
-                <Dropdown
-                  id="custom-stone-type"
-                  value={formData.stoneType}
-                  onChange={(val) => setFormData((prev) => ({ ...prev, stoneType: val }))}
-                  options={stoneOptions}
-                  placeholder="Select option"
-                  prefixIcon={<IoDiamondOutline className="w-4 h-4 text-[#8b6f4e]" />}
-                  size="md"
-                  showDivider={false}
-                  buttonClassName="w-full flex items-center justify-between h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs sm:text-sm text-stone-900 hover:border-stone-300 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all cursor-pointer"
-                />
+                <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+                  {JEWELLERY_TYPES.map((type) => {
+                    const isChecked = selectedJewelleryTypes.includes(type);
+                    return (
+                      <label
+                        key={type}
+                        className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-medium cursor-pointer select-none transition-all focus-within:ring-2 focus-within:ring-[#8b6f4e]/30 focus-within:border-[#8b6f4e] ${
+                          isChecked
+                            ? 'border-[#8b6f4e] bg-[#FAF6F0] text-[#8b6f4e] shadow-2xs font-semibold'
+                            : 'border-stone-200/90 bg-white text-stone-700 hover:border-stone-300 shadow-2xs'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleJewelleryType(type)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              toggleJewelleryType(type);
+                            }
+                          }}
+                          className="w-3.5 h-3.5 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] focus:ring-[#8b6f4e] cursor-pointer"
+                        />
+                        <span>{type}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Metal Type & Budget */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                {/* Metal Type */}
+                <div>
+                  <label
+                    htmlFor="custom-metal-type"
+                    className="block text-xs font-semibold text-stone-800 mb-1.5"
+                  >
+                    Metal Type <span className="text-red-500">*</span>
+                  </label>
+                  <Dropdown
+                    id="custom-metal-type"
+                    value={formData.metalType}
+                    onChange={(val) => setFormData((prev) => ({ ...prev, metalType: val }))}
+                    options={METAL_OPTIONS}
+                    placeholder="Select metal type"
+                    prefixIcon={<FiLayers className="w-4 h-4 text-[#8b6f4e]" />}
+                    size="md"
+                    showDivider={false}
+                    buttonClassName="w-full flex items-center justify-between h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm text-stone-900 hover:border-stone-300 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all cursor-pointer shadow-2xs"
+                  />
+                </div>
+
+                {/* Budget */}
+                <div>
+                  <label
+                    htmlFor="custom-budget"
+                    className="block text-xs font-semibold text-stone-800 mb-1.5"
+                  >
+                    Budget <span className="text-stone-400 font-normal">(Optional)</span>
+                  </label>
+                  <Dropdown
+                    id="custom-budget"
+                    value={formData.budget}
+                    onChange={(val) => setFormData((prev) => ({ ...prev, budget: val }))}
+                    options={BUDGET_OPTIONS}
+                    placeholder="Select budget"
+                    prefixIcon={<TbCurrencyRupee className="w-4 h-4 text-[#8b6f4e]" />}
+                    size="md"
+                    showDivider={false}
+                    buttonClassName="w-full flex items-center justify-between h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm text-stone-900 hover:border-stone-300 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all cursor-pointer shadow-2xs"
+                  />
+                </div>
               </div>
             </div>
 
-            {/* ── Row 3: Jewellery Type (Multiple optional)* ── */}
-            <div>
-              <label className="block text-xs font-semibold text-stone-800 mb-2">
-                Jewellery Type (Multiple optional)<span className="text-red-500">*</span>
-              </label>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-1">
-                {JEWELLERY_TYPES.map((type) => {
-                  const isChecked = selectedJewelleryTypes.includes(type);
-                  return (
-                    <label
-                      key={type}
-                      className="inline-flex items-center gap-2 text-xs sm:text-sm text-stone-700 cursor-pointer select-none hover:text-stone-900 transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleJewelleryType(type)}
-                        className="w-4 h-4 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] focus:ring-[#8b6f4e] cursor-pointer"
-                      />
-                      <span>{type}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* ── Row 4: Metal Type* & Budget* ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              {/* Metal Type */}
-              <div>
-                <label
-                  htmlFor="custom-metal-type"
-                  className="block text-xs font-semibold text-stone-800 mb-1.5"
-                >
-                  Metal Type<span className="text-red-500">*</span>
-                </label>
-                <Dropdown
-                  id="custom-metal-type"
-                  value={formData.metalType}
-                  onChange={(val) => setFormData((prev) => ({ ...prev, metalType: val }))}
-                  options={METAL_OPTIONS}
-                  placeholder="Select metal type"
-                  prefixIcon={<FiLayers className="w-4 h-4 text-[#8b6f4e]" />}
-                  size="md"
-                  showDivider={false}
-                  buttonClassName="w-full flex items-center justify-between h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs sm:text-sm text-stone-900 hover:border-stone-300 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all cursor-pointer"
-                />
-              </div>
-
-              {/* Budget */}
-              <div>
-                <label
-                  htmlFor="custom-budget"
-                  className="block text-xs font-semibold text-stone-800 mb-1.5"
-                >
-                  Budget<span className="text-red-500">*</span>
-                </label>
-                <Dropdown
-                  id="custom-budget"
-                  value={formData.budget}
-                  onChange={(val) => setFormData((prev) => ({ ...prev, budget: val }))}
-                  options={BUDGET_OPTIONS}
-                  placeholder="Please Select"
-                  prefixIcon={<TbCurrencyRupee className="w-4 h-4 text-[#8b6f4e]" />}
-                  size="md"
-                  showDivider={false}
-                  buttonClassName="w-full flex items-center justify-between h-11 px-3.5 rounded-lg border border-stone-200 bg-white text-xs sm:text-sm text-stone-900 hover:border-stone-300 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all cursor-pointer"
-                />
-              </div>
-            </div>
-
-            {/* ── Row 5: Comments ── */}
+            {/* ── Section 3: Comments ── */}
             <div>
               <label
                 htmlFor="custom-comments"
@@ -652,16 +683,16 @@ export default function CustomJewellery() {
                 </div>
                 <textarea
                   id="custom-comments"
-                  rows={4}
+                  rows={3}
                   value={formData.comments}
                   onChange={handleChange('comments')}
-                  placeholder="Tell us more about your dream design..."
-                  className="w-full pl-10 pr-3.5 py-3 rounded-lg border border-stone-200 bg-white text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all resize-y"
+                  placeholder="Tell us more about your dream design (e.g. style, occasion, inspiration, etc.)"
+                  className="w-full pl-10 pr-3.5 py-3 rounded-xl border border-stone-200 bg-white text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all resize-y shadow-2xs"
                 />
               </div>
             </div>
 
-            {/* ── Row 6: Upload Reference Images (Matching Screenshot 1) ── */}
+            {/* ── Section 4: Upload Reference Images ── */}
             <div>
               <input
                 ref={fileInputRef}
@@ -680,18 +711,36 @@ export default function CustomJewellery() {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`w-full rounded-xl border-2 border-dashed transition-all duration-200 p-8 sm:p-10 flex flex-col items-center justify-center gap-2 cursor-pointer select-none ${
+                className={`w-full rounded-2xl border border-dashed transition-all duration-200 p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer select-none shadow-2xs ${
                   isDragging
-                    ? 'border-[#8b6f4e] bg-[#faf7f3]'
-                    : 'border-stone-300/80 bg-[#FAF8F5]/80 hover:bg-[#FAF8F5] hover:border-[#8b6f4e]/50'
+                    ? 'border-[#8b6f4e] bg-[#fbf8f4]'
+                    : 'border-[#dfd5c6] bg-[#FAF8F5] hover:bg-[#f6f1ea] hover:border-[#8b6f4e]/60'
                 }`}
               >
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-stone-500 mb-0.5">
-                  <HiOutlineCloudUpload className="w-7 h-7 stroke-[1.5]" />
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-white border border-[#e8dfd3] flex items-center justify-center text-[#8b6f4e] shrink-0 shadow-2xs">
+                    <HiOutlinePhotograph className="w-5 h-5 text-[#8b6f4e]" />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs sm:text-sm font-bold text-stone-900">
+                      Upload Reference Images
+                    </h4>
+                    <p className="text-[11px] sm:text-xs text-stone-500 mt-0.5 truncate">
+                      Drag &amp; drop or click to upload (JPG, PNG, WebP)
+                    </p>
+                  </div>
                 </div>
-                <span className="text-xs sm:text-sm font-medium text-stone-700">
-                  Upload Reference Images
-                </span>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
+                  className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full bg-[#f1e5d6] hover:bg-[#e7d5c0] text-stone-800 text-xs font-semibold tracking-wide transition-colors shrink-0 shadow-2xs cursor-pointer"
+                >
+                  Choose Files
+                </button>
               </div>
 
               {/* Uploaded Images Preview Grid */}
@@ -749,7 +798,7 @@ export default function CustomJewellery() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full sm:w-auto min-w-[200px] px-12 py-3.5 rounded-lg btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-xs font-bold tracking-[0.2em] uppercase active:scale-95 transition-all shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full sm:w-auto min-w-[200px] px-12 py-3.5 rounded-xl btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-xs font-bold tracking-[0.2em] uppercase active:scale-95 transition-all shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isSubmitting ? 'SUBMITTING...' : 'SUBMIT'}
               </button>

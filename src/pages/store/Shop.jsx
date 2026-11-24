@@ -26,7 +26,9 @@ export default function Shop({ defaultCategory = '' }) {
 
   const [products, setProducts] = useState([]);
   const [pagination, setPagination] = useState({ totalDocs: 0, totalPages: 0 });
-  const [loading, setLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isRefetching, setIsRefetching] = useState(false);
+  const hasLoadedRef = useRef(false);
   const [error, setError] = useState('');
   const [navigationReady, setNavigationReady] = useState(false);
   const [mobileFilters, setMobileFilters] = useState(false);
@@ -172,7 +174,7 @@ export default function Shop({ defaultCategory = '' }) {
   const selectedGemstone = params.get('gemstone') || params.get('stone_names') || '';
   const selectedGemstoneShape = params.get('gemstoneShape') || params.get('stone_shapes') || '';
   const selectedBirthMonth = params.get('birthMonth') || '';
-  const sort = params.get('sort') || 'newest';
+  const sort = params.get('sort') || ((minPrice || maxPrice) ? 'price-low' : 'newest');
   const page = Math.max(1, Number(params.get('page')) || 1);
   const limit = [12, 24, 48].includes(Number(params.get('limit'))) ? Number(params.get('limit')) : 12;
 
@@ -250,7 +252,9 @@ export default function Shop({ defaultCategory = '' }) {
   // 2. Fetch Category-Specific Filters Dynamically
   useEffect(() => {
     let current = true;
-    setLoadingFilters(true);
+    if (!dynamicFilters.length) {
+      setLoadingFilters(true);
+    }
     const featCatId = featuredData?.categoryId?._id || featuredData?.categoryId;
     const catQuery = categoryId || categoryParam || featCatId;
 
@@ -305,7 +309,11 @@ export default function Shop({ defaultCategory = '' }) {
   useEffect(() => {
     if (!navigationReady) return;
     let current = true;
-    setLoading(true);
+    if (!hasLoadedRef.current) {
+      setIsInitialLoading(true);
+    } else {
+      setIsRefetching(true);
+    }
     setError('');
 
     const query = {
@@ -341,6 +349,7 @@ export default function Shop({ defaultCategory = '' }) {
       .getAll(query)
       .then((response) => {
         if (current) {
+          hasLoadedRef.current = true;
           setProducts(getItems(response));
           setPagination(response.data?.pagination || { totalDocs: getItems(response).length, totalPages: 1 });
         }
@@ -352,7 +361,10 @@ export default function Shop({ defaultCategory = '' }) {
         }
       })
       .finally(() => {
-        if (current) setLoading(false);
+        if (current) {
+          setIsInitialLoading(false);
+          setIsRefetching(false);
+        }
       });
 
     return () => { current = false; };
@@ -441,7 +453,13 @@ export default function Shop({ defaultCategory = '' }) {
   if (minPrice || maxPrice) {
     activeChips.push({
       label: `₹${minPrice || '0'} – ${maxPrice ? `₹${maxPrice}` : 'Any'}`,
-      onRemove: () => updateFilters({ minPrice: '', maxPrice: '' }),
+      onRemove: () => {
+        const nextFilter = { minPrice: '', maxPrice: '' };
+        if (params.get('sort') === 'price-low') {
+          nextFilter.sort = 'newest';
+        }
+        updateFilters(nextFilter);
+      },
     });
   }
 
@@ -464,7 +482,7 @@ export default function Shop({ defaultCategory = '' }) {
     const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
     parts.forEach((val) => {
       activeChips.push({
-        label: key === 'birthMonth' ? `Month: ${val}` : val,
+        label: key === 'birthMonth' ? `Birthstone: ${val}` : val,
         onRemove: () => {
           const nextParts = parts.filter((p) => p !== val);
           updateFilters({ [key]: nextParts.join(',') });
@@ -523,57 +541,33 @@ export default function Shop({ defaultCategory = '' }) {
       {currentCoupon && (
         <div
           style={{
-            backgroundColor: 'var(--storefront-header-bg, #201e1b)',
-            color: 'var(--storefront-header-text, #ffffff)',
+            backgroundColor: 'var(--storefront-coupon-bg, var(--storefront-header-bg, #201e1b))',
+            color: 'var(--storefront-coupon-text, var(--storefront-header-text, #ffffff))',
           }}
-          className="w-full py-1 sm:py-1.5 px-4 shadow-xs border-t border-b border-white/10 select-none flex items-center justify-center transition-colors"
+          className="w-full py-1.5 sm:py-2 px-4 border-t border-b border-black/10 select-none flex items-center justify-center transition-colors"
         >
-          <div className="max-w-7xl w-full mx-auto flex items-center justify-between sm:justify-center relative">
-            {activeCoupons.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setCouponIndex((prev) => (prev - 1 + activeCoupons.length) % activeCoupons.length)}
-                className="p-0.5 text-white/70 hover:text-[#d2b18a] transition-colors mr-2 sm:absolute sm:left-4"
-                title="Previous coupon"
-                aria-label="Previous coupon"
-              >
-                <HiOutlineChevronLeft className="w-3.5 h-3.5" />
-              </button>
-            )}
-
+          <div className="max-w-7xl w-full mx-auto flex items-center justify-center">
             {(() => {
               const { code, discountPhrase } = getCouponDisplayText(currentCoupon);
               return (
                 <button
                   type="button"
                   onClick={() => handleCopyCoupon(code)}
-                  className="group inline-flex items-center justify-center gap-1.5 text-[9.5px] sm:text-[10.5px] md:text-[11px] tracking-[0.16em] uppercase font-normal text-white/95 hover:text-white transition-all cursor-pointer focus:outline-none leading-tight"
+                  className="group inline-flex items-center justify-center gap-2 text-[11px] sm:text-xs md:text-[13px] tracking-wider uppercase font-medium text-current hover:opacity-95 transition-all cursor-pointer focus:outline-none leading-tight"
                   title="Click to copy coupon code"
                 >
-                  <HiOutlineTag className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#d2b18a] group-hover:scale-110 transition-transform flex-shrink-0" />
+                  <HiOutlineTag className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-90 group-hover:scale-110 transition-transform flex-shrink-0" />
                   <span className="truncate">
-                    USE CODE <strong className="font-bold underline decoration-dotted underline-offset-2 tracking-[0.18em] text-[#d2b18a] group-hover:text-amber-200 transition-colors">'{code}'</strong> {discountPhrase}
+                    USE CODE <strong className="font-bold underline decoration-dotted underline-offset-2 tracking-widest opacity-100 group-hover:opacity-100 transition-opacity">'{code}'</strong> {discountPhrase}
                   </span>
                   {copiedCouponCode === code && (
-                    <span className="inline-flex items-center gap-0.5 text-[9.5px] font-semibold bg-[#d2b18a] text-stone-900 px-1.5 py-0.5 rounded-full ml-1.5 normal-case tracking-normal flex-shrink-0 shadow-xs">
-                      <HiOutlineCheck className="w-2.5 h-2.5 text-stone-900" /> Copied!
+                    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-white/20 px-2 py-0.5 rounded-full ml-2 normal-case tracking-normal flex-shrink-0 shadow-xs border border-white/25">
+                      <HiOutlineCheck className="w-3 h-3" /> Copied!
                     </span>
                   )}
                 </button>
               );
             })()}
-
-            {activeCoupons.length > 1 && (
-              <button
-                type="button"
-                onClick={() => setCouponIndex((prev) => (prev + 1) % activeCoupons.length)}
-                className="p-0.5 text-white/70 hover:text-[#d2b18a] transition-colors ml-2 sm:absolute sm:right-4"
-                title="Next coupon"
-                aria-label="Next coupon"
-              >
-                <HiOutlineChevronRight className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
         </div>
       )}
@@ -649,7 +643,13 @@ export default function Shop({ defaultCategory = '' }) {
                   updateFilters({ [key]: value });
                 }
               }}
-              onPriceChange={(min, max) => updateFilters({ minPrice: min, maxPrice: max })}
+              onPriceChange={(min, max) => {
+                if (min || max) {
+                  updateFilters({ minPrice: min, maxPrice: max, sort: 'price-low' });
+                } else {
+                  updateFilters({ minPrice: '', maxPrice: '', ...(params.get('sort') === 'price-low' ? { sort: 'newest' } : {}) });
+                }
+              }}
               onClearAll={() => setParams({})}
               filtersActive={filtersActive}
               categories={categories}
@@ -658,7 +658,7 @@ export default function Shop({ defaultCategory = '' }) {
           </div>
 
           {/* Right Product Grid Column */}
-          <section aria-label="Jewellery catalogue" aria-busy={loading} className="min-w-0">
+          <section aria-label="Jewellery catalogue" aria-busy={isInitialLoading || isRefetching} className="min-w-0">
             {/* Active Filter Chips */}
             {activeChips.length > 0 && (
               <div className="mb-6 flex flex-wrap items-center gap-2">
@@ -678,7 +678,7 @@ export default function Shop({ defaultCategory = '' }) {
             )}
 
             {/* Products Grid / Skeletons / Empty */}
-            {loading ? (
+            {isInitialLoading && products.length === 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-2 sm:gap-x-3.5 gap-y-3 sm:gap-y-6">
                 {Array.from({ length: 8 }, (_, index) => (
                   <div key={index} className="animate-pulse rounded-lg sm:rounded-xl border border-gray-100 bg-white p-2 sm:p-2.5">
@@ -689,7 +689,7 @@ export default function Shop({ defaultCategory = '' }) {
                   </div>
                 ))}
               </div>
-            ) : error ? (
+            ) : error && products.length === 0 ? (
               <div role="alert" className="py-20 text-center">
                 <p className="text-sm text-stone-600">{error}</p>
                 <button
@@ -700,10 +700,22 @@ export default function Shop({ defaultCategory = '' }) {
                 </button>
               </div>
             ) : sortedDisplayedProducts.length ? (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-2 sm:gap-x-3.5 gap-y-3 sm:gap-y-6">
-                {sortedDisplayedProducts.map((product) => (
-                  <ProductCard key={product._id || product.id} product={product} />
-                ))}
+              <div className="relative">
+                {/* Subtle luxury shimmer line when updating filters / category */}
+                {isRefetching && (
+                  <div className="absolute -top-3 left-0 right-0 h-0.5 overflow-hidden z-20 rounded-full bg-stone-100">
+                    <div className="h-full w-full bg-gradient-to-r from-transparent via-[#8b6f4e] to-transparent animate-pulse" />
+                  </div>
+                )}
+                <div
+                  className={`grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-2 sm:gap-x-3.5 gap-y-3 sm:gap-y-6 transition-all duration-300 ${
+                    isRefetching ? 'opacity-65 pointer-events-none' : 'opacity-100'
+                  }`}
+                >
+                  {sortedDisplayedProducts.map((product) => (
+                    <ProductCard key={product._id || product.id} product={product} />
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
@@ -721,10 +733,12 @@ export default function Shop({ defaultCategory = '' }) {
             )}
 
             {/* Pagination Controls */}
-            {!loading && !error && pagination.totalDocs > 0 && (
+            {!isInitialLoading && !error && pagination.totalDocs > 0 && (
               <nav
                 aria-label="Product pagination"
-                className="mt-12 sm:mt-16 pt-6 sm:pt-8 border-t border-stone-200/80 flex flex-col items-center gap-4"
+                className={`mt-12 sm:mt-16 pt-6 sm:pt-8 border-t border-stone-200/80 flex flex-col items-center gap-4 transition-opacity duration-200 ${
+                  isRefetching ? 'opacity-50 pointer-events-none' : 'opacity-100'
+                }`}
               >
                 {/* Desktop View (Single unified row) */}
                 <div className="hidden sm:flex items-center justify-between w-full">

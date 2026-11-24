@@ -61,11 +61,20 @@ function ShapeSilhouette({ name = '', code = '' }) {
   if (!path) return null;
 
   return (
-    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 text-stone-700 shrink-0">
+    <svg viewBox="0 0 24 24" className="w-4 h-4 text-stone-700 shrink-0">
       {path}
     </svg>
   );
 }
+
+const formatStoneName = (name) => {
+  if (!name) return '';
+  return String(name)
+    .toLowerCase()
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
 
 /**
  * Filter Group Content with Search, Active Pills, and Visual Swatches
@@ -87,7 +96,7 @@ function FilterOptionsList({ filter, isOptionSelected, handleToggleOption }) {
     if (!searchTerm.trim()) return filter.options;
     const q = searchTerm.toLowerCase().trim();
     return filter.options.filter((opt) => {
-      const name = (opt.name || opt.value || '').toLowerCase();
+      const name = (opt.name || opt.value || opt.title || '').toLowerCase();
       const stone = (opt.stoneName || '').toLowerCase();
       return name.includes(q) || stone.includes(q);
     });
@@ -103,7 +112,7 @@ function FilterOptionsList({ filter, isOptionSelected, handleToggleOption }) {
     <div className="space-y-2">
       {/* 1. Selected Active Tag Pills (Matching Angara screenshot) */}
       {selectedOptions.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 pb-1">
+        <div className="flex flex-wrap gap-1.5 mb-2.5 pt-0.5">
           {selectedOptions.map((opt) => {
             const optVal = opt.value || opt.name || opt._id;
             const optName = opt.name || opt.value || opt._id;
@@ -112,28 +121,41 @@ function FilterOptionsList({ filter, isOptionSelected, handleToggleOption }) {
                 key={opt._id || optVal}
                 type="button"
                 onClick={() => handleToggleOption(filter.key, optVal, optName)}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#faf6f0] text-[#8b6f4e] border border-[#ebdcc8] hover:bg-[#f3ebe0] transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#faf6f0] text-[#8b6f4e] border border-[#ebdcc8] hover:bg-[#f3ebe0] transition-colors cursor-pointer"
                 title={`Remove ${optName}`}
               >
-                <span>{optName}</span>
-                <HiOutlineX className="w-3 h-3 text-[#8b6f4e]" />
+                <span>
+                  {optName}
+                  {filter.key === 'birthMonth' && opt.stoneName ? ` (${formatStoneName(opt.stoneName)})` : ''}
+                </span>
+                <HiOutlineX className="w-3.5 h-3.5 text-[#8b6f4e]" />
               </button>
             );
           })}
         </div>
       )}
 
-      {/* 2. In-group Search input (Matching Angara screenshot) */}
+      {/* 2. In-group Search input */}
       {showSearch && (
-        <div className="relative mb-2">
+        <div className="relative mb-3 flex items-center">
+          <HiOutlineSearch className="absolute left-3 w-4 h-4 text-stone-400 pointer-events-none" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={`Search ${filter.title}`}
-            className="w-full h-8 pl-3 pr-8 rounded-lg border border-stone-200/90 bg-stone-50/60 text-[11px] placeholder:text-stone-400 text-stone-800 focus:outline-none focus:border-[#8b6f4e] focus:bg-white transition-all"
+            placeholder={`Search ${filter.title}...`}
+            className="w-full h-9 pl-9 pr-8 rounded-lg border border-stone-200 bg-white text-xs sm:text-[13px] placeholder:text-stone-400 text-stone-800 shadow-2xs hover:border-stone-300 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/30 transition-all"
           />
-          <HiOutlineSearch className="absolute right-2.5 top-2.5 w-3.5 h-3.5 text-stone-400 pointer-events-none" />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-2.5 p-1 text-stone-400 hover:text-stone-600 transition-colors cursor-pointer"
+              title="Clear search"
+            >
+              <HiOutlineX className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       )}
 
@@ -143,7 +165,7 @@ function FilterOptionsList({ filter, isOptionSelected, handleToggleOption }) {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {displayedOptions.length === 0 ? (
-          <div className="py-2 text-[11px] text-stone-400 italic">No matches found</div>
+          <div className="py-2 text-xs text-stone-400 italic">No matches found</div>
         ) : (
           displayedOptions.map((opt) => {
             const optVal = opt.value || opt.name || opt._id;
@@ -159,21 +181,27 @@ function FilterOptionsList({ filter, isOptionSelected, handleToggleOption }) {
             return (
               <label
                 key={opt._id || optVal}
-                className="flex cursor-pointer items-center justify-between text-xs text-stone-700 hover:text-stone-900 py-0.5 group/item select-none"
+                className="flex cursor-pointer items-center justify-between text-[13.5px] sm:text-sm text-stone-700 hover:text-stone-950 py-1 group/item select-none transition-colors"
               >
-                <span className="flex items-center gap-2">
+                <span className="flex items-center gap-2.5 min-w-0">
                   <input
                     type="checkbox"
                     checked={isChecked}
                     onChange={() => handleToggleOption(filter.key, optVal, optName)}
-                    className="h-3.5 w-3.5 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] cursor-pointer"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleToggleOption(filter.key, optVal, optName);
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] cursor-pointer shrink-0"
                   />
 
                   {/* Gemstone Swatch Badge (Screenshot 1) */}
                   {filter.key === 'gemstone' && (
                     <span
                       style={{ background: swatchBg }}
-                      className="w-3.5 h-3.5 rounded-full border border-stone-300/80 shadow-2xs shrink-0 group-hover/item:scale-110 transition-transform"
+                      className="w-4 h-4 rounded-full border border-stone-300/80 shadow-2xs shrink-0 group-hover/item:scale-110 transition-transform"
                     />
                   )}
 
@@ -183,21 +211,33 @@ function FilterOptionsList({ filter, isOptionSelected, handleToggleOption }) {
                   )}
 
                   {/* Birthstone Gem Swatch / Image */}
-                  {filter.key === 'birthMonth' && opt.imageUrl && (
-                    <img
-                      src={opt.imageUrl}
-                      alt={optName}
-                      className="w-4 h-4 rounded-full object-contain mix-blend-multiply shrink-0 group-hover/item:scale-110 transition-transform"
-                    />
+                  {filter.key === 'birthMonth' && (
+                    <span className="w-5 h-5 rounded-full bg-stone-100 flex items-center justify-center shrink-0 overflow-hidden border border-stone-200/80 group-hover/item:scale-110 transition-transform">
+                      {opt.imageUrl ? (
+                        <img
+                          src={opt.imageUrl}
+                          alt={optName}
+                          className="w-full h-full object-contain mix-blend-multiply"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className="w-2.5 h-2.5 rounded-full bg-stone-300" />
+                      )}
+                    </span>
                   )}
 
-                  <span className={isChecked ? 'font-semibold text-stone-900' : 'text-stone-700'}>
+                  <span className={`text-[13.5px] sm:text-sm truncate ${isChecked ? 'font-semibold text-stone-900' : 'text-stone-700'}`}>
                     {optName}
+                    {filter.key === 'birthMonth' && opt.stoneName && (
+                      <span className="text-xs text-stone-500 font-normal ml-1.5">
+                        ({formatStoneName(opt.stoneName)})
+                      </span>
+                    )}
                   </span>
                 </span>
 
                 {typeof opt.count === 'number' && (
-                  <span className="text-[11px] text-stone-400 font-normal">({opt.count})</span>
+                  <span className="text-xs text-stone-400 font-normal shrink-0 ml-2">({opt.count})</span>
                 )}
               </label>
             );
@@ -277,7 +317,7 @@ export default function FilterSidebar({
     <aside aria-label="Product filters" className="min-w-0">
       {/* Header: Filters + CLEAR ALL */}
       <div className="flex items-center justify-between pb-3 border-b border-stone-200/80">
-        <h2 className="text-xs sm:text-[13px] font-bold uppercase tracking-wider text-stone-900">
+        <h2 className="text-[13px] sm:text-sm font-bold uppercase tracking-wider text-stone-900">
           Filters
         </h2>
         {filtersActive && (
@@ -293,7 +333,7 @@ export default function FilterSidebar({
       </div>
 
       <div id="catalogue-filters" className="space-y-0">
-        {loading ? (
+        {loading && (!filters || filters.length === 0) ? (
           <div className="py-6 space-y-4">
             <div className="h-6 bg-stone-100 rounded animate-pulse" />
             <div className="h-6 bg-stone-100 rounded animate-pulse" />
@@ -316,11 +356,17 @@ export default function FilterSidebar({
                     title={filter.title || 'Price Range'}
                     defaultOpen={hasPriceActive}
                   >
-                    <form onSubmit={handlePriceSubmit} className="space-y-3">
-                      <div className="grid grid-cols-2 gap-2">
-                        <label className="space-y-1 text-[11px] text-stone-600">
-                          Min (₹)
+                    <form onSubmit={handlePriceSubmit} className="space-y-3 pt-1">
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div>
+                          <label
+                            htmlFor="filter-price-min"
+                            className="block text-xs font-medium text-stone-600 mb-1.5"
+                          >
+                            Min (₹)
+                          </label>
                           <input
+                            id="filter-price-min"
                             name="minPrice"
                             type="number"
                             min="0"
@@ -328,12 +374,18 @@ export default function FilterSidebar({
                             value={localMin}
                             onChange={(e) => setLocalMin(e.target.value)}
                             placeholder="0"
-                            className="w-full rounded border border-stone-300 p-2 text-xs focus:outline-none focus:border-[#8b6f4e]"
+                            className="w-full h-9 rounded-lg border border-stone-200 bg-white px-2.5 text-xs sm:text-sm text-stone-900 shadow-2xs hover:border-stone-300 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all"
                           />
-                        </label>
-                        <label className="space-y-1 text-[11px] text-stone-600">
-                          Max (₹)
+                        </div>
+                        <div>
+                          <label
+                            htmlFor="filter-price-max"
+                            className="block text-xs font-medium text-stone-600 mb-1.5"
+                          >
+                            Max (₹)
+                          </label>
                           <input
+                            id="filter-price-max"
                             name="maxPrice"
                             type="number"
                             min="0"
@@ -341,13 +393,13 @@ export default function FilterSidebar({
                             value={localMax}
                             onChange={(e) => setLocalMax(e.target.value)}
                             placeholder="Any"
-                            className="w-full rounded border border-stone-300 p-2 text-xs focus:outline-none focus:border-[#8b6f4e]"
+                            className="w-full h-9 rounded-lg border border-stone-200 bg-white px-2.5 text-xs sm:text-sm text-stone-900 shadow-2xs hover:border-stone-300 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all"
                           />
-                        </label>
+                        </div>
                       </div>
                       <button
                         type="submit"
-                        className="w-full rounded border border-stone-300 py-1.5 text-xs font-semibold hover:bg-stone-50 cursor-pointer transition-colors"
+                        className="w-full h-9 rounded-lg border border-stone-300 hover:border-stone-400 bg-white hover:bg-stone-50 text-xs sm:text-sm font-semibold text-stone-800 shadow-2xs cursor-pointer transition-all active:scale-[0.99]"
                       >
                         Apply Price
                       </button>

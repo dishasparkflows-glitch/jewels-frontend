@@ -180,7 +180,6 @@ const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchTotal, setSearchTotal] = useState(0);
-  const [searchTab, setSearchTab] = useState('all');
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
   const searchContainerRef = useRef(null);
@@ -231,30 +230,7 @@ const Navbar = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const matchedCategories = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!Array.isArray(categories) || !categories.length) return [];
-    if (!q) return categories.slice(0, 6);
-    const direct = categories.filter((cat) => {
-      const name = (cat.name || cat.title || '').toLowerCase();
-      const slug = (cat.slug || '').toLowerCase();
-      return name.includes(q) || slug.includes(q);
-    });
-    if (direct.length > 0) return direct;
-    return categories.slice(0, 6);
-  }, [searchQuery, categories]);
-
-  const matchedCollections = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!Array.isArray(collections) || !collections.length) return [];
-    if (!q) return collections.slice(0, 6);
-    return collections.filter((col) => (col.name || '').toLowerCase().includes(q));
-  }, [searchQuery, collections]);
-
-  const productCount = searchTotal || searchResults.length;
-  const categoryCount = matchedCategories.length;
-  const collectionCount = matchedCollections.length;
-  const allCount = productCount;
+  const allCount = searchTotal || searchResults.length;
   const displayedProducts = searchResults.slice(0, 6);
 
   // Close dropdown on outside click or route navigation
@@ -554,162 +530,52 @@ const Navbar = () => {
                 style={{ transform: 'translateX(-50%)' }}
                 className="absolute left-1/2 -translate-x-1/2 top-full mt-3 w-[780px] lg:w-[890px] xl:w-[980px] max-w-[calc(100vw-2rem)] bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-stone-200/90 p-5 z-50 text-left animate-fadeIn"
               >
-                {/* Top Tab Bar: All (128) | Products (128) | Collections (4) | Categories (6) | View all -> */}
+                {/* Top Header: All ({allCount}) | View all -> */}
                 <div className="flex items-center justify-between border-b border-stone-100 pb-3 mb-4">
-                      <div className="flex items-center gap-5 sm:gap-7 text-xs sm:text-sm">
-                        <button
-                          type="button"
-                          onClick={() => setSearchTab('all')}
-                          className={`font-semibold transition-all relative pb-2 cursor-pointer ${
-                            searchTab === 'all'
-                              ? 'text-[#8b6f4e] font-bold'
-                              : 'text-stone-500 hover:text-stone-900'
-                          }`}
-                        >
-                          <span>All ({allCount})</span>
-                          {searchTab === 'all' && (
-                            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8b6f4e] rounded-full" />
-                          )}
-                        </button>
+                  <div className="flex items-center text-xs sm:text-sm">
+                    <span className="font-bold text-[#8b6f4e] relative pb-2">
+                      <span>All ({allCount})</span>
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8b6f4e] rounded-full" />
+                    </span>
+                  </div>
 
-                        <button
-                          type="button"
-                          onClick={() => setSearchTab('products')}
-                          className={`font-semibold transition-all relative pb-2 cursor-pointer ${
-                            searchTab === 'products'
-                              ? 'text-[#8b6f4e] font-bold'
-                              : 'text-stone-500 hover:text-stone-900'
-                          }`}
-                        >
-                          <span>Products ({productCount})</span>
-                          {searchTab === 'products' && (
-                            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8b6f4e] rounded-full" />
-                          )}
-                        </button>
+                  <Link
+                    to={`/shop?search=${encodeURIComponent(searchQuery.trim())}`}
+                    onClick={() => setShowSearchDropdown(false)}
+                    className="text-xs sm:text-sm font-semibold text-stone-700 hover:text-[#8b6f4e] flex items-center gap-1 group transition-colors cursor-pointer shrink-0"
+                  >
+                    <span>View all</span>
+                    <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                  </Link>
+                </div>
 
-                        <button
-                          type="button"
-                          onClick={() => setSearchTab('collections')}
-                          className={`font-semibold transition-all relative pb-2 cursor-pointer ${
-                            searchTab === 'collections'
-                              ? 'text-[#8b6f4e] font-bold'
-                              : 'text-stone-500 hover:text-stone-900'
-                          }`}
-                        >
-                          <span>Collections ({collectionCount})</span>
-                          {searchTab === 'collections' && (
-                            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8b6f4e] rounded-full" />
-                          )}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setSearchTab('categories')}
-                          className={`font-semibold transition-all relative pb-2 cursor-pointer ${
-                            searchTab === 'categories'
-                              ? 'text-[#8b6f4e] font-bold'
-                              : 'text-stone-500 hover:text-stone-900'
-                          }`}
-                        >
-                          <span>Categories ({categoryCount})</span>
-                          {searchTab === 'categories' && (
-                            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8b6f4e] rounded-full" />
-                          )}
-                        </button>
-                      </div>
-
-                      <Link
-                        to={`/shop?search=${encodeURIComponent(searchQuery.trim())}`}
-                        onClick={() => setShowSearchDropdown(false)}
-                        className="text-xs sm:text-sm font-semibold text-stone-700 hover:text-[#8b6f4e] flex items-center gap-1 group transition-colors cursor-pointer shrink-0"
-                      >
-                        <span>View all</span>
-                        <span className="group-hover:translate-x-0.5 transition-transform">→</span>
-                      </Link>
-                    </div>
-
-                    {/* Content Section based on selected tab */}
-                    {isSearching ? (
-                      <div className="py-12 flex flex-col items-center justify-center gap-2.5 text-stone-400">
-                        <div className="w-6 h-6 border-2 border-[#8b6f4e] border-t-transparent rounded-full animate-spin" />
-                        <span className="text-xs font-medium">Searching luxury collection...</span>
-                      </div>
-                    ) : (searchTab === 'all' || searchTab === 'products') ? (
-                      displayedProducts.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-3.5">
-                          {displayedProducts.map((item) => (
-                            <SearchProductCard
-                              key={item._id}
-                              item={item}
-                              variant="desktop"
-                              onSelect={() => {
-                                setShowSearchDropdown(false);
-                                setSearchQuery('');
-                              }}
-                            />
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="py-8 px-4 text-center">
-                          <p className="text-xs text-stone-500">
-                            No products found matching &ldquo;<span className="text-stone-900 font-semibold">{searchQuery}</span>&rdquo;.
-                          </p>
-                        </div>
-                      )
-                    ) : searchTab === 'collections' ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                        {matchedCollections.map((col) => (
-                          <button
-                            key={col.id}
-                            type="button"
-                            onClick={() => handleTrendingClick(col.query)}
-                            className="p-3 rounded-2xl bg-[#f8f6f0] hover:bg-[#8b6f4e]/10 border border-stone-100 hover:border-[#8b6f4e]/40 transition-all text-left group cursor-pointer"
-                          >
-                            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-[#8b6f4e] mb-2 shadow-2xs group-hover:scale-105 transition-transform">
-                              <IoDiamondOutline className="w-4 h-4" />
-                            </div>
-                            <p className="text-xs font-bold text-stone-900 group-hover:text-[#8b6f4e] transition-colors">
-                              {col.name}
-                            </p>
-                            <span className="text-[10px] text-stone-400 group-hover:text-[#8b6f4e] mt-1 inline-block">
-                              Explore collection →
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                        {matchedCategories.map((cat) => {
-                          const catImage = cat.image?.url || cat.icon?.url;
-                          return (
-                            <Link
-                              key={cat._id}
-                              to={`/shop?category=${encodeURIComponent(cat._id)}`}
-                              onClick={() => {
-                                setShowSearchDropdown(false);
-                                setSearchQuery('');
-                              }}
-                              className="p-2.5 rounded-2xl bg-[#f8f6f0] hover:bg-[#8b6f4e]/10 border border-stone-100 hover:border-[#8b6f4e]/40 transition-all text-center group"
-                            >
-                              <div className="w-full aspect-square rounded-xl bg-white mb-2 overflow-hidden flex items-center justify-center p-2 shadow-2xs">
-                                {catImage ? (
-                                  <img
-                                    src={getImageUrl(catImage)}
-                                    alt={cat.name}
-                                    className="w-full h-full object-contain group-hover:scale-105 transition-transform"
-                                  />
-                                ) : (
-                                  <IoDiamondOutline className="w-6 h-6 text-[#8b6f4e]/60" />
-                                )}
-                              </div>
-                              <p className="text-xs font-bold text-stone-800 group-hover:text-[#8b6f4e] truncate transition-colors">
-                                {cat.name}
-                              </p>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
+                {/* Content Section: Matched Products */}
+                {isSearching ? (
+                  <div className="py-12 flex flex-col items-center justify-center gap-2.5 text-stone-400">
+                    <div className="w-6 h-6 border-2 border-[#8b6f4e] border-t-transparent rounded-full animate-spin" />
+                    <span className="text-xs font-medium">Searching luxury collection...</span>
+                  </div>
+                ) : displayedProducts.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-3.5">
+                    {displayedProducts.map((item) => (
+                      <SearchProductCard
+                        key={item._id}
+                        item={item}
+                        variant="desktop"
+                        onSelect={() => {
+                          setShowSearchDropdown(false);
+                          setSearchQuery('');
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 px-4 text-center">
+                    <p className="text-xs text-stone-500">
+                      No products found matching &ldquo;<span className="text-stone-900 font-semibold">{searchQuery}</span>&rdquo;.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -934,37 +800,10 @@ const Navbar = () => {
           {/* Mobile Search Results */}
           {searchQuery.trim().length >= 2 && (
             <div className="mt-3 bg-white rounded-2xl shadow-xl border border-stone-200/90 p-3.5 text-left animate-fadeIn">
-              <div className="flex items-center justify-between border-b border-stone-100 pb-2 mb-3">
-                <div className="flex items-center gap-3 text-xs overflow-x-auto scrollbar-none">
-                  <button
-                    type="button"
-                    onClick={() => setSearchTab('all')}
-                    className={`font-semibold pb-1 whitespace-nowrap ${searchTab === 'all' ? 'text-[#8b6f4e] border-b-2 border-[#8b6f4e]' : 'text-stone-500'}`}
-                  >
-                    All ({allCount})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSearchTab('products')}
-                    className={`font-semibold pb-1 whitespace-nowrap ${searchTab === 'products' ? 'text-[#8b6f4e] border-b-2 border-[#8b6f4e]' : 'text-stone-500'}`}
-                  >
-                    Products ({productCount})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSearchTab('collections')}
-                    className={`font-semibold pb-1 whitespace-nowrap ${searchTab === 'collections' ? 'text-[#8b6f4e] border-b-2 border-[#8b6f4e]' : 'text-stone-500'}`}
-                  >
-                    Collections ({collectionCount})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSearchTab('categories')}
-                    className={`font-semibold pb-1 whitespace-nowrap ${searchTab === 'categories' ? 'text-[#8b6f4e] border-b-2 border-[#8b6f4e]' : 'text-stone-500'}`}
-                  >
-                    Categories ({categoryCount})
-                  </button>
-                </div>
+              <div className="flex items-center justify-between border-b border-stone-100 pb-2 mb-3 text-xs">
+                <span className="font-bold text-[#8b6f4e] border-b-2 border-[#8b6f4e] pb-1">
+                  All ({allCount})
+                </span>
                 <Link
                   to={`/shop?search=${encodeURIComponent(searchQuery.trim())}`}
                   onClick={() => {

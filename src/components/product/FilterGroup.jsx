@@ -3,13 +3,13 @@ import { HiOutlinePlus, HiOutlineMinus } from 'react-icons/hi';
 
 export default function FilterGroup({ title, children, defaultOpen = false }) {
   return (
-    <details open={defaultOpen || undefined} className="group/filter border-b border-stone-200/80 py-4">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs sm:text-[12.5px] font-semibold uppercase tracking-[0.06em] text-stone-800 hover:text-stone-950 select-none [&::-webkit-details-marker]:hidden">
+    <details open={defaultOpen || undefined} className="group/filter border-b border-stone-200/80 py-3.5">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs sm:text-[13px] font-semibold uppercase tracking-[0.06em] text-stone-800 hover:text-stone-950 select-none [&::-webkit-details-marker]:hidden">
         <span>{title}</span>
         <HiOutlinePlus className="h-3.5 w-3.5 text-stone-400 group-open/filter:hidden shrink-0" />
         <HiOutlineMinus className="hidden h-3.5 w-3.5 text-stone-400 group-open/filter:block shrink-0" />
       </summary>
-      <div className="space-y-2.5 pt-3.5 pb-1 text-xs text-stone-600">{children}</div>
+      <div className="space-y-2.5 pt-3 pb-1 text-sm text-stone-600">{children}</div>
     </details>
   );
 }
