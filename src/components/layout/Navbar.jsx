@@ -453,7 +453,7 @@ const Navbar = () => {
         }}
         className="px-4 sm:px-6 lg:px-8 border-b border-white/5"
       >
-        <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto flex items-center justify-between gap-3 sm:gap-6 h-14 sm:h-16 lg:h-[68px]">
+        <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto flex items-center justify-between gap-3 sm:gap-6 h-14 sm:h-16 lg:h-[70px]">
           {/* Mobile hamburger */}
           <div className="order-last flex items-center lg:order-none lg:hidden">
             <button
@@ -481,7 +481,7 @@ const Navbar = () => {
                 <img
                   src={brandLogo.desktop}
                   alt={storeSettings.companyName || 'Neirah Jewels'}
-                  className="h-8 sm:h-9.5 lg:h-10.5 w-auto max-w-[150px] sm:max-w-[185px] lg:max-w-[215px] object-contain object-left transition-transform duration-300 group-hover:scale-[1.02]"
+                  className="h-9 sm:h-10 md:h-11 lg:h-[46px] xl:h-[48px] w-auto max-w-[160px] sm:max-w-[190px] md:max-w-[220px] lg:max-w-[245px] object-contain object-left transition-transform duration-300 group-hover:scale-[1.02]"
                 />
               </picture>
             ) : (

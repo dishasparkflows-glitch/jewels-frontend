@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { authAPI } from '../../api/services';
-import { HiOutlineLockClosed } from 'react-icons/hi';
+import { HiOutlineEye, HiOutlineEyeOff, HiOutlineLockClosed } from 'react-icons/hi';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { getImageUrl } from '../../utils/imageUrl';
 
@@ -12,6 +12,8 @@ const ResetPassword = () => {
   const token = searchParams.get('token') || '';
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { settings } = useStoreSettings();
   const brandLogo = {
@@ -124,17 +126,25 @@ const ResetPassword = () => {
                   NEW PASSWORD
                 </label>
                 <div className="relative">
-                  <HiOutlineLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-[#5e5145]" />
+                  <HiOutlineLockClosed className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-600" />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     minLength={6}
                     required
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-xl border border-[#cbb89e] bg-white py-3 pl-11 pr-4 text-sm text-[#1f1a16] placeholder-[#9c8e80] outline-none transition-all focus:border-[#8b6f4e] focus:ring-2 focus:ring-[#8b6f4e]/15"
+                    className="h-11 sm:h-12 w-full rounded-xl border border-stone-200/90 bg-[#F8F7F5] pl-11 pr-11 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-[#7A5B3E] focus:bg-white focus:ring-2 focus:ring-[#7A5B3E]/15 autofill-neutral"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-600 hover:text-stone-900 cursor-pointer"
+                  >
+                    {showPassword ? <HiOutlineEyeOff className="h-5 w-5" /> : <HiOutlineEye className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
 
@@ -143,24 +153,32 @@ const ResetPassword = () => {
                   CONFIRM PASSWORD
                 </label>
                 <div className="relative">
-                  <HiOutlineLockClosed className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-[#5e5145]" />
+                  <HiOutlineLockClosed className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-600" />
                   <input
-                    type="password"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     minLength={6}
                     required
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-xl border border-[#cbb89e] bg-white py-3 pl-11 pr-4 text-sm text-[#1f1a16] placeholder-[#9c8e80] outline-none transition-all focus:border-[#8b6f4e] focus:ring-2 focus:ring-[#8b6f4e]/15"
+                    className="h-11 sm:h-12 w-full rounded-xl border border-stone-200/90 bg-[#F8F7F5] pl-11 pr-11 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-[#7A5B3E] focus:bg-white focus:ring-2 focus:ring-[#7A5B3E]/15 autofill-neutral"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-600 hover:text-stone-900 cursor-pointer"
+                  >
+                    {showConfirmPassword ? <HiOutlineEyeOff className="h-5 w-5" /> : <HiOutlineEye className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] active:scale-[0.99] py-3.5 px-4 text-xs font-bold uppercase tracking-[0.16em] text-white transition-all shadow-xs hover:shadow-md disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
+                className="w-full rounded-xl bg-[#715538] hover:bg-[#5f472e] active:scale-[0.99] h-11 sm:h-12 px-4 text-xs sm:text-sm font-semibold uppercase tracking-[0.14em] text-white transition-all shadow-xs hover:shadow-md disabled:cursor-wait disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>

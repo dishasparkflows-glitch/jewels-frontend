@@ -737,16 +737,22 @@ const Profile = () => {
   };
 
   // ─── Delete Address via Dedicated Address API ──────────────────
-  const handleDeleteAddress = async (addressId) => {
-    if (!addressId) return;
-    if (!window.confirm('Are you sure you want to delete this address?')) return;
+  const [deleteAddressId, setDeleteAddressId] = useState(null);
+  const [deletingAddress, setDeletingAddress] = useState(false);
+
+  const confirmDeleteAddress = async () => {
+    if (!deleteAddressId) return;
     try {
-      await addressesAPI.delete(addressId);
+      setDeletingAddress(true);
+      await addressesAPI.delete(deleteAddressId);
       await fetchAddresses();
       toast.success('Address deleted successfully!');
+      setDeleteAddressId(null);
     } catch (err) {
       console.error('Failed to delete address:', err);
       toast.error(err.response?.data?.message || 'Failed to delete address');
+    } finally {
+      setDeletingAddress(false);
     }
   };
 
@@ -1152,7 +1158,7 @@ const Profile = () => {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleDeleteAddress(addrItem._id)}
+                                    onClick={() => setDeleteAddressId(addrItem._id)}
                                     className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors cursor-pointer"
                                     title="Delete address"
                                     aria-label="Delete address"
@@ -2351,6 +2357,56 @@ const Profile = () => {
         onClose={() => setTrackingOrder(null)}
         order={trackingOrder}
       />
+
+      {/* ─── SIMPLE DELETE ADDRESS CONFIRMATION MODAL ─── */}
+      {deleteAddressId && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => !deletingAddress && setDeleteAddressId(null)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-stone-200 text-center animate-scaleUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-500 mx-auto flex items-center justify-center mb-3">
+              <HiOutlineTrash className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-semibold text-stone-900 mb-1">
+              Delete Address
+            </h3>
+            <p className="text-xs text-stone-500 mb-5 leading-relaxed">
+              Are you sure you want to delete this address?
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                disabled={deletingAddress}
+                onClick={() => setDeleteAddressId(null)}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-stone-200 text-xs font-semibold text-stone-700 hover:bg-stone-50 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingAddress}
+                onClick={confirmDeleteAddress}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+              >
+                {deletingAddress ? (
+                  <>
+                    <HiOutlineRefresh className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting…</span>
+                  </>
+                ) : (
+                  <span>Delete</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

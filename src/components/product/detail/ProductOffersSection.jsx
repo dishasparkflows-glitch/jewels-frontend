@@ -7,8 +7,8 @@ import toast from 'react-hot-toast';
 /**
  * Luxury ticket-styled Available Offers accordion with coupon copying
  */
-export default function ProductOffersSection({ coupons = [] }) {
-  const [offersOpen, setOffersOpen] = useState(false);
+export default function ProductOffersSection({ coupons = [], defaultOpen = true }) {
+  const [offersOpen, setOffersOpen] = useState(defaultOpen);
   const [copiedCode, setCopiedCode] = useState(null);
 
   if (!coupons || coupons.length === 0) return null;

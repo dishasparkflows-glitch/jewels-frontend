@@ -22,7 +22,15 @@ export const defaultStoreSettingsValue = {
 };
 
 const StoreSettingsContext = createContext(defaultStoreSettingsValue);
-const BOOTSTRAP_STORAGE_KEY = 'neirah_storefront_bootstrap_v1';
+const BOOTSTRAP_STORAGE_KEY = 'neirah_storefront_bootstrap_v3';
+
+// Clear legacy cached bootstrap versions that may contain stale settings
+if (typeof window !== 'undefined') {
+  try {
+    sessionStorage.removeItem('neirah_storefront_bootstrap_v1');
+    sessionStorage.removeItem('neirah_storefront_bootstrap_v2');
+  } catch {}
+}
 
 function getInitialCachedBootstrap() {
   if (typeof window === 'undefined') return null;
@@ -57,7 +65,16 @@ export function StoreSettingsProvider({ children }) {
 
   const applyBootstrapData = useCallback((data) => {
     if (!data) return;
-    if (data.settings) setSettings(data.settings);
+    if (data.settings) {
+      setSettings({
+        ...data.settings,
+        birthstones: {
+          showOnStorefront: Boolean(
+            data.settings?.birthstones?.showOnStorefront ?? data.birthstones?.showOnStorefront
+          ),
+        },
+      });
+    }
     if (data.footerSettings) setFooterSettings(data.footerSettings);
     if (data.topAnnouncement) setTopAnnouncement(data.topAnnouncement);
     if (data.websiteConfig) setWebsiteConfig(data.websiteConfig);
@@ -86,10 +103,10 @@ export function StoreSettingsProvider({ children }) {
     }
   }, [applyBootstrapData]);
 
-  // Initial load
+  // Initial load: always fetch fresh from backend
   useEffect(() => {
     let mounted = true;
-    commonAPI.getBootstrap()
+    commonAPI.getBootstrap({ fresh: true })
       .then((res) => {
         if (!mounted) return;
         const data = res?.data?.data;

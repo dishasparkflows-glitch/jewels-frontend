@@ -98,8 +98,6 @@ export default function ProductDetail() {
   const [mostLikedProducts, setMostLikedProducts] = useState([]);
   const [sizes, setSizes] = useState([]);
   const [coupons, setCoupons] = useState([]);
-  const [offersOpen, setOffersOpen] = useState(true);
-  const [copiedCode, setCopiedCode] = useState(null);
 
   useEffect(() => {
     couponsAPI
@@ -1213,96 +1211,107 @@ export default function ProductDetail() {
     }
     setAddingToCart(true);
 
-    const price = Number(currentPrice) || 0;
-    const quantity = 1;
-    const totalItemPrice = price * quantity;
-    const addedAt = new Date().toISOString();
-    const resolvedDiamondTypeName = isSilver
-      ? ''
-      : (selectedVariant?.diamondTypeId?.name ||
-        selectedVariant?.diamondType?.name ||
-        diamondType ||
-        (isColorStone ? 'Lab Grown Gemstone' : 'Lab Grown Diamond'));
+    try {
+      const price = Number(currentPrice) || 0;
+      const quantity = 1;
+      const totalItemPrice = price * quantity;
+      const addedAt = new Date().toISOString();
 
-    const resolvedShapeName =
-      selectedVariant?.diamondShapeId?.name ||
-      selectedVariant?.diamondShape?.name ||
-      '';
+      const selectedSizeObj = sortedSizes.find(
+        (s) => String(s._id || s.id || s.name || s) === String(selectedSize)
+      );
+      const resolvedSizeName = selectedSizeObj ? (selectedSizeObj.name || String(selectedSizeObj)) : (selectedSize || '');
 
-    const resolvedClarityName = isColorStone
-      ? ''
-      : (selectedQuality || selectedVariant?.diamondClarityId?.name || '');
+      const resolvedDiamondTypeName = isSilver
+        ? ''
+        : (selectedVariant?.diamondTypeId?.name ||
+          selectedVariant?.diamondType?.name ||
+          diamondType ||
+          (isColorStone ? 'Lab Grown Gemstone' : 'Lab Grown Diamond'));
 
-    const resolvedColorName = isColorStone
-      ? ''
-      : (selectedVariant?.diamondColorId?.name || '');
+      const resolvedShapeName =
+        selectedVariant?.diamondShapeId?.name ||
+        selectedVariant?.diamondShape?.name ||
+        '';
 
-    let selectedAttributes = null;
-    if (isGold) {
-      const attrs = {
-        metalPurity: selectedPurity || '9KT Gold',
-        metalColor: selectedColor || 'Rose Gold',
-        diamondType: resolvedDiamondTypeName,
-        diamondShape: cleanAttribute(resolvedShapeName),
-        diamondClarity: cleanAttribute(resolvedClarityName),
-        diamondColor: cleanAttribute(resolvedColorName),
-        caratWeight: Number(selectedVariant?.colorStoneWeight || selectedVariant?.caratWeight || selectedCarat || 0) || null,
-        size: resolvedSizeName || null,
-        colorStoneCost: Number(selectedVariant?.colorStoneCost || 0) || undefined,
-        colorStoneWeight: Number(selectedVariant?.colorStoneWeight || 0) || undefined,
-        sideColorStoneCost: Number(selectedVariant?.sideColorStoneCost || 0) || undefined,
-        sideColorStoneWeight: Number(selectedVariant?.sideColorStoneWeight || 0) || undefined,
-        metalPurityId: selectedVariant?.metalPurityId?._id || selectedVariant?.metalPurityId || product.metalPurityIds?.[0]?._id || product.metalPurityIds?.[0] || null,
-        metalColorId: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId?.id || selectedVariant?.metalColorId || product.metalColors?.[0]?.id || product.metalColors?.[0]?._id || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null,
-        diamondTypeId: selectedVariant?.diamondTypeId?._id || selectedVariant?.diamondTypeId || null,
-        diamondShapeId: selectedVariant?.diamondShapeId?._id || selectedVariant?.diamondShapeId || null,
-        diamondClarityId: selectedVariant?.diamondClarityId?._id || selectedVariant?.diamondClarityId || null,
-        diamondColorId: selectedVariant?.diamondColorId?._id || selectedVariant?.diamondColorId || null,
-      };
-      const validEntries = Object.entries(attrs).filter(([, val]) => val !== null && val !== undefined && val !== '');
-      if (validEntries.length > 0) {
-        selectedAttributes = Object.fromEntries(validEntries);
+      const resolvedClarityName = isColorStone
+        ? ''
+        : (selectedQuality || selectedVariant?.diamondClarityId?.name || '');
+
+      const resolvedColorName = isColorStone
+        ? ''
+        : (selectedVariant?.diamondColorId?.name || '');
+
+      let selectedAttributes = null;
+      if (isGold) {
+        const attrs = {
+          metalPurity: selectedPurity || '9KT Gold',
+          metalColor: selectedColor || 'Rose Gold',
+          diamondType: resolvedDiamondTypeName,
+          diamondShape: cleanAttribute(resolvedShapeName),
+          diamondClarity: cleanAttribute(resolvedClarityName),
+          diamondColor: cleanAttribute(resolvedColorName),
+          caratWeight: Number(selectedVariant?.colorStoneWeight || selectedVariant?.caratWeight || selectedCarat || 0) || null,
+          size: resolvedSizeName || null,
+          colorStoneCost: Number(selectedVariant?.colorStoneCost || 0) || undefined,
+          colorStoneWeight: Number(selectedVariant?.colorStoneWeight || 0) || undefined,
+          sideColorStoneCost: Number(selectedVariant?.sideColorStoneCost || 0) || undefined,
+          sideColorStoneWeight: Number(selectedVariant?.sideColorStoneWeight || 0) || undefined,
+          metalPurityId: selectedVariant?.metalPurityId?._id || selectedVariant?.metalPurityId || product.metalPurityIds?.[0]?._id || product.metalPurityIds?.[0] || null,
+          metalColorId: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId?.id || selectedVariant?.metalColorId || product.metalColors?.[0]?.id || product.metalColors?.[0]?._id || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null,
+          diamondTypeId: selectedVariant?.diamondTypeId?._id || selectedVariant?.diamondTypeId || null,
+          diamondShapeId: selectedVariant?.diamondShapeId?._id || selectedVariant?.diamondShapeId || null,
+          diamondClarityId: selectedVariant?.diamondClarityId?._id || selectedVariant?.diamondClarityId || null,
+          diamondColorId: selectedVariant?.diamondColorId?._id || selectedVariant?.diamondColorId || null,
+        };
+        const validEntries = Object.entries(attrs).filter(([, val]) => val !== null && val !== undefined && val !== '');
+        if (validEntries.length > 0) {
+          selectedAttributes = Object.fromEntries(validEntries);
+        }
+      } else {
+        const attrs = {
+          metalPurity: 'Silver',
+          metalColor: 'Silver',
+          size: resolvedSizeName || null,
+        };
+        const validEntries = Object.entries(attrs).filter(([, val]) => val !== null && val !== undefined && val !== '');
+        if (validEntries.length > 0) {
+          selectedAttributes = Object.fromEntries(validEntries);
+        }
       }
-    } else {
-      const attrs = {
-        metalPurity: 'Silver',
-        metalColor: 'Silver',
-        size: resolvedSizeName || null,
+
+      const selectedMetalStr = isGold ? `${selectedPurity} ${selectedColor}`.trim() : 'Silver';
+
+      const cartItem = {
+        _id: product._id,
+        productId: product._id,
+        title: product.basicInfo?.title,
+        sku: product.basicInfo?.sku || '',
+        price,
+        totalItemPrice,
+        addedAt,
+        quantity,
+        image: galleryImages.find((img) => !isVideoMedia(img)) || galleryImages[0] || getPrimaryProductImage(product),
+        category: categoryName,
+        productType: product.productType,
+        selectedMetal: selectedMetalStr,
+        selectedSize: resolvedSizeName || '',
+        selectedAttributes,
       };
-      const validEntries = Object.entries(attrs).filter(([, val]) => val !== null && val !== undefined && val !== '');
-      if (validEntries.length > 0) {
-        selectedAttributes = Object.fromEntries(validEntries);
-      }
+
+      addToCart(cartItem, 1, {
+        selectedMetal: selectedMetalStr,
+        selectedSize: resolvedSizeName,
+        selectedAttributes,
+      });
+    } catch (err) {
+      console.error('Failed to add to cart:', err);
+      toast.error('Failed to add item to bag. Please try again.');
+    } finally {
+      setTimeout(() => {
+        setAddingToCart(false);
+      }, 400);
     }
-
-    const selectedMetalStr = isGold ? `${selectedPurity} ${selectedColor}`.trim() : 'Silver';
-
-    const cartItem = {
-      _id: product._id,
-      productId: product._id,
-      title: product.basicInfo?.title,
-      sku: product.basicInfo?.sku || '',
-      price,
-      totalItemPrice,
-      addedAt,
-      quantity,
-      image: galleryImages.find((img) => !isVideoMedia(img)) || galleryImages[0] || getPrimaryProductImage(product),
-      category: categoryName,
-      productType: product.productType,
-      selectedMetal: selectedMetalStr,
-      selectedSize: resolvedSizeName || '',
-      selectedAttributes,
-    };
-
-    addToCart(cartItem, 1, {
-      selectedMetal: selectedMetalStr,
-      selectedSize: resolvedSizeName,
-      selectedAttributes,
-    });
-
-    setTimeout(() => {
-      setAddingToCart(false);
-    }, 400);
   };
 
   // Share state & handlers

@@ -140,7 +140,6 @@ const Home = () => {
           collectionList.map((banner) => ({
             id: banner._id,
             title: banner.content?.title || '',
-            subtitle: banner.content?.subtitle || '',
             images: (banner.collectionImages || []).map((img, idx) => {
               const cat = img.categoryId || banner.display?.categoryId;
               const catKey = cat?.slug || cat?._id || '';
@@ -161,7 +160,6 @@ const Home = () => {
           customData?.image?.url
             ? {
                 title: customData.content?.title || '',
-                subtitle: customData.content?.subtitle || '',
                 image: customData.image.url,
                 buttonText: customData.content?.buttonText || '',
                 link: customData.link || '/custom-jewellery',
@@ -175,7 +173,6 @@ const Home = () => {
           mobileData?.image?.url
             ? {
                 title: mobileData.content?.title || '',
-                subtitle: mobileData.content?.subtitle || '',
                 image: mobileData.image.url,
                 mobileImage: mobileData.mobileImage?.url || mobileData.image.url,
                 link: mobileData.link || '',
@@ -191,7 +188,6 @@ const Home = () => {
           appointData?.image?.url
             ? {
                 title: appointData.content?.title || '',
-                subtitle: appointData.content?.subtitle || '',
                 image: appointData.image.url,
                 buttonText: appointData.content?.buttonText || '',
                 link: appointData.link || '',
@@ -1114,7 +1110,9 @@ const Home = () => {
       {/* ─────────────────────────────────────────────────────────────────
           9.5. MAKE BIRTHDAYS MORE COLOURFUL (Birthstones Carousel)
       ─────────────────────────────────────────────────────────────────── */}
-      <BirthstonesSection style={sectionStyle('birthstones')} />
+      {storeSettings?.birthstones?.showOnStorefront === true && (
+        <BirthstonesSection style={sectionStyle('birthstones')} />
+      )}
 
       {/* ─────────────────────────────────────────────────────────────────
           10. BOOK A VIRTUAL APPOINTMENT BANNER

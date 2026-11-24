@@ -7,7 +7,7 @@ import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 export default function BirthstonesSection({ style }) {
   const { settings: storeSettings } = useStoreSettings();
   const isStorefrontVisible =
-    storeSettings?.birthstones?.showOnStorefront !== false;
+    storeSettings?.birthstones?.showOnStorefront === true;
 
   const [birthstones, setBirthstones] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +43,7 @@ export default function BirthstonesSection({ style }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isStorefrontVisible]);
 
   const handleScroll = () => {
     const el = scrollRef.current;

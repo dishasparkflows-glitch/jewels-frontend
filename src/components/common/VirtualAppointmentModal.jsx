@@ -146,77 +146,77 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
       open={isOpen}
       onClose={onClose}
       label="Schedule a virtual appointment"
-      className="w-[min(400px,calc(100vw-2rem))] !bg-transparent !p-0 !border-0 !shadow-none"
+      className="w-[min(540px,calc(100vw-2rem))] !bg-transparent !p-0 !border-0 !shadow-none"
     >
       <div
-        className="relative w-full max-h-[calc(100dvh-2rem)] overflow-visible rounded-2xl bg-white border border-stone-100 shadow-2xl p-4 sm:p-5 text-stone-800"
+        className="relative w-full max-h-[calc(100dvh-2rem)] overflow-y-auto sm:overflow-visible rounded-3xl bg-white border border-stone-100 shadow-2xl p-6 sm:p-8 text-stone-800"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
           type="button"
-          className="absolute top-3 right-3 sm:top-3.5 sm:right-3.5 p-1 text-stone-400 hover:text-stone-600 rounded-full hover:bg-stone-100 transition-colors cursor-pointer"
+          className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 text-stone-400 hover:text-stone-600 rounded-full hover:bg-stone-100 transition-colors cursor-pointer"
           aria-label="Close modal"
         >
-          <HiOutlineX className="w-4 h-4" />
+          <HiOutlineX className="w-5 h-5" />
         </button>
 
         {/* Circular Calendar Badge */}
-        <div className="w-10 h-10 rounded-full bg-[#f8f2eb] flex items-center justify-center mx-auto mb-2 transition-transform">
-          <HiOutlineCalendar className="w-5 h-5 text-[#8c6b45] stroke-[1.8]" />
+        <div className="w-14 h-14 rounded-full bg-[#f8f2eb] flex items-center justify-center mx-auto mb-3 shadow-xs">
+          <HiOutlineCalendar className="w-7 h-7 text-[#8c6b45] stroke-[1.8]" />
         </div>
 
         {/* Header Title & Subtitle */}
         <div className="text-center">
-          <h3 className="font-serif text-base sm:text-lg font-bold text-stone-900 tracking-tight">
+          <h3 className="font-serif text-xl sm:text-2xl font-bold text-stone-900 tracking-tight">
             Book a Virtual Appointment
           </h3>
-          <p className="text-[11px] sm:text-xs text-stone-500 font-sans mt-0.5">
+          <p className="text-xs sm:text-sm text-stone-500 font-sans mt-1 max-w-sm mx-auto">
             Schedule your online consultation with our jewellery experts.
           </p>
         </div>
 
         {/* Form Fields */}
-        <form onSubmit={handleSubmit} className="mt-3.5 space-y-2.5">
+        <form onSubmit={handleSubmit} className="mt-5 sm:mt-6 space-y-3.5 sm:space-y-4">
           {/* Full Name */}
-          <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-stone-700">
+          <div className="space-y-1.5">
+            <label className="block text-xs sm:text-[13px] font-medium text-stone-700">
               Full Name <span className="text-red-500">*</span>
             </label>
-            <div className="relative flex items-center border border-stone-200 rounded-lg px-2.5 h-9 focus-within:border-[#8c6b45] focus-within:ring-2 focus-within:ring-[#8c6b45]/15 transition-all bg-white">
-              <HiOutlineUser className="w-3.5 h-3.5 text-stone-400 mr-2 shrink-0" />
+            <div className="relative flex items-center border border-stone-200 rounded-xl px-3.5 h-11 focus-within:border-[#8c6b45] focus-within:ring-2 focus-within:ring-[#8c6b45]/15 transition-all bg-white hover:border-stone-300">
+              <HiOutlineUser className="w-4 h-4 text-stone-400 mr-2.5 shrink-0" />
               <input
                 type="text"
                 placeholder="Enter your full name"
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 required
-                className="w-full text-xs text-stone-800 placeholder-stone-400 bg-transparent focus:outline-none"
+                className="w-full text-sm text-stone-800 placeholder-stone-400 bg-transparent focus:outline-none"
               />
             </div>
           </div>
 
           {/* Email Address */}
-          <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-stone-700">
+          <div className="space-y-1.5">
+            <label className="block text-xs sm:text-[13px] font-medium text-stone-700">
               Email Address <span className="text-red-500">*</span>
             </label>
-            <div className="relative flex items-center border border-stone-200 rounded-lg px-2.5 h-9 focus-within:border-[#8c6b45] focus-within:ring-2 focus-within:ring-[#8c6b45]/15 transition-all bg-white">
-              <HiOutlineMail className="w-3.5 h-3.5 text-stone-400 mr-2 shrink-0" />
+            <div className="relative flex items-center border border-stone-200 rounded-xl px-3.5 h-11 focus-within:border-[#8c6b45] focus-within:ring-2 focus-within:ring-[#8c6b45]/15 transition-all bg-white hover:border-stone-300">
+              <HiOutlineMail className="w-4 h-4 text-stone-400 mr-2.5 shrink-0" />
               <input
                 type="email"
                 placeholder="Enter your email address"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
-                className="w-full text-xs text-stone-800 placeholder-stone-400 bg-transparent focus:outline-none"
+                className="w-full text-sm text-stone-800 placeholder-stone-400 bg-transparent focus:outline-none"
               />
             </div>
           </div>
 
           {/* Phone Number */}
-          <div className="space-y-1">
-            <label className="block text-[11px] font-medium text-stone-700">
+          <div className="space-y-1.5">
+            <label className="block text-xs sm:text-[13px] font-medium text-stone-700">
               Phone Number <span className="text-red-500">*</span>
             </label>
             <PhoneInput
@@ -226,15 +226,15 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
               onCountryCodeChange={setCountryCode}
               placeholder="98765 43210"
               required
-              size="sm"
+              size="md"
             />
           </div>
 
           {/* Date & Time Grid */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-3.5">
             {/* Date */}
-            <div className="space-y-1">
-              <label className="block text-[11px] font-medium text-stone-700">
+            <div className="space-y-1.5">
+              <label className="block text-xs sm:text-[13px] font-medium text-stone-700">
                 Date <span className="text-red-500">*</span>
               </label>
               <DatePicker
@@ -242,15 +242,15 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
                 onChange={(dateStr) => setFormData((prev) => ({ ...prev, appointmentDate: dateStr }))}
                 minDate={new Date()}
                 placeholder="Select Date"
-                size="sm"
-                buttonClassName="h-9 px-2.5 rounded-lg border border-stone-200 bg-white text-xs text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8c6b45] focus:ring-2 focus:ring-[#8c6b45]/15 transition-all cursor-pointer"
+                size="md"
+                buttonClassName="w-full h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-sm text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8c6b45] focus:ring-2 focus:ring-[#8c6b45]/15 transition-all cursor-pointer"
                 popupClassName="z-[100]"
               />
             </div>
 
             {/* Time */}
-            <div className="space-y-1">
-              <label className="block text-[11px] font-medium text-stone-700">
+            <div className="space-y-1.5">
+              <label className="block text-xs sm:text-[13px] font-medium text-stone-700">
                 Time <span className="text-red-500">*</span>
               </label>
               <Dropdown
@@ -258,32 +258,32 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
                 onChange={(val) => setFormData({ ...formData, preferredTime: val })}
                 options={availableTimeSlots}
                 placeholder="Select Time"
-                size="sm"
-                prefixIcon={<HiOutlineClock className="w-3.5 h-3.5 text-stone-400" />}
-                buttonClassName="w-full h-9 px-2.5 rounded-lg border border-stone-200 bg-white text-xs text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8c6b45] focus:ring-2 focus:ring-[#8c6b45]/15 transition-all flex items-center justify-between cursor-pointer"
-                menuClassName="z-[90] text-xs max-h-44"
+                size="md"
+                prefixIcon={<HiOutlineClock className="w-4 h-4 text-stone-400" />}
+                buttonClassName="w-full h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-sm text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8c6b45] focus:ring-2 focus:ring-[#8c6b45]/15 transition-all flex items-center justify-between cursor-pointer"
+                menuClassName="z-[90] text-sm max-h-52 rounded-xl"
               />
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2 pt-2.5 sm:pt-3">
+          <div className="flex items-center gap-3 pt-3 sm:pt-4">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 h-9 rounded-lg border border-stone-200 hover:bg-stone-50 text-stone-700 text-xs font-medium transition-colors cursor-pointer"
+              className="px-6 h-11 rounded-xl border border-stone-200 hover:bg-stone-50 text-stone-700 text-sm font-medium transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 h-9 rounded-lg btn-theme-primary text-xs font-semibold transition-all shadow-xs disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              className="flex-1 h-11 rounded-xl btn-theme-primary text-sm font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
                 <>
-                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   <span>Scheduling...</span>
                 </>
               ) : (
