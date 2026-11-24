@@ -7,6 +7,44 @@
     <meta name="description" content="Discover handcrafted luxury jewelry, certified diamonds, and timeless gemstone collections at Jewels." />
     <meta name="theme-color" content="#0f172a" />
     <title>Neirah Jewels | Fine Jewellery & Diamonds</title>
+    <!-- Polyfill to eliminate Chromium Permissions Policy violations for deprecated unload events -->
+    <script>
+      (function() {
+        if (typeof window !== 'undefined') {
+          if (window.EventTarget && EventTarget.prototype.addEventListener) {
+            var originalAddEventListener = EventTarget.prototype.addEventListener;
+            EventTarget.prototype.addEventListener = function(type, listener, options) {
+              if (type === 'unload') {
+                return originalAddEventListener.call(this, 'pagehide', listener, options);
+              }
+              return originalAddEventListener.call(this, type, listener, options);
+            };
+          }
+          try {
+            Object.defineProperty(window, 'onunload', {
+              get: function() { return null; },
+              set: function(fn) {
+                if (typeof fn === 'function') {
+                  window.addEventListener('pagehide', fn);
+                }
+              },
+              configurable: true,
+            });
+          } catch (_) {}
+
+          try {
+            var origCreateElement = Document.prototype.createElement;
+            Document.prototype.createElement = function(tagName, options) {
+              var el = origCreateElement.call(this, tagName, options);
+              if (tagName && typeof tagName === 'string' && tagName.toLowerCase() === 'iframe') {
+                el.setAttribute('allow', 'unload');
+              }
+              return el;
+            };
+          } catch (_) {}
+        }
+      })();
+    </script>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

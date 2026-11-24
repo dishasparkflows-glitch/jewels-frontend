@@ -277,8 +277,10 @@ export default function FilterSidebar({
   // Helper to check if a checkbox option is selected
   const isOptionSelected = (filterKey, optionValue, optionName) => {
     if (filterKey === 'category') {
-      const activeCat = params.get('category') || '';
-      return activeCat === optionValue || activeCat === optionName;
+      const activeCat = (params.get('category') || currentCategoryParam || '').toLowerCase();
+      const val = String(optionValue || '').toLowerCase();
+      const name = String(optionName || '').toLowerCase();
+      return activeCat === val || activeCat === name;
     }
     const rawVal = params.get(filterKey) || '';
     if (!rawVal) return false;
@@ -293,8 +295,10 @@ export default function FilterSidebar({
   const handleToggleOption = (filterKey, optionValue, optionName) => {
     const val = optionValue || optionName;
     if (filterKey === 'category') {
-      const current = params.get('category') || '';
-      const isCurrent = current === optionValue || current === optionName;
+      const current = (params.get('category') || currentCategoryParam || '').toLowerCase();
+      const valLower = String(val || '').toLowerCase();
+      const nameLower = String(optionName || '').toLowerCase();
+      const isCurrent = current === valLower || current === nameLower;
       onFilterChange('category', isCurrent ? '' : val, true);
       return;
     }

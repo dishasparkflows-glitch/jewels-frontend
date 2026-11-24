@@ -8,7 +8,7 @@ export default defineConfig({
     host: true,
     port: 5173,
     headers: {
-      'Permissions-Policy': 'unload=*',
+      'Permissions-Policy': 'unload=(*)',
     },
   },
 })
