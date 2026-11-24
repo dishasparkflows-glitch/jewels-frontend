@@ -9,7 +9,7 @@ import ColorSwatches from './ColorSwatches';
 
 export default function WishlistProductCard({ item, onRemove }) {
   const [selectedColorName, setSelectedColorName] = useState(null);
-  const [addingToCart, setAddingToCart] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
   const { addToCart } = useCart();
 
   if (!item) return null;
@@ -53,13 +53,11 @@ export default function WishlistProductCard({ item, onRemove }) {
   const hasDiscount = mrp > salePrice;
   const unitPrice = salePrice || minPrice || mrp || 0;
 
-  const handleAddToCart = async (e) => {
+  const handleAddToCart = (e) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
-    if (addingToCart) return;
-    setAddingToCart(true);
 
     try {
       const activeColorId = activeColor?._id || activeColor?.id || null;
@@ -75,7 +73,7 @@ export default function WishlistProductCard({ item, onRemove }) {
         }
       }
 
-      await addToCart(
+      addToCart(
         {
           _id: id,
           id,
@@ -96,10 +94,11 @@ export default function WishlistProductCard({ item, onRemove }) {
           selectedAttributes: Object.keys(selectedAttributes).length > 0 ? selectedAttributes : undefined,
         }
       );
+
+      setJustAdded(true);
+      setTimeout(() => setJustAdded(false), 1200);
     } catch (err) {
       console.error('Failed to add to cart from wishlist:', err);
-    } finally {
-      setAddingToCart(false);
     }
   };
 
@@ -176,15 +175,13 @@ export default function WishlistProductCard({ item, onRemove }) {
         <div className="mt-3 w-full pt-1">
           <button
             type="button"
-            disabled={addingToCart}
             onClick={handleAddToCart}
-            className="w-full h-9 sm:h-10 px-3 flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-[#211f1c] hover:bg-[#8b6f4e] text-white text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed group/btn"
+            className="w-full h-9 sm:h-10 px-3 flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-[#211f1c] hover:bg-[#8b6f4e] text-white text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-[0.98] cursor-pointer group/btn"
           >
-            {addingToCart ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>Adding...</span>
-              </>
+            {justAdded ? (
+              <span className="text-emerald-300 font-bold flex items-center gap-1 animate-fadeIn">
+                ✓ Added
+              </span>
             ) : (
               <>
                 <HiOutlineShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover/btn:scale-110" />

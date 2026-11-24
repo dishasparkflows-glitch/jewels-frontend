@@ -148,7 +148,22 @@ export const CartProvider = ({ children }) => {
   const updateCartFromResponse = useCallback((data) => {
     if (!data || !Array.isArray(data.items)) return;
     const consolidated = consolidateItems(data.items.map(formatCartItem));
-    setCart(consolidated);
+    setCart((prev) => {
+      const merged = consolidated.map((item) => {
+        const localMatch = prev.find(
+          (p) => (p.productId && p.productId === item.productId) || (p.id && p.id === item.id)
+        );
+        return {
+          ...item,
+          image: item.image || localMatch?.image || '',
+          slug: item.slug || localMatch?.slug || '',
+          title: item.title || localMatch?.title || item.name || '',
+          name: item.name || localMatch?.name || item.title || '',
+        };
+      });
+      localStorage.setItem('jewels_cart', JSON.stringify(merged));
+      return merged;
+    });
     setCartTotals({
       totalItems: data.totalItems ?? consolidated.length,
       subtotal: data.subtotal ?? calculateTotals(consolidated).subtotal,
@@ -156,7 +171,6 @@ export const CartProvider = ({ children }) => {
       tax: data.tax ?? 0,
       total: data.total ?? calculateTotals(consolidated).total,
     });
-    localStorage.setItem('jewels_cart', JSON.stringify(consolidated));
   }, [calculateTotals]);
 
   // Fetch cart from backend API
@@ -230,8 +244,8 @@ export const CartProvider = ({ children }) => {
     }
   }, [user, location.pathname, fetchCounts, fetchCart]);
 
-  // Add item to cart with backend API call & optimistic update
-  const addToCart = async (product, quantity = 1, options = {}, explicitUser = null) => {
+  // Add item to cart with instant 0ms optimistic UI and background API sync
+  const addToCart = (product, quantity = 1, options = {}, explicitUser = null) => {
     if (!product) return;
 
     // Check authentication: user must be logged in to add to cart
@@ -249,7 +263,7 @@ export const CartProvider = ({ children }) => {
       setCartDrawerOpen(false);
       if (typeof openLoginModal === 'function') {
         openLoginModal(async (authedUser) => {
-          await addToCart(product, quantity, options, authedUser);
+          addToCart(product, quantity, options, authedUser);
         });
       } else {
         navigate('/login', { state: { from: location } });
@@ -277,7 +291,7 @@ export const CartProvider = ({ children }) => {
     // Increment request ID to track racing async requests
     const reqId = ++cartReqIdRef.current;
 
-    // 1. Optimistic local update
+    // 1. INSTANT optimistic local update (Synchronous 0ms - no UI stutter)
     setCart((prev) => {
       const existingIndex = prev.findIndex(
         (item) => item.productId === productId || item.id === productId || item._id === productId
@@ -326,61 +340,64 @@ export const CartProvider = ({ children }) => {
       return consolidated;
     });
 
-    if (location.pathname !== '/cart' && location.pathname !== '/checkout') {
+    const isCartOrCheckoutPage = location.pathname === '/cart' || location.pathname === '/checkout';
+    if (!options?.preventDrawer && !isCartOrCheckoutPage) {
       setCartDrawerOpen(true);
+    }
+
+    // Instant deduplicated feedback toast (never stacks multiple toasts)
+    if (!options?.silent) {
+      toast.success(`Added "${title}" to your bag!`, {
+        id: 'cart-added',
+        icon: '🛍️',
+        duration: 2000,
+        style: {
+          background: '#22201e',
+          color: '#f5f0eb',
+          border: '1px solid rgba(198, 145, 60, 0.4)',
+        },
+      });
     }
 
     trackAddToCart(product, parsedQty, { shopperId: user?._id || user?.id });
 
-    // 2. Call backend Cart API
-    try {
-      const payload = {
-        productId,
-        quantity: parsedQty,
-        price,
-        totalItemPrice,
-        userId: currentUser?._id || currentUser?.id,
-      };
+    // 2. Silent non-blocking background API sync
+    const payload = {
+      productId,
+      quantity: parsedQty,
+      price,
+      totalItemPrice,
+      userId: currentUser?._id || currentUser?.id,
+    };
 
-      if (selectedMetal) payload.selectedMetal = selectedMetal;
-      if (selectedSize) payload.selectedSize = selectedSize;
-      if (selectedAttributes && typeof selectedAttributes === 'object') {
-        const validEntries = Object.entries(selectedAttributes).filter(
-          ([, val]) => val !== null && val !== undefined && val !== ''
-        );
-        if (validEntries.length > 0) {
-          payload.selectedAttributes = Object.fromEntries(validEntries);
-        }
-      }
-
-      const res = await cartAPI.add(payload);
-      if (reqId !== cartReqIdRef.current) return;
-      const data = res?.data?.data || res?.data || {};
-
-      if (!options?.silent) {
-        toast.success(`Added "${title}" to your bag!`, {
-          icon: '🛍️',
-          style: {
-            background: '#22201e',
-            color: '#f5f0eb',
-            border: '1px solid rgba(198, 145, 60, 0.4)',
-          },
-        });
-      }
-
-      updateCartFromResponse(data);
-    } catch (err) {
-      console.warn('Backend cart sync error:', err);
-      fetchCart();
-      if (err.response?.status === 401) {
-        setCartDrawerOpen(false);
-        if (typeof openLoginModal === 'function') {
-          openLoginModal(async () => {
-            await addToCart(product, quantity, options);
-          });
-        }
+    if (selectedMetal) payload.selectedMetal = selectedMetal;
+    if (selectedSize) payload.selectedSize = selectedSize;
+    if (selectedAttributes && typeof selectedAttributes === 'object') {
+      const validEntries = Object.entries(selectedAttributes).filter(
+        ([, val]) => val !== null && val !== undefined && val !== ''
+      );
+      if (validEntries.length > 0) {
+        payload.selectedAttributes = Object.fromEntries(validEntries);
       }
     }
+
+    cartAPI.add(payload)
+      .then((res) => {
+        if (reqId !== cartReqIdRef.current) return;
+        const data = res?.data?.data || res?.data || {};
+        updateCartFromResponse(data);
+      })
+      .catch((err) => {
+        console.warn('Backend cart sync error:', err);
+        if (err.response?.status === 401) {
+          setCartDrawerOpen(false);
+          if (typeof openLoginModal === 'function') {
+            openLoginModal(async () => {
+              addToCart(product, quantity, options);
+            });
+          }
+        }
+      });
   };
 
   // Update item quantity

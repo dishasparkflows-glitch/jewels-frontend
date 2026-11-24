@@ -135,7 +135,7 @@ export default function PhoneInput({
         required={required}
         disabled={disabled}
         className={`min-w-0 flex-1 bg-transparent ${
-          size === 'sm' ? 'px-2 text-xs' : 'px-3 text-sm'
+          size === 'sm' ? 'px-2 text-base sm:text-xs' : 'px-3 text-base sm:text-sm'
         } text-stone-800 outline-none placeholder:text-stone-400 ${inputClassName}`}
       />
     </div>

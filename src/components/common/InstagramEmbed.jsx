@@ -22,6 +22,22 @@ export default function InstagramEmbed({ url, captioned = false }) {
   const containerRef = useRef(null);
   const cleanUrl = cleanInstagramUrl(url);
 
+  // Set allow="unload" on Instagram iframes to satisfy Chromium Permissions-Policy
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new MutationObserver(() => {
+      const iframes = containerRef.current?.querySelectorAll('iframe');
+      iframes?.forEach((iframe) => {
+        const allow = iframe.getAttribute('allow') || '';
+        if (!allow.includes('unload')) {
+          iframe.setAttribute('allow', allow ? `${allow}; unload` : 'unload');
+        }
+      });
+    });
+    observer.observe(containerRef.current, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => {
     if (!cleanUrl) return;
 

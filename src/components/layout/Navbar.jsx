@@ -261,6 +261,8 @@ const Navbar = () => {
   useEffect(() => {
     setShowSearchDropdown(false);
     setUserDropdownOpen(false);
+    setMobileMenuOpen(false);
+    setMobileSearchOpen(false);
   }, [location.pathname, location.search]);
 
   useEffect(() => {
@@ -470,6 +472,7 @@ const Navbar = () => {
           <Link
             to="/"
             onClick={() => {
+              setMobileMenuOpen(false);
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             className="order-first flex items-center leading-none group shrink-0 min-w-0 py-1 h-full"
@@ -793,7 +796,10 @@ const Navbar = () => {
                       <div className="py-1.5 space-y-0.5">
                         <Link
                           to="/profile"
-                          onClick={() => setUserDropdownOpen(false)}
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            setMobileMenuOpen(false);
+                          }}
                           className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[#f3ede3]/80 text-stone-700 hover:text-stone-950 transition-colors group cursor-pointer"
                         >
                           <div className="flex items-center gap-3">
@@ -805,7 +811,10 @@ const Navbar = () => {
 
                         <Link
                           to="/profile?tab=orders"
-                          onClick={() => setUserDropdownOpen(false)}
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            setMobileMenuOpen(false);
+                          }}
                           className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[#f3ede3]/80 text-stone-700 hover:text-stone-950 transition-colors group cursor-pointer"
                         >
                           <div className="flex items-center gap-3">
@@ -817,7 +826,10 @@ const Navbar = () => {
 
                         <Link
                           to="/profile?tab=addresses"
-                          onClick={() => setUserDropdownOpen(false)}
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            setMobileMenuOpen(false);
+                          }}
                           className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[#f3ede3]/80 text-stone-700 hover:text-stone-950 transition-colors group cursor-pointer"
                         >
                           <div className="flex items-center gap-3">
@@ -826,8 +838,6 @@ const Navbar = () => {
                           </div>
                           <HiOutlineChevronRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-stone-700 group-hover:translate-x-0.5 transition-all" />
                         </Link>
-
-
                       </div>
 
                       {/* Sign Out Button */}
@@ -837,6 +847,7 @@ const Navbar = () => {
                           onClick={() => {
                             logout();
                             setUserDropdownOpen(false);
+                            setMobileMenuOpen(false);
                           }}
                           className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#fdf2f1] hover:bg-[#fae6e4] text-[#c2413a] font-semibold text-[13px] transition-colors cursor-pointer border border-[#f7d6d3]"
                         >

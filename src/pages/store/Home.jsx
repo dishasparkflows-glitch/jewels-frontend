@@ -161,6 +161,7 @@ const Home = () => {
             ? {
                 title: customData.content?.title || '',
                 image: customData.image.url,
+                mobileImage: customData.mobileImage?.url || '',
                 buttonText: customData.content?.buttonText || '',
                 link: customData.link || '/custom-jewellery',
               }
@@ -189,6 +190,7 @@ const Home = () => {
             ? {
                 title: appointData.content?.title || '',
                 image: appointData.image.url,
+                mobileImage: appointData.mobileImage?.url || '',
                 buttonText: appointData.content?.buttonText || '',
                 link: appointData.link || '',
               }
@@ -888,7 +890,7 @@ const Home = () => {
 
           {/* Mobile view */}
           <div className="block md:hidden px-3 sm:px-4">
-            <div className="relative w-full h-[220px] sm:h-[260px] rounded-[20px] sm:rounded-[24px] overflow-hidden border border-[#E8E0D8]/80 shadow-md bg-[#FAF6F0]">
+            <div className="relative w-full rounded-[20px] sm:rounded-[24px] overflow-hidden border border-[#E8E0D8]/80 shadow-md bg-[#FAF6F0]">
               {customBanner.link?.startsWith('http') ? (
                 <a
                   href={customBanner.link}
@@ -897,9 +899,9 @@ const Home = () => {
                   className="block w-full h-full cursor-pointer"
                 >
                   <img
-                    src={getMediaUrl(customBanner.image)}
+                    src={getMediaUrl(customBanner.mobileImage || customBanner.image)}
                     alt={customBanner.title || 'Custom Jewellery Journey'}
-                    className="w-full h-full object-cover object-[80%_center]"
+                    className="w-full h-auto object-cover"
                   />
                 </a>
               ) : (
@@ -908,9 +910,9 @@ const Home = () => {
                   className="block w-full h-full cursor-pointer"
                 >
                   <img
-                    src={getMediaUrl(customBanner.image)}
+                    src={getMediaUrl(customBanner.mobileImage || customBanner.image)}
                     alt={customBanner.title || 'Custom Jewellery Journey'}
-                    className="w-full h-full object-cover object-[80%_center]"
+                    className="w-full h-auto object-cover"
                   />
                 </Link>
               )}
@@ -1163,7 +1165,7 @@ const Home = () => {
 
           {/* Mobile view */}
           <div className="block md:hidden px-3 sm:px-4">
-            <div className="relative w-full h-[220px] sm:h-[260px] rounded-[20px] sm:rounded-[24px] overflow-hidden border border-[#E8E0D8]/80 shadow-md bg-[#FAF6F0]">
+            <div className="relative w-full rounded-[20px] sm:rounded-[24px] overflow-hidden border border-[#E8E0D8]/80 shadow-md bg-[#FAF6F0]">
               {bookAppointBanner.link ? (
                 bookAppointBanner.link.startsWith('http') ? (
                   <a
@@ -1173,9 +1175,9 @@ const Home = () => {
                     className="block w-full h-full cursor-pointer"
                   >
                     <img
-                      src={getMediaUrl(bookAppointBanner.image)}
+                      src={getMediaUrl(bookAppointBanner.mobileImage || bookAppointBanner.image)}
                       alt={bookAppointBanner.title || 'Book A Virtual Appointment'}
-                      className="w-full h-full object-cover"
+                      className="w-full h-auto object-cover"
                     />
                   </a>
                 ) : (
@@ -1184,9 +1186,9 @@ const Home = () => {
                     className="block w-full h-full cursor-pointer"
                   >
                     <img
-                      src={getMediaUrl(bookAppointBanner.image)}
+                      src={getMediaUrl(bookAppointBanner.mobileImage || bookAppointBanner.image)}
                       alt={bookAppointBanner.title || 'Book A Virtual Appointment'}
-                      className="w-full h-full object-cover"
+                      className="w-full h-auto object-cover"
                     />
                   </Link>
                 )
@@ -1196,9 +1198,9 @@ const Home = () => {
                   className="w-full h-full cursor-pointer"
                 >
                   <img
-                    src={getMediaUrl(bookAppointBanner.image)}
+                    src={getMediaUrl(bookAppointBanner.mobileImage || bookAppointBanner.image)}
                     alt={bookAppointBanner.title || 'Book A Virtual Appointment'}
-                    className="w-full h-full object-cover"
+                    className="w-full h-auto object-cover"
                   />
                 </div>
               )}

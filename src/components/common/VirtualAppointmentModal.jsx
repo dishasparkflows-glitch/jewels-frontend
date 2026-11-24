@@ -146,38 +146,38 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
       open={isOpen}
       onClose={onClose}
       label="Schedule a virtual appointment"
-      className="w-[min(540px,calc(100vw-2rem))] !bg-transparent !p-0 !border-0 !shadow-none"
+      className="w-[min(440px,calc(100vw-2rem))] !bg-transparent !p-0 !border-0 !shadow-none"
     >
       <div
-        className="relative w-full max-h-[calc(100dvh-2rem)] overflow-y-auto sm:overflow-visible rounded-3xl bg-white border border-stone-100 shadow-2xl p-6 sm:p-8 text-stone-800"
+        className="relative w-full max-h-[calc(100dvh-2rem)] overflow-y-auto sm:overflow-visible rounded-2xl sm:rounded-3xl bg-white border border-stone-100 shadow-2xl p-4 sm:p-5 text-stone-800"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
           type="button"
-          className="absolute top-4 right-4 sm:top-5 sm:right-5 p-2 text-stone-400 hover:text-stone-600 rounded-full hover:bg-stone-100 transition-colors cursor-pointer"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 text-stone-400 hover:text-stone-600 rounded-full hover:bg-stone-100 transition-colors cursor-pointer"
           aria-label="Close modal"
         >
           <HiOutlineX className="w-5 h-5" />
         </button>
 
         {/* Circular Calendar Badge */}
-        <div className="w-14 h-14 rounded-full bg-[#f8f2eb] flex items-center justify-center mx-auto mb-3 shadow-xs">
-          <HiOutlineCalendar className="w-7 h-7 text-[#8c6b45] stroke-[1.8]" />
+        <div className="w-10 h-10 rounded-full bg-[#f8f2eb] flex items-center justify-center mx-auto mb-2 shadow-xs">
+          <HiOutlineCalendar className="w-5 h-5 text-[#8c6b45] stroke-[1.8]" />
         </div>
 
         {/* Header Title & Subtitle */}
         <div className="text-center">
-          <h3 className="font-serif text-xl sm:text-2xl font-bold text-stone-900 tracking-tight">
+          <h3 className="font-serif text-lg sm:text-xl font-bold text-stone-900 tracking-tight">
             Book a Virtual Appointment
           </h3>
-          <p className="text-xs sm:text-sm text-stone-500 font-sans mt-1 max-w-sm mx-auto">
+          <p className="text-xs text-stone-500 font-sans mt-0.5 max-w-sm mx-auto leading-relaxed">
             Schedule your online consultation with our jewellery experts.
           </p>
         </div>
 
         {/* Form Fields */}
-        <form onSubmit={handleSubmit} className="mt-5 sm:mt-6 space-y-3.5 sm:space-y-4">
+        <form onSubmit={handleSubmit} className="mt-3.5 sm:mt-4 space-y-3 sm:space-y-3.5">
           {/* Full Name */}
           <div className="space-y-1.5">
             <label className="block text-xs sm:text-[13px] font-medium text-stone-700">

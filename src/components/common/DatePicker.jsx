@@ -128,6 +128,57 @@ export default function DatePicker({
   const containerRef = useRef(null);
   const triggerRef = useRef(null);
   const popupRef = useRef(null);
+  const isPointerDownRef = useRef(false);
+
+  const handleTriggerPointerDown = () => {
+    isPointerDownRef.current = true;
+  };
+
+  const handleClick = () => {
+    if (disabled) return;
+    isPointerDownRef.current = false;
+    setIsOpen((prev) => !prev);
+  };
+
+  // Keyboard Tab focus automatically opens the date box
+  const handleFocus = () => {
+    if (disabled) return;
+    // If focused by mouse click, handleClick handles toggle
+    if (isPointerDownRef.current) return;
+    setIsOpen(true);
+  };
+
+  // Tabbing away or blurring outside container closes the date box
+  const handleBlur = (e) => {
+    if (
+      e.relatedTarget &&
+      (containerRef.current?.contains(e.relatedTarget) || popupRef.current?.contains(e.relatedTarget))
+    ) {
+      return;
+    }
+    if (!e.relatedTarget) {
+      return;
+    }
+    setIsOpen(false);
+    setIsMonthYearPickerOpen(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Tab') {
+      // When tabbing out to the next field, close this date box
+      setIsOpen(false);
+      setIsMonthYearPickerOpen(false);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setIsOpen((prev) => !prev);
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      setIsOpen(true);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancel();
+    }
+  };
 
   // Sync internal state when prop value changes
   useEffect(() => {
@@ -422,8 +473,14 @@ export default function DatePicker({
       {children ? (
         <div
           ref={triggerRef}
-          onClick={() => !disabled && setIsOpen(!isOpen)}
-          className="cursor-pointer"
+          tabIndex={disabled ? -1 : 0}
+          role="button"
+          onClick={handleClick}
+          onPointerDown={handleTriggerPointerDown}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          className="cursor-pointer outline-none"
         >
           {children}
         </div>
@@ -433,7 +490,11 @@ export default function DatePicker({
           id={inputId}
           type="button"
           disabled={disabled}
-          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onClick={handleClick}
+          onPointerDown={handleTriggerPointerDown}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
           className={`w-full flex items-center justify-between text-left font-medium transition-all duration-150 outline-none cursor-pointer bg-white border border-stone-200 hover:border-stone-300 shadow-2xs text-stone-800 ${
             sizeStyles
           } ${
@@ -459,7 +520,7 @@ export default function DatePicker({
             {value && !disabled && (
               <span
                 role="button"
-                tabIndex={0}
+                tabIndex={-1}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleClear(e);

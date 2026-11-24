@@ -101,54 +101,57 @@ export default function ProductOffersSection({ coupons = [], defaultOpen = true 
                   <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#f8f3ea] border-r border-[#EDE3D3] pointer-events-none" />
                   <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#f8f3ea] border-l border-[#EDE3D3] pointer-events-none" />
 
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 px-0.5">
-                    {/* Left Details: Dashed Code Badge + Discount */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* Dashed Code Badge */}
-                      <button
-                        type="button"
-                        onClick={() => handleCopyCoupon(code)}
-                        className="group/badge relative flex items-center gap-1 px-2 py-0.5 rounded border border-dashed border-[#C5A880] bg-[#FAF5EE] hover:bg-[#F3EAD9] text-[#785934] font-mono font-bold text-[11px] tracking-wider cursor-pointer hover:border-[#8b6f4e] transition-all select-all shadow-2xs"
-                        title="Click to copy coupon code"
-                      >
-                        <span>{code}</span>
-                        <HiOutlineDuplicate className="w-3 h-3 text-[#8b6f4e] opacity-60 group-hover/badge:opacity-100 transition-opacity" />
-                      </button>
+                  <div className="flex items-center justify-between gap-2.5 px-0.5">
+                    {/* Left: Code badge + Discount value + optional Min Order / Description */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Dashed Code Badge */}
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCoupon(code)}
+                          className="group/badge relative inline-flex items-center gap-1 px-2 py-0.5 rounded border border-dashed border-[#C5A880] bg-[#FAF5EE] hover:bg-[#F3EAD9] text-[#785934] font-mono font-bold text-[11px] tracking-wider cursor-pointer hover:border-[#8b6f4e] transition-all select-all shadow-2xs shrink-0"
+                          title="Click to copy coupon code"
+                        >
+                          <span>{code}</span>
+                          <HiOutlineDuplicate className="w-3 h-3 text-[#8b6f4e] opacity-60 group-hover/badge:opacity-100 transition-opacity" />
+                        </button>
 
-                      {/* Discount Highlight */}
-                      <span className="text-xs sm:text-[12.5px] font-bold text-stone-900 tracking-tight font-poppins">
-                        {discountText}
-                      </span>
-                    </div>
-
-                    {/* Right: Minimum Order & Action Button */}
-                    <div className="flex items-center justify-between sm:justify-end gap-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-[#f2eae0]">
-                      {c.discount?.minimumOrderAmount > 0 && (
-                        <span className="text-[9.5px] text-stone-400 font-medium">
-                          Min. order ₹{Number(c.discount.minimumOrderAmount).toLocaleString('en-IN')}
+                        {/* Discount Highlight */}
+                        <span className="text-xs sm:text-[12.5px] font-bold text-stone-900 tracking-tight font-poppins">
+                          {discountText}
                         </span>
-                      )}
+                      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleCopyCoupon(code)}
-                        className={`px-2.5 py-1 rounded-md text-[10.5px] font-semibold transition-all duration-200 cursor-pointer flex items-center gap-1 active:scale-95 ${
-                          isCopied
-                            ? 'bg-[#162b20] text-white shadow-2xs'
-                            : 'btn-theme-primary shadow-2xs'
-                        }`}
-                        title={isCopied ? 'Code copied!' : 'Copy code to clipboard'}
-                      >
-                        {isCopied ? (
-                          <>
-                            <FaCheck className="w-2.5 h-2.5" />
-                            <span>Copied!</span>
-                          </>
-                        ) : (
-                          <span>Copy Code</span>
-                        )}
-                      </button>
+                      {/* Minimum Order / Description (Sub-label if exists) */}
+                      {(c.discount?.minimumOrderAmount > 0 || c.description) && (
+                        <p className="mt-0.5 text-[10px] text-stone-400 font-medium truncate">
+                          {c.discount?.minimumOrderAmount > 0
+                            ? `Min. order ₹${Number(c.discount.minimumOrderAmount).toLocaleString('en-IN')}`
+                            : c.description}
+                        </p>
+                      )}
                     </div>
+
+                    {/* Right: Action Button - ALWAYS right aligned and vertically centered */}
+                    <button
+                      type="button"
+                      onClick={() => handleCopyCoupon(code)}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[10.5px] sm:text-[11px] font-semibold transition-all duration-200 cursor-pointer flex items-center gap-1 active:scale-95 shrink-0 ${
+                        isCopied
+                          ? 'bg-[#1b4332] text-white shadow-2xs'
+                          : 'btn-theme-primary shadow-2xs hover:shadow-xs'
+                      }`}
+                      title={isCopied ? 'Code copied!' : 'Copy code to clipboard'}
+                    >
+                      {isCopied ? (
+                        <>
+                          <FaCheck className="w-2.5 h-2.5 text-emerald-300" />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <span>Copy Code</span>
+                      )}
+                    </button>
                   </div>
                 </div>
               );

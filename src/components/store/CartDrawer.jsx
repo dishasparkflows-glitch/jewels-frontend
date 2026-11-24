@@ -17,15 +17,16 @@ export default function CartDrawer({ open, onClose }) {
   const wasOpenRef = useRef(false);
 
   useEffect(() => {
-    if (open && !wasOpenRef.current) {
+    // Only refresh on initial open if cart is currently empty
+    if (open && !wasOpenRef.current && cart.length === 0) {
       refreshCart();
     }
     wasOpenRef.current = open;
-  }, [open, refreshCart]);
+  }, [open, cart.length, refreshCart]);
 
   return (
     <Modal open={open} onClose={onClose} label="Shopping bag" className="cart-drawer">
-      <aside className="relative flex h-[100dvh] w-[min(100vw,480px)] flex-col bg-white text-[#201e1b] shadow-2xl overflow-hidden font-sans">
+      <aside className="relative flex h-[100dvh] w-full max-w-full flex-col bg-white text-[#201e1b] shadow-2xl overflow-hidden font-sans">
         
         {/* Subtle Luxury Floral Watermark at Bottom Right */}
         <div className="pointer-events-none absolute -bottom-10 -right-10 opacity-[0.03] select-none overflow-hidden z-0">
@@ -37,9 +38,9 @@ export default function CartDrawer({ open, onClose }) {
         </div>
 
         {/* ─── Header: Your Bag | 1 item ─────────────────────────── */}
-        <header className="relative z-10 flex items-center justify-between border-b border-stone-200/80 px-6 py-5 bg-white">
+        <header className="relative z-10 flex items-center justify-between border-b border-stone-200/80 px-4 sm:px-6 py-4 sm:py-5 bg-white">
           <div className="flex items-baseline gap-2">
-            <h2 className="font-serif text-2xl font-normal text-stone-900">Your Bag</h2>
+            <h2 className="font-serif text-xl sm:text-2xl font-normal text-stone-900">Your Bag</h2>
             <span className="text-stone-300 font-light select-none">|</span>
             <span className="text-xs text-stone-500">
               {totalItems} {totalItems === 1 ? 'item' : 'items'}
@@ -49,7 +50,7 @@ export default function CartDrawer({ open, onClose }) {
             type="button"
             onClick={onClose}
             aria-label="Close shopping bag"
-            className="rounded-full p-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors cursor-pointer"
+            className="rounded-full p-1.5 sm:p-2 text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition-colors cursor-pointer"
           >
             <HiOutlineX className="h-5 w-5" />
           </button>
@@ -57,19 +58,19 @@ export default function CartDrawer({ open, onClose }) {
 
         {/* ─── Cart Items List ────────────────────────────────────── */}
         {cart.length ? (
-          <ul className="relative z-10 flex-1 divide-y divide-stone-100 overflow-y-auto px-6 luxury-scrollbar bg-white">
+          <ul className="relative z-10 flex-1 divide-y divide-stone-100 overflow-y-auto px-4 sm:px-6 luxury-scrollbar bg-white">
             {cart.map((item, index) => {
               const specs = getItemSpecs(item);
               const { displayName, productLink } = specs;
               const itemKey = `${item.id || item.productId || index}-${item.selectedMetal || ''}-${item.selectedSize || ''}`;
 
               return (
-                <li key={itemKey} className="flex gap-4 py-5">
+                <li key={itemKey} className="flex gap-3 sm:gap-4 py-4 sm:py-5">
                   {/* Clickable Image Link to PDP */}
                   <Link
                     to={productLink}
                     onClick={onClose}
-                    className="h-24 w-24 sm:h-28 sm:w-28 shrink-0 bg-[#fbf9f6] rounded-2xl p-2.5 border border-stone-200/80 block cursor-pointer hover:opacity-95 transition-opacity overflow-hidden"
+                    className="h-20 w-20 sm:h-24 sm:w-24 shrink-0 bg-[#fbf9f6] rounded-xl sm:rounded-2xl p-2 border border-stone-200/80 block cursor-pointer hover:opacity-95 transition-opacity overflow-hidden"
                     title={`View ${displayName}`}
                   >
                     <img
@@ -93,32 +94,32 @@ export default function CartDrawer({ open, onClose }) {
                     <ItemSpecsDisplay specs={specs} />
 
                     {/* Price */}
-                    <p className="mt-2 font-sans text-xs sm:text-sm font-bold text-stone-900">
+                    <p className="mt-1.5 sm:mt-2 font-sans text-xs sm:text-sm font-bold text-stone-900">
                       {formatPrice(item.price)}
                     </p>
 
                     {/* Stepper + Remove row */}
-                    <div className="mt-3 flex items-center justify-between gap-3">
+                    <div className="mt-2.5 sm:mt-3 flex items-center justify-between gap-2">
                       {/* Rounded Pill Stepper */}
-                      <div className="inline-flex items-center rounded-full border border-stone-200 bg-white px-2.5 py-0.5 shadow-2xs">
+                      <div className="inline-flex items-center rounded-full border border-stone-200 bg-white px-2 py-0.5 shadow-2xs">
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
                           aria-label={`Decrease quantity of ${displayName}`}
-                          className="flex h-6 w-5 items-center justify-center text-xs font-bold text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
+                          className="flex h-5 w-4.5 sm:h-6 sm:w-5 items-center justify-center text-xs font-bold text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
                         >
-                          <HiMinus className="h-3 w-3" />
+                          <HiMinus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                         </button>
-                        <span className="w-6 text-center text-xs font-semibold text-stone-900 select-none">
+                        <span className="w-5 sm:w-6 text-center text-xs font-semibold text-stone-900 select-none">
                           {item.quantity}
                         </span>
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
                           aria-label={`Increase quantity of ${displayName}`}
-                          className="flex h-6 w-5 items-center justify-center text-xs font-bold text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
+                          className="flex h-5 w-4.5 sm:h-6 sm:w-5 items-center justify-center text-xs font-bold text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
                         >
-                          <HiPlus className="h-3 w-3" />
+                          <HiPlus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                         </button>
                       </div>
 
@@ -127,9 +128,9 @@ export default function CartDrawer({ open, onClose }) {
                         type="button"
                         onClick={() => removeFromCart(item.id)}
                         aria-label={`Remove ${displayName} from cart`}
-                        className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-widest text-red-500 hover:text-red-700 transition-colors cursor-pointer uppercase group"
+                        className="inline-flex items-center gap-1 sm:gap-1.5 text-[10.5px] sm:text-[11px] font-bold tracking-wider text-red-500 hover:text-red-700 transition-colors cursor-pointer uppercase group shrink-0"
                       >
-                        <HiOutlineTrash className="h-4 w-4 text-red-500 group-hover:text-red-700 transition-colors" />
+                        <HiOutlineTrash className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500 group-hover:text-red-700 transition-colors" />
                         <span>REMOVE</span>
                       </button>
                     </div>
@@ -143,7 +144,7 @@ export default function CartDrawer({ open, onClose }) {
         )}
 
         {/* ─── Footer: Subtotal + Checkout + Continue Shopping ────── */}
-        <footer className="relative z-10 border-t border-stone-200/80 bg-white px-6 pb-6 pt-5 shadow-[0_-8px_24px_rgba(0,0,0,0.03)]">
+        <footer className="relative z-10 border-t border-stone-200/80 bg-white px-4 sm:px-6 pb-6 pt-4 sm:pt-5 shadow-[0_-8px_24px_rgba(0,0,0,0.03)]">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-[0.16em] text-stone-800">
               SUBTOTAL

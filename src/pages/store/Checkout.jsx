@@ -317,7 +317,9 @@ export default function Checkout() {
 
   const finalTotal = isTestUser && calculatedTotal > 0 ? 1 : calculatedTotal;
   const totalQuantity = cart.reduce((sum, item) => sum + Number(item.quantity || 1), 0);
-  const codDueNow = Math.min(finalTotal, Number(codFee?.calculatedCharge || 0));
+  const codDueNow = isTestUser && finalTotal > 0
+    ? (codFee?.isAvailable ? 1 : 0)
+    : Math.min(finalTotal, Number(codFee?.calculatedCharge || 0));
   const codRemaining = Math.max(0, finalTotal - codDueNow);
 
   const paymentAmount = useMemo(() => Math.round(finalTotal * 100) / 100, [finalTotal]);
@@ -355,7 +357,8 @@ export default function Checkout() {
 
   const loadCodFee = useCallback(async (silent = false) => {
     try {
-      const data = unwrapResponse(await checkoutAPI.calculateCodFee(paymentAmount));
+      const evalAmount = Math.max(0, calculatedTotal || paymentAmount);
+      const data = unwrapResponse(await checkoutAPI.calculateCodFee(evalAmount));
       if (!data?.isAvailable) {
         setCodFee(null);
         if (!silent) {
@@ -372,13 +375,13 @@ export default function Checkout() {
         toast.error(error.response?.data?.message || 'Could not check cash on delivery availability.');
       }
     }
-  }, [paymentAmount]);
+  }, [calculatedTotal, paymentAmount]);
 
   useEffect(() => {
-    if (paymentAmount > 0) {
+    if (calculatedTotal > 0 || paymentAmount > 0) {
       loadCodFee(true);
     }
-  }, [paymentAmount, loadCodFee]);
+  }, [calculatedTotal, paymentAmount, loadCodFee]);
 
   const handlePaymentChange = (method) => {
     setPaymentMethod(method);
@@ -649,7 +652,7 @@ export default function Checkout() {
                   value={form.email}
                   onChange={updateField('email')}
                   required
-                  className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                  className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-base sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
                 />
               </div>
             </section>
@@ -767,17 +770,18 @@ export default function Checkout() {
                 </div>
               ) : (
                 <div className="space-y-3 pt-1">
-                  <div className="flex items-center justify-between pb-1">
-                    <span className="text-xs font-bold text-stone-700 uppercase tracking-wider">
+                  <div className="flex items-center justify-between gap-2 pb-1">
+                    <span className="text-xs font-bold text-stone-700 uppercase tracking-wider whitespace-nowrap">
                       New Delivery Address
                     </span>
                     <button
                       type="button"
                       onClick={handleUseLocation}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8c6536] hover:text-[#75522b] bg-[#fbf5ee] hover:bg-[#f5ecdf] border border-[#ebd9c8] px-3 py-1.5 rounded-lg transition cursor-pointer shadow-2xs"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8c6536] hover:text-[#75522b] bg-[#fbf5ee] hover:bg-[#f5ecdf] border border-[#ebd9c8] px-2.5 sm:px-3 py-1.5 rounded-lg transition cursor-pointer shadow-2xs shrink-0"
                     >
-                      <HiOutlineLocationMarker className="h-3.5 w-3.5 text-[#8c6536]" />
-                      <span>Use Current Location</span>
+                      <HiOutlineLocationMarker className="h-3.5 w-3.5 text-[#8c6536] shrink-0" />
+                      <span className="hidden sm:inline">Use Current Location</span>
+                      <span className="sm:hidden">Current Location</span>
                     </button>
                   </div>
                   {/* Row 1: First Name & Last Name */}
@@ -785,7 +789,7 @@ export default function Checkout() {
                     <div className="relative">
                       <HiOutlineUser className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                       <input
-                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-base sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
                         autoComplete="given-name"
                         placeholder="First Name *"
                         value={form.firstName}
@@ -796,7 +800,7 @@ export default function Checkout() {
                     <div className="relative">
                       <HiOutlineUser className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                       <input
-                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-base sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
                         autoComplete="family-name"
                         placeholder="Last Name *"
                         value={form.lastName}
@@ -810,7 +814,7 @@ export default function Checkout() {
                   <div className="relative">
                     <HiOutlineHome className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                     <input
-                      className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                      className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-base sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
                       autoComplete="address-line1"
                       placeholder="Address (House no, Street, Landmark) *"
                       value={form.addressLine}
@@ -837,7 +841,7 @@ export default function Checkout() {
                     <div className="relative">
                       <HiOutlineOfficeBuilding className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                       <input
-                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-base sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
                         autoComplete="address-level2"
                         placeholder="City *"
                         value={form.city}
@@ -849,7 +853,7 @@ export default function Checkout() {
                     <div className="relative">
                       <HiOutlineLocationMarker className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                       <input
-                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-xs sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-base sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
                         autoComplete="postal-code"
                         inputMode="numeric"
                         placeholder="PIN Code *"
@@ -876,7 +880,7 @@ export default function Checkout() {
                   </div>
 
                   {/* Actions when adding new address */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-stone-100">
+                  <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-3 pt-3 border-t border-stone-100">
                     {addresses.length > 0 && (
                       <button
                         type="button"
@@ -885,9 +889,9 @@ export default function Checkout() {
                           const sel = addresses.find((a) => String(a._id) === selectedAddressId) || addresses[0];
                           if (sel) applySavedAddress(sel);
                         }}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 text-xs font-semibold tracking-wide transition shadow-2xs hover:border-stone-300 cursor-pointer"
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 sm:py-2 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 text-xs font-semibold tracking-wide transition shadow-2xs hover:border-stone-300 cursor-pointer text-center"
                       >
-                        <HiOutlineArrowLeft className="h-3.5 w-3.5 text-stone-500" />
+                        <HiOutlineArrowLeft className="h-3.5 w-3.5 text-stone-500 shrink-0" />
                         <span>Cancel & Use Saved Address</span>
                       </button>
                     )}
@@ -895,9 +899,9 @@ export default function Checkout() {
                       type="button"
                       onClick={handleSaveNewAddress}
                       disabled={savingAddress}
-                      className="ml-auto inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#8c6536] hover:bg-[#75522b] text-white text-xs font-semibold tracking-wide transition shadow-sm cursor-pointer disabled:opacity-60"
+                      className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-1.5 px-5 py-2.5 sm:py-2 rounded-xl bg-[#8c6536] hover:bg-[#75522b] text-white text-xs font-semibold tracking-wide transition shadow-sm cursor-pointer disabled:opacity-60 text-center"
                     >
-                      <HiOutlineCheck className="h-3.5 w-3.5" />
+                      <HiOutlineCheck className="h-3.5 w-3.5 shrink-0" />
                       <span>{savingAddress ? 'Saving...' : 'Save & Use This Address'}</span>
                     </button>
                   </div>
@@ -998,7 +1002,7 @@ export default function Checkout() {
               <button
                 type="submit"
                 disabled={submitting || isSendingOtp}
-                className="inline-flex h-12 items-center justify-center gap-2.5 rounded-xl bg-[#8c6536] px-8 text-xs sm:text-sm font-semibold text-white transition hover:bg-[#75522b] disabled:opacity-60 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+                className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2.5 rounded-xl bg-[#8c6536] px-8 text-xs sm:text-sm font-semibold text-white transition hover:bg-[#75522b] disabled:opacity-60 disabled:cursor-not-allowed shadow-xs cursor-pointer"
               >
                 <span>
                   {submitting
@@ -1015,7 +1019,7 @@ export default function Checkout() {
           </div>
 
           {/* Right Column: Order Summary Card */}
-          <aside className="rounded-2xl border border-stone-200/90 bg-white p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-6 lg:sticky lg:top-[164px] z-20">
+          <aside className="rounded-2xl border border-stone-200/90 bg-white p-4 sm:p-6 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-5 sm:space-y-6 lg:sticky lg:top-[164px] z-20">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-stone-100">
               <div className="flex items-center gap-2.5">
@@ -1173,7 +1177,8 @@ export default function Checkout() {
                   </label>
                   <div className="flex items-center gap-2">
                     <input
-                      className={`h-10 min-w-0 flex-1 rounded-xl border bg-white px-3.5 text-xs text-stone-800 placeholder:text-stone-400 outline-none transition ${
+                      type="text"
+                      className={`h-10 min-w-0 flex-1 rounded-xl border bg-white px-3 sm:px-3.5 text-base sm:text-xs text-stone-800 placeholder:text-stone-400 outline-none transition ${
                         couponError
                           ? 'border-red-400 focus:border-red-500 bg-red-50/20'
                           : 'border-stone-200 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]'
@@ -1196,7 +1201,7 @@ export default function Checkout() {
                       type="button"
                       onClick={handleApplyCoupon}
                       disabled={couponLoading || !couponCode.trim()}
-                      className="h-10 px-5 rounded-xl bg-[#f2e6db] hover:bg-[#e8dacb] active:scale-[0.98] text-xs font-bold text-stone-900 transition disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center shrink-0 shadow-2xs"
+                      className="h-10 px-4 sm:px-5 rounded-xl bg-[#f2e6db] hover:bg-[#e8dacb] active:scale-[0.98] text-xs font-bold text-stone-900 transition disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center shrink-0 shadow-2xs"
                     >
                       {couponLoading ? 'Verifying...' : 'Apply'}
                     </button>

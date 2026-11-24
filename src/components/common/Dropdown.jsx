@@ -58,6 +58,7 @@ export default function Dropdown({
   const menuRef = useRef(null);
   const listRef = useRef(null);
   const searchInputRef = useRef(null);
+  const isPointerDownRef = useRef(false);
   const generatedId = useId();
   const dropdownId = id || generatedId;
 
@@ -198,6 +199,42 @@ export default function Dropdown({
     };
   }, [isOpen]);
 
+  const handleTriggerPointerDown = () => {
+    isPointerDownRef.current = true;
+  };
+
+  const handleClick = () => {
+    if (disabled) return;
+    isPointerDownRef.current = false;
+    setIsOpen((prev) => !prev);
+  };
+
+  // Focus handler: Opens dropdown when focused via keyboard Tab
+  const handleFocus = () => {
+    if (disabled) return;
+    // If focus was triggered by a mouse click, do not auto-open here; handleClick handles toggle
+    if (isPointerDownRef.current) return;
+
+    // Focused via keyboard (Tab / Shift+Tab) -> automatically open dropdown list!
+    setIsOpen(true);
+    setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
+  };
+
+  // Blur handler: When focus leaves the dropdown container, cleanly close it
+  const handleBlur = (e) => {
+    if (
+      e.relatedTarget &&
+      (containerRef.current?.contains(e.relatedTarget) || menuRef.current?.contains(e.relatedTarget))
+    ) {
+      return;
+    }
+    if (!e.relatedTarget) {
+      return;
+    }
+    setIsOpen(false);
+    setHighlightedIndex(-1);
+  };
+
   // Keyboard navigation
   const handleKeyDown = (e) => {
     if (disabled) return;
@@ -242,6 +279,7 @@ export default function Dropdown({
       }
     } else if (e.key === 'Escape' || e.key === 'Tab') {
       setIsOpen(false);
+      setHighlightedIndex(-1);
     }
   };
 
@@ -300,7 +338,10 @@ export default function Dropdown({
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={handleClick}
+        onPointerDown={handleTriggerPointerDown}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         className={`w-full flex items-center justify-between gap-2.5 text-left transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
           buttonClassName
             ? buttonClassName

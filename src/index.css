@@ -17,6 +17,13 @@
     -moz-osx-font-smoothing: grayscale;
     background-color: #ffffff;
     color: #22201e;
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  html {
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
   .font-script {
@@ -85,6 +92,22 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Prevent iOS Safari from auto-zooming into inputs when focused (Safari zooms if font-size < 16px) */
+  @media screen and (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="number"],
+    input[type="password"],
+    input[type="search"],
+    input[type="date"],
+    input:not([type]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
   }
 }
 

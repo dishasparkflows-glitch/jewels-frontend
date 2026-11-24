@@ -724,106 +724,207 @@ export default function Shop({ defaultCategory = '' }) {
             {!loading && !error && pagination.totalDocs > 0 && (
               <nav
                 aria-label="Product pagination"
-                className="mt-12 sm:mt-16 pt-8 border-t border-stone-200/80 flex flex-col sm:flex-row items-center justify-between gap-4"
+                className="mt-12 sm:mt-16 pt-6 sm:pt-8 border-t border-stone-200/80 flex flex-col items-center gap-4"
               >
-                {/* Product count summary */}
-                <div className="text-xs sm:text-sm text-stone-500 font-medium order-2 sm:order-1">
-                  Showing{' '}
-                  <span className="font-semibold text-stone-800">
-                    {Math.min((page - 1) * limit + 1, pagination.totalDocs)}
-                  </span>
-                  {' '}–{' '}
-                  <span className="font-semibold text-stone-800">
-                    {Math.min(page * limit, pagination.totalDocs)}
-                  </span>
-                  {' '}of{' '}
-                  <span className="font-semibold text-stone-800">
-                    {pagination.totalDocs}
-                  </span>
-                  {' '}{pagination.totalDocs === 1 ? 'product' : 'products'}
-                </div>
+                {/* Desktop View (Single unified row) */}
+                <div className="hidden sm:flex items-center justify-between w-full">
+                  {/* Product count summary */}
+                  <div className="text-xs sm:text-sm text-stone-500 font-medium">
+                    Showing{' '}
+                    <span className="font-semibold text-stone-800">
+                      {Math.min((page - 1) * limit + 1, pagination.totalDocs)}
+                    </span>
+                    {' '}–{' '}
+                    <span className="font-semibold text-stone-800">
+                      {Math.min(page * limit, pagination.totalDocs)}
+                    </span>
+                    {' '}of{' '}
+                    <span className="font-semibold text-stone-800">
+                      {pagination.totalDocs}
+                    </span>
+                    {' '}{pagination.totalDocs === 1 ? 'product' : 'products'}
+                  </div>
 
-                {/* Page Buttons */}
-                <div className="flex items-center gap-1 sm:gap-1.5 order-1 sm:order-2">
-                  {/* Previous Page Button */}
-                  <button
-                    type="button"
-                    disabled={page <= 1}
-                    onClick={() => goToPage(page - 1)}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
-                    aria-label="Previous page"
-                    title="Previous page"
-                  >
-                    <HiOutlineChevronLeft className="w-4 h-4" />
-                  </button>
+                  {/* Page Buttons */}
+                  <div className="flex items-center gap-1.5">
+                    {/* Previous Page Button */}
+                    <button
+                      type="button"
+                      disabled={page <= 1}
+                      onClick={() => goToPage(page - 1)}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer shadow-2xs"
+                      aria-label="Previous page"
+                      title="Previous page"
+                    >
+                      <HiOutlineChevronLeft className="w-4 h-4" />
+                    </button>
 
-                  {/* Numbered Page Buttons */}
-                  {getPageNumbers(page, pagination.totalPages).map((pageNum, idx) => {
-                    if (pageNum === '...') {
+                    {/* Numbered Page Buttons */}
+                    {getPageNumbers(page, pagination.totalPages).map((pageNum, idx) => {
+                      if (pageNum === '...') {
+                        return (
+                          <span
+                            key={`ellipsis-${idx}`}
+                            className="px-2 py-1 text-xs sm:text-sm text-stone-400 select-none"
+                          >
+                            …
+                          </span>
+                        );
+                      }
+                      const isActive = pageNum === page;
                       return (
-                        <span
-                          key={`ellipsis-${idx}`}
-                          className="px-2 py-1 text-xs sm:text-sm text-stone-400 select-none"
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => goToPage(pageNum)}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={`min-w-[36px] h-9 px-3 flex items-center justify-center text-xs sm:text-sm font-medium rounded-lg transition-all duration-150 cursor-pointer ${
+                            isActive
+                              ? 'bg-[#8b6f4e] text-white border border-[#8b6f4e] shadow-2xs font-semibold'
+                              : 'bg-white text-stone-700 border border-stone-200 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e]'
+                          }`}
                         >
-                          …
-                        </span>
+                          {pageNum}
+                        </button>
                       );
-                    }
-                    const isActive = pageNum === page;
-                    return (
-                      <button
-                        key={pageNum}
-                        type="button"
-                        onClick={() => goToPage(pageNum)}
-                        aria-current={isActive ? 'page' : undefined}
-                        className={`min-w-[36px] h-9 px-3 flex items-center justify-center text-xs sm:text-sm font-medium rounded-lg transition-all duration-150 cursor-pointer ${
-                          isActive
-                            ? 'bg-[#8b6f4e] text-white border border-[#8b6f4e] shadow-xs font-semibold'
-                            : 'bg-white text-stone-700 border border-stone-200 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e]'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
+                    })}
 
-                  {/* Next Page Button */}
-                  <button
-                    type="button"
-                    disabled={page >= pagination.totalPages}
-                    onClick={() => goToPage(page + 1)}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer"
-                    aria-label="Next page"
-                    title="Next page"
-                  >
-                    <HiOutlineChevronRight className="w-4 h-4" />
-                  </button>
+                    {/* Next Page Button */}
+                    <button
+                      type="button"
+                      disabled={page >= pagination.totalPages}
+                      onClick={() => goToPage(page + 1)}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer shadow-2xs"
+                      aria-label="Next page"
+                      title="Next page"
+                    >
+                      <HiOutlineChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Per Page Dropdown Selector */}
+                  <div className="flex items-center gap-2 text-xs text-stone-500 font-medium">
+                    <span>Show:</span>
+                    <Dropdown
+                      value={limit}
+                      onChange={(val) => {
+                        const next = new URLSearchParams(params);
+                        next.delete('page');
+                        next.set('limit', String(val));
+                        setParams(next);
+                        scrollToTop();
+                        requestAnimationFrame(scrollToTop);
+                      }}
+                      options={[
+                        { value: 12, label: '12' },
+                        { value: 24, label: '24' },
+                        { value: 48, label: '48' },
+                      ]}
+                      size="sm"
+                      direction="up"
+                      className="w-20 text-xs"
+                      menuClassName="min-w-[5rem]"
+                      showDivider={false}
+                    />
+                  </div>
                 </div>
 
-                {/* Per Page Dropdown Selector */}
-                <div className="flex items-center gap-2 text-xs text-stone-500 font-medium order-3">
-                  <span className="hidden sm:inline">Items:</span>
-                  <Dropdown
-                    value={limit}
-                    onChange={(val) => {
-                      const next = new URLSearchParams(params);
-                      next.delete('page');
-                      next.set('limit', String(val));
-                      setParams(next);
-                      scrollToTop();
-                      requestAnimationFrame(scrollToTop);
-                    }}
-                    options={[
-                      { value: 12, label: '12' },
-                      { value: 24, label: '24' },
-                      { value: 48, label: '48' },
-                    ]}
-                    size="sm"
-                    direction="up"
-                    className="w-24 sm:w-28 text-xs"
-                    menuClassName="min-w-[6rem]"
-                    showDivider={false}
-                  />
+                {/* Mobile View (Clean 2-row layout) */}
+                <div className="flex sm:hidden flex-col items-center w-full gap-3">
+                  {/* Page Buttons - Centered */}
+                  <div className="flex items-center justify-center gap-1.5">
+                    {/* Previous Page Button */}
+                    <button
+                      type="button"
+                      disabled={page <= 1}
+                      onClick={() => goToPage(page - 1)}
+                      className="w-9 h-9 flex items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-700 active:bg-[#FAF7F2] active:border-[#8b6f4e] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs"
+                      aria-label="Previous page"
+                    >
+                      <HiOutlineChevronLeft className="w-4 h-4" />
+                    </button>
+
+                    {/* Numbered Page Buttons */}
+                    {getPageNumbers(page, pagination.totalPages).map((pageNum, idx) => {
+                      if (pageNum === '...') {
+                        return (
+                          <span
+                            key={`ellipsis-${idx}`}
+                            className="px-1 text-xs text-stone-400 select-none"
+                          >
+                            …
+                          </span>
+                        );
+                      }
+                      const isActive = pageNum === page;
+                      return (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => goToPage(pageNum)}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={`min-w-[36px] h-9 px-3 flex items-center justify-center text-xs font-semibold rounded-xl transition-all ${
+                            isActive
+                              ? 'bg-[#8b6f4e] text-white border border-[#8b6f4e] shadow-xs'
+                              : 'bg-white text-stone-700 border border-stone-200 active:bg-[#FAF7F2]'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+
+                    {/* Next Page Button */}
+                    <button
+                      type="button"
+                      disabled={page >= pagination.totalPages}
+                      onClick={() => goToPage(page + 1)}
+                      className="w-9 h-9 flex items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-700 active:bg-[#FAF7F2] active:border-[#8b6f4e] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs"
+                      aria-label="Next page"
+                    >
+                      <HiOutlineChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Summary & Per Page Bar */}
+                  <div className="flex items-center justify-between w-full pt-3 border-t border-stone-100 text-[11px] text-stone-500">
+                    <div>
+                      Showing{' '}
+                      <span className="font-semibold text-stone-800">
+                        {Math.min((page - 1) * limit + 1, pagination.totalDocs)}–{Math.min(page * limit, pagination.totalDocs)}
+                      </span>
+                      {' '}of{' '}
+                      <span className="font-semibold text-stone-800">
+                        {pagination.totalDocs}
+                      </span>
+                      {' '}products
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-stone-400">Show:</span>
+                      <Dropdown
+                        value={limit}
+                        onChange={(val) => {
+                          const next = new URLSearchParams(params);
+                          next.delete('page');
+                          next.set('limit', String(val));
+                          setParams(next);
+                          scrollToTop();
+                          requestAnimationFrame(scrollToTop);
+                        }}
+                        options={[
+                          { value: 12, label: '12' },
+                          { value: 24, label: '24' },
+                          { value: 48, label: '48' },
+                        ]}
+                        size="sm"
+                        direction="up"
+                        className="w-18 text-xs"
+                        menuClassName="min-w-[4.5rem]"
+                        showDivider={false}
+                      />
+                    </div>
+                  </div>
                 </div>
               </nav>
             )}

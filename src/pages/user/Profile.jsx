@@ -33,12 +33,18 @@ import {
   HiOutlineShoppingCart,
   HiOutlineArrowLeft,
   HiOutlineDotsVertical,
+  HiOutlineChevronLeft,
+  HiOutlineChevronRight,
 } from 'react-icons/hi';
 import { HiOutlineSquare3Stack3D } from 'react-icons/hi2';
 import { getImageUrl } from '../../utils/imageUrl';
 import CustomerTrackingModal from '../../components/common/CustomerTrackingModal';
 import { getItemSpecs } from '../../utils/productSpecs';
 import ItemSpecsDisplay from '../../components/common/ItemSpecsDisplay';
+
+// In-memory module cache for user orders to eliminate loading latency and tab-switch flashing
+const userOrdersCache = new Map();
+const ordersInFlightMap = new Map();
 
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 'Haryana',
@@ -223,9 +229,42 @@ const Profile = () => {
     }
   }, [tabParam]);
 
-  // Orders state
-  const [orders, setOrders] = useState([]);
+  // Orders state & pagination
+  const [orders, setOrders] = useState(() => {
+    const defaultKey = user?._id ? `${user._id}_p1_l10` : null;
+    if (defaultKey && userOrdersCache.has(defaultKey)) {
+      return userOrdersCache.get(defaultKey)?.items || [];
+    }
+    if (user?._id && userOrdersCache.has(user._id)) {
+      const legacy = userOrdersCache.get(user._id);
+      return Array.isArray(legacy) ? legacy : legacy?.items || [];
+    }
+    return [];
+  });
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [orderPage, setOrderPage] = useState(1);
+  const [orderLimit, setOrderLimit] = useState(10);
+  const [orderPagination, setOrderPagination] = useState(() => {
+    const defaultKey = user?._id ? `${user._id}_p1_l10` : null;
+    if (defaultKey && userOrdersCache.has(defaultKey)) {
+      return userOrdersCache.get(defaultKey)?.pagination || {
+        currentPage: 1,
+        totalPages: 1,
+        totalDocs: 0,
+        limit: 10,
+        hasNextPage: false,
+        hasPrevPage: false,
+      };
+    }
+    return {
+      currentPage: 1,
+      totalPages: 1,
+      totalDocs: 0,
+      limit: 10,
+      hasNextPage: false,
+      hasPrevPage: false,
+    };
+  });
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [trackingOrder, setTrackingOrder] = useState(null);
   const [reorderingId, setReorderingId] = useState(null);
@@ -324,16 +363,109 @@ const Profile = () => {
     }
   };
 
-  // Load orders from API
-  const fetchOrders = async () => {
+  const getPageNumbers = (current, total) => {
+    if (!total || total <= 1) return [1];
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    if (current <= 4) {
+      return [1, 2, 3, 4, 5, '...', total];
+    }
+    if (current >= total - 3) {
+      return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+    }
+    return [1, '...', current - 1, current, current + 1, '...', total];
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 150);
+  };
+
+  const handleOrderPageChange = (newPage) => {
+    if (newPage < 1 || (orderPagination.totalPages && newPage > orderPagination.totalPages) || newPage === orderPage) {
+      return;
+    }
+    setOrderPage(newPage);
+    fetchOrders(false, newPage, orderLimit);
+    scrollToTop();
+  };
+
+  const handleOrderLimitChange = (newLimit) => {
+    const numLimit = Number(newLimit) || 10;
+    setOrderLimit(numLimit);
+    setOrderPage(1);
+    fetchOrders(false, 1, numLimit);
+    scrollToTop();
+  };
+
+  // Load orders from API (with silent background prefetching & SWR)
+  const fetchOrders = async (silent = false, targetPage = orderPage, targetLimit = orderLimit) => {
+    const flightKey = `${user?._id || 'anon'}_p${targetPage}_l${targetLimit}`;
+    if (ordersInFlightMap.has(flightKey)) {
+      return ordersInFlightMap.get(flightKey);
+    }
+
     try {
-      setOrdersLoading(true);
-      const res = await ordersAPI.getMyOrders();
+      const cacheKey = user?._id ? `${user._id}_p${targetPage}_l${targetLimit}` : null;
+      if (cacheKey && userOrdersCache.has(cacheKey)) {
+        const cached = userOrdersCache.get(cacheKey);
+        if (Array.isArray(cached?.items)) {
+          setOrders(cached.items);
+        }
+        if (cached?.pagination) {
+          setOrderPagination(cached.pagination);
+        }
+      } else if (!silent) {
+        setOrdersLoading(true);
+      }
+
+      const promise = ordersAPI.getMyOrders({ page: targetPage, limit: targetLimit });
+      ordersInFlightMap.set(flightKey, promise);
+
+      const res = await promise;
       const list = res?.data?.data?.items || res?.data?.items || res?.data?.data || res?.data || [];
-      setOrders(Array.isArray(list) ? list : []);
+      const validList = Array.isArray(list) ? list : [];
+      const paginationMeta = res?.data?.data?.pagination || res?.data?.pagination || {
+        currentPage: targetPage,
+        totalPages: Math.max(1, Math.ceil((validList.length || 1) / targetLimit)),
+        totalDocs: validList.length,
+        limit: targetLimit,
+        hasNextPage: false,
+        hasPrevPage: targetPage > 1,
+      };
+
+      setOrders(validList);
+      setOrderPagination(paginationMeta);
+      setOrderPage(paginationMeta.currentPage || targetPage);
+
+      if (cacheKey) {
+        userOrdersCache.set(cacheKey, { items: validList, pagination: paginationMeta });
+      }
+
+      // Preload primary images of all ordered items in the background
+      if (typeof window !== 'undefined') {
+        validList.forEach((order) => {
+          if (Array.isArray(order.items)) {
+            order.items.forEach((it) => {
+              const imgUrl = it.productId?.images?.[0]?.url || it.image;
+              if (imgUrl) {
+                const img = new Image();
+                img.src = imgUrl;
+              }
+            });
+          }
+        });
+      }
     } catch (err) {
       console.error('Failed to load orders:', err);
     } finally {
+      ordersInFlightMap.delete(flightKey);
       setOrdersLoading(false);
     }
   };
@@ -508,12 +640,14 @@ const Profile = () => {
   useEffect(() => {
     if (user?._id) {
       fetchAddresses();
+      // Silently prefetch orders in background so clicking the Orders tab is instantaneous
+      fetchOrders(true, 1, orderLimit);
     }
   }, [user?._id]);
 
   useEffect(() => {
     if (user?._id && activeTab === 'orders') {
-      fetchOrders();
+      fetchOrders(orders.length > 0, orderPage, orderLimit);
     }
   }, [user?._id, activeTab]);
 
@@ -802,6 +936,12 @@ const Profile = () => {
               {/* Orders Tab */}
               <button
                 onClick={() => setActiveTab('orders')}
+                onMouseEnter={() => {
+                  if (orders.length === 0) fetchOrders(true, 1, orderLimit);
+                }}
+                onTouchStart={() => {
+                  if (orders.length === 0) fetchOrders(true, 1, orderLimit);
+                }}
                 className={`flex items-center justify-between px-4 py-3.5 text-left transition-colors ${
                   activeTab === 'orders'
                     ? 'border-l-4 border-[#8b6f4e] bg-[#FAF7F2] font-medium text-[#8b6f4e]'
@@ -812,9 +952,9 @@ const Profile = () => {
                   <HiOutlineCube className={`w-4 h-4 ${activeTab === 'orders' ? 'text-[#8b6f4e]' : 'text-stone-500'}`} />
                   <span>Orders</span>
                 </div>
-                {(orders.length > 0 || (orderCount || 0) > 0) && (
+                {(orders.length > 0 || (orderPagination.totalDocs || orderCount || 0) > 0) && (
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#8b6f4e]/10 text-[#8b6f4e]">
-                    {orders.length > 0 ? orders.length : orderCount}
+                    {orderPagination.totalDocs || orders.length || orderCount}
                   </span>
                 )}
               </button>
@@ -885,7 +1025,7 @@ const Profile = () => {
                           {(userFullName?.[0] || user?.profile?.firstName?.[0] || 'D').toUpperCase()}
                         </div>
                         <div className="space-y-0.5 min-w-0">
-                          <h2 className="text-base sm:text-lg font-medium text-stone-900 leading-tight whitespace-nowrap" title={userFullName || `${user?.profile?.firstName || ''} ${user?.profile?.lastName || ''}`.trim()}>
+                          <h2 className="text-base sm:text-lg font-medium text-stone-900 leading-tight truncate max-w-[200px] sm:max-w-none" title={userFullName || `${user?.profile?.firstName || ''} ${user?.profile?.lastName || ''}`.trim()}>
                             {userFullName || `${user?.profile?.firstName || ''} ${user?.profile?.lastName || ''}`.trim() || 'Disha Customer'}
                           </h2>
                           <p className="text-xs text-stone-500 font-normal truncate max-w-[180px]" title={user?.auth?.email}>
@@ -1197,8 +1337,8 @@ const Profile = () => {
 
             {/* ─── TAB 3: ORDERS ────────────────────────────────────── */}
             {activeTab === 'orders' && (
-              <div className="space-y-4">
-                {ordersLoading ? (
+              <div className="space-y-4 transition-opacity duration-200 ease-out animate-fadeIn">
+                {ordersLoading && orders.length === 0 ? (
                   <div className="space-y-3">
                     {[1, 2].map((n) => (
                       <div key={n} className="bg-white rounded-xl border border-stone-200 p-5 space-y-3 animate-pulse">
@@ -1229,18 +1369,19 @@ const Profile = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-[#FAF7F2] rounded-2xl border border-[#EFE8DD] p-5 sm:p-7 space-y-5">
-                    <div className="flex items-center justify-center gap-2.5 text-center">
-                      <HiOutlineCube className="w-5.5 h-5.5 text-[#6d4a27] shrink-0" />
+                  <div className="bg-[#FAF7F2] rounded-2xl border border-[#EFE8DD] p-3 sm:p-4.5 space-y-3 sm:space-y-3.5">
+                    <div className="flex items-center justify-center gap-2 text-center pb-0.5">
+                      <HiOutlineCube className="w-4.5 h-4.5 text-[#6d4a27] shrink-0" />
                       <h2
+                        id="orders-section-heading"
                         style={{ fontFamily: '"Cormorant Garamond", Georgia, serif' }}
-                        className="text-xl sm:text-2xl font-medium sm:font-semibold text-[#1c1917] tracking-normal leading-snug"
+                        className="text-lg sm:text-xl font-medium sm:font-semibold text-[#1c1917] tracking-normal leading-tight"
                       >
-                        Order History ({orders.length})
+                        Order History ({orderPagination.totalDocs || orders.length})
                       </h2>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className={`space-y-3.5 transition-opacity duration-200 ${ordersLoading ? 'opacity-60 pointer-events-none' : ''}`}>
                       {orders.map((order) => {
                         const orderDate = formatOrderDate(order.meta?.createdAt || order.createdAt);
                         const totalAmount = order.pricing?.total ?? order.totalAmount ?? 0;
@@ -1255,7 +1396,7 @@ const Profile = () => {
                         return (
                           <div
                             key={order._id || order.id}
-                            className="bg-white rounded-2xl border border-[#EFE8DD] p-5 sm:p-6 space-y-4 shadow-2xs transition-all hover:shadow-xs"
+                            className="bg-white rounded-2xl border border-[#EFE8DD] p-4 sm:p-5 space-y-3.5 shadow-2xs transition-all hover:shadow-xs"
                           >
                             {/* Top Header Row */}
                             <div className="flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-stone-100">
@@ -1397,24 +1538,24 @@ const Profile = () => {
                             </div>
 
                             {/* Card Footer: Actions */}
-                            <div className="flex items-center justify-end gap-2.5 sm:gap-3 pt-2">
+                            <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 sm:gap-2.5 pt-2">
                               <button
                                 type="button"
                                 onClick={() => handleDownloadInvoice(order)}
                                 disabled={downloadingOrderId === (order._id || order.id)}
-                                className="px-4 py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
+                                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
                                 title="Download Official Tax Invoice (PDF)"
                               >
-                                <HiOutlineDocumentText className="w-4 h-4 text-[#7A5B3A]" />
+                                <HiOutlineDocumentText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#7A5B3A]" />
                                 <span>{downloadingOrderId === (order._id || order.id) ? 'Downloading...' : 'Download Invoice'}</span>
                               </button>
                               {Boolean(order.shiprocketInfo?.awbCode) && (
                                 <button
                                   type="button"
                                   onClick={() => setTrackingOrder(order)}
-                                  className="px-4 py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
+                                  className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
                                 >
-                                  <HiOutlineCube className="w-4 h-4 text-[#7A5B3A]" />
+                                  <HiOutlineCube className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#7A5B3A]" />
                                   <span>Track Package</span>
                                 </button>
                               )}
@@ -1425,7 +1566,7 @@ const Profile = () => {
                                     const target = order.items?.[0];
                                     if (target) openReviewModal(target, order);
                                   }}
-                                  className="px-4 py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
+                                  className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
                                 >
                                   <FaStar className="w-3.5 h-3.5 text-[#B88746]" />
                                   <span>Write Review</span>
@@ -1436,10 +1577,10 @@ const Profile = () => {
                                   type="button"
                                   disabled={reorderingId === (order._id || order.id)}
                                   onClick={() => handleBuyAgain(order)}
-                                  className="px-5 py-2 rounded-xl border border-[#78552B] bg-[#78552B] hover:bg-[#644621] text-white text-xs font-semibold transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 disabled:opacity-60 whitespace-nowrap"
+                                  className="px-4 sm:px-5 py-1.5 sm:py-2 rounded-xl border border-[#78552B] bg-[#78552B] hover:bg-[#644621] text-white text-xs font-semibold transition-all inline-flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs active:scale-95 disabled:opacity-60 whitespace-nowrap"
                                 >
                                   <HiOutlineShoppingCart
-                                    className={`w-4 h-4 text-white ${
+                                    className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-white ${
                                       reorderingId === (order._id || order.id) ? 'animate-spin' : ''
                                     }`}
                                   />
@@ -1449,9 +1590,9 @@ const Profile = () => {
                               <button
                                 type="button"
                                 onClick={() => setSelectedOrder(order)}
-                                className="px-4 py-2 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-700 text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
+                                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-stone-700 text-xs font-medium transition-all inline-flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
                               >
-                                <HiOutlineEye className="w-4 h-4 text-stone-600" />
+                                <HiOutlineEye className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-stone-600" />
                                 <span>View Details</span>
                               </button>
                             </div>
@@ -1459,6 +1600,199 @@ const Profile = () => {
                         );
                       })}
                     </div>
+
+                    {/* Pagination Controls */}
+                    {orderPagination.totalPages > 1 && (
+                      <nav
+                        aria-label="Order history pagination"
+                        className="mt-6 pt-5 border-t border-[#EFE8DD] flex flex-col items-center gap-4"
+                      >
+                        {/* Desktop View (Single unified row) */}
+                        <div className="hidden sm:flex items-center justify-between w-full">
+                          {/* Count Summary */}
+                          <div className="text-xs sm:text-sm text-stone-500 font-medium">
+                            Showing{' '}
+                            <span className="font-semibold text-stone-800">
+                              {Math.min((orderPage - 1) * orderLimit + 1, orderPagination.totalDocs || orders.length)}
+                            </span>
+                            {' '}–{' '}
+                            <span className="font-semibold text-stone-800">
+                              {Math.min(orderPage * orderLimit, orderPagination.totalDocs || orders.length)}
+                            </span>
+                            {' '}of{' '}
+                            <span className="font-semibold text-stone-800">
+                              {orderPagination.totalDocs || orders.length}
+                            </span>
+                            {' '}{(orderPagination.totalDocs || orders.length) === 1 ? 'order' : 'orders'}
+                          </div>
+
+                          {/* Page Buttons */}
+                          <div className="flex items-center gap-1.5">
+                            {/* Previous Page Button */}
+                            <button
+                              type="button"
+                              disabled={orderPage <= 1 || ordersLoading}
+                              onClick={() => handleOrderPageChange(orderPage - 1)}
+                              className="w-9 h-9 flex items-center justify-center rounded-lg border border-[#EFE8DD] bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-[#EFE8DD] disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer shadow-2xs"
+                              aria-label="Previous page"
+                              title="Previous page"
+                            >
+                              <HiOutlineChevronLeft className="w-4 h-4" />
+                            </button>
+
+                            {/* Numbered Page Buttons */}
+                            {getPageNumbers(orderPage, orderPagination.totalPages).map((pageNum, idx) => {
+                              if (pageNum === '...') {
+                                return (
+                                  <span
+                                    key={`ellipsis-${idx}`}
+                                    className="px-2 py-1 text-xs sm:text-sm text-stone-400 select-none"
+                                  >
+                                    …
+                                  </span>
+                                );
+                              }
+                              const isActive = pageNum === orderPage;
+                              return (
+                                <button
+                                  key={pageNum}
+                                  type="button"
+                                  disabled={ordersLoading}
+                                  onClick={() => handleOrderPageChange(pageNum)}
+                                  aria-current={isActive ? 'page' : undefined}
+                                  className={`min-w-[36px] h-9 px-3 flex items-center justify-center text-xs sm:text-sm font-medium rounded-lg transition-all duration-150 cursor-pointer ${
+                                    isActive
+                                      ? 'bg-[#8b6f4e] text-white border border-[#8b6f4e] shadow-2xs font-semibold'
+                                      : 'bg-white text-stone-700 border border-[#EFE8DD] hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e]'
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              );
+                            })}
+
+                            {/* Next Page Button */}
+                            <button
+                              type="button"
+                              disabled={orderPage >= orderPagination.totalPages || ordersLoading}
+                              onClick={() => handleOrderPageChange(orderPage + 1)}
+                              className="w-9 h-9 flex items-center justify-center rounded-lg border border-[#EFE8DD] bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-[#EFE8DD] disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer shadow-2xs"
+                              aria-label="Next page"
+                              title="Next page"
+                            >
+                              <HiOutlineChevronRight className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          {/* Per Page Dropdown Selector */}
+                          <div className="flex items-center gap-2 text-xs text-stone-500 font-medium">
+                            <span>Per page:</span>
+                            <Dropdown
+                              value={orderLimit}
+                              onChange={handleOrderLimitChange}
+                              options={[
+                                { value: 5, label: '5' },
+                                { value: 10, label: '10' },
+                                { value: 20, label: '20' },
+                              ]}
+                              size="sm"
+                              direction="up"
+                              className="w-20 text-xs"
+                              menuClassName="min-w-[5rem]"
+                              showDivider={false}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Mobile View (Clean 2-row layout) */}
+                        <div className="flex sm:hidden flex-col items-center w-full gap-3">
+                          {/* Page Buttons - Centered */}
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              disabled={orderPage <= 1 || ordersLoading}
+                              onClick={() => handleOrderPageChange(orderPage - 1)}
+                              className="w-9 h-9 flex items-center justify-center rounded-xl border border-[#EFE8DD] bg-white text-stone-700 active:bg-[#FAF7F2] active:border-[#8b6f4e] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs"
+                              aria-label="Previous page"
+                            >
+                              <HiOutlineChevronLeft className="w-4 h-4" />
+                            </button>
+
+                            {getPageNumbers(orderPage, orderPagination.totalPages).map((pageNum, idx) => {
+                              if (pageNum === '...') {
+                                return (
+                                  <span
+                                    key={`ellipsis-${idx}`}
+                                    className="px-1 text-xs text-stone-400 select-none"
+                                  >
+                                    …
+                                  </span>
+                                );
+                              }
+                              const isActive = pageNum === orderPage;
+                              return (
+                                <button
+                                  key={pageNum}
+                                  type="button"
+                                  disabled={ordersLoading}
+                                  onClick={() => handleOrderPageChange(pageNum)}
+                                  aria-current={isActive ? 'page' : undefined}
+                                  className={`min-w-[36px] h-9 px-3 flex items-center justify-center text-xs font-semibold rounded-xl transition-all ${
+                                    isActive
+                                      ? 'bg-[#8b6f4e] text-white border border-[#8b6f4e] shadow-xs'
+                                      : 'bg-white text-stone-700 border border-[#EFE8DD] active:bg-[#FAF7F2]'
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              );
+                            })}
+
+                            <button
+                              type="button"
+                              disabled={orderPage >= orderPagination.totalPages || ordersLoading}
+                              onClick={() => handleOrderPageChange(orderPage + 1)}
+                              className="w-9 h-9 flex items-center justify-center rounded-xl border border-[#EFE8DD] bg-white text-stone-700 active:bg-[#FAF7F2] active:border-[#8b6f4e] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs"
+                              aria-label="Next page"
+                            >
+                              <HiOutlineChevronRight className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          {/* Summary & Per Page Bar */}
+                          <div className="flex items-center justify-between w-full pt-3 border-t border-stone-150 text-[11px] text-stone-500">
+                            <div>
+                              Showing{' '}
+                              <span className="font-semibold text-stone-800">
+                                {Math.min((orderPage - 1) * orderLimit + 1, orderPagination.totalDocs || orders.length)}–{Math.min(orderPage * orderLimit, orderPagination.totalDocs || orders.length)}
+                              </span>
+                              {' '}of{' '}
+                              <span className="font-semibold text-stone-800">
+                                {orderPagination.totalDocs || orders.length}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-stone-400">Show:</span>
+                              <Dropdown
+                                value={orderLimit}
+                                onChange={handleOrderLimitChange}
+                                options={[
+                                  { value: 5, label: '5' },
+                                  { value: 10, label: '10' },
+                                  { value: 20, label: '20' },
+                                ]}
+                                size="sm"
+                                direction="up"
+                                className="w-18 text-xs"
+                                menuClassName="min-w-[4.5rem]"
+                                showDivider={false}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </nav>
+                    )}
                   </div>
                 )}
               </div>
@@ -1571,7 +1905,7 @@ const Profile = () => {
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-100">
+              <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-stone-100">
                 <button
                   type="button"
                   onClick={() => setEditProfileOpen(false)}
@@ -1781,18 +2115,18 @@ const Profile = () => {
               </div>
 
               {/* Footer Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4">
+              <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-3 pt-4">
                 <button
                   type="button"
                   onClick={() => setAddressModalOpen(false)}
-                  className="px-6 py-2.5 rounded-xl border border-[#d6cfc2] hover:bg-stone-50 text-stone-700 text-xs sm:text-sm font-medium transition cursor-pointer"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-[#d6cfc2] hover:bg-stone-50 text-stone-700 text-xs sm:text-sm font-medium transition cursor-pointer text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2.5 rounded-xl btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-xs sm:text-sm font-medium transition shadow-sm disabled:opacity-50 cursor-pointer"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-xs sm:text-sm font-medium transition shadow-sm disabled:opacity-50 cursor-pointer text-center"
                 >
                   {saving ? 'Saving...' : 'Save Address'}
                 </button>
@@ -1808,30 +2142,30 @@ const Profile = () => {
         return (
           <div
             onClick={() => setSelectedOrder(null)}
-            className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto cursor-pointer animate-fadeIn"
+            className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto cursor-pointer animate-fadeIn"
           >
             <div
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-2xl lg:max-w-3xl bg-[#fdfbf7] rounded-2xl shadow-2xl overflow-hidden animate-scale-in my-4 max-h-[92vh] flex flex-col cursor-default border border-[#e8ded0]"
+              className="w-full max-w-2xl lg:max-w-3xl bg-[#fdfbf7] rounded-2xl shadow-2xl overflow-hidden animate-scale-in my-auto sm:my-4 max-h-[92vh] flex flex-col cursor-default border border-[#e8ded0]"
             >
               {/* Modal Header */}
-              <div className="bg-[#291e16] text-white px-6 sm:px-7 py-4.5 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                    <HiOutlineCube className="w-5 h-5 sm:w-6 sm:h-6 text-[#d5c7b3]" />
+              <div className="bg-[#291e16] text-white px-4.5 sm:px-7 py-3.5 sm:py-4 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0">
+                    <HiOutlineCube className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-[#d5c7b3]" />
                   </div>
-                  <div>
-                    <h3 className="font-serif text-base sm:text-lg font-medium text-white leading-tight">
+                  <div className="min-w-0">
+                    <h3 className="font-serif text-sm sm:text-lg font-medium text-white leading-tight">
                       Order Details
                     </h3>
-                    <p className="font-mono text-xs sm:text-sm font-semibold text-stone-300 tracking-wider">
+                    <p className="font-mono text-xs sm:text-sm font-semibold text-stone-300 tracking-wider truncate mt-0.5">
                       #{selectedOrder.orderNumber}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedOrder(null)}
-                  className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-stone-400 hover:text-white transition-colors cursor-pointer"
+                  className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-stone-400 hover:text-white transition-colors cursor-pointer shrink-0 ml-2"
                   aria-label="Close modal"
                 >
                   <HiOutlineX className="w-5 h-5" />
@@ -2095,22 +2429,23 @@ const Profile = () => {
               </div>
 
               {/* Modal Footer */}
-              <div className="p-4 sm:px-7 bg-[#fcfbfa] border-t border-[#ebe1d3] flex flex-wrap items-center justify-between gap-3 shrink-0 rounded-b-2xl">
+              <div className="p-3.5 sm:p-5 sm:px-7 bg-[#fcfbfa] border-t border-[#ebe1d3] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0 rounded-b-2xl">
                 <Link
                   to={`/order-success?orderId=${selectedOrder._id || selectedOrder.id}&orderNumber=${encodeURIComponent(selectedOrder.orderNumber)}`}
-                  className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-[#8b6f4e] hover:text-[#755c3e] font-medium transition-colors cursor-pointer"
+                  className="inline-flex items-center justify-center sm:justify-start gap-1.5 text-xs sm:text-sm text-[#8b6f4e] hover:text-[#755c3e] font-medium transition-colors cursor-pointer py-0.5 sm:py-0"
                 >
-                  <HiOutlineDocumentText className="w-4 h-4" />
+                  <HiOutlineDocumentText className="w-4 h-4 shrink-0" />
                   <span>View Order Receipt →</span>
                 </Link>
-                <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+
+                <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
                   {selectedOrder.shiprocketInfo?.awbCode && (
                     <button
                       type="button"
                       onClick={() => setTrackingOrder(selectedOrder)}
-                      className="px-4 py-2 rounded-xl border border-[#dcc8b0] bg-[#faf6f0] hover:bg-[#f3eadf] text-[#7a5b3a] text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs whitespace-nowrap"
+                      className="px-3 sm:px-4 py-2 sm:py-2 rounded-xl border border-[#dcc8b0] bg-[#faf6f0] hover:bg-[#f3eadf] text-[#7a5b3a] text-xs font-medium transition-all inline-flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
                     >
-                      <HiOutlineCube className="w-4 h-4 text-[#7a5b3a]" />
+                      <HiOutlineCube className="w-4 h-4 text-[#7a5b3a] shrink-0" />
                       <span>Track Package</span>
                     </button>
                   )}
@@ -2121,9 +2456,9 @@ const Profile = () => {
                         const target = selectedOrder.items?.[0];
                         if (target) openReviewModal(target, selectedOrder);
                       }}
-                      className="px-4 py-2 rounded-xl border border-[#dcc8b0] bg-[#faf6f0] hover:bg-[#f3eadf] text-[#7a5b3a] text-xs font-medium transition-all inline-flex items-center gap-2 cursor-pointer shadow-2xs whitespace-nowrap"
+                      className="px-3 sm:px-4 py-2 sm:py-2 rounded-xl border border-[#dcc8b0] bg-[#faf6f0] hover:bg-[#f3eadf] text-[#7a5b3a] text-xs font-medium transition-all inline-flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs whitespace-nowrap active:scale-95"
                     >
-                      <FaStar className="w-3.5 h-3.5 text-[#a4784a]" />
+                      <FaStar className="w-3.5 h-3.5 text-[#a4784a] shrink-0" />
                       <span>Write Review</span>
                     </button>
                   )}
@@ -2135,16 +2470,16 @@ const Profile = () => {
                         handleBuyAgain(selectedOrder);
                         setSelectedOrder(null);
                       }}
-                      className="px-4.5 py-2 rounded-xl border border-[#785736] bg-[#785736] hover:bg-[#67492c] text-white text-xs font-semibold transition-all inline-flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-wait shadow-2xs whitespace-nowrap"
+                      className="px-3.5 sm:px-4.5 py-2 sm:py-2 rounded-xl border border-[#785736] bg-[#785736] hover:bg-[#67492c] text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-wait shadow-2xs whitespace-nowrap active:scale-95"
                     >
-                      <HiOutlineShoppingCart className={`w-4 h-4 ${reorderingId === (selectedOrder._id || selectedOrder.id) ? 'animate-spin' : ''}`} />
+                      <HiOutlineShoppingCart className={`w-4 h-4 shrink-0 ${reorderingId === (selectedOrder._id || selectedOrder.id) ? 'animate-spin' : ''}`} />
                       <span>{reorderingId === (selectedOrder._id || selectedOrder.id) ? 'Adding…' : 'Buy Again'}</span>
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={() => setSelectedOrder(null)}
-                    className="px-4.5 py-2 rounded-xl border border-stone-200 hover:border-stone-300 bg-white hover:bg-stone-50 text-stone-700 text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-2xs"
+                    className="px-4 sm:px-4.5 py-2 sm:py-2 rounded-xl border border-stone-200 hover:border-stone-300 bg-white hover:bg-stone-50 text-stone-700 text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-2xs inline-flex items-center justify-center active:scale-95 col-span-1 [&:only-child]:col-span-2 [&:nth-child(3):last-child]:col-span-2 sm:col-auto sm:[&:only-child]:col-auto sm:[&:nth-child(3):last-child]:col-auto"
                   >
                     Close
                   </button>
@@ -2322,7 +2657,7 @@ const Profile = () => {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-100">
+              <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-stone-100">
                 <button
                   type="button"
                   onClick={() => setReviewModalOpen(false)}

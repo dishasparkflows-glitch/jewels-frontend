@@ -38,7 +38,7 @@ export default function Modal({ open, onClose, label, children, className = '' }
       <div
         className={`relative ${
           isDrawer
-            ? 'h-full w-[min(460px,100vw)] max-h-none shadow-2xl'
+            ? 'h-full w-full max-w-full sm:max-w-[460px] sm:w-[460px] max-h-none shadow-2xl'
             : 'm-auto max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)]'
         } ${className}`}
         onClick={(e) => e.stopPropagation()}

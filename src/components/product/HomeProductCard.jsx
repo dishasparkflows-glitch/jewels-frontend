@@ -12,7 +12,7 @@ import ColorSwatches from "./ColorSwatches";
 export default function HomeProductCard({ product, isSilver: isSilverProp }) {
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const [addingToCart, setAddingToCart] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
 
   const {
     data,
@@ -35,13 +35,11 @@ export default function HomeProductCard({ product, isSilver: isSilverProp }) {
     hasDiscount,
   } = useProductCard(product, { isSilver: isSilverProp });
 
-  const handleAddToCart = async (e) => {
+  const handleAddToCart = (e) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
-    if (addingToCart) return;
-    setAddingToCart(true);
 
     try {
       const metalColorId = color?.id || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null;
@@ -54,7 +52,7 @@ export default function HomeProductCard({ product, isSilver: isSilverProp }) {
       }
 
       const price = Number(data.price) || 0;
-      await addToCart(
+      addToCart(
         {
           id: data.id,
           productId: data.id,
@@ -74,10 +72,10 @@ export default function HomeProductCard({ product, isSilver: isSilverProp }) {
           selectedMetal: activeColorName || color?.name || "",
         },
       );
+      setJustAdded(true);
+      setTimeout(() => setJustAdded(false), 1200);
     } catch (err) {
       console.error("Failed to add to cart from home card:", err);
-    } finally {
-      setAddingToCart(false);
     }
   };
 
@@ -130,15 +128,13 @@ export default function HomeProductCard({ product, isSilver: isSilverProp }) {
           <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm p-1.5 sm:p-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-20">
             <button
               type="button"
-              disabled={addingToCart}
               onClick={handleAddToCart}
-              className="w-full btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-75"
+              className="w-full btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
             >
-              {addingToCart ? (
-                <>
-                  <div className="w-3 h-3 sm:w-3.5 sm:h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Adding...</span>
-                </>
+              {justAdded ? (
+                <span className="text-white font-bold flex items-center gap-1 animate-fadeIn">
+                  ✓ Added
+                </span>
               ) : (
                 <>
                   <HiOutlineShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5" />

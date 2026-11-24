@@ -42,7 +42,7 @@ import { trackProductView } from '../../config/firebase';
 import { useLiveViewers } from '../../hooks/useLiveViewers';
 import Dropdown from '../../components/common/Dropdown';
 import ProductCard from '../../components/product/ProductCard';
-import SimilarProductsDrawer from '../../components/store/SimilarProductsDrawer';
+import SimilarProductsDrawer, { prefetchSimilarProducts } from '../../components/store/SimilarProductsDrawer';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
 import {
   calculateSizeAdjustedMetalWeight,
@@ -1145,6 +1145,12 @@ export default function ProductDetail() {
           }
           trackProductView(prodData);
 
+          // Silently prefetch similar products in background for instant, seamless viewing
+          const prodTargetId = prodData._id || prodData.id;
+          if (prodTargetId) {
+            prefetchSimilarProducts(prodTargetId);
+          }
+
           // Fetch most liked products from API
           productsAPI
             .getMostLiked({
@@ -1520,38 +1526,40 @@ export default function ProductDetail() {
             })()}
 
             {/* Price Row with Wishlist & Share */}
-            <div className="flex items-center justify-between gap-4 pb-3 border-b border-stone-100">
-              <div className="flex items-baseline flex-wrap gap-2 sm:gap-2.5">
-                <span className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight font-sans">
-                  {formatPrice(currentPrice)}
-                </span>
-                {Number(mrpPrice) > Number(currentPrice) && (
-                  <span className="text-sm sm:text-base text-stone-400 line-through">
-                    {formatPrice(mrpPrice)}
+            <div className="flex items-center justify-between gap-3 pb-3 border-b border-stone-100">
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <div className="flex items-baseline flex-wrap gap-1.5 sm:gap-2.5">
+                  <span className="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight font-sans">
+                    {formatPrice(currentPrice)}
                   </span>
-                )}
-                <span className="text-[11px] sm:text-xs text-stone-400 font-normal whitespace-nowrap">
+                  {Number(mrpPrice) > Number(currentPrice) && (
+                    <span className="text-sm sm:text-base text-stone-400 line-through">
+                      {formatPrice(mrpPrice)}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10.5px] sm:text-xs text-stone-400 font-normal whitespace-nowrap">
                   (MRP Incl. of all taxes)
                 </span>
               </div>
 
               {/* Action Buttons: Wishlist & Share (Styled matching GIVA) */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <div className="relative group">
                   <button
                     type="button"
                     onClick={handleToggleWishlist}
-                    className="p-1.5 rounded-full hover:bg-rose-50/80 text-stone-400 hover:text-[#e11d48] transition-all cursor-pointer flex items-center justify-center active:scale-90"
+                    className="p-1 sm:p-1.5 rounded-full hover:bg-rose-50/80 text-stone-400 hover:text-[#e11d48] transition-all cursor-pointer flex items-center justify-center active:scale-90"
                     aria-label={isItemWishlisted ? "Remove from wishlist" : "Add to wishlist"}
                   >
                     {isItemWishlisted ? (
-                      <HiHeart className="w-6 h-6 text-[#e11d48] fill-current drop-shadow-xs transition-transform duration-200 scale-105" />
+                      <HiHeart className="w-5 h-5 sm:w-6 sm:h-6 text-[#e11d48] fill-current drop-shadow-xs transition-transform duration-200 scale-105" />
                     ) : (
-                      <HiOutlineHeart className="w-6 h-6 transition-transform duration-200 hover:scale-110" />
+                      <HiOutlineHeart className="w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-200 hover:scale-110" />
                     )}
                   </button>
-                  {/* Tooltip matching GIVA reference screenshot */}
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                  {/* Tooltip matching GIVA reference screenshot - hidden on touch/mobile to prevent sticking */}
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden md:group-hover:flex flex-col items-center pointer-events-none z-30">
                     <div className="bg-black text-white text-[11px] font-medium px-2.5 py-1 rounded shadow-lg whitespace-nowrap">
                       {isItemWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                     </div>
@@ -1563,12 +1571,12 @@ export default function ProductDetail() {
                   <button
                     type="button"
                     onClick={handleShare}
-                    className="p-1.5 rounded-full hover:bg-stone-100 text-stone-500 hover:text-stone-900 transition-colors cursor-pointer flex items-center justify-center active:scale-90"
+                    className="p-1 sm:p-1.5 rounded-full hover:bg-stone-100 text-stone-500 hover:text-stone-900 transition-colors cursor-pointer flex items-center justify-center active:scale-90"
                     aria-label="Share piece"
                   >
                     <HiOutlineShare className="w-5 h-5" />
                   </button>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden md:group-hover:flex flex-col items-center pointer-events-none z-30">
                     <div className="bg-black text-white text-[11px] font-medium px-2.5 py-1 rounded shadow-lg whitespace-nowrap">
                       Share piece
                     </div>
@@ -1581,18 +1589,26 @@ export default function ProductDetail() {
                   <button
                     type="button"
                     onClick={() => setSimilarDrawerOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-stone-200 hover:border-[#8b6f4e]/60 bg-stone-50/80 hover:bg-[#FAF7F2] text-stone-700 hover:text-[#8b6f4e] transition-all cursor-pointer text-xs font-medium active:scale-95 shadow-2xs"
+                    onMouseEnter={() => {
+                      const pid = product?._id || product?.id;
+                      if (pid) prefetchSimilarProducts(pid);
+                    }}
+                    onTouchStart={() => {
+                      const pid = product?._id || product?.id;
+                      if (pid) prefetchSimilarProducts(pid);
+                    }}
+                    className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-stone-200 hover:border-[#8b6f4e]/60 bg-stone-50/80 hover:bg-[#FAF7F2] text-stone-700 hover:text-[#8b6f4e] transition-all cursor-pointer text-xs font-medium active:scale-95 shadow-2xs"
                     aria-label="View similar products"
                     title="View Similar Products"
                   >
                     <HiSparkles className="w-3.5 h-3.5 text-[#8b6f4e] shrink-0" />
-                    <span className="text-[11.5px] font-semibold tracking-wide">Similar</span>
+                    <span className="text-[11px] sm:text-[11.5px] font-semibold tracking-wide">Similar</span>
                   </button>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center pointer-events-none z-30">
+                  <div className="absolute bottom-full right-0 mb-2 hidden md:group-hover:flex flex-col items-end pointer-events-none z-30">
                     <div className="bg-black text-white text-[11px] font-medium px-2.5 py-1 rounded shadow-lg whitespace-nowrap">
                       View Similar Products
                     </div>
-                    <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-black" />
+                    <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-black mr-4" />
                   </div>
                 </div>
               </div>
