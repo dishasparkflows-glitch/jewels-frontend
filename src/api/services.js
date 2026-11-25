@@ -203,6 +203,7 @@ export const footerAPI = {
 export const wishlistAPI = {
   get: () => getOnce('/wishlist'),
   getCounts: () => getOnce('/cart/counts'),
+  merge: (items) => api.post('/wishlist/merge', { items }),
   toggle: ({ refId, itemType = 'product' }) => api.post('/wishlist/toggle', { refId, itemType }),
   add: ({ refId, itemType = 'product' }) => api.post('/wishlist/add', { refId, itemType }),
   remove: (refId) => api.delete(`/wishlist/${refId}`),
@@ -213,6 +214,7 @@ export const wishlistAPI = {
 export const cartAPI = {
   get: () => getOnce('/cart'),
   getCounts: () => getOnce('/cart/counts'),
+  merge: (items) => api.post('/cart/merge', { items }),
   add: (payload) =>
     api.post('/cart/add', {
       refId: payload?.refId,

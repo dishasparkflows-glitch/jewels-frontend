@@ -174,7 +174,7 @@ const ForgotPassword = () => {
                 onClick={() => setSent(false)}
                 className="text-xs font-semibold text-[#8b6f4e] hover:underline cursor-pointer block mx-auto"
               >
-                Didn't receive the email? Try again
+                Didn&apos;t receive the email? Try again
               </button>
             </div>
           )}

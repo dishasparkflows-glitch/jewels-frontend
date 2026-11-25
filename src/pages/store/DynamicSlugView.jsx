@@ -1,23 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { categoriesAPI } from '../../api/services';
+import { slugify, CATEGORY_ALIASES as aliases, getResponseItems as getItems } from '../../utils/common';
 import Shop from './Shop';
 import StaticPageView from './StaticPageView';
-
-const slugify = (value = '') =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-
-const aliases = {
-  necklaces: 'pendant',
-  bracelets: 'bangles-bracelets',
-  silver: 'silver-collection',
-};
-
-const getItems = (res) =>
-  Array.isArray(res?.data?.data) ? res.data.data : res?.data?.data?.items || [];
 
 /**
  * DynamicSlugView handles single-segment root routes like /:slug dynamically.

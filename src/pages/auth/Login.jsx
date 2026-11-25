@@ -257,7 +257,7 @@ const Login = () => {
           </form>
 
           <p className="mt-4 sm:mt-5 text-center text-xs sm:text-[13px] text-stone-500 font-normal">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link to="/register" state={{ from: returnTo }} className="font-bold text-[#715538] hover:text-[#523d26] transition-colors ml-0.5">
               Create Account
             </Link>

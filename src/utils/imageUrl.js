@@ -22,4 +22,28 @@ export function getImageUrl(url) {
   return url.trim();
 }
 
+/**
+ * Normalizes media URL from Cloudflare R2 / S3 / API or relative paths.
+ * @param {string|object} url
+ * @returns {string}
+ */
+export function getMediaUrl(url) {
+  if (!url) return '';
+  const raw = typeof url === 'object' ? (url.url || url.src || '') : String(url);
+  if (!raw) return '';
+  if (
+    raw.startsWith('http://') ||
+    raw.startsWith('https://') ||
+    raw.startsWith('blob:') ||
+    raw.startsWith('data:')
+  ) {
+    return raw;
+  }
+  const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(
+    /\/api\/?$/,
+    ''
+  );
+  return `${backendBase}${raw.startsWith('/') ? '' : '/'}${raw}`;
+}
+
 export default getImageUrl;

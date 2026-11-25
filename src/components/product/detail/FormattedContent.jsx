@@ -58,7 +58,7 @@ export default function FormattedContent({ content }) {
   };
 
   rawLines.forEach((line) => {
-    const bulletMatch = line.match(/^[•\-\*]\s*(.+)$/);
+    const bulletMatch = line.match(/^[•\-*]\s*(.+)$/);
     if (bulletMatch) {
       currentList.push(bulletMatch[1]);
     } else {

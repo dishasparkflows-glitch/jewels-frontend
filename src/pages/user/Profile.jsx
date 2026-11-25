@@ -3,6 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import SEO from '../../components/common/SEO';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
+import { useWishlist } from '../../contexts/WishlistContext';
+import WishlistProductCard from '../../components/product/WishlistProductCard';
 import { usersAPI, addressesAPI, ordersAPI, reviewsAPI } from '../../api/services';
 import { toast } from 'react-hot-toast';
 import Dropdown from '../../components/common/Dropdown';
@@ -10,6 +12,9 @@ import PhoneInput from '../../components/common/PhoneInput';
 import { FaStar } from 'react-icons/fa6';
 import {
   HiOutlineUser,
+  HiUser,
+  HiOutlineHeart,
+  HiHeart,
   HiOutlineCube,
   HiOutlineRefresh,
   HiOutlineLocationMarker,
@@ -33,7 +38,6 @@ import {
   HiOutlineTruck,
   HiOutlineShoppingCart,
   HiOutlineArrowLeft,
-  HiOutlineDotsVertical,
   HiOutlineChevronLeft,
   HiOutlineChevronRight,
 } from 'react-icons/hi';
@@ -225,10 +229,19 @@ const getStatusBannerInfo = (status = '') => {
 const Profile = () => {
   const { user, logout, updateUser } = useAuth();
   const { addToCart, openCartDrawer, orderCount, returnOrderCount } = useCart();
+  const {
+    wishlistItems,
+    wishlistCount,
+    loading: wishlistLoading,
+    isInitialLoaded: wishlistLoaded,
+    removeFromWishlist,
+    clearWishlist,
+    refreshWishlist,
+  } = useWishlist();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const validTabs = ['profile', 'orders', 'returns', 'addresses'];
+  const validTabs = ['profile', 'orders', 'returns', 'wishlist', 'addresses'];
   const [activeTab, setActiveTab] = useState(
     tabParam && validTabs.includes(tabParam) ? tabParam : 'profile'
   );
@@ -238,6 +251,12 @@ const Profile = () => {
       setActiveTab(tabParam);
     }
   }, [tabParam]);
+
+  useEffect(() => {
+    if (activeTab === 'wishlist') {
+      refreshWishlist({ silent: true });
+    }
+  }, [activeTab, refreshWishlist]);
 
   // Orders state & pagination
   const [orders, setOrders] = useState(() => {
@@ -901,51 +920,70 @@ const Profile = () => {
   };
 
   // Page title matching screenshots
-  const pageTitle = activeTab === 'addresses' ? 'Address Book' : 'My Dashboard';
+  const pageTitle =
+    activeTab === 'addresses'
+      ? 'Address Book'
+      : activeTab === 'wishlist'
+        ? 'My Wishlist'
+        : 'My Dashboard';
+  const greetingFirstName =
+    user?.profile?.firstName || userFullName?.split(' ')[0] || 'Guest';
 
   return (
     <div className="bg-[#fcfbfa] min-h-screen text-[#22201e] font-sans antialiased py-6 sm:py-8 px-3 sm:px-5 lg:px-6">
       <SEO title="My Account & Orders | Neirah Jewels" noindex={true} />
       <div className="max-w-6xl mx-auto space-y-5">
-        {/* Top Header: Title and Logout Button */}
+        {/* Top Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-serif text-2xl sm:text-3xl font-normal text-stone-900 tracking-tight">
               {pageTitle}
             </h1>
             <p className="text-xs sm:text-sm text-stone-500 font-normal mt-0.5">
-              Manage your profile, orders, returns and addresses all in one place.
+              Manage your profile, orders, returns, wishlist and addresses all in one place.
             </p>
           </div>
-          <button
-            onClick={logout}
-            className="border border-[#d6c7b2] rounded-lg px-4 py-2 text-xs font-medium text-[#8b6f4e] hover:bg-[#FAF7F2] transition-colors flex items-center gap-1.5"
-          >
-            <HiOutlineLogout className="w-4 h-4 text-[#8b6f4e]" />
-            <span>Logout</span>
-          </button>
         </div>
 
         {/* Dashboard Layout: Sidebar + Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5 items-start">
           {/* Left Navigation Sidebar (3 cols on lg) */}
-          <div className="lg:col-span-3 bg-white rounded-xl border border-stone-200/80 shadow-xs overflow-hidden">
-            <nav className="flex flex-col text-xs sm:text-sm font-normal">
-              {/* Profile Tab */}
+          <div className="lg:col-span-3 bg-white rounded-2xl border border-stone-200/80 shadow-xs overflow-hidden">
+            {/* User Greeting Header */}
+            <div className="px-4 py-4 border-b border-stone-100 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[#8b6f4e] text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <HiUser className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-stone-900 leading-tight truncate">
+                  Hello, {greetingFirstName}
+                </p>
+                {user?.auth?.email && (
+                  <p className="text-[11px] text-stone-500 truncate mt-0.5">
+                    {user.auth.email}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <nav className="flex flex-col py-2 text-xs sm:text-[13px] font-medium">
+              {/* My Profile */}
               <button
+                type="button"
                 onClick={() => setActiveTab('profile')}
-                className={`flex items-center gap-3 px-4 py-3.5 text-left transition-colors ${
+                className={`relative flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer ${
                   activeTab === 'profile'
-                    ? 'border-l-4 border-[#8b6f4e] bg-[#FAF7F2] font-medium text-[#8b6f4e]'
-                    : 'text-stone-600 hover:bg-stone-50 hover:text-black border-l-4 border-transparent'
+                    ? 'bg-[#f7ebdc]/80 text-stone-900 font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:rounded-r-full before:bg-[#8b6f4e]'
+                    : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
                 }`}
               >
-                <HiOutlineUser className={`w-4 h-4 ${activeTab === 'profile' ? 'text-[#8b6f4e]' : 'text-stone-500'}`} />
-                <span>Profile</span>
+                <HiOutlineUser className={`w-[18px] h-[18px] shrink-0 ${activeTab === 'profile' ? 'text-stone-900' : 'text-stone-500'}`} />
+                <span>My Profile</span>
               </button>
 
-              {/* Orders Tab */}
+              {/* My Orders */}
               <button
+                type="button"
                 onClick={() => setActiveTab('orders')}
                 onMouseEnter={() => {
                   if (orders.length === 0) fetchOrders(true, 1, orderLimit);
@@ -953,54 +991,80 @@ const Profile = () => {
                 onTouchStart={() => {
                   if (orders.length === 0) fetchOrders(true, 1, orderLimit);
                 }}
-                className={`flex items-center justify-between px-4 py-3.5 text-left transition-colors ${
+                className={`relative flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer ${
                   activeTab === 'orders'
-                    ? 'border-l-4 border-[#8b6f4e] bg-[#FAF7F2] font-medium text-[#8b6f4e]'
-                    : 'text-stone-600 hover:bg-stone-50 hover:text-black border-l-4 border-transparent'
+                    ? 'bg-[#f7ebdc]/80 text-stone-900 font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:rounded-r-full before:bg-[#8b6f4e]'
+                    : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <HiOutlineCube className={`w-4 h-4 ${activeTab === 'orders' ? 'text-[#8b6f4e]' : 'text-stone-500'}`} />
-                  <span>Orders</span>
+                  <HiOutlineCube className={`w-[18px] h-[18px] shrink-0 ${activeTab === 'orders' ? 'text-stone-900' : 'text-stone-500'}`} />
+                  <span>My Orders</span>
                 </div>
                 {(orders.length > 0 || (orderPagination.totalDocs || orderCount || 0) > 0) && (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#8b6f4e]/10 text-[#8b6f4e]">
-                    {orderPagination.totalDocs || orders.length || orderCount}
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#f5e6d3] text-[#8b6f4e]">
+                    ({orderPagination.totalDocs || orders.length || orderCount})
                   </span>
                 )}
               </button>
 
-              {/* Returns Tab */}
+              {/* Returns & Refunds */}
               <button
+                type="button"
                 onClick={() => setActiveTab('returns')}
-                className={`flex items-center justify-between px-4 py-3.5 text-left transition-colors ${
+                className={`relative flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer ${
                   activeTab === 'returns'
-                    ? 'border-l-4 border-[#8b6f4e] bg-[#FAF7F2] font-medium text-[#8b6f4e]'
-                    : 'text-stone-600 hover:bg-stone-50 hover:text-black border-l-4 border-transparent'
+                    ? 'bg-[#f7ebdc]/80 text-stone-900 font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:rounded-r-full before:bg-[#8b6f4e]'
+                    : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <HiOutlineRefresh className={`w-4 h-4 ${activeTab === 'returns' ? 'text-[#8b6f4e]' : 'text-stone-500'}`} />
-                  <span>Returns</span>
+                  <HiOutlineRefresh className={`w-[18px] h-[18px] shrink-0 ${activeTab === 'returns' ? 'text-stone-900' : 'text-stone-500'}`} />
+                  <span>Returns &amp; Refunds</span>
                 </div>
                 {(returnOrderCount || 0) > 0 && (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#8b6f4e]/10 text-[#8b6f4e]">
-                    {returnOrderCount}
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#f5e6d3] text-[#8b6f4e]">
+                    ({returnOrderCount})
                   </span>
                 )}
               </button>
 
-              {/* Address Book Tab */}
+              {/* Wishlist */}
               <button
-                onClick={() => setActiveTab('addresses')}
-                className={`flex items-center gap-3 px-4 py-3.5 text-left transition-colors ${
-                  activeTab === 'addresses'
-                    ? 'border-l-4 border-[#8b6f4e] bg-[#FAF7F2] font-medium text-[#8b6f4e]'
-                    : 'text-stone-600 hover:bg-stone-50 hover:text-black border-l-4 border-transparent'
+                type="button"
+                onClick={() => setActiveTab('wishlist')}
+                className={`relative flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer ${
+                  activeTab === 'wishlist'
+                    ? 'bg-[#f7ebdc]/80 text-stone-900 font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:rounded-r-full before:bg-[#8b6f4e]'
+                    : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
                 }`}
               >
-                <HiOutlineLocationMarker className={`w-4 h-4 ${activeTab === 'addresses' ? 'text-[#8b6f4e]' : 'text-stone-500'}`} />
+                <HiOutlineHeart className={`w-[18px] h-[18px] shrink-0 ${activeTab === 'wishlist' ? 'text-stone-900' : 'text-stone-500'}`} />
+                <span>Wishlist</span>
+              </button>
+
+              {/* Address Book */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('addresses')}
+                className={`relative flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer ${
+                  activeTab === 'addresses'
+                    ? 'bg-[#f7ebdc]/80 text-stone-900 font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:rounded-r-full before:bg-[#8b6f4e]'
+                    : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
+                }`}
+              >
+                <HiOutlineLocationMarker className={`w-[18px] h-[18px] shrink-0 ${activeTab === 'addresses' ? 'text-stone-900' : 'text-stone-500'}`} />
                 <span>Address Book</span>
+              </button>
+
+              {/* Logout */}
+              <button
+                type="button"
+                onClick={logout}
+                className="relative flex items-center gap-3 px-4 py-3 text-left text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors cursor-pointer"
+              >
+                <HiOutlineLogout className="w-[18px] h-[18px] shrink-0 text-stone-500" />
+                <span>Logout</span>
               </button>
             </nav>
           </div>
@@ -1137,10 +1201,11 @@ const Profile = () => {
                           <button
                             type="button"
                             onClick={() => openAddressModal('billing')}
-                            className="inline-flex items-center gap-1 text-xs text-stone-600 hover:text-[#8b6f4e] font-medium transition-colors cursor-pointer"
+                            className="p-1 text-stone-500 hover:text-[#8b6f4e] hover:bg-stone-50 rounded transition-colors cursor-pointer"
+                            title="Edit billing address"
+                            aria-label="Edit billing address"
                           >
-                            <HiOutlinePencilAlt className="w-3.5 h-3.5" />
-                            <span>Edit</span>
+                            <HiOutlinePencilAlt className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -1167,10 +1232,11 @@ const Profile = () => {
                           <button
                             type="button"
                             onClick={() => openAddressModal('shipping')}
-                            className="inline-flex items-center gap-1 text-xs text-stone-600 hover:text-[#8b6f4e] font-medium transition-colors cursor-pointer"
+                            className="p-1 text-stone-500 hover:text-[#8b6f4e] hover:bg-stone-50 rounded transition-colors cursor-pointer"
+                            title="Edit shipping address"
+                            aria-label="Edit shipping address"
                           >
-                            <HiOutlinePencilAlt className="w-3.5 h-3.5" />
-                            <span>Edit</span>
+                            <HiOutlinePencilAlt className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -1212,10 +1278,11 @@ const Profile = () => {
                           <button
                             type="button"
                             onClick={() => openAddressModal('billing')}
-                            className="inline-flex items-center gap-1 text-xs text-stone-600 hover:text-[#8b6f4e] font-medium transition-colors cursor-pointer"
+                            className="p-1 text-stone-500 hover:text-[#8b6f4e] hover:bg-stone-50 rounded transition-colors cursor-pointer"
+                            title="Edit billing address"
+                            aria-label="Edit billing address"
                           >
-                            <HiOutlinePencilAlt className="w-3.5 h-3.5" />
-                            <span>Edit</span>
+                            <HiOutlinePencilAlt className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -1242,10 +1309,11 @@ const Profile = () => {
                           <button
                             type="button"
                             onClick={() => openAddressModal('shipping')}
-                            className="inline-flex items-center gap-1 text-xs text-stone-600 hover:text-[#8b6f4e] font-medium transition-colors cursor-pointer"
+                            className="p-1 text-stone-500 hover:text-[#8b6f4e] hover:bg-stone-50 rounded transition-colors cursor-pointer"
+                            title="Edit shipping address"
+                            aria-label="Edit shipping address"
                           >
-                            <HiOutlinePencilAlt className="w-3.5 h-3.5" />
-                            <span>Edit</span>
+                            <HiOutlinePencilAlt className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -1815,10 +1883,68 @@ const Profile = () => {
                 <div className="w-16 h-16 rounded-full bg-stone-100 mx-auto flex items-center justify-center text-stone-400">
                   <HiOutlineRefresh className="w-8 h-8" />
                 </div>
-                <h3 className="font-serif text-xl font-normal text-stone-800">Returns & Exchanges</h3>
+                <h3 className="font-serif text-xl font-normal text-stone-800">Returns &amp; Exchanges</h3>
                 <p className="text-xs text-stone-500 max-w-sm mx-auto">
                   No active return requests found.
                 </p>
+              </div>
+            )}
+
+            {/* ─── TAB 5: WISHLIST ──────────────────────────────────── */}
+            {activeTab === 'wishlist' && (
+              <div className="bg-white rounded-xl border border-stone-200/80 shadow-xs p-4 sm:p-6 space-y-5">
+                <div className="flex items-center justify-between border-b border-stone-100 pb-3.5">
+                  <h3 className="font-serif text-lg sm:text-xl font-normal text-stone-800">
+                    My Wishlist <span className="text-sm text-stone-500">({wishlistCount})</span>
+                  </h3>
+                  {wishlistCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={clearWishlist}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] text-xs font-medium transition-colors cursor-pointer"
+                    >
+                      <HiOutlineTrash className="w-3.5 h-3.5" />
+                      <span>Clear All</span>
+                    </button>
+                  )}
+                </div>
+
+                {(!wishlistLoaded || wishlistLoading) && wishlistItems.length === 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {Array.from({ length: 3 }, (_, idx) => (
+                      <div key={idx} className="animate-pulse space-y-2">
+                        <div className="aspect-square rounded-xl bg-stone-100" />
+                        <div className="h-3.5 w-3/4 bg-stone-100 rounded" />
+                        <div className="h-3 w-1/3 bg-stone-100 rounded" />
+                      </div>
+                    ))}
+                  </div>
+                ) : wishlistItems.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5">
+                    {wishlistItems.map((item) => (
+                      <WishlistProductCard
+                        key={item.refId || item._id}
+                        item={item}
+                        onRemove={removeFromWishlist}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center space-y-3">
+                    <HiHeart className="mx-auto w-9 h-9 text-stone-300" />
+                    <h4 className="font-serif text-lg text-stone-800">Your wishlist is empty</h4>
+                    <p className="text-xs text-stone-500 max-w-xs mx-auto">
+                      Save the pieces you love and find them here whenever you return.
+                    </p>
+                    <Link
+                      to="/shop"
+                      className="inline-flex items-center gap-2 btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white px-5 py-2.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors"
+                    >
+                      <span>Explore Jewellery</span>
+                      <HiArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                )}
               </div>
             )}
           </div>

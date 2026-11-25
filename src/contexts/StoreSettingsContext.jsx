@@ -29,7 +29,9 @@ if (typeof window !== 'undefined') {
   try {
     sessionStorage.removeItem('neirah_storefront_bootstrap_v1');
     sessionStorage.removeItem('neirah_storefront_bootstrap_v2');
-  } catch {}
+  } catch {
+    /* ignore */
+  }
 }
 
 function getInitialCachedBootstrap() {
@@ -86,7 +88,9 @@ export function StoreSettingsProvider({ children }) {
 
     try {
       sessionStorage.setItem(BOOTSTRAP_STORAGE_KEY, JSON.stringify(data));
-    } catch {}
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const refreshBootstrap = useCallback(async (options = { fresh: true }) => {

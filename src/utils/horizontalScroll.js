@@ -26,11 +26,14 @@ export function initHorizontalScroll() {
     return null;
   }
 
-  // ─── 2. Mouse Wheel Handler ───
+  // ─── 2. Mouse Wheel Handler (Shift + Wheel for horizontal, never block vertical page scroll) ───
   window.addEventListener(
     'wheel',
     (e) => {
-      // If user is already scrolling horizontally via trackpad or Shift key, let native physics handle it
+      // Allow normal vertical wheel scrolling to scroll the page everywhere,
+      // including when hovering over product cards or horizontal carousels.
+      // Only convert vertical wheel to horizontal scroll when holding Shift.
+      if (!e.shiftKey) return;
       if (Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
 
       const scrollable = findHorizontalScrollable(e.target);
@@ -44,12 +47,12 @@ export function initHorizontalScroll() {
       const isAtLeft = currentScroll <= 1;
       const isAtRight = Math.ceil(currentScroll) >= maxScrollLeft - 1;
 
-      // Scroll right on wheel down
+      // Scroll right on Shift + wheel down
       if (e.deltaY > 0 && !isAtRight) {
         scrollable.scrollLeft += e.deltaY;
         e.preventDefault();
       }
-      // Scroll left on wheel up
+      // Scroll left on Shift + wheel up
       else if (e.deltaY < 0 && !isAtLeft) {
         scrollable.scrollLeft += e.deltaY;
         e.preventDefault();

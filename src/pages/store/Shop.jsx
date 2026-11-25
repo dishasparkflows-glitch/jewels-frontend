@@ -1,8 +1,8 @@
 import api from '../../api/axios';
-import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import SEO from '../../components/common/SEO';
+import { slugify, CATEGORY_ALIASES as aliases, getResponseItems as getItems } from '../../utils/common';
 import { HiOutlineAdjustments, HiOutlineX, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineTag, HiOutlineCheck, HiOutlineInformationCircle } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import ProductCard from '../../components/product/ProductCard';
@@ -11,14 +11,7 @@ import Dropdown from '../../components/common/Dropdown';
 import LuxuryDivider from '../../components/common/LuxuryDivider';
 import { categoriesAPI, productsAPI, diamondsAPI, bannersAPI, couponsAPI } from '../../api/services';
 
-const slugify = (value = '') => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-const aliases = { necklaces: 'pendant', bracelets: 'bangles-bracelets' };
-const getItems = (response) => Array.isArray(response?.data?.data) ? response.data.data : response?.data?.data?.items || [];
-
 export default function Shop({ defaultCategory = '' }) {
-  const { settings, theme } = useStoreSettings();
-  const themeColor = settings?.themeColors?.buttonColor || settings?.buttonColor || theme?.colors?.primary || '#8b6f4e';
-  const themeTextColor = settings?.themeColors?.buttonTextColor || settings?.buttonTextColor || '#ffffff';
   const [params, setParams] = useSearchParams();
 
   const [categories, setCategories] = useState([]);
@@ -717,7 +710,7 @@ export default function Shop({ defaultCategory = '' }) {
                 >
                   <HiOutlineTag className="w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-90 group-hover:scale-110 transition-transform flex-shrink-0" />
                   <span className="truncate">
-                    USE CODE <strong className="font-bold underline decoration-dotted underline-offset-2 tracking-widest opacity-100 group-hover:opacity-100 transition-opacity">'{code}'</strong> {discountPhrase}
+                    USE CODE <strong className="font-bold underline decoration-dotted underline-offset-2 tracking-widest opacity-100 group-hover:opacity-100 transition-opacity">&apos;{code}&apos;</strong> {discountPhrase}
                   </span>
                   {copiedCouponCode === code && (
                     <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-white/20 px-2 py-0.5 rounded-full ml-2 normal-case tracking-normal flex-shrink-0 shadow-xs border border-white/25">

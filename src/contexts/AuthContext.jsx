@@ -1,6 +1,17 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { authAPI } from '../api/services';
+import { authAPI, cartAPI, wishlistAPI } from '../api/services';
 import { setAnalyticsUser } from '../config/firebase';
+
+const readGuestItems = (storageKey) => {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
 
 /* eslint-disable react/prop-types, react-refresh/only-export-components */
 const AuthContext = createContext(null);
@@ -62,7 +73,11 @@ export const AuthProvider = ({ children }) => {
     try {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-    } catch {}
+      localStorage.removeItem('jewels_cart');
+      localStorage.removeItem('jewels_wishlist');
+    } catch {
+      /* ignore */
+    }
     setToken(null);
     setUser(null);
   }, []);
@@ -79,7 +94,9 @@ export const AuthProvider = ({ children }) => {
         setUser(data.data);
         try {
           localStorage.setItem('user', JSON.stringify(data.data));
-        } catch {}
+        } catch {
+          /* ignore */
+        }
       }
     } catch (err) {
       // Only logout and clear credentials if server explicitly returns 401 Unauthorized
@@ -104,43 +121,80 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
-  const login = async (identifier, password) => {
-    const { data } = await authAPI.login({ identifier, password });
-    const receivedToken = data.data.token;
-    const receivedUser = data.data.user;
+  /**
+   * Persists auth credentials, merges any guest cart/wishlist items into the
+   * authenticated account, and notifies storefront contexts to refresh.
+   */
+  const completeAuthSession = useCallback(async (authData) => {
+    const receivedToken = authData?.token;
+    const receivedUser = authData?.user;
+    if (!receivedToken || !receivedUser) return authData;
+
+    const guestCart = readGuestItems('jewels_cart');
+    const guestWishlist = readGuestItems('jewels_wishlist');
+
     try {
       localStorage.setItem('token', receivedToken);
       localStorage.setItem('user', JSON.stringify(receivedUser));
-    } catch {}
+    } catch {
+      /* ignore */
+    }
+
+    const mergeTasks = [];
+    if (guestCart.length > 0) {
+      mergeTasks.push(
+        cartAPI.merge(guestCart).then((res) => {
+          const mergedItems = res?.data?.data?.items;
+          if (Array.isArray(mergedItems)) {
+            try {
+              localStorage.setItem('jewels_cart', JSON.stringify(mergedItems));
+            } catch {
+              /* ignore */
+            }
+          }
+        })
+      );
+    }
+    if (guestWishlist.length > 0) {
+      mergeTasks.push(
+        wishlistAPI.merge(guestWishlist).then((res) => {
+          const mergedItems = res?.data?.data?.items;
+          if (Array.isArray(mergedItems)) {
+            try {
+              localStorage.setItem('jewels_wishlist', JSON.stringify(mergedItems));
+            } catch {
+              /* ignore */
+            }
+          }
+        })
+      );
+    }
+
+    if (mergeTasks.length > 0) {
+      await Promise.allSettled(mergeTasks);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:merged'));
+      }
+    }
+
     setToken(receivedToken);
     setUser(receivedUser);
-    return data.data;
+    return authData;
+  }, []);
+
+  const login = async (identifier, password) => {
+    const { data } = await authAPI.login({ identifier, password });
+    return completeAuthSession(data.data);
   };
 
   const loginWithGoogle = useCallback(async (credential) => {
     const { data } = await authAPI.googleLogin(credential);
-    const receivedToken = data.data.token;
-    const receivedUser = data.data.user;
-    try {
-      localStorage.setItem('token', receivedToken);
-      localStorage.setItem('user', JSON.stringify(receivedUser));
-    } catch {}
-    setToken(receivedToken);
-    setUser(receivedUser);
-    return data.data;
-  }, []);
+    return completeAuthSession(data.data);
+  }, [completeAuthSession]);
 
   const register = async (formData) => {
     const { data } = await authAPI.register(formData);
-    const receivedToken = data.data.token;
-    const receivedUser = data.data.user;
-    try {
-      localStorage.setItem('token', receivedToken);
-      localStorage.setItem('user', JSON.stringify(receivedUser));
-    } catch {}
-    setToken(receivedToken);
-    setUser(receivedUser);
-    return data.data;
+    return completeAuthSession(data.data);
   };
 
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';

@@ -401,7 +401,7 @@ export default function DiamondDetail() {
   const seoDescription =
     diamond.description ||
     `Certified ${caratWeight || ''} CT ${diamondShapeName || ''} diamond with ${diamondColorName || ''} color and ${diamondClarityName || ''} clarity. Hand-selected for brilliance and certified authenticity.`;
-  const seoPrice = finalCalculatedPrice || diamond.priceINR || 0;
+  const seoPrice = currentPrice || diamond?.price || diamond?.priceINR || 0;
   const canonicalUrl =
     typeof window !== 'undefined'
       ? `${window.location.origin}/diamond/${diamond.sku || identifier}`

@@ -33,13 +33,6 @@ export const WishlistProvider = ({ children }) => {
   const wishlistItemsRef = useRef([]);
 
   const [wishlistItems, setWishlistItems] = useState(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    if (!token) {
-      try {
-        localStorage.removeItem('jewels_wishlist');
-      } catch {}
-      return [];
-    }
     try {
       const saved = localStorage.getItem('jewels_wishlist');
       return saved ? JSON.parse(saved) : [];
@@ -121,7 +114,9 @@ export const WishlistProvider = ({ children }) => {
           }
           try {
             localStorage.setItem('jewels_wishlist', JSON.stringify(items));
-          } catch {}
+          } catch {
+            /* ignore */
+          }
           return items;
         });
 
@@ -207,15 +202,22 @@ export const WishlistProvider = ({ children }) => {
       setWishlistMap({});
       setWishlistCount(0);
       setIsInitialLoaded(true);
-      try {
-        localStorage.removeItem('jewels_wishlist');
-      } catch {}
       return;
     }
     fetchWishlistCount();
     // Silent prefetch so data is already loaded in memory before user clicks the heart icon!
     fetchWishlist({ silent: true });
   }, [userId, fetchWishlistCount, fetchWishlist]);
+
+  // Refresh wishlist immediately after guest-to-authenticated merge completes
+  useEffect(() => {
+    const handleAuthMerged = () => {
+      fetchWishlist({ force: true, silent: true });
+      fetchWishlistCount();
+    };
+    window.addEventListener('auth:merged', handleAuthMerged);
+    return () => window.removeEventListener('auth:merged', handleAuthMerged);
+  }, [fetchWishlist, fetchWishlistCount]);
 
   // When navigating directly to /wishlist, perform silent background revalidation
   useEffect(() => {
@@ -295,7 +297,9 @@ export const WishlistProvider = ({ children }) => {
       }
       try {
         localStorage.setItem('jewels_wishlist', JSON.stringify(next));
-      } catch {}
+      } catch {
+        /* ignore */
+      }
       return next;
     });
 
@@ -371,7 +375,9 @@ export const WishlistProvider = ({ children }) => {
       const next = prev.filter((i) => String(i.refId || i._id || i.id) !== strId);
       try {
         localStorage.setItem('jewels_wishlist', JSON.stringify(next));
-      } catch {}
+      } catch {
+        /* ignore */
+      }
       return next;
     });
     toast('Item removed from wishlist', {
@@ -399,7 +405,9 @@ export const WishlistProvider = ({ children }) => {
     setWishlistCount(0);
     try {
       localStorage.removeItem('jewels_wishlist');
-    } catch {}
+    } catch {
+      /* ignore */
+    }
     toast.success('Wishlist cleared');
 
     const token = localStorage.getItem('token');

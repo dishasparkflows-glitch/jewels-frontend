@@ -1,37 +1,12 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import SEO from '../../components/common/SEO';
 import {
   HiOutlineHeart,
   HiHeart,
   HiOutlineShare,
-  HiOutlineX,
-  HiOutlineEye,
-  HiOutlineExternalLink,
-  HiChevronUp,
-  HiChevronDown,
-  HiChevronLeft,
-  HiChevronRight,
-  HiOutlinePlus,
-  HiOutlineMinus,
-  HiOutlineArrowsExpand,
-  HiOutlineTag,
-  HiOutlineDuplicate,
-  HiOutlineRefresh,
-  HiOutlineDocumentText,
-  HiOutlineStar,
   HiSparkles,
 } from 'react-icons/hi';
-import { IoStar } from 'react-icons/io5';
-import {
-  FaWhatsapp,
-  FaFacebookF,
-  FaXTwitter,
-  FaPinterestP,
-  FaEnvelope,
-  FaLink,
-  FaCheck,
-} from 'react-icons/fa6';
 import toast from 'react-hot-toast';
 import { productsAPI, couponsAPI, reviewsAPI } from '../../api/services';
 import { useAuth } from '../../contexts/AuthContext';
@@ -42,7 +17,6 @@ import { getValidProductImages, getPrimaryProductImage, isOrnateImage } from '..
 import { trackProductView } from '../../config/firebase';
 import { useLiveViewers } from '../../hooks/useLiveViewers';
 import Dropdown from '../../components/common/Dropdown';
-import ProductCard from '../../components/product/ProductCard';
 import SimilarProductsDrawer, { prefetchSimilarProducts } from '../../components/store/SimilarProductsDrawer';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
 import {
@@ -51,7 +25,7 @@ import {
   getCategorySizeLabel,
 } from '../../utils/sizePriceCalculator';
 import { getMetallicColorStyle } from '../../utils/productCard';
-import { isRawObjectId, cleanAttribute } from '../../utils/metalColors';
+import { cleanAttribute } from '../../utils/metalColors';
 
 const referenceName = (value) => (value && typeof value === 'object' ? value.name || '' : (typeof value === 'string' ? value : ''));
 
@@ -112,23 +86,11 @@ export default function ProductDetail() {
       });
   }, []);
 
-  const handleCopyCoupon = (code) => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(code);
-    }
-    setCopiedCode(code);
-    toast.success(`Coupon "${code}" copied to clipboard!`);
-    setTimeout(() => {
-      setCopiedCode((prev) => (prev === code ? null : prev));
-    }, 2500);
-  };
-
   // ─── Customer Reviews State ───
   const [productReviews, setProductReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewSort] = useState('recent');
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [hoverRating, setHoverRating] = useState(0);
   const [newReview, setNewReview] = useState({
     rating: 5,
     name: '',
@@ -261,13 +223,6 @@ export default function ProductDetail() {
     }
   };
 
-  const formatReviewDate = (d) => {
-    if (!d) return '';
-    const date = new Date(d);
-    if (isNaN(date.getTime())) return '';
-    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
-
   const { count: liveViewersCount, hasUpdated: liveViewersUpdated } = useLiveViewers(product?._id || id);
 
   // Selections
@@ -295,24 +250,6 @@ export default function ProductDetail() {
     product?.certificateImage?.url ||
     storeSettings?.certificateImage?.url ||
     'https://pub-82427c7fd20e4acaa4bdb3b933c0a3bf.r2.dev/certificates/certificate-1792672361210-d82f.png';
-
-  // Product specifications key-value pairs (Admin Step 4: Care & Specs)
-  const productSpecs = useMemo(() => {
-    const list = [];
-    if (Array.isArray(product?.productSpecifications)) {
-      product.productSpecifications.forEach((spec) => {
-        if (spec && (spec.key?.trim() || spec.value?.trim())) {
-          list.push({
-            key: spec.key?.trim() || '',
-            value: spec.value?.trim() || '',
-            id: spec._id || spec.id,
-          });
-        }
-      });
-    }
-    return list;
-  }, [product?.productSpecifications]);
-
 
   // Center Stone: Diamond vs Colorstone detection
   const isColorStone = useMemo(() => {
@@ -712,12 +649,8 @@ export default function ProductDetail() {
         closeLightbox();
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         setLightboxIndex((prev) => (prev > 0 ? prev - 1 : galleryImages.length - 1));
-        setLightboxZoom(1);
-        setLightboxPan({ x: 0, y: 0 });
       } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         setLightboxIndex((prev) => (prev + 1) % galleryImages.length);
-        setLightboxZoom(1);
-        setLightboxPan({ x: 0, y: 0 });
       }
     };
 
@@ -1105,6 +1038,83 @@ export default function ProductDetail() {
     hasSideColorStone,
   ]);
 
+  // Product specifications key-value pairs (Care & Specs + Dynamic Metal & Stone Specs)
+  const productSpecs = useMemo(() => {
+    const list = [];
+
+    // 1. Dynamic Metal & Stone specifications
+    if (isGold) {
+      if (selectedPurity) {
+        list.push({ key: 'Metal Purity', value: selectedPurity });
+      }
+      if (selectedColor) {
+        list.push({ key: 'Metal Color / Tone', value: selectedColor });
+      }
+
+      const centerCsWeight = Number(
+        selectedVariant?.colorStoneWeight || (isColorStone ? (selectedVariant?.caratWeight || selectedCarat || 0) : 0)
+      );
+      const centerDiaWeight = Number(
+        selectedVariant?.centerDiamondWeight || (!isColorStone ? (selectedVariant?.caratWeight || selectedCarat || 0) : 0)
+      );
+      const sideCsWeight = Number(selectedVariant?.sideColorStoneWeight || 0);
+      const sideDiaWeight = Number(selectedVariant?.sideDiamondWeight || 0);
+
+      if (isColorStone && centerCsWeight > 0) {
+        list.push({
+          key: hasSideColorStone ? 'Center Labgrown Gemstone' : 'Labgrown Gemstone',
+          value: `${centerCsWeight} Ct`,
+        });
+      } else if (!isColorStone && centerDiaWeight > 0) {
+        list.push({
+          key: 'Center Diamond Weight',
+          value: `${centerDiaWeight} Ct`,
+        });
+      }
+
+      if (hasSideColorStone && sideCsWeight > 0) {
+        list.push({
+          key: 'Side Labgrown Gemstone',
+          value: `${sideCsWeight} Ct`,
+        });
+      }
+
+      if (sideDiaWeight > 0) {
+        list.push({
+          key: 'Side Diamond Weight',
+          value: `${sideDiaWeight} Ct`,
+        });
+      }
+    }
+
+    // 2. Custom Product Specifications from Admin
+    if (Array.isArray(product?.productSpecifications)) {
+      product.productSpecifications.forEach((spec) => {
+        if (spec && (spec.key?.trim() || spec.value?.trim())) {
+          const k = spec.key?.trim() || '';
+          if (!list.some((item) => item.key.toLowerCase() === k.toLowerCase())) {
+            list.push({
+              key: k,
+              value: spec.value?.trim() || '',
+              id: spec._id || spec.id,
+            });
+          }
+        }
+      });
+    }
+
+    return list;
+  }, [
+    product?.productSpecifications,
+    isGold,
+    selectedPurity,
+    selectedColor,
+    selectedVariant,
+    selectedCarat,
+    isColorStone,
+    hasSideColorStone,
+  ]);
+
 
 
   // Derive available sizes directly from product data without extra API calls and default to size 7
@@ -1323,19 +1333,7 @@ export default function ProductDetail() {
 
   // Share state & handlers
   const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
   const [similarDrawerOpen, setSimilarDrawerOpen] = useState(false);
-
-  const handleCopyLink = () => {
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(window.location.href);
-      setLinkCopied(true);
-      toast.success('Product link copied to clipboard!');
-      setTimeout(() => setLinkCopied(false), 2500);
-    } else {
-      toast('Share link: ' + window.location.href);
-    }
-  };
 
   const handleShare = async () => {
     const shareUrl = window.location.href;
@@ -1430,7 +1428,7 @@ export default function ProductDetail() {
   const seoKeywords = product.seo?.keywords || '';
   const seoPrimaryImage = getPrimaryProductImage(product) || galleryImages?.[0]?.url || '';
   const seoPrice =
-    finalCalculatedPrice ||
+    currentPrice ||
     product.pricing?.calculatedPrice ||
     product.pricing?.salePrice ||
     product.pricing?.regularPrice ||

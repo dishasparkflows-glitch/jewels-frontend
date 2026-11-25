@@ -104,7 +104,9 @@ export function getStoredShopperId() {
       const uid = parsed?._id || parsed?.id || parsed?.userId;
       if (uid) return String(uid);
     }
-  } catch {}
+  } catch {
+    /* ignore storage access error */
+  }
   try {
     return localStorage.getItem('shopper_id') || localStorage.getItem('guest_shopper_id') || '';
   } catch {

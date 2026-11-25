@@ -4,7 +4,6 @@ import SEO from '../../components/common/SEO';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import {
-  HiOutlineCloudUpload,
   HiOutlineX,
   HiCheckCircle,
   HiOutlineUser,
@@ -430,6 +429,7 @@ export default function CustomJewellery() {
             {/* Submission Summary Card */}
             <div className="max-w-lg mx-auto rounded-xl bg-[#fcfaf7] border border-[#e6dccf] shadow-2xs text-left divide-y divide-[#eee6db] px-5">
               {[
+                ...(submittedInquiryId ? [{ icon: FiLayers, label: 'Reference ID', value: String(submittedInquiryId).slice(-8).toUpperCase() }] : []),
                 { icon: HiOutlineUser, label: 'Client', value: formData.name },
                 {
                   icon: IoDiamondOutline,

@@ -19,24 +19,7 @@ import {
 } from 'react-icons/hi';
 import InstagramEmbed from '../../components/common/InstagramEmbed';
 import LuxuryDivider from '../../components/common/LuxuryDivider';
-
-// Helper to normalize media URL from Cloudflare R2 / S3 / API or relative paths
-const getMediaUrl = (url) => {
-  if (!url) return '';
-  if (
-    url.startsWith('http://') ||
-    url.startsWith('https://') ||
-    url.startsWith('blob:') ||
-    url.startsWith('data:')
-  ) {
-    return url;
-  }
-  const backendBase = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace(
-    /\/api\/?$/,
-    ''
-  );
-  return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
-};
+import { getMediaUrl } from '../../utils/imageUrl';
 
 const Home = () => {
   const { settings: storeSettings, theme: themeConfig } = useStoreSettings();

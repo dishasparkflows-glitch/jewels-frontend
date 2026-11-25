@@ -258,7 +258,7 @@ export default function LoginModal({ isOpen, onClose }) {
           </form>
 
           <p className="mt-4 sm:mt-5 text-center text-xs sm:text-[13px] text-stone-500 font-normal">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <button
               type="button"
               onClick={() => {

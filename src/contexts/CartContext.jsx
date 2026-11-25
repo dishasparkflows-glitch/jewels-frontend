@@ -249,13 +249,36 @@ export const CartProvider = ({ children }) => {
     return () => unsubscribe();
   }, [user]);
 
-  // On mount or user/route change: fetch lightweight counts, only fetch full cart on cart/checkout pages
+  // On mount or user/route change: fetch lightweight counts, fetch full cart on cart/checkout or login
   useEffect(() => {
+    const activeToken = token || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
+    if (!user && !activeToken) {
+      try {
+        const saved = localStorage.getItem('jewels_cart');
+        if (!saved) {
+          setCart([]);
+          setCartTotals({ totalItems: 0, subtotal: 0, shipping: 0, tax: 0, total: 0 });
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
     fetchCounts();
-    if (location.pathname === '/cart' || location.pathname === '/checkout') {
+    if (user || location.pathname === '/cart' || location.pathname === '/checkout') {
       fetchCart();
     }
-  }, [user, location.pathname, fetchCounts, fetchCart]);
+  }, [user, token, location.pathname, fetchCounts, fetchCart]);
+
+  // Refresh cart immediately after guest-to-authenticated merge completes
+  useEffect(() => {
+    const handleAuthMerged = () => {
+      fetchCart();
+      fetchCounts();
+    };
+    window.addEventListener('auth:merged', handleAuthMerged);
+    return () => window.removeEventListener('auth:merged', handleAuthMerged);
+  }, [fetchCart, fetchCounts]);
 
   // Add item to cart with instant 0ms optimistic UI and background API sync
   const addToCart = (product, quantity = 1, options = {}, explicitUser = null) => {

@@ -78,7 +78,9 @@ export function useLiveViewers(productId) {
           initialCount = parsed;
         }
       }
-    } catch {}
+    } catch {
+      /* ignore storage access error */
+    }
 
     setCount(initialCount);
     lastSocketUpdateRef.current = Date.now();
@@ -100,7 +102,9 @@ export function useLiveViewers(productId) {
           setHasUpdated(true);
           try {
             sessionStorage.setItem(`live_viewers_${pid}`, String(newCount));
-          } catch {}
+          } catch {
+            /* ignore */
+          }
         }
       };
 
@@ -119,7 +123,9 @@ export function useLiveViewers(productId) {
               const next = getNextNaturalCount(prev);
               try {
                 sessionStorage.setItem(`live_viewers_${pid}`, String(next));
-              } catch {}
+              } catch {
+                /* ignore */
+              }
               setHasUpdated(true);
               return next;
             });

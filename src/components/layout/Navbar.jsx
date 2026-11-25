@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
@@ -152,19 +152,6 @@ const Navbar = () => {
   const { totalItems, cartDrawerOpen, setCartDrawerOpen } = useCart();
   const { wishlistCount, refreshWishlist } = useWishlist();
   const [categories, setCategories] = useState([]);
-  const collections = useMemo(() => {
-    return (categories || [])
-      .filter(
-        (c) =>
-          String(c.type || '').toLowerCase() === 'collection' ||
-          /collection/i.test(c.name || c.title || '')
-      )
-      .map((item) => ({
-        id: item._id || item.id,
-        name: item.name || item.title || '',
-        query: item.name || item.title || '',
-      }));
-  }, [categories]);
   const [navigationError, setNavigationError] = useState(false);
   const [navigationRevision, setNavigationRevision] = useState(0);
   const { settings: storeSettings, theme: themeConfig, topAnnouncement: contextTopAnnouncement, navigation: bootstrapNavigation } = useStoreSettings();
@@ -279,13 +266,6 @@ const Navbar = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showSearchDropdown, userDropdownOpen]);
-
-  const handleTrendingClick = (keyword) => {
-    setSearchQuery(keyword);
-    navigate(`/shop?search=${encodeURIComponent(keyword)}`);
-    setShowSearchDropdown(false);
-    setMobileSearchOpen(false);
-  };
 
   // Listen for open appointment modal event from anywhere in the app
   useEffect(() => {
