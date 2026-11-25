@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import SEO from '../../components/common/SEO';
 import {
   HiOutlineHeart,
   HiHeart,
@@ -1421,8 +1422,76 @@ export default function ProductDetail() {
     );
   }
 
+  const seoTitle = product.seo?.metaTitle || product.basicInfo?.title || 'Fine Jewellery';
+  const seoDescription =
+    product.seo?.metaDescription ||
+    product.basicInfo?.description ||
+    `${product.basicInfo?.title || 'Fine Jewellery Piece'} - Handcrafted luxury fine jewellery piece from Neirah Jewels featuring certified materials and timeless craftsmanship.`;
+  const seoKeywords = product.seo?.keywords || '';
+  const seoPrimaryImage = getPrimaryProductImage(product) || galleryImages?.[0]?.url || '';
+  const seoPrice =
+    finalCalculatedPrice ||
+    product.pricing?.calculatedPrice ||
+    product.pricing?.salePrice ||
+    product.pricing?.regularPrice ||
+    0;
+  const productSku = product.basicInfo?.sku || identifier;
+  const canonicalUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/product/${product.basicInfo?.slug || identifier}`
+      : undefined;
+
+  const productSchema = {
+    '@context': 'https://schema.org/',
+    '@type': 'Product',
+    name: product.basicInfo?.title || 'Fine Jewellery',
+    image:
+      galleryImages?.map((img) => img.url).filter(Boolean).length > 0
+        ? galleryImages.map((img) => img.url).filter(Boolean)
+        : seoPrimaryImage
+          ? [seoPrimaryImage]
+          : [],
+    description: seoDescription,
+    sku: productSku,
+    brand: {
+      '@type': 'Brand',
+      name: 'Neirah Jewels',
+    },
+    offers: {
+      '@type': 'Offer',
+      url: canonicalUrl,
+      priceCurrency: 'INR',
+      price: seoPrice,
+      availability: 'https://schema.org/InStock',
+      itemCondition: 'https://schema.org/NewCondition',
+    },
+    ...(reviewStats.total > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: reviewStats.average,
+            reviewCount: reviewStats.total,
+            bestRating: '5',
+            worstRating: '1',
+          },
+        }
+      : {}),
+  };
+
   return (
     <div className="bg-white text-stone-900 min-h-screen pb-24 lg:pb-12">
+      <SEO
+        title={seoTitle}
+        description={seoDescription}
+        keywords={seoKeywords}
+        image={seoPrimaryImage}
+        type="product"
+        price={seoPrice}
+        currency="INR"
+        sku={productSku}
+        canonical={canonicalUrl}
+        schema={productSchema}
+      />
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-1.5 sm:py-2.5">
         {/* ─── Breadcrumb Navigation ─── */}
         <nav className="text-[10px] sm:text-[11px] text-stone-400 py-1.5 sm:py-2 flex items-center gap-1.5 overflow-hidden whitespace-nowrap border-b border-stone-100 mb-3 sm:mb-4">

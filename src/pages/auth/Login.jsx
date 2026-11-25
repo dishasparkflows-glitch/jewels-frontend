@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import SEO from '../../components/common/SEO';
 import toast from 'react-hot-toast';
 import { HiOutlineEye, HiOutlineEyeOff, HiOutlineLockClosed, HiOutlineMail } from 'react-icons/hi';
 import { FcGoogle } from 'react-icons/fc';
@@ -140,6 +141,7 @@ const Login = () => {
 
   return (
     <Modal open onClose={closeModal} label="Sign in to your Neirah account" className="p-0 border-0 bg-transparent shadow-none">
+      <SEO title="Sign In | Neirah Jewels" noindex={true} />
       <div className="relative grid max-h-[calc(100dvh-2rem)] w-[min(860px,calc(100vw-2rem))] overflow-hidden rounded-3xl bg-white shadow-2xl border border-stone-100 md:grid-cols-[1.1fr_0.9fr]">
         {/* Close Button - positioned in top right (over image on desktop, over form on mobile) */}
         <button

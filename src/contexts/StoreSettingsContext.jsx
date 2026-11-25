@@ -192,16 +192,14 @@ export function StoreSettingsProvider({ children }) {
   useEffect(() => {
     const title = theme?.seo?.metaTitle;
     const description = theme?.seo?.metaDescription;
-    if (!title && !description) return undefined;
-    const previousTitle = document.title;
+    if (!title && !description) return;
+    if (title && (!document.title || document.title === 'Neirah Jewels | Fine Jewellery & Diamonds')) {
+      document.title = title;
+    }
     const meta = document.querySelector('meta[name="description"]');
-    const previousDescription = meta?.content;
-    if (title) document.title = title;
-    if (description && meta) meta.content = description;
-    return () => {
-      document.title = previousTitle;
-      if (meta && previousDescription !== undefined) meta.content = previousDescription;
-    };
+    if (description && meta && (!meta.content || meta.content.includes('Discover handcrafted'))) {
+      meta.content = description;
+    }
   }, [theme?.seo?.metaTitle, theme?.seo?.metaDescription]);
 
   const themeStyle = useMemo(() => {

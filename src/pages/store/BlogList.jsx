@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import SEO from '../../components/common/SEO';
 import { HiOutlineClock, HiOutlineSearch, HiOutlineArrowRight } from 'react-icons/hi';
 import { blogsAPI, blogCategoriesAPI } from '../../api/services';
 
@@ -192,6 +193,12 @@ export default function BlogList() {
 
   return (
     <div className="min-h-screen bg-[#faf8f5] text-stone-900 pb-20">
+      <SEO
+        title={activeCategory && activeCategory !== 'all' ? `${activeCategory} Articles | Jewellery Journal` : 'Jewellery Journal & Guides'}
+        description="Explore fine jewellery styling tips, gemstone care guides, lab-grown diamond education, and artisan craftsmanship stories from Neirah Jewels."
+        keywords="jewellery blog, diamond guide, gold jewellery care, jewellery styling, neirah journal"
+        type="website"
+      />
       {/* ─── Hero Header ─── */}
       <section className="relative bg-[#1c1917] text-white py-16 sm:py-24 px-4 overflow-hidden border-b border-stone-800">
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:16px_16px]" />

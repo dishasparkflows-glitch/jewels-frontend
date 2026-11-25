@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import SEO from '../../components/common/SEO';
 import { HiOutlineChevronRight } from 'react-icons/hi';
 import { staticPagesAPI } from '../../api/services';
 
@@ -21,18 +22,6 @@ export default function StaticPageView() {
         if (!isMounted) return;
         if (data) {
           setPage(data);
-          // Set document title
-          document.title = data.seoTitle || `${data.title} | Neirah Fine Jewellery`;
-          // Set meta description if present
-          if (data.metaDescription) {
-            let metaDesc = document.querySelector('meta[name="description"]');
-            if (!metaDesc) {
-              metaDesc = document.createElement('meta');
-              metaDesc.name = 'description';
-              document.head.appendChild(metaDesc);
-            }
-            metaDesc.content = data.metaDescription;
-          }
         } else {
           setError('Page not found');
         }
@@ -85,6 +74,11 @@ export default function StaticPageView() {
 
   return (
     <div className="min-h-screen bg-[#fbfaf8] text-[#1c1917] pb-24">
+      <SEO
+        title={page.seoTitle || page.title}
+        description={page.metaDescription}
+        type="article"
+      />
       {/* ─── Breadcrumb ────────────────────────────────────── */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 pb-4">
         <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-stone-400">

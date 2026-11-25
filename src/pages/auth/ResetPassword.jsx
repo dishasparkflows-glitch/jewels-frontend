@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import SEO from '../../components/common/SEO';
 import toast from 'react-hot-toast';
 import { authAPI } from '../../api/services';
 import { HiOutlineEye, HiOutlineEyeOff, HiOutlineLockClosed } from 'react-icons/hi';
@@ -46,6 +47,7 @@ const ResetPassword = () => {
 
   return (
     <main className="min-h-[75vh] bg-[#fbf9f6] px-4 py-12 sm:py-16 flex items-center justify-center font-sans">
+      <SEO title="Reset Password | Neirah Jewels" noindex={true} />
       <section className="relative w-full max-w-[420px] overflow-hidden rounded-[26px] border border-[#ebdcc8] bg-[#faf6f0] p-7 sm:p-9 shadow-[0_12px_45px_rgba(70,50,30,0.08)]">
         {/* Subtle decorative floral/lace watermark in bottom-right corner */}
         <svg

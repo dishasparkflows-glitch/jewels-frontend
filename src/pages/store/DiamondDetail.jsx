@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import SEO from '../../components/common/SEO';
 import {
   HiOutlineHeart,
   HiHeart,
@@ -394,8 +395,51 @@ export default function DiamondDetail() {
     { label: 'Rate per Carat', value: ratePerCarat > 0 ? `${formatPrice(ratePerCarat)} / ct` : '' },
   ].filter((r) => Boolean(r.value));
 
+  const seoTitle = diamond.title
+    ? `${diamond.title} | Certified Diamond`
+    : `${caratWeight ? `${caratWeight} CT ` : ''}${diamondShapeName || ''} Certified Diamond`;
+  const seoDescription =
+    diamond.description ||
+    `Certified ${caratWeight || ''} CT ${diamondShapeName || ''} diamond with ${diamondColorName || ''} color and ${diamondClarityName || ''} clarity. Hand-selected for brilliance and certified authenticity.`;
+  const seoPrice = finalCalculatedPrice || diamond.priceINR || 0;
+  const canonicalUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/diamond/${diamond.sku || identifier}`
+      : undefined;
+
+  const diamondSchema = {
+    '@context': 'https://schema.org/',
+    '@type': 'Product',
+    name: diamond.title || seoTitle,
+    image: galleryImages?.map((img) => img.url).filter(Boolean) || [],
+    description: seoDescription,
+    sku: diamond.sku || identifier,
+    brand: {
+      '@type': 'Brand',
+      name: 'Neirah Jewels',
+    },
+    offers: {
+      '@type': 'Offer',
+      url: canonicalUrl,
+      priceCurrency: 'INR',
+      price: seoPrice,
+      availability: 'https://schema.org/InStock',
+      itemCondition: 'https://schema.org/NewCondition',
+    },
+  };
+
   return (
     <div className="bg-white text-stone-900 min-h-screen pb-24 lg:pb-12">
+      <SEO
+        title={seoTitle}
+        description={seoDescription}
+        type="product"
+        price={seoPrice}
+        currency="INR"
+        sku={diamond.sku}
+        canonical={canonicalUrl}
+        schema={diamondSchema}
+      />
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 py-1.5 sm:py-2.5">
         {/* ─── Breadcrumb Navigation ─── */}
         <nav className="text-[10px] sm:text-[11px] text-stone-400 py-1.5 sm:py-2 flex items-center gap-1.5 overflow-hidden whitespace-nowrap border-b border-stone-100 mb-3 sm:mb-4">

@@ -2,6 +2,7 @@ import api from '../../api/axios';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import SEO from '../../components/common/SEO';
 import { HiOutlineAdjustments, HiOutlineX, HiOutlineTrash, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineTag, HiOutlineCheck, HiOutlineInformationCircle } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import ProductCard from '../../components/product/ProductCard';
@@ -659,8 +660,20 @@ export default function Shop({ defaultCategory = '' }) {
     (selectedBirthMonth ? `Birthstone: ${selectedBirthMonth}` : '') ||
     (search ? `Search: "${search}"` : (selectedCollection || 'All Jewellery'));
 
+  const seoTitle = pageTitle ? `${pageTitle} | Fine Jewellery Collection` : 'Shop Fine Jewellery & Certified Diamonds';
+  const seoDescription = category?.name
+    ? `Explore our exclusive collection of handcrafted ${category.name}. Certified lab-grown diamonds, pure gold, and sterling silver pieces from Neirah Jewels.`
+    : isDiamondCategory
+      ? 'Browse certified lab-grown diamonds in all shapes and sizes. Sustainable luxury with exceptional brilliance, certified by leading gemological institutes.'
+      : 'Discover handcrafted luxury fine jewellery, rings, earrings, bracelets, and necklaces made with certified gold and precious diamonds at Neirah Jewels.';
+
   return (
     <div className="min-h-[75vh] bg-white">
+      <SEO
+        title={seoTitle}
+        description={seoDescription}
+        type="website"
+      />
       {/* ─── Top Category Banner Image (Exact Match: 100% full width, max-h-[360px], object-cover, bg-[#FAF7F2]) ─── */}
       {displayBanner && (
         <div className="w-full relative overflow-hidden bg-[#FAF7F2]">

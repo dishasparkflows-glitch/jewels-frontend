@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import SEO from '../../components/common/SEO';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import { usersAPI, addressesAPI, ordersAPI, reviewsAPI } from '../../api/services';
@@ -904,6 +905,7 @@ const Profile = () => {
 
   return (
     <div className="bg-[#fcfbfa] min-h-screen text-[#22201e] font-sans antialiased py-6 sm:py-8 px-3 sm:px-5 lg:px-6">
+      <SEO title="My Account & Orders | Neirah Jewels" noindex={true} />
       <div className="max-w-6xl mx-auto space-y-5">
         {/* Top Header: Title and Logout Button */}
         <div className="flex items-center justify-between">

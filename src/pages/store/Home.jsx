@@ -1,5 +1,6 @@
 import HomeProductCard from '../../components/product/HomeProductCard';
 import BirthstonesSection from '../../components/home/BirthstonesSection';
+import SEO from '../../components/common/SEO';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -505,6 +506,42 @@ const Home = () => {
 
   const currentHero = heroBanners[activeHeroIdx] || heroBanners[0];
 
+  const homeTitle =
+    storeSettings?.seo?.metaTitle ||
+    themeConfig?.seo?.metaTitle ||
+    'Neirah Jewels | Fine Handcrafted Jewellery & Certified Diamonds';
+  const homeDescription =
+    storeSettings?.seo?.metaDescription ||
+    themeConfig?.seo?.metaDescription ||
+    'Discover handcrafted luxury jewelry, certified lab-grown diamonds, and timeless gemstone collections at Neirah Jewels.';
+  const homeKeywords =
+    storeSettings?.seo?.keywords ||
+    themeConfig?.seo?.keywords ||
+    'fine jewellery, lab grown diamonds, engagement rings, gold jewellery, 925 silver jewellery, handcrafted';
+
+  const homeSchema = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        name: 'Neirah Jewels',
+        url: typeof window !== 'undefined' ? window.location.origin : 'https://neirahjewels.com',
+        logo: typeof window !== 'undefined' ? `${window.location.origin}/logo.svg` : 'https://neirahjewels.com/logo.svg',
+        description: homeDescription,
+      },
+      {
+        '@type': 'WebSite',
+        name: 'Neirah Jewels',
+        url: typeof window !== 'undefined' ? window.location.origin : 'https://neirahjewels.com',
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: `${typeof window !== 'undefined' ? window.location.origin : 'https://neirahjewels.com'}/shop?search={search_term_string}`,
+          'query-input': 'required name=search_term_string',
+        },
+      },
+    ],
+  };
+
   return (
     <div
       className="flex flex-col bg-white text-stone-900 font-sans antialiased overflow-x-hidden"
@@ -515,6 +552,13 @@ const Home = () => {
         fontFamily: themeConfig?.typography?.bodyFont || undefined,
       }}
     >
+      <SEO
+        title={homeTitle}
+        description={homeDescription}
+        keywords={homeKeywords}
+        type="website"
+        schema={homeSchema}
+      />
       {/* ─────────────────────────────────────────────────────────────────
           1. HERO BANNER
       ─────────────────────────────────────────────────────────────────── */}

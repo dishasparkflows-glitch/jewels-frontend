@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import SEO from '../../components/common/SEO';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import {
@@ -390,6 +391,11 @@ export default function CustomJewellery() {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Bespoke Custom Jewellery Design | Handcrafted Heirloom Pieces"
+        description="Design one-of-a-kind bespoke jewellery, custom engagement rings, and personalised fine jewellery with Neirah master artisans."
+        type="website"
+      />
       {/* ─── Header ─── */}
       <div className="pt-8 sm:pt-12 pb-4 px-4 sm:px-6 max-w-4xl mx-auto text-center">
         {/* Page Title matching Screenshot 1 */}

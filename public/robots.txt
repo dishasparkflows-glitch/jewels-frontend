@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+
+# Disallow private user flows & checkout paths
+Disallow: /cart
+Disallow: /checkout
+Disallow: /profile
+Disallow: /dashboard
+Disallow: /wishlist
+Disallow: /order-success
+Disallow: /order-failed
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Crawl delay to prevent overloading
+Crawl-delay: 1

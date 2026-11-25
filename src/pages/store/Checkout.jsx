@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import SEO from '../../components/common/SEO';
 import toast from 'react-hot-toast';
 import {
   HiOutlineArrowLeft,
@@ -610,6 +611,7 @@ export default function Checkout() {
   if (!cart.length) {
     return (
       <main className="mx-auto flex min-h-[55vh] max-w-2xl flex-col items-center justify-center px-4 py-20 text-center font-sans">
+        <SEO title="Secure Luxury Checkout | Neirah Fine Jewellery" noindex={true} />
         <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#f8f5f0] text-[#8c6536]">
           <HiOutlineLockClosed className="h-7 w-7" />
         </div>
@@ -629,6 +631,7 @@ export default function Checkout() {
 
   return (
     <main className="min-h-screen bg-[#faf8f5] text-stone-900 font-sans">
+      <SEO title="Secure Luxury Checkout | Neirah Fine Jewellery" noindex={true} />
       <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
         <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(360px,1fr)] xl:gap-8">
           {/* Left Column: Form Card */}

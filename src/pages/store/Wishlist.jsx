@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import SEO from '../../components/common/SEO';
 import { HiHeart, HiOutlineArrowRight, HiOutlineTrash } from 'react-icons/hi';
 import WishlistProductCard from '../../components/product/WishlistProductCard';
 import { useWishlist } from '../../contexts/WishlistContext';
@@ -23,6 +24,7 @@ export default function Wishlist() {
 
   return (
     <section className="min-h-[75vh] bg-white pt-3 sm:pt-5 pb-12 sm:pb-16">
+      <SEO title="My Wishlist | Neirah Fine Jewellery" noindex={true} />
       <div className="mx-auto max-w-[1380px] px-4 sm:px-8">
         <nav aria-label="Breadcrumb" className="mb-2 sm:mb-2.5 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-stone-400">
           <Link to="/" className="transition hover:text-stone-800">Home</Link>

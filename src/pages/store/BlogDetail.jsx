@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import SEO from '../../components/common/SEO';
 import {
   HiOutlineClock,
   HiOutlineTag,
@@ -137,8 +138,58 @@ export default function BlogDetail() {
       })
     : '';
 
+  const seoTitle = blog.seo?.metaTitle || title || 'Jewellery Journal';
+  const seoDescription =
+    blog.seo?.metaDescription ||
+    shortDescription ||
+    (description ? description.slice(0, 160).replace(/<[^>]*>/g, '').trim() : '') ||
+    'Read our latest jewellery insights, styling guides, and gemstone care tips.';
+  const seoKeywords =
+    (Array.isArray(blog.seo?.metaKeywords) ? blog.seo.metaKeywords.join(', ') : blog.seo?.metaKeywords) ||
+    categoryName ||
+    '';
+  const canonicalUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/blog/${blog.basicInfo?.slug || blog.slug || slug}`
+      : undefined;
+
+  const blogSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: seoTitle,
+    description: seoDescription,
+    image: imageUrl ? [imageUrl] : undefined,
+    datePublished: blog.basicInfo?.publishDate || blog.publishDate || blog.createdAt || blog.meta?.createdAt,
+    dateModified: blog.updatedAt || blog.meta?.updatedAt,
+    author: {
+      '@type': 'Person',
+      name: blog.author?.name || 'Neirah Editorial Team',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Neirah Jewels',
+      logo: {
+        '@type': 'ImageObject',
+        url: typeof window !== 'undefined' ? `${window.location.origin}/logo.svg` : '',
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': canonicalUrl,
+    },
+  };
+
   return (
     <article className="min-h-screen bg-[#faf8f5] text-stone-900 pb-24">
+      <SEO
+        title={seoTitle}
+        description={seoDescription}
+        keywords={seoKeywords}
+        image={imageUrl}
+        type="article"
+        canonical={canonicalUrl}
+        schema={blogSchema}
+      />
       {/* ─── Breadcrumb Navigation ─── */}
       <div className="border-b border-stone-200/80 bg-white">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-2 text-xs text-stone-500 font-medium overflow-x-auto whitespace-nowrap">
