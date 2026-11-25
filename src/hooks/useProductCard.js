@@ -51,7 +51,7 @@ export function useProductCard(product, options = {}) {
 
   const activeImage = cardImages[imageIndex] || color?.image || data.images[0] || '';
 
-  const isDiamond = Boolean(product?.isDiamond || product?.productType === 'diamond');
+  const isDiamond = Boolean(product?.itemType === 'diamond' || product?.productType === 'diamond');
 
   const isOrnate =
     !isDiamond &&

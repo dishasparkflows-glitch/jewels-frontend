@@ -265,8 +265,7 @@ export const WishlistProvider = ({ children }) => {
 
     const itemType =
       String(product.itemType || '').toLowerCase() === 'diamond' ||
-      product.productType === 'diamond' ||
-      product.isDiamond
+      product.productType === 'diamond'
         ? 'diamond'
         : 'product';
 

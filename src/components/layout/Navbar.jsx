@@ -530,11 +530,11 @@ const Navbar = () => {
                 style={{ transform: 'translateX(-50%)' }}
                 className="absolute left-1/2 -translate-x-1/2 top-full mt-3 w-[780px] lg:w-[890px] xl:w-[980px] max-w-[calc(100vw-2rem)] bg-white rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.18)] border border-stone-200/90 p-5 z-50 text-left animate-fadeIn"
               >
-                {/* Top Header: All ({allCount}) | View all -> */}
+                {/* Top Header: Products ({allCount}) | View all -> */}
                 <div className="flex items-center justify-between border-b border-stone-100 pb-3 mb-4">
                   <div className="flex items-center text-xs sm:text-sm">
                     <span className="font-bold text-[#8b6f4e] relative pb-2">
-                      <span>All ({allCount})</span>
+                      <span>Products ({allCount})</span>
                       <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8b6f4e] rounded-full" />
                     </span>
                   </div>
@@ -802,7 +802,7 @@ const Navbar = () => {
             <div className="mt-3 bg-white rounded-2xl shadow-xl border border-stone-200/90 p-3.5 text-left animate-fadeIn">
               <div className="flex items-center justify-between border-b border-stone-100 pb-2 mb-3 text-xs">
                 <span className="font-bold text-[#8b6f4e] border-b-2 border-[#8b6f4e] pb-1">
-                  All ({allCount})
+                  Products ({allCount})
                 </span>
                 <Link
                   to={`/shop?search=${encodeURIComponent(searchQuery.trim())}`}

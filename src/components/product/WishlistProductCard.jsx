@@ -15,7 +15,7 @@ export default function WishlistProductCard({ item, onRemove }) {
   if (!item) return null;
 
   const id = String(item.refId || item._id || '');
-  const isDiamond = Boolean(item.itemType === 'diamond' || item.isDiamond || item.productType === 'diamond');
+  const isDiamond = Boolean(item.itemType === 'diamond' || item.productType === 'diamond');
   const itemType = isDiamond ? 'diamond' : 'product';
   const name = item.basicInfo?.title || (isDiamond ? 'Certified Diamond' : 'Jewellery');
   const slug = item.basicInfo?.slug || '';
@@ -92,7 +92,6 @@ export default function WishlistProductCard({ item, onRemove }) {
           refId: id,
           id,
           itemType,
-          ...(isDiamond ? { isDiamond: true } : {}),
           title: name,
           name,
           price: unitPrice,

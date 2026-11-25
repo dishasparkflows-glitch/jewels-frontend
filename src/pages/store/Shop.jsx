@@ -409,7 +409,7 @@ export default function Shop({ defaultCategory = '' }) {
             const mappedDiamonds = rawDiamonds.map((d) => ({
               _id: d._id,
               id: d._id,
-              isDiamond: true,
+              itemType: 'diamond',
               productType: 'diamond',
               sku: d.sku || '',
               title: d.title || '',

@@ -45,7 +45,7 @@ const extractRefId = (val) => {
 const resolveItemType = (val, options = {}) => {
   const raw = val?.itemType || options?.itemType;
   if (String(raw || '').toLowerCase() === 'diamond') return 'diamond';
-  if (val?.isDiamond || val?.productType === 'diamond' || options?.isDiamond) return 'diamond';
+  if (val?.productType === 'diamond') return 'diamond';
   return 'product';
 };
 
@@ -57,7 +57,7 @@ const formatCartItem = (i) => {
     id: refId,
     refId,
     itemType,
-    ...(isDiamond ? { isDiamond: true, productType: 'diamond' } : {}),
+    ...(isDiamond ? { productType: 'diamond' } : {}),
     _id: i._id || refId,
     sku: i.sku || '',
     slug: i.slug || '',
@@ -337,7 +337,7 @@ export const CartProvider = ({ children }) => {
             id: refId,
             refId,
             itemType,
-            ...(isDiamond ? { isDiamond: true, productType: 'diamond' } : {}),
+            ...(isDiamond ? { productType: 'diamond' } : {}),
             slug,
             name: title,
             title,

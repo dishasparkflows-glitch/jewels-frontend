@@ -127,7 +127,7 @@ export default function DiamondDetail() {
           .map((d) => ({
             _id: d._id,
             id: d._id,
-            isDiamond: true,
+            itemType: 'diamond',
             productType: 'diamond',
             sku: d.sku || '',
             title: d.title || '',
@@ -233,7 +233,6 @@ export default function DiamondDetail() {
     return {
       _id: diamond._id,
       id: diamond._id,
-      isDiamond: true,
       itemType: 'diamond',
       productType: 'diamond',
       sku: diamond.sku,
@@ -311,7 +310,6 @@ export default function DiamondDetail() {
         {
           refId: diamond._id,
           id: diamond._id,
-          isDiamond: true,
           itemType: 'diamond',
           productType: 'diamond',
           title: diamond.title,

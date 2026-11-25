@@ -448,7 +448,7 @@ export default function Checkout() {
         isPhoneVerified: true,
         items: cart.map((item) => ({
           refId: item.refId || item.id,
-          itemType: item.itemType || (item.isDiamond ? 'diamond' : 'product'),
+          itemType: item.itemType || (item.productType === 'diamond' ? 'diamond' : 'product'),
           title: item.title || item.name,
           sku: item.sku || item.basicInfo?.sku || '',
           price: item.price,

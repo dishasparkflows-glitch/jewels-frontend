@@ -28,7 +28,7 @@ export function getItemSpecs(item) {
     };
   }
 
-  const isDiamond = Boolean(item.isDiamond || item.itemType === 'diamond' || item.productType === 'diamond');
+  const isDiamond = Boolean(item.itemType === 'diamond' || item.productType === 'diamond');
   const isSilver = !isDiamond && isSilverProduct(item);
   const attrs = item.selectedAttributes || {};
 
