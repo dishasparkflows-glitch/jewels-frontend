@@ -82,8 +82,10 @@ const formatOrderDate = (dateVal) => {
 const resolveItemImage = (item) => {
   if (item?.image) return item.image;
   if (item?.thumbnail) return item.thumbnail;
-  const prod = item?.productId;
+  const prod = item?.refId;
   if (!prod) return '';
+  if (prod.image?.url) return prod.image.url;
+  if (typeof prod.image === 'string' && prod.image) return prod.image;
   if (Array.isArray(prod.ornate?.ornateImages) && prod.ornate.ornateImages.length > 0) {
     const found = prod.ornate.ornateImages.find((img) => img?.url);
     if (found?.url) return found.url;
@@ -108,18 +110,25 @@ const resolveItemImage = (item) => {
 };
 
 const resolveProductLink = (item) => {
-  const prod = item?.productId;
+  const isDiamond = item?.itemType === 'diamond';
+  const refDoc = item?.refId && typeof item.refId === 'object' ? item.refId : null;
   const slug =
-    prod?.basicInfo?.slug ||
-    prod?.slug ||
+    refDoc?.basicInfo?.slug ||
+    refDoc?.slug ||
+    refDoc?.sku ||
+    (isDiamond ? item?.sku : null) ||
     item?.slug;
-  if (slug) return `/product/${encodeURIComponent(slug)}`;
+  if (slug) {
+    return isDiamond ? `/diamond/${encodeURIComponent(slug)}` : `/product/${encodeURIComponent(slug)}`;
+  }
 
   const id =
-    prod?._id ||
-    (typeof prod === 'string' ? prod : null) ||
+    refDoc?._id ||
+    (typeof item?.refId === 'string' ? item.refId : null) ||
     item?.id;
-  if (id) return `/product/${encodeURIComponent(id)}`;
+  if (id) {
+    return isDiamond ? `/diamond/${encodeURIComponent(id)}` : `/product/${encodeURIComponent(id)}`;
+  }
 
   return null;
 };

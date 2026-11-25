@@ -71,7 +71,7 @@ export const WishlistProvider = ({ children }) => {
       const list = saved ? JSON.parse(saved) : [];
       const map = {};
       list.forEach((item) => {
-        const id = String(item._id || item.productId || item.id || '');
+        const id = String(item.refId || item._id || item.id || '');
         if (id) map[id] = true;
       });
       return map;
@@ -109,12 +109,13 @@ export const WishlistProvider = ({ children }) => {
       try {
         const res = await wishlistAPI.get();
         const data = res?.data?.data || res?.data || {};
-        const rawProductList = Array.isArray(data.productIds) ? data.productIds : (Array.isArray(data.items) ? data.items : []);
-        const items = rawProductList.filter((item) => item && typeof item === 'object');
+        const items = (Array.isArray(data.items) ? data.items : []).filter(
+          (item) => item && typeof item === 'object'
+        );
 
         setWishlistItems((prev) => {
-          const prevKey = prev.map((i) => String(i._id || i.productId || i.id || '')).sort().join(',');
-          const newKey = items.map((i) => String(i._id || i.productId || i.id || '')).sort().join(',');
+          const prevKey = prev.map((i) => String(i.refId || i._id || i.id || '')).sort().join(',');
+          const newKey = items.map((i) => String(i.refId || i._id || i.id || '')).sort().join(',');
           if (prevKey === newKey && prev.length === items.length && prev.length > 0) {
             return prev;
           }
@@ -125,14 +126,9 @@ export const WishlistProvider = ({ children }) => {
         });
 
         const map = {};
-        if (Array.isArray(data.productIds)) {
-          data.productIds.forEach((id) => {
-            if (id) map[String(id._id || id)] = true;
-          });
-        }
         items.forEach((item) => {
-          if (item.productId) map[String(item.productId)] = true;
-          if (item._id) map[String(item._id)] = true;
+          const id = String(item.refId || item._id || item.id || '');
+          if (id) map[id] = true;
         });
         setWishlistMap(map);
         setWishlistCount(items.length);
@@ -190,10 +186,10 @@ export const WishlistProvider = ({ children }) => {
       if (data?.wishlistCount !== undefined) {
         setWishlistCount(Number(data.wishlistCount));
       }
-      if (data?.productId) {
+      if (data?.refId) {
         setWishlistMap((prev) => ({
           ...prev,
-          [String(data.productId)]: Boolean(data.isWishlisted),
+          [String(data.refId)]: Boolean(data.isWishlisted),
         }));
       }
     });
@@ -264,15 +260,22 @@ export const WishlistProvider = ({ children }) => {
       return false;
     }
 
-    const productId = String(product.id || product._id || product.productId || '').trim();
-    if (!productId) return false;
+    const refId = String(product.refId || product._id || product.id || '').trim();
+    if (!refId) return false;
+
+    const itemType =
+      String(product.itemType || '').toLowerCase() === 'diamond' ||
+      product.productType === 'diamond' ||
+      product.isDiamond
+        ? 'diamond'
+        : 'product';
 
     // Determine actual current status accurately
     const wasWishlisted =
       isCurrentlyWished !== null
         ? Boolean(isCurrentlyWished)
-        : wishlistMap[productId] !== undefined
-        ? Boolean(wishlistMap[productId])
+        : wishlistMap[refId] !== undefined
+        ? Boolean(wishlistMap[refId])
         : Boolean(product.inWishlist);
 
     const willBeWishlisted = !wasWishlisted;
@@ -280,16 +283,16 @@ export const WishlistProvider = ({ children }) => {
     // Instant optimistic UI update
     setWishlistMap((prev) => ({
       ...prev,
-      [productId]: willBeWishlisted,
+      [refId]: willBeWishlisted,
     }));
 
     setWishlistItems((prev) => {
       let next;
       if (willBeWishlisted) {
-        const exists = prev.some((i) => String(i._id || i.productId || i.id) === productId);
-        next = exists ? prev : [product, ...prev];
+        const exists = prev.some((i) => String(i.refId || i._id || i.id) === refId);
+        next = exists ? prev : [{ ...product, refId, itemType }, ...prev];
       } else {
-        next = prev.filter((i) => String(i._id || i.productId || i.id) !== productId);
+        next = prev.filter((i) => String(i.refId || i._id || i.id) !== refId);
       }
       try {
         localStorage.setItem('jewels_wishlist', JSON.stringify(next));
@@ -323,27 +326,26 @@ export const WishlistProvider = ({ children }) => {
 
     if (accessToken || currentUser) {
       try {
-        const res = await wishlistAPI.toggle({ productId });
+        const res = await wishlistAPI.toggle({ refId, itemType });
         const result = res?.data?.data || {};
 
         if (result.isWishlisted !== undefined) {
           setWishlistMap((prev) => ({
             ...prev,
-            [productId]: Boolean(result.isWishlisted),
+            [refId]: Boolean(result.isWishlisted),
           }));
         }
 
         if (result.items && Array.isArray(result.items)) {
           setWishlistItems(result.items);
           localStorage.setItem('jewels_wishlist', JSON.stringify(result.items));
-        }
-        if (Array.isArray(result.productIds)) {
           const nextMap = {};
-          result.productIds.forEach((id) => {
-            if (id) nextMap[String(id._id || id)] = true;
+          result.items.forEach((entry) => {
+            const entryId = String(entry?.refId || entry?._id || entry?.id || '');
+            if (entryId) nextMap[entryId] = true;
           });
           setWishlistMap(nextMap);
-          setWishlistCount(result.productIds.length);
+          setWishlistCount(result.items.length);
         } else if (result.wishlistCount !== undefined) {
           setWishlistCount(Number(result.wishlistCount));
         }
@@ -355,10 +357,10 @@ export const WishlistProvider = ({ children }) => {
     return willBeWishlisted;
   };
 
-  // Remove item by productId
-  const removeFromWishlist = async (productId) => {
-    if (!productId) return;
-    const strId = String(productId);
+  // Remove item by refId
+  const removeFromWishlist = async (refId) => {
+    if (!refId) return;
+    const strId = String(refId).trim();
 
     setWishlistMap((prev) => {
       const next = { ...prev };
@@ -367,7 +369,7 @@ export const WishlistProvider = ({ children }) => {
     });
     setWishlistCount((prev) => Math.max(0, prev - 1));
     setWishlistItems((prev) => {
-      const next = prev.filter((i) => String(i.productId) !== strId && String(i._id) !== strId && String(i.id) !== strId);
+      const next = prev.filter((i) => String(i.refId || i._id || i.id) !== strId);
       try {
         localStorage.setItem('jewels_wishlist', JSON.stringify(next));
       } catch {}

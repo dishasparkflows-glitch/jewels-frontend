@@ -8,7 +8,7 @@ import ProductCard from '../../components/product/ProductCard';
 import FilterSidebar from '../../components/product/FilterSidebar';
 import Dropdown from '../../components/common/Dropdown';
 import LuxuryDivider from '../../components/common/LuxuryDivider';
-import { categoriesAPI, productsAPI, bannersAPI, couponsAPI } from '../../api/services';
+import { categoriesAPI, productsAPI, diamondsAPI, bannersAPI, couponsAPI } from '../../api/services';
 
 const slugify = (value = '') => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const aliases = { necklaces: 'pendant', bracelets: 'bangles-bracelets' };
@@ -38,6 +38,10 @@ export default function Shop({ defaultCategory = '' }) {
   const categoryParam = params.get('category') || defaultCategory || '';
   const category = categories.find((entry) => entry._id === categoryParam || slugify(entry.slug || entry.name) === (aliases[categoryParam] || categoryParam));
   const categoryId = category?._id || (/^[a-f0-9]{24}$/i.test(categoryParam) ? categoryParam : '');
+  const isDiamondCategory = useMemo(() => {
+    const rawCat = String(category?.slug || category?.name || categoryParam || '').toLowerCase().trim();
+    return rawCat === 'diamond' || rawCat === 'diamonds' || category?.type === 'diamond';
+  }, [category, categoryParam]);
 
   const featuredParam = params.get('featured') || '';
   const titleParam = params.get('title') || '';
@@ -166,7 +170,9 @@ export default function Shop({ defaultCategory = '' }) {
   const minPrice = params.get('minPrice') || '';
   const maxPrice = params.get('maxPrice') || '';
   const selectedDiamondType = params.get('diamondType') || '';
-  const selectedClarity = params.get('clarity') || '';
+  const selectedDiamondShape = params.get('diamondShape') || params.get('shape') || '';
+  const selectedDiamondColor = params.get('diamondColor') || params.get('color') || '';
+  const selectedClarity = params.get('clarity') || params.get('diamondClarity') || '';
   const selectedCarat = params.get('carat') || '';
   const selectedCollection = params.get('collection') || '';
   const selectedMetal = params.get('metal') || '';
@@ -249,7 +255,7 @@ export default function Shop({ defaultCategory = '' }) {
     return () => { current = false; };
   }, [retry]);
 
-  // 2. Fetch Category-Specific Filters Dynamically
+  // 2. Fetch Category-Specific Filters Dynamically (plus Diamond Attributes for Diamond category)
   useEffect(() => {
     let current = true;
     if (!dynamicFilters.length) {
@@ -258,12 +264,71 @@ export default function Shop({ defaultCategory = '' }) {
     const featCatId = featuredData?.categoryId?._id || featuredData?.categoryId;
     const catQuery = categoryId || categoryParam || featCatId;
 
-    api
-      .get('/filters', { params: catQuery ? { category: catQuery } : {} })
-      .then((res) => {
+    const requests = [
+      api.get('/filters', { params: catQuery ? { category: catQuery } : {} }),
+      ...(isDiamondCategory ? [diamondsAPI.getAttributes().catch(() => null)] : []),
+    ];
+
+    Promise.all(requests)
+      .then(([res, attrRes]) => {
         if (!current) return;
         const data = res.data?.data;
-        const filterList = Array.isArray(data) ? data : (data?.filters || []);
+        let filterList = Array.isArray(data) ? data : (data?.filters || []);
+
+        if (isDiamondCategory && attrRes?.data?.data) {
+          const attrs = attrRes.data.data;
+          const existingKeys = new Set(filterList.map((f) => f.key));
+          const extraDiamondFilters = [];
+
+          if (!existingKeys.has('price')) {
+            extraDiamondFilters.push({ id: 'price', key: 'price', title: 'Price Range', type: 'range', enabled: true });
+          }
+          if (!existingKeys.has('diamondType') && Array.isArray(attrs.diamondTypes) && attrs.diamondTypes.length > 0) {
+            extraDiamondFilters.push({
+              id: 'diamondType',
+              key: 'diamondType',
+              title: 'Diamond Type',
+              type: 'checkbox',
+              enabled: true,
+              options: attrs.diamondTypes.map((o) => ({ _id: o._id, name: o.name, value: o.name })),
+            });
+          }
+          if (!existingKeys.has('diamondShape') && !existingKeys.has('shape') && Array.isArray(attrs.diamondShapes) && attrs.diamondShapes.length > 0) {
+            extraDiamondFilters.push({
+              id: 'diamondShape',
+              key: 'diamondShape',
+              title: 'Shape',
+              type: 'checkbox',
+              enabled: true,
+              options: attrs.diamondShapes.map((o) => ({ _id: o._id, name: o.name, value: o.name })),
+            });
+          }
+          if (!existingKeys.has('diamondColor') && !existingKeys.has('color') && Array.isArray(attrs.diamondColors) && attrs.diamondColors.length > 0) {
+            extraDiamondFilters.push({
+              id: 'diamondColor',
+              key: 'diamondColor',
+              title: 'Color',
+              type: 'checkbox',
+              enabled: true,
+              options: attrs.diamondColors.map((o) => ({ _id: o._id, name: o.name, value: o.name })),
+            });
+          }
+          if (!existingKeys.has('clarity') && !existingKeys.has('diamondClarity') && Array.isArray(attrs.diamondClarities) && attrs.diamondClarities.length > 0) {
+            extraDiamondFilters.push({
+              id: 'clarity',
+              key: 'clarity',
+              title: 'Clarity',
+              type: 'checkbox',
+              enabled: true,
+              options: attrs.diamondClarities.map((o) => ({ _id: o._id, name: o.name, value: o.name })),
+            });
+          }
+
+          if (extraDiamondFilters.length > 0) {
+            filterList = [...filterList, ...extraDiamondFilters];
+          }
+        }
+
         setDynamicFilters(filterList);
 
         // When switching category, prune incompatible filter keys from URL params
@@ -277,9 +342,11 @@ export default function Shop({ defaultCategory = '' }) {
             'search',
             'sort',
             'page',
+            'limit',
             'minPrice',
             'maxPrice',
             'birthMonth',
+            ...(isDiamondCategory ? ['diamondType', 'diamondShape', 'shape', 'diamondColor', 'color', 'diamondClarity', 'clarity', 'carat'] : []),
             ...filterList.map((f) => f.key),
           ]);
           const next = new URLSearchParams(params);
@@ -303,9 +370,9 @@ export default function Shop({ defaultCategory = '' }) {
       });
 
     return () => { current = false; };
-  }, [categoryParam, categoryId, featuredData]);
+  }, [categoryParam, categoryId, featuredData, isDiamondCategory]);
 
-  // 3. Fetch Products with all active filters executed on backend
+  // 3. Fetch Products (or Diamonds when Diamond category is selected)
   useEffect(() => {
     if (!navigationReady) return;
     let current = true;
@@ -315,6 +382,74 @@ export default function Shop({ defaultCategory = '' }) {
       setIsRefetching(true);
     }
     setError('');
+
+    if (isDiamondCategory) {
+      const diamondQuery = {
+        status: 'active',
+        forweb: true,
+        page,
+        limit,
+        sort: sort === 'price-low' ? 'price-asc' : sort === 'price-high' ? 'price-desc' : sort,
+      };
+      if (search) diamondQuery.search = search;
+      if (minPrice) diamondQuery.minPrice = minPrice;
+      if (maxPrice) diamondQuery.maxPrice = maxPrice;
+      if (selectedDiamondType) diamondQuery.diamondType = selectedDiamondType;
+      if (selectedDiamondShape) diamondQuery.diamondShape = selectedDiamondShape;
+      if (selectedDiamondColor) diamondQuery.diamondColor = selectedDiamondColor;
+      if (selectedClarity) diamondQuery.diamondClarity = selectedClarity;
+      if (selectedCarat) diamondQuery.carat = selectedCarat;
+
+      diamondsAPI
+        .getAll(diamondQuery)
+        .then((response) => {
+          if (current) {
+            hasLoadedRef.current = true;
+            const rawDiamonds = getItems(response);
+            const mappedDiamonds = rawDiamonds.map((d) => ({
+              _id: d._id,
+              id: d._id,
+              isDiamond: true,
+              productType: 'diamond',
+              sku: d.sku || '',
+              title: d.title || '',
+              description: d.description || '',
+              basicInfo: {
+                title: d.title || '',
+                slug: d.sku || String(d._id),
+              },
+              pricing: {
+                salePrice: Number(d.price) || 0,
+                mrp: Number(d.price) || 0,
+              },
+              image: d.image?.url || '',
+              images: d.image?.url ? [d.image.url] : [],
+              carat: d.carat,
+              rate: d.rate,
+              colorId: d.colorId,
+              clarityId: d.clarityId,
+              shapeId: d.shapeId,
+              typeId: d.typeId,
+            }));
+            setProducts(mappedDiamonds);
+            setPagination(response.data?.pagination || { totalDocs: mappedDiamonds.length, totalPages: 1 });
+          }
+        })
+        .catch(() => {
+          if (current) {
+            setError('We could not load diamonds. Please try again.');
+            setProducts([]);
+          }
+        })
+        .finally(() => {
+          if (current) {
+            setIsInitialLoading(false);
+            setIsRefetching(false);
+          }
+        });
+
+      return () => { current = false; };
+    }
 
     const query = {
       status: 'approved',
@@ -370,6 +505,7 @@ export default function Shop({ defaultCategory = '' }) {
     return () => { current = false; };
   }, [
     navigationReady,
+    isDiamondCategory,
     featuredParam,
     categoryId,
     categoryParam,
@@ -384,6 +520,8 @@ export default function Shop({ defaultCategory = '' }) {
     retry,
     shopFor,
     selectedDiamondType,
+    selectedDiamondShape,
+    selectedDiamondColor,
     selectedClarity,
     selectedCarat,
     selectedCollection,
@@ -412,6 +550,8 @@ export default function Shop({ defaultCategory = '' }) {
     !!maxPrice ||
     !!shopFor ||
     !!selectedDiamondType ||
+    !!selectedDiamondShape ||
+    !!selectedDiamondColor ||
     !!selectedClarity ||
     !!selectedCarat ||
     !!selectedCollection ||
@@ -467,6 +607,11 @@ export default function Shop({ defaultCategory = '' }) {
     'birthMonth',
     'shopFor',
     'diamondType',
+    'diamondShape',
+    'shape',
+    'diamondColor',
+    'color',
+    'diamondClarity',
     'clarity',
     'carat',
     'collection',
@@ -494,8 +639,9 @@ export default function Shop({ defaultCategory = '' }) {
   const displayedProducts = products;
   const displayCount = pagination.totalDocs || products.length;
 
-  // 1st display gold products, then silver products (unless explicit price sort)
+  // 1st display gold products, then silver products (unless explicit price sort or diamond catalog)
   const sortedDisplayedProducts = useMemo(() => {
+    if (isDiamondCategory) return displayedProducts;
     const isPriceSorted = sort === 'price-low' || sort === 'price-high';
     if (isPriceSorted) return displayedProducts;
     return [...displayedProducts].sort((a, b) => {
@@ -503,7 +649,7 @@ export default function Shop({ defaultCategory = '' }) {
       const isGoldB = (b.productType || '').toLowerCase() === 'gold' ? 0 : 1;
       return isGoldA - isGoldB;
     });
-  }, [displayedProducts, sort]);
+  }, [displayedProducts, sort, isDiamondCategory]);
 
   // Page title: When nothing in filter, display 'All Jewellery'
   const pageTitle =
@@ -590,10 +736,10 @@ export default function Shop({ defaultCategory = '' }) {
         <div className="flex items-center justify-between py-3.5 mb-6 border-b border-stone-200/80">
           <div className="flex items-center gap-1.5 text-xs sm:text-[13px] text-stone-600 font-medium">
             <span>
-              {displayCount} {displayCount === 1 ? 'product' : 'products'} found
+              {displayCount} {isDiamondCategory ? (displayCount === 1 ? 'diamond' : 'diamonds') : (displayCount === 1 ? 'product' : 'products')} found
             </span>
             <span
-              title="Count of jewellery matching current selection"
+              title="Count of items matching current selection"
               className="inline-flex items-center justify-center text-stone-400 hover:text-stone-700 cursor-help transition-colors"
             >
               <HiOutlineInformationCircle className="w-4 h-4" />
@@ -616,11 +762,21 @@ export default function Shop({ defaultCategory = '' }) {
             <Dropdown
               value={sort}
               onChange={(val) => updateFilters({ sort: val })}
-              options={[
-                { value: 'newest', label: 'Newest' },
-                { value: 'price-low', label: 'Price: Low to High' },
-                { value: 'price-high', label: 'Price: High to Low' },
-              ]}
+              options={
+                isDiamondCategory
+                  ? [
+                      { value: 'newest', label: 'Newest' },
+                      { value: 'price-low', label: 'Price: Low to High' },
+                      { value: 'price-high', label: 'Price: High to Low' },
+                      { value: 'carat-asc', label: 'Carat: Low to High' },
+                      { value: 'carat-desc', label: 'Carat: High to Low' },
+                    ]
+                  : [
+                      { value: 'newest', label: 'Newest' },
+                      { value: 'price-low', label: 'Price: Low to High' },
+                      { value: 'price-high', label: 'Price: High to Low' },
+                    ]
+              }
               size="sm"
               className="w-44 sm:w-48"
               menuClassName="z-[40] w-48 sm:w-52 right-0 left-auto"
@@ -719,7 +875,9 @@ export default function Shop({ defaultCategory = '' }) {
               </div>
             ) : (
               <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
-                <h2 className="text-xl text-stone-800 font-serif">No products available</h2>
+                <h2 className="text-xl text-stone-800 font-serif">
+                  {isDiamondCategory ? 'No diamonds available' : 'No products available'}
+                </h2>
                 {filtersActive && (
                   <button
                     onClick={() => setParams({})}
@@ -756,7 +914,7 @@ export default function Shop({ defaultCategory = '' }) {
                     <span className="font-semibold text-stone-800">
                       {pagination.totalDocs}
                     </span>
-                    {' '}{pagination.totalDocs === 1 ? 'product' : 'products'}
+                    {' '}{isDiamondCategory ? (pagination.totalDocs === 1 ? 'diamond' : 'diamonds') : (pagination.totalDocs === 1 ? 'product' : 'products')}
                   </div>
 
                   {/* Page Buttons */}
@@ -911,7 +1069,7 @@ export default function Shop({ defaultCategory = '' }) {
                       <span className="font-semibold text-stone-800">
                         {pagination.totalDocs}
                       </span>
-                      {' '}products
+                      {' '}{isDiamondCategory ? 'diamonds' : 'products'}
                     </div>
 
                     <div className="flex items-center gap-1.5">

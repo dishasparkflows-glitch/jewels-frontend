@@ -10,7 +10,7 @@ import {
   HiOutlineMail,
   HiOutlinePhotograph,
 } from 'react-icons/hi';
-import { IoDiamondOutline, IoChatbubbleEllipsesOutline } from 'react-icons/io5';
+import { IoDiamondOutline, IoChatbubbleEllipsesOutline, IoWalletOutline } from 'react-icons/io5';
 import { FiLayers } from 'react-icons/fi';
 import { TbCurrencyRupee } from 'react-icons/tb';
 import api from '../../api/axios';
@@ -407,8 +407,8 @@ export default function CustomJewellery() {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-20 pt-4">
         {isSubmitted ? (
           /* ─── Confirmation Success Screen ─── */
-          <div className="rounded-3xl border border-[#efe7dd] bg-[#faf7f3]/60 p-8 sm:p-12 text-center space-y-6 shadow-sm animate-fadeIn">
-            <div className="w-16 h-16 rounded-full bg-[#f4ece3] border border-[#d9c4ad] text-[#8b6f4e] mx-auto flex items-center justify-center shadow-xs">
+          <div className="relative mt-8 rounded-3xl border border-[#efe7dd] bg-[#faf7f3]/60 px-6 pb-8 pt-12 sm:px-12 sm:pb-10 sm:pt-12 text-center space-y-5 shadow-sm animate-fadeIn">
+            <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-[#f4ece3] border border-[#d9c4ad] ring-4 ring-white text-[#8b6f4e] flex items-center justify-center shadow-xs">
               <HiCheckCircle className="w-9 h-9" />
             </div>
 
@@ -421,36 +421,32 @@ export default function CustomJewellery() {
               </h2>
             </div>
 
-            {/* Submission Summary Pill */}
-            <div className="max-w-md mx-auto p-4 rounded-2xl bg-white border border-[#efe7dd] text-left text-xs space-y-2 shadow-2xs">
-              <div className="flex justify-between items-center text-stone-500">
-                <span>Client:</span>
-                <span className="font-semibold text-stone-900">{formData.name}</span>
-              </div>
-              <div className="flex justify-between items-center text-stone-500">
-                <span>Stone & Metal:</span>
-                <span className="font-semibold text-stone-900">
-                  {formData.stoneType} • {formData.metalType}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-stone-500">
-                <span>Jewellery Type:</span>
-                <span className="font-semibold text-stone-900">
-                  {selectedJewelleryTypes.join(', ')}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-stone-500">
-                <span>Target Budget:</span>
-                <span className="font-semibold text-[#8b6f4e]">{formData.budget}</span>
-              </div>
-              {submittedInquiryId && (
-                <div className="pt-2 border-t border-stone-100 flex justify-between items-center text-[11px] text-stone-400">
-                  <span>Reference ID:</span>
-                  <span className="font-mono text-stone-700">
-                    {String(submittedInquiryId).slice(-8).toUpperCase()}
+            {/* Submission Summary Card */}
+            <div className="max-w-lg mx-auto rounded-xl bg-[#fcfaf7] border border-[#e6dccf] shadow-2xs text-left divide-y divide-[#eee6db] px-5">
+              {[
+                { icon: HiOutlineUser, label: 'Client', value: formData.name },
+                {
+                  icon: IoDiamondOutline,
+                  label: 'Stone & Metal',
+                  value: `${formData.stoneType} • ${formData.metalType}`,
+                },
+                {
+                  icon: FiLayers,
+                  label: 'Jewellery Type',
+                  value: selectedJewelleryTypes.join(', '),
+                },
+                { icon: IoWalletOutline, label: 'Target Budget', value: formData.budget },
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="flex justify-between items-center gap-4 py-3.5">
+                  <div className="flex items-center gap-3 text-stone-600 text-xs sm:text-[13px] shrink-0">
+                    <Icon className="w-[17px] h-[17px] text-[#8b6f4e] shrink-0" />
+                    <span>{label}</span>
+                  </div>
+                  <span className="font-semibold text-stone-900 text-xs sm:text-[13px] text-right">
+                    {value}
                   </span>
                 </div>
-              )}
+              ))}
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">

@@ -14,10 +14,16 @@ export default function WishlistProductCard({ item, onRemove }) {
 
   if (!item) return null;
 
-  const id = String(item._id || item.productId || '');
-  const name = item.basicInfo?.title || 'Jewellery';
+  const id = String(item.refId || item._id || '');
+  const isDiamond = Boolean(item.itemType === 'diamond' || item.isDiamond || item.productType === 'diamond');
+  const itemType = isDiamond ? 'diamond' : 'product';
+  const name = item.basicInfo?.title || (isDiamond ? 'Certified Diamond' : 'Jewellery');
   const slug = item.basicInfo?.slug || '';
-  const productPath = slug ? `/product/${encodeURIComponent(slug)}` : '/shop';
+  const productPath = isDiamond
+    ? `/diamond/${encodeURIComponent(slug || id)}`
+    : slug
+      ? `/product/${encodeURIComponent(slug)}`
+      : '/shop';
 
   // Metal colors from backend
   const colors = (item.metalColors || []).map((mc) => ({
@@ -61,23 +67,32 @@ export default function WishlistProductCard({ item, onRemove }) {
 
     try {
       const activeColorId = activeColor?._id || activeColor?.id || null;
-      const selectedMetalStr = activeColorName || (isSilver ? 'Silver' : 'Gold');
+      const selectedMetalStr = isDiamond ? '' : (activeColorName || (isSilver ? 'Silver' : 'Gold'));
       const selectedAttributes = {};
-      if (activeColorId) {
-        selectedAttributes.metalColor = activeColorId;
-      }
-      if (isSilver) {
-        selectedAttributes.metalPurity = 'Silver';
-        if (!selectedAttributes.metalColor) {
-          selectedAttributes.metalColor = 'Silver';
+      if (isDiamond) {
+        if (item.diamondType) selectedAttributes.diamondType = item.diamondType;
+        if (item.shape) selectedAttributes.diamondShape = item.shape;
+        if (item.color) selectedAttributes.diamondColor = item.color;
+        if (item.clarity) selectedAttributes.diamondClarity = item.clarity;
+        if (item.carat) selectedAttributes.caratWeight = item.carat;
+      } else {
+        if (activeColorId) {
+          selectedAttributes.metalColor = activeColorId;
+        }
+        if (isSilver) {
+          selectedAttributes.metalPurity = 'Silver';
+          if (!selectedAttributes.metalColor) {
+            selectedAttributes.metalColor = 'Silver';
+          }
         }
       }
 
       addToCart(
         {
-          _id: id,
+          refId: id,
           id,
-          productId: id,
+          itemType,
+          ...(isDiamond ? { isDiamond: true } : {}),
           title: name,
           name,
           price: unitPrice,
@@ -90,6 +105,7 @@ export default function WishlistProductCard({ item, onRemove }) {
         },
         1,
         {
+          itemType,
           selectedMetal: selectedMetalStr,
           selectedAttributes: Object.keys(selectedAttributes).length > 0 ? selectedAttributes : undefined,
         }

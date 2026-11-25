@@ -175,6 +175,8 @@ export function getProductCardData(product) {
   }));
 
   const prodPricing = product?.pricing || {};
+  const rep = product?.representative || product?.representativeProduct || {};
+  const repPricing = rep?.pricing || {};
 
   const productType = String(product?.productType || '').toLowerCase();
 
@@ -192,7 +194,8 @@ export function getProductCardData(product) {
     prodPricing.salePrice,
     prodPricing.calculatedPrice,
     prodPricing.ornatePrice,
-    prodPricing.costPrice
+    prodPricing.costPrice,
+    product?.price
   );
 
   const mrp = firstPrice(
@@ -202,14 +205,15 @@ export function getProductCardData(product) {
   const price = salePrice || firstPrice(
     prodPricing.salePrice,
     prodPricing.mrp,
-    prodPricing.cataloguePrice
+    prodPricing.cataloguePrice,
+    product?.price
   );
 
   const minPrice = isSilver ? (salePrice || 0) : Number(prodPricing.minPrice || repPricing.minPrice || 0);
   const maxPrice = isSilver ? (salePrice || 0) : Number(prodPricing.maxPrice || repPricing.maxPrice || 0);
   const originalPrice = !isGold && mrp && Number(mrp) > Number(price) ? mrp : null;
-  const name = product?.basicInfo?.title || rep.basicInfo?.title || 'Untitled product';
-  const rawSlug = product?.basicInfo?.slug || rep.basicInfo?.slug;
+  const name = product?.basicInfo?.title || product?.title || rep?.basicInfo?.title || 'Untitled product';
+  const rawSlug = product?.basicInfo?.slug || product?.slug || rep?.basicInfo?.slug;
   const slug =
     rawSlug ||
     (name && name !== 'Untitled product'

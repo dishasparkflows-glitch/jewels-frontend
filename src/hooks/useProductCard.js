@@ -51,29 +51,34 @@ export function useProductCard(product, options = {}) {
 
   const activeImage = cardImages[imageIndex] || color?.image || data.images[0] || '';
 
+  const isDiamond = Boolean(product?.isDiamond || product?.productType === 'diamond');
+
   const isOrnate =
-    Boolean(product.isOrnate) ||
-    String(product?.productType || '').toLowerCase() === 'ornate';
+    !isDiamond &&
+    (Boolean(product.isOrnate) ||
+      String(product?.productType || '').toLowerCase() === 'ornate');
 
   const isSilver =
-    options.isSilver ??
-    (Boolean(data.isSilver) ||
-      String(product?.productType || '').toLowerCase() === 'silver' ||
-      Boolean(product?.isOrnate) ||
-      isOrnate ||
-      /silver|92\.5|925/i.test(product?.basicInfo?.title || product?.title || data?.name || ''));
+    !isDiamond &&
+    (options.isSilver ??
+      (Boolean(data.isSilver) ||
+        String(product?.productType || '').toLowerCase() === 'silver' ||
+        Boolean(product?.isOrnate) ||
+        isOrnate ||
+        /silver|92\.5|925/i.test(product?.basicInfo?.title || product?.title || data?.name || '')));
 
   const isGroup = Boolean(product.isGroup);
 
   const rawSlug =
     product.basicInfo?.slug ||
+    (isDiamond ? (product.sku || String(product._id || product.id || '')) : '') ||
     data.slug;
 
   const title =
     (isGroup && product.groupName) ||
     product.basicInfo?.title ||
     data?.name ||
-    'Jewellery';
+    (isDiamond ? 'Certified Diamond' : 'Jewellery');
 
   const slug =
     rawSlug ||
@@ -81,9 +86,11 @@ export function useProductCard(product, options = {}) {
       ? title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-')
       : String(product._id || product.id || data.id));
 
-  const href = isOrnate
-    ? `/silver-collection/${encodeURIComponent(slug)}`
-    : `/product/${encodeURIComponent(slug)}`;
+  const href = isDiamond
+    ? `/diamond/${encodeURIComponent(slug)}`
+    : isOrnate
+      ? `/silver-collection/${encodeURIComponent(slug)}`
+      : `/product/${encodeURIComponent(slug)}`;
 
   const [localWished, setLocalWished] = useState(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -185,6 +192,7 @@ export function useProductCard(product, options = {}) {
     imageIndex,
     setImageIndex,
     previewImages,
+    isDiamond,
     isOrnate,
     isSilver,
     isGroup,

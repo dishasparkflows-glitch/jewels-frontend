@@ -140,22 +140,28 @@ export default function OrderSuccess() {
               </h3>
               <div className="space-y-3 sm:space-y-4">
                 {order.items?.map((item, idx) => {
+                  const isDiamond = item.itemType === 'diamond';
+                  const refDoc = item.refId && typeof item.refId === 'object' ? item.refId : null;
                   const slug =
-                    item.productId?.basicInfo?.slug ||
-                    item.productId?.slug ||
+                    refDoc?.basicInfo?.slug ||
+                    refDoc?.slug ||
+                    refDoc?.sku ||
+                    item.sku ||
                     item.slug;
                   const id =
-                    item.productId?._id ||
-                    (typeof item.productId === 'string' ? item.productId : null) ||
+                    refDoc?._id ||
+                    (typeof item.refId === 'string' ? item.refId : null) ||
                     item.id;
-                  const productLink = slug
-                    ? `/product/${encodeURIComponent(slug)}`
-                    : id
-                    ? `/product/${encodeURIComponent(id)}`
+                  const target = slug || id;
+                  const productLink = target
+                    ? (isDiamond ? `/diamond/${encodeURIComponent(target)}` : `/product/${encodeURIComponent(target)}`)
                     : null;
 
                   const imageUrl =
                     item.image?.url ||
+                    refDoc?.image?.url ||
+                    refDoc?.colorImages?.[0]?.images?.[0]?.url ||
+                    refDoc?.ornate?.ornateImages?.[0]?.url ||
                     (typeof item.image === 'string' ? item.image : '') ||
                     '/featured/ring.jpg';
 

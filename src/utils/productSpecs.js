@@ -28,7 +28,8 @@ export function getItemSpecs(item) {
     };
   }
 
-  const isSilver = isSilverProduct(item);
+  const isDiamond = Boolean(item.isDiamond || item.itemType === 'diamond' || item.productType === 'diamond');
+  const isSilver = !isDiamond && isSilverProduct(item);
   const attrs = item.selectedAttributes || {};
 
   const rawDiamondType = isSilver ? '' : (attrs.diamondType || '');
@@ -57,10 +58,13 @@ export function getItemSpecs(item) {
   const hasSpecs = Boolean(metalDisplay || metalColor || clarityDisplay || caratWeight != null || diamondShape || sizeDisplay);
 
   const displayName = item.title || item.name || item.basicInfo?.title || 'Fine Jewellery';
-  const targetIdentifier = item.slug || item.basicInfo?.slug || item.productId || item.id || (displayName ? displayName.toLowerCase().trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') : '');
-  const productLink = `/product/${encodeURIComponent(targetIdentifier)}`;
+  const targetIdentifier = item.slug || item.basicInfo?.slug || item.sku || item.refId || item.id || (displayName ? displayName.toLowerCase().trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') : '');
+  const productLink = isDiamond
+    ? `/diamond/${encodeURIComponent(targetIdentifier)}`
+    : `/product/${encodeURIComponent(targetIdentifier)}`;
 
   return {
+    isDiamond,
     isSilver,
     diamondType,
     metalPurity,

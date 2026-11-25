@@ -1289,8 +1289,8 @@ export default function ProductDetail() {
       const selectedMetalStr = isGold ? `${selectedPurity} ${selectedColor}`.trim() : 'Silver';
 
       const cartItem = {
-        _id: product._id,
-        productId: product._id,
+        refId: product._id,
+        itemType: 'product',
         title: product.basicInfo?.title,
         sku: product.basicInfo?.sku || '',
         price,

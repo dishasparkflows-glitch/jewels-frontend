@@ -447,7 +447,8 @@ export default function Checkout() {
         otpVerificationToken: verifyResult?.verificationToken,
         isPhoneVerified: true,
         items: cart.map((item) => ({
-          productId: item.productId || item.id,
+          refId: item.refId || item.id,
+          itemType: item.itemType || (item.isDiamond ? 'diamond' : 'product'),
           title: item.title || item.name,
           sku: item.sku || item.basicInfo?.sku || '',
           price: item.price,
@@ -1044,7 +1045,7 @@ export default function Checkout() {
                   const image = item.image && !isOrnateImage(item.image) ? item.image : getPrimaryProductImage(item);
                   const specs = getItemSpecs(item);
                   const { displayName, productLink } = specs;
-                  const itemKey = `${item.id || item.productId || index}-${item.selectedMetal || ''}-${item.selectedSize || ''}`;
+                  const itemKey = `${item.refId || item.id || index}-${item.selectedMetal || ''}-${item.selectedSize || ''}`;
 
                   return (
                     <article

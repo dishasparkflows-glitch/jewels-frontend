@@ -172,6 +172,15 @@ export const productsAPI = {
   getSimilar: (id, params) => api.get(`/products/${id}/similar`, { params: { forweb: true, ...params } }),
 };
 
+// ─── Diamonds ─────────────────────────────────────
+export const diamondsAPI = {
+  getAll: (params) => getOnce('/diamonds', { params: { forweb: true, status: 'active', ...params } }),
+  getAttributes: () => getOnce('/diamonds/attributes'),
+  getLookup: (params) => getOnce('/diamonds/lookup', { params }),
+  getById: (id) => getOnce(`/diamonds/${encodeURIComponent(id)}`),
+  getBySku: (sku) => getOnce(`/diamonds/sku/${encodeURIComponent(sku)}`),
+};
+
 // ─── Reviews ──────────────────────────────────────
 export const reviewsAPI = {
   getAll: (params) => api.get('/reviews', { params }),
@@ -194,9 +203,9 @@ export const footerAPI = {
 export const wishlistAPI = {
   get: () => getOnce('/wishlist'),
   getCounts: () => getOnce('/cart/counts'),
-  toggle: (productData) => api.post('/wishlist/toggle', productData),
-  add: (productData) => api.post('/wishlist/add', productData),
-  remove: (productId) => api.delete(`/wishlist/${productId}`),
+  toggle: ({ refId, itemType = 'product' }) => api.post('/wishlist/toggle', { refId, itemType }),
+  add: ({ refId, itemType = 'product' }) => api.post('/wishlist/add', { refId, itemType }),
+  remove: (refId) => api.delete(`/wishlist/${refId}`),
   clear: () => api.delete('/wishlist'),
 };
 
@@ -206,19 +215,19 @@ export const cartAPI = {
   getCounts: () => getOnce('/cart/counts'),
   add: (payload) =>
     api.post('/cart/add', {
-      selectedAttributes: payload?.selectedAttributes ?? null,
-      selectedMetal: payload?.selectedMetal || payload?.options?.selectedMetal || null,
-      selectedSize: payload?.selectedSize || payload?.options?.selectedSize || null,
-      productId: payload?.productId || payload?.id || payload?._id,
+      refId: payload?.refId,
+      itemType: payload?.itemType || 'product',
+      quantity: Number(payload?.quantity) || 1,
       price: Number(payload?.price) || 0,
       totalItemPrice: Number(payload?.totalItemPrice) || Number(payload?.price) || 0,
-      quantity: payload?.quantity || 1,
-      options: payload?.options || {},
+      ...(payload?.selectedMetal ? { selectedMetal: payload.selectedMetal } : {}),
+      ...(payload?.selectedSize ? { selectedSize: payload.selectedSize } : {}),
+      ...(payload?.selectedAttributes ? { selectedAttributes: payload.selectedAttributes } : {}),
       ...(payload?.userId ? { userId: payload.userId } : {}),
     }),
-  updateQuantity: (productId, quantity, options = {}) =>
-    api.put('/cart/quantity', { productId, quantity, options }),
-  remove: (productId) => api.delete(`/cart/${productId}`),
+  updateQuantity: (refId, quantity) =>
+    api.put('/cart/quantity', { refId, quantity }),
+  remove: (refId) => api.delete(`/cart/${refId}`),
   clear: () => api.delete('/cart'),
 };
 

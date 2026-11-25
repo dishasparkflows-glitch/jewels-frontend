@@ -54,8 +54,9 @@ export default function HomeProductCard({ product, isSilver: isSilverProp }) {
       const price = Number(data.price) || 0;
       addToCart(
         {
+          refId: data.id,
           id: data.id,
-          productId: data.id,
+          itemType: 'product',
           sku: product.basicInfo?.sku || '',
           title,
           price,

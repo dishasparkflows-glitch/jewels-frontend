@@ -62,7 +62,7 @@ export default function CartDrawer({ open, onClose }) {
             {cart.map((item, index) => {
               const specs = getItemSpecs(item);
               const { displayName, productLink } = specs;
-              const itemKey = `${item.id || item.productId || index}-${item.selectedMetal || ''}-${item.selectedSize || ''}`;
+              const itemKey = `${item.refId || item.id || index}-${item.selectedMetal || ''}-${item.selectedSize || ''}`;
 
               return (
                 <li key={itemKey} className="flex gap-3 sm:gap-4 py-4 sm:py-5">

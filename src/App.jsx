@@ -15,6 +15,7 @@ import StoreLayout from './components/layout/StoreLayout';
 const Home = lazy(() => import('./pages/store/Home'));
 const Shop = lazy(() => import('./pages/store/Shop'));
 const ProductDetail = lazy(() => import('./pages/store/ProductDetail'));
+const DiamondDetail = lazy(() => import('./pages/store/DiamondDetail'));
 const Cart = lazy(() => import('./pages/store/Cart'));
 const Checkout = lazy(() => import('./pages/store/Checkout'));
 const Wishlist = lazy(() => import('./pages/store/Wishlist'));
@@ -98,6 +99,9 @@ function App() {
                 <Route element={<StoreLayout />}>
                   <Route path="/" element={<Home />} />
                   <Route path="/shop" element={<Shop />} />
+                  <Route path="/diamonds" element={<Shop defaultCategory="diamond" />} />
+                  <Route path="/diamond/:slug" element={<DiamondDetail />} />
+                  <Route path="/diamonds/:slug" element={<DiamondDetail />} />
                   <Route path="/product/:slug" element={<ProductDetail />} />
                   <Route path="/:categorySlug/:slug" element={<ProductDetail />} />
                   <Route path="/cart" element={<Cart />} />

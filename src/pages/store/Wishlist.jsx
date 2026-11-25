@@ -53,7 +53,7 @@ export default function Wishlist() {
         ) : wishlistItems.length ? (
           <div className="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4 lg:gap-x-8">
             {wishlistItems.map((item) => (
-              <WishlistProductCard key={item._id || item.productId} item={item} onRemove={removeFromWishlist} />
+              <WishlistProductCard key={item.refId || item._id} item={item} onRemove={removeFromWishlist} />
             ))}
           </div>
         ) : (

@@ -242,7 +242,7 @@ export function trackBeginCheckout(items = [], totalValue = 0) {
     currency: 'INR',
     value: Number(totalValue) || 0,
     items: items.map((item) => ({
-      item_id: String(item.productId || item.id || item._id || ''),
+      item_id: String(item.refId || item.id || item._id || ''),
       item_name: item.title || item.basicInfo?.title || '',
       price: Number(item.price || item.totalItemPrice || 0),
       quantity: Number(item.quantity || 1),
@@ -259,7 +259,7 @@ export function trackPurchase(orderId, items = [], totalValue = 0) {
     currency: 'INR',
     value: Number(totalValue) || 0,
     items: items.map((item) => ({
-      item_id: String(item.productId || item.id || item._id || ''),
+      item_id: String(item.refId || item.id || item._id || ''),
       item_name: item.title || item.basicInfo?.title || '',
       price: Number(item.price || item.totalItemPrice || 0),
       quantity: Number(item.quantity || 1),

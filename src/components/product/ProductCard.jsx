@@ -121,7 +121,19 @@ export default function ProductCard({ product }) {
     maxPrice,
     hasRange,
     hasDiscount,
+    isDiamond,
   } = useProductCard(product);
+
+  const diamondMetaLine = isDiamond
+    ? [
+        product.carat ? `${product.carat} ct` : '',
+        product.shapeId?.name || product.shape || '',
+        product.colorId?.name || product.color || '',
+        product.clarityId?.name || product.clarity || '',
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
 
   const handleCardClick = () => {
     sessionStorage.setItem("cameFromProduct", "1");
@@ -210,6 +222,11 @@ export default function ProductCard({ product }) {
           >
             {title}
           </h3>
+          {diamondMetaLine && (
+            <p className="text-[10px] sm:text-[11px] text-[#8b6f4e] font-medium mb-1 truncate">
+              {diamondMetaLine}
+            </p>
+          )}
         </div>
       </div>
 
