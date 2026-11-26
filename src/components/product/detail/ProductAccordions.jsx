@@ -137,7 +137,7 @@ export default function ProductAccordions({
           <div className={`accordion-collapse ${openAccordions.price ? 'open' : ''}`}>
             <div className="accordion-collapse-inner">
               {breakdown && (
-                <div className="px-5 pb-5 pt-3 bg-white border-t border-[#EFE8DD] text-xs">
+                <div className="px-3.5 sm:px-5 pb-5 pt-3 bg-white border-t border-[#EFE8DD] text-xs">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>

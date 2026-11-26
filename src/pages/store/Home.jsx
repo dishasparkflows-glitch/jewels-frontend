@@ -33,6 +33,7 @@ const Home = () => {
 
   // ─── Dynamic API State ──────────────────────────────────────────────
   const [heroBanners, setHeroBanners] = useState([]);
+  const [bannersLoading, setBannersLoading] = useState(true);
   const [activeHeroIdx, setActiveHeroIdx] = useState(0);
 
   const [celebrateItems, setCelebrateItems] = useState([]);
@@ -43,6 +44,7 @@ const Home = () => {
   const [platinumProducts, setPlatinumProducts] = useState([]);
   const [silverProducts, setSilverProducts] = useState([]);
   const [trendingProducts, setTrendingProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
   const [homeSections, setHomeSections] = useState([]);
   const mostLovedScrollRef = useRef(null);
   const [isMostLovedHovered, setIsMostLovedHovered] = useState(false);
@@ -161,8 +163,8 @@ const Home = () => {
                 image: mobileData.image.url,
                 mobileImage: mobileData.mobileImage?.url || mobileData.image.url,
                 link: mobileData.link || '',
-                appStoreUrl: mobileData.appStoreUrl || storeSettings?.appStoreUrl || '',
-                googlePlayUrl: mobileData.googlePlayUrl || storeSettings?.googlePlayUrl || '',
+                appStoreUrl: mobileData.appStoreUrl || '',
+                googlePlayUrl: mobileData.googlePlayUrl || '',
               }
             : null
         );
@@ -181,10 +183,13 @@ const Home = () => {
             : null
         );
       })
-      .catch((err) => console.error('Failed to load banners:', err));
+      .catch((err) => console.error('Failed to load banners:', err))
+      .finally(() => {
+        if (mounted) setBannersLoading(false);
+      });
 
     return () => { mounted = false; };
-  }, [storeSettings?.appStoreUrl, storeSettings?.googlePlayUrl]);
+  }, []);
 
   // ─── Category Lookup ───────────────────────────────────────────────
   useEffect(() => {
@@ -210,9 +215,11 @@ const Home = () => {
 
   // ─── 2. FETCH FEATURED SHOWCASES (Celebrate & Gifts) ───────────────
   useEffect(() => {
+    let mounted = true;
     const fetchFeatured = async () => {
       try {
         const res = await featuredAPI.getLookup({ status: 'active' });
+        if (!mounted) return;
         const list = Array.isArray(res?.data?.data) ? res.data.data : [];
         if (!list.length) return;
 
@@ -277,6 +284,7 @@ const Home = () => {
       }
     };
     fetchFeatured();
+    return () => { mounted = false; };
   }, [themeConfig?.featuredSelections]);
 
   const scrollCelebrate = useCallback((direction) => {
@@ -365,9 +373,11 @@ const Home = () => {
 
   // ─── 3. FETCH PRODUCTS FOR HOME (/api/products/home) ─────────────────
   useEffect(() => {
+    let mounted = true;
     const fetchHomeProducts = async () => {
       try {
         const res = await productsAPI.getHomeProducts();
+        if (!mounted) return;
         const sections = res?.data?.data?.sections;
         if (sections) {
           setGoldProducts(sections.gold || sections.mostLoved || []);
@@ -377,9 +387,12 @@ const Home = () => {
         }
       } catch (err) {
         console.error('Failed to load home products:', err);
+      } finally {
+        if (mounted) setProductsLoading(false);
       }
     };
     fetchHomeProducts();
+    return () => { mounted = false; };
   }, []);
 
   // ─── FETCH DYNAMIC HOME SECTIONS (/api/products/home-sections) ─────
@@ -545,7 +558,9 @@ const Home = () => {
       {/* ─────────────────────────────────────────────────────────────────
           1. HERO BANNER
       ─────────────────────────────────────────────────────────────────── */}
-      {heroBanners.length > 0 && currentHero && (
+      {bannersLoading && heroBanners.length === 0 ? (
+        <section style={sectionStyle('hero')} className="w-full h-[220px] sm:h-[360px] md:h-[460px] lg:h-[520px] bg-[#FAF6F0] animate-pulse" aria-hidden="true" />
+      ) : heroBanners.length > 0 && currentHero && (
         <section style={sectionStyle('hero')} className="relative isolate w-full overflow-hidden bg-[#FAF6F0] text-[#29231d]">
           <div className="relative w-full">
             {(() => {
@@ -1053,11 +1068,11 @@ const Home = () => {
               )}
 
               {/* Clickable hotspots for Google Play and App Store buttons in banner artwork */}
-              {(mobileAppBanner.googlePlayUrl || mobileAppBanner.appStoreUrl) && (
+              {((mobileAppBanner.googlePlayUrl || storeSettings?.googlePlayUrl) || (mobileAppBanner.appStoreUrl || storeSettings?.appStoreUrl)) && (
                 <div className="absolute right-4 sm:right-8 md:right-12 lg:right-16 bottom-5 sm:bottom-7 lg:bottom-9 z-10 flex items-center gap-2 sm:gap-3">
-                  {mobileAppBanner.googlePlayUrl && (
+                  {(mobileAppBanner.googlePlayUrl || storeSettings?.googlePlayUrl) && (
                     <a
-                      href={mobileAppBanner.googlePlayUrl}
+                      href={mobileAppBanner.googlePlayUrl || storeSettings?.googlePlayUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-28 sm:w-32 lg:w-36 h-9 sm:h-10 lg:h-12 cursor-pointer"
@@ -1065,9 +1080,9 @@ const Home = () => {
                       aria-label="Google Play"
                     />
                   )}
-                  {mobileAppBanner.appStoreUrl && (
+                  {(mobileAppBanner.appStoreUrl || storeSettings?.appStoreUrl) && (
                     <a
-                      href={mobileAppBanner.appStoreUrl}
+                      href={mobileAppBanner.appStoreUrl || storeSettings?.appStoreUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-28 sm:w-32 lg:w-36 h-9 sm:h-10 lg:h-12 cursor-pointer"
@@ -1114,7 +1129,20 @@ const Home = () => {
           Trending jewellery in lab grown diamond
         </h3>
 
-        {trendingProducts.length > 0 ? (
+        {productsLoading && trendingProducts.length === 0 ? (
+          <div className="flex gap-3 sm:gap-4 lg:gap-5 overflow-hidden pb-4">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div
+                key={n}
+                className="flex-shrink-0 w-[calc(50%-6px)] sm:w-[calc(50%-8px)] md:w-[calc(33.333%-11px)] lg:w-[calc(25%-15px)] xl:w-[calc(20%-16px)] animate-pulse rounded-xl border border-stone-100 bg-white p-2 sm:p-3 space-y-2.5"
+              >
+                <div className="aspect-square rounded-lg bg-stone-100" />
+                <div className="h-3.5 w-3/4 mx-auto bg-stone-100 rounded" />
+                <div className="h-3.5 w-1/3 mx-auto bg-stone-100 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : trendingProducts.length > 0 ? (
           <div
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             className="flex gap-3 sm:gap-4 lg:gap-5 overflow-x-auto pb-4 no-scrollbar scrollbar-none [&::-webkit-scrollbar]:hidden snap-x snap-mandatory scroll-smooth"

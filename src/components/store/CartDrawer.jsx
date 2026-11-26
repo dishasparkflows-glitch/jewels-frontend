@@ -106,7 +106,7 @@ export default function CartDrawer({ open, onClose }) {
                           type="button"
                           onClick={() => updateQuantity(item.id, item.quantity - 1)}
                           aria-label={`Decrease quantity of ${displayName}`}
-                          className="flex h-5 w-4.5 sm:h-6 sm:w-5 items-center justify-center text-xs font-bold text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
+                          className="flex h-5 w-5 sm:h-6 sm:w-5 items-center justify-center text-xs font-bold text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
                         >
                           <HiMinus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                         </button>
@@ -117,7 +117,7 @@ export default function CartDrawer({ open, onClose }) {
                           type="button"
                           onClick={() => updateQuantity(item.id, item.quantity + 1)}
                           aria-label={`Increase quantity of ${displayName}`}
-                          className="flex h-5 w-4.5 sm:h-6 sm:w-5 items-center justify-center text-xs font-bold text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
+                          className="flex h-5 w-5 sm:h-6 sm:w-5 items-center justify-center text-xs font-bold text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
                         >
                           <HiPlus className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                         </button>

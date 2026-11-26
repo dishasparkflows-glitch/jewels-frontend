@@ -1416,7 +1416,7 @@ export default function ProductDetail() {
     return (
       <div className="bg-white min-h-[70vh] flex items-center justify-center">
         <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-3 border-stone-200 border-t-[#8f6d43] rounded-full animate-spin mx-auto" />
+          <div className="w-10 h-10 border-[3px] border-stone-200 border-t-[#8f6d43] rounded-full animate-spin mx-auto" />
           <p className="text-xs uppercase tracking-widest font-bold text-stone-400">
             Loading Fine Jewelry Details...
           </p>

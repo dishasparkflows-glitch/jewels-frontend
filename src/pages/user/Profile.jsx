@@ -188,7 +188,7 @@ const getStatusBannerInfo = (status = '') => {
       description: 'Your order has been delivered successfully.',
       icon: (
         <div className="w-8 h-8 rounded-full bg-[#1b7a3a] text-white flex items-center justify-center shrink-0 shadow-xs">
-          <HiOutlineCheck className="w-4.5 h-4.5 stroke-[2.5]" />
+          <HiOutlineCheck className="w-[18px] h-[18px] stroke-[2.5]" />
         </div>
       ),
     };
@@ -199,7 +199,7 @@ const getStatusBannerInfo = (status = '') => {
       description: 'Your order is in transit and on its way to you.',
       icon: (
         <div className="w-8 h-8 rounded-full bg-[#117688] text-white flex items-center justify-center shrink-0 shadow-xs">
-          <HiOutlineTruck className="w-4.5 h-4.5" />
+          <HiOutlineTruck className="w-[18px] h-[18px]" />
         </div>
       ),
     };
@@ -210,7 +210,7 @@ const getStatusBannerInfo = (status = '') => {
       description: 'This order has been cancelled.',
       icon: (
         <div className="w-8 h-8 rounded-full bg-[#9e2724] text-white flex items-center justify-center shrink-0 shadow-xs">
-          <HiOutlineX className="w-4.5 h-4.5 stroke-[2.5]" />
+          <HiOutlineX className="w-[18px] h-[18px] stroke-[2.5]" />
         </div>
       ),
     };
@@ -220,7 +220,7 @@ const getStatusBannerInfo = (status = '') => {
     description: 'Your order has been placed and is being prepared.',
     icon: (
       <div className="w-8 h-8 rounded-full bg-[#a36829] text-white flex items-center justify-center shrink-0 shadow-xs">
-        <HiOutlineClock className="w-4.5 h-4.5" />
+        <HiOutlineClock className="w-[18px] h-[18px]" />
       </div>
     ),
   };
@@ -1154,7 +1154,7 @@ const Profile = () => {
                       
                       {/* 1. Avatar + Name & Email */}
                       <div className="flex items-center gap-3.5 shrink-0 min-w-0">
-                        <div className="w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-[#f4ebe1] text-[#8b6f4e] font-serif text-xl sm:text-2xl font-medium flex items-center justify-center shrink-0 border border-[#e8dfd5]">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#f4ebe1] text-[#8b6f4e] font-serif text-xl sm:text-2xl font-medium flex items-center justify-center shrink-0 border border-[#e8dfd5]">
                           {(userFullName?.[0] || user?.profile?.firstName?.[0] || 'D').toUpperCase()}
                         </div>
                         <div className="space-y-0.5 min-w-0">
@@ -1514,7 +1514,7 @@ const Profile = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-[#FAF7F2] rounded-2xl border border-[#EFE8DD] p-3 sm:p-4.5 space-y-3 sm:space-y-3.5">
+                  <div className="bg-[#FAF7F2] rounded-2xl border border-[#EFE8DD] p-3 sm:p-4 space-y-3 sm:space-y-3.5">
                     <div className="flex items-center justify-center text-center pb-0.5">
                       <h2
                         id="orders-section-heading"
@@ -1955,8 +1955,8 @@ const Profile = () => {
                                 ]}
                                 size="sm"
                                 direction="up"
-                                className="w-18 text-xs"
-                                menuClassName="min-w-[4.5rem]"
+                                className="w-20 text-xs"
+                                menuClassName="min-w-[5rem]"
                                 showDivider={false}
                               />
                             </div>
@@ -2411,10 +2411,10 @@ const Profile = () => {
               className="w-full max-w-2xl lg:max-w-3xl bg-[#fdfbf7] rounded-2xl shadow-2xl overflow-hidden animate-scale-in my-auto sm:my-4 max-h-[92vh] flex flex-col cursor-default border border-[#e8ded0]"
             >
               {/* Modal Header */}
-              <div className="bg-[#291e16] text-white px-4.5 sm:px-7 py-3.5 sm:py-4 flex items-center justify-between shrink-0">
+              <div className="bg-[#291e16] text-white px-4 sm:px-7 py-3.5 sm:py-4 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0">
-                    <HiOutlineCube className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-[#d5c7b3]" />
+                    <HiOutlineCube className="w-[18px] h-[18px] sm:w-5 sm:h-5 text-[#d5c7b3]" />
                   </div>
                   <div className="min-w-0">
                     <h3 className="font-serif text-sm sm:text-lg font-medium text-white leading-tight">
@@ -2737,7 +2737,7 @@ const Profile = () => {
                         color: 'var(--btn-primary-text, #ffffff)',
                         borderColor: 'var(--btn-primary-bg, #8c6536)',
                       }}
-                      className="px-3.5 sm:px-4.5 py-2 sm:py-2 rounded-xl border hover:opacity-90 text-xs font-semibold transition-all inline-flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-wait shadow-2xs whitespace-nowrap active:scale-95"
+                      className="px-3.5 sm:px-5 py-2 sm:py-2 rounded-xl border hover:opacity-90 text-xs font-semibold transition-all inline-flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-wait shadow-2xs whitespace-nowrap active:scale-95"
                     >
                       <HiOutlineShoppingCart className={`w-4 h-4 shrink-0 ${reorderingId === (selectedOrder._id || selectedOrder.id) ? 'animate-spin' : ''}`} />
                       <span>{reorderingId === (selectedOrder._id || selectedOrder.id) ? 'Adding…' : 'Buy Again'}</span>
@@ -2746,7 +2746,7 @@ const Profile = () => {
                   <button
                     type="button"
                     onClick={() => setSelectedOrder(null)}
-                    className="px-4 sm:px-4.5 py-2 sm:py-2 rounded-xl border border-stone-200 hover:border-stone-300 bg-white hover:bg-stone-50 text-stone-700 text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-2xs inline-flex items-center justify-center active:scale-95 col-span-1 [&:only-child]:col-span-2 [&:nth-child(3):last-child]:col-span-2 sm:col-auto sm:[&:only-child]:col-auto sm:[&:nth-child(3):last-child]:col-auto"
+                    className="px-4 sm:px-5 py-2 sm:py-2 rounded-xl border border-stone-200 hover:border-stone-300 bg-white hover:bg-stone-50 text-stone-700 text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-2xs inline-flex items-center justify-center active:scale-95 col-span-1 [&:only-child]:col-span-2 [&:nth-child(3):last-child]:col-span-2 sm:col-auto sm:[&:only-child]:col-auto sm:[&:nth-child(3):last-child]:col-auto"
                   >
                     Close
                   </button>

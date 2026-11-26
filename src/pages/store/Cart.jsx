@@ -80,7 +80,7 @@ const Cart = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-8 sm:pb-12 space-y-4 sm:space-y-5">
       <SEO title="Shopping Bag | Neirah Fine Jewellery" noindex={true} />
       {/* Title & Return */}
-      <div className="flex items-center justify-between gap-3 pb-3 sm:pb-3.5 border-b border-stone-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 sm:pb-3.5 border-b border-stone-200">
         <div>
           <h1 className="font-serif text-xl sm:text-3xl font-medium text-[#26221e]">
             Shopping Bag ({cart.length})
@@ -136,7 +136,7 @@ const Cart = () => {
                 return (
                   <div
                     key={itemKey}
-                    className="bg-[#fcfaf7] hover:bg-white rounded-xl sm:rounded-2xl border border-stone-200/90 hover:border-stone-300 p-2.5 sm:p-4.5 flex gap-3 sm:gap-4.5 transition-all shadow-2xs items-start sm:items-center"
+                    className="bg-[#fcfaf7] hover:bg-white rounded-xl sm:rounded-2xl border border-stone-200/90 hover:border-stone-300 p-3 sm:p-4 flex gap-3 sm:gap-4 transition-all shadow-2xs items-start sm:items-center"
                   >
                     <Link
                       to={productLink}
@@ -351,7 +351,7 @@ const Cart = () => {
                   if (promoMessage.text) setPromoMessage({ text: '', type: '' });
                 }}
                 placeholder="Try 'WELCOME10'"
-                className={`bg-white border text-stone-800 text-xs rounded-xl px-3 py-2.5 flex-1 focus:outline-none uppercase tracking-wider transition-colors ${
+                className={`min-w-0 bg-white border text-stone-800 text-xs rounded-xl px-3 py-2.5 flex-1 focus:outline-none uppercase tracking-wider transition-colors ${
                   promoMessage.type === 'error'
                     ? 'border-red-300 focus:border-red-500'
                     : promoMessage.type === 'success'

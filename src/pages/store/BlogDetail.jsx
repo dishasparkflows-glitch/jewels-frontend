@@ -97,7 +97,7 @@ export default function BlogDetail() {
     return (
       <div className="min-h-screen bg-[#faf8f5] flex items-center justify-center py-24">
         <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-3 border-[#d4af37] border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="w-10 h-10 border-[3px] border-[#d4af37] border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-sm font-serif text-stone-500">Unveiling the story...</p>
         </div>
       </div>

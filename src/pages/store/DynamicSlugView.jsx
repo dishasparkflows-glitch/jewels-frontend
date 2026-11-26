@@ -1,9 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { categoriesAPI } from '../../api/services';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { slugify, CATEGORY_ALIASES as aliases, getResponseItems as getItems } from '../../utils/common';
 import Shop from './Shop';
 import StaticPageView from './StaticPageView';
+
+function findMatchingCategory(categories, slug) {
+  if (!slug || !Array.isArray(categories) || categories.length === 0) return null;
+  const normalizedSlug = slug.toLowerCase().trim();
+  const resolvedSlug = aliases[normalizedSlug] || normalizedSlug;
+  return categories.find((cat) => {
+    const catSlug = (cat.slug || '').toLowerCase().trim();
+    const catNameSlug = slugify(cat.name || '');
+    const catId = String(cat._id || '');
+    return (
+      catSlug === resolvedSlug ||
+      catNameSlug === resolvedSlug ||
+      catSlug === normalizedSlug ||
+      catNameSlug === normalizedSlug ||
+      catId === normalizedSlug
+    );
+  }) || null;
+}
 
 /**
  * DynamicSlugView handles single-segment root routes like /:slug dynamically.
@@ -15,6 +34,13 @@ import StaticPageView from './StaticPageView';
  */
 export default function DynamicSlugView() {
   const { slug } = useParams();
+  const { navigation: bootstrapNav } = useStoreSettings();
+
+  const bootstrapMatch = useMemo(() => {
+    if (!Array.isArray(bootstrapNav) || bootstrapNav.length === 0 || !slug) return undefined;
+    return findMatchingCategory(bootstrapNav, slug);
+  }, [bootstrapNav, slug]);
+
   const [resolution, setResolution] = useState({
     loading: true,
     type: null,
@@ -22,36 +48,28 @@ export default function DynamicSlugView() {
   });
 
   useEffect(() => {
-    let isCurrent = true;
-    setResolution({ loading: true, type: null, category: null });
-
     if (!slug) {
       setResolution({ loading: false, type: 'static', category: null });
       return;
     }
 
-    const normalizedSlug = slug.toLowerCase().trim();
-    const resolvedSlug = aliases[normalizedSlug] || normalizedSlug;
+    if (bootstrapMatch !== undefined) {
+      setResolution(
+        bootstrapMatch
+          ? { loading: false, type: 'category', category: bootstrapMatch.slug || bootstrapMatch._id }
+          : { loading: false, type: 'static', category: null }
+      );
+      return;
+    }
+
+    let isCurrent = true;
+    setResolution({ loading: true, type: null, category: null });
 
     categoriesAPI
       .getNavigation()
       .then((res) => {
         if (!isCurrent) return;
-        const categories = getItems(res);
-
-        const matchedCategory = categories.find((cat) => {
-          const catSlug = (cat.slug || '').toLowerCase().trim();
-          const catNameSlug = slugify(cat.name || '');
-          const catId = String(cat._id || '');
-          return (
-            catSlug === resolvedSlug ||
-            catNameSlug === resolvedSlug ||
-            catSlug === normalizedSlug ||
-            catNameSlug === normalizedSlug ||
-            catId === normalizedSlug
-          );
-        });
-
+        const matchedCategory = findMatchingCategory(getItems(res), slug);
         if (matchedCategory) {
           setResolution({
             loading: false,
@@ -78,9 +96,16 @@ export default function DynamicSlugView() {
     return () => {
       isCurrent = false;
     };
-  }, [slug]);
+  }, [slug, bootstrapMatch]);
 
-  if (resolution.loading) {
+  const effectiveResolution =
+    bootstrapMatch !== undefined
+      ? bootstrapMatch
+        ? { loading: false, type: 'category', category: bootstrapMatch.slug || bootstrapMatch._id }
+        : { loading: false, type: 'static', category: null }
+      : resolution;
+
+  if (effectiveResolution.loading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center bg-white">
         <div className="w-8 h-8 border-2 border-stone-200 border-t-[#8b6f4e] rounded-full animate-spin" />
@@ -88,8 +113,8 @@ export default function DynamicSlugView() {
     );
   }
 
-  if (resolution.type === 'category') {
-    return <Shop defaultCategory={resolution.category} />;
+  if (effectiveResolution.type === 'category') {
+    return <Shop defaultCategory={effectiveResolution.category} />;
   }
 
   return <StaticPageView />;

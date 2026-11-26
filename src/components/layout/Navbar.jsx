@@ -456,7 +456,7 @@ const Navbar = () => {
           <div ref={searchContainerRef} className="flex-1 max-w-sm lg:max-w-md xl:max-w-lg mx-auto hidden md:block relative z-40">
             <form
               onSubmit={handleSearch}
-              className="relative flex items-center w-full h-9 sm:h-9.5 rounded-full bg-white border border-stone-200/90 shadow-2xs hover:border-[#8b6f4e]/60 focus-within:border-[#8b6f4e] focus-within:ring-2 focus-within:ring-[#8b6f4e]/20 transition-all duration-300"
+              className="relative flex items-center w-full h-9 sm:h-10 rounded-full bg-white border border-stone-200/90 shadow-2xs hover:border-[#8b6f4e]/60 focus-within:border-[#8b6f4e] focus-within:ring-2 focus-within:ring-[#8b6f4e]/20 transition-all duration-300"
             >
               <HiOutlineSearch className="w-4 h-4 ml-3.5 text-stone-400 shrink-0 pointer-events-none transition-colors" />
               <input
@@ -501,7 +501,7 @@ const Navbar = () => {
                   backgroundColor: 'var(--btn-primary-bg, #8c6536)',
                   color: 'var(--btn-primary-text, #ffffff)',
                 }}
-                className="mr-1 w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full hover:opacity-90 active:scale-95 flex items-center justify-center shadow-2xs transition-all cursor-pointer shrink-0"
+                className="mr-1 w-7 h-7 sm:w-8 sm:h-8 rounded-full hover:opacity-90 active:scale-95 flex items-center justify-center shadow-2xs transition-all cursor-pointer shrink-0"
                 title="Search"
               >
                 <HiOutlineSearch className="w-3.5 h-3.5 stroke-[2.2]" />
@@ -635,7 +635,7 @@ const Navbar = () => {
                   </button>
 
                   {userDropdownOpen && (
-                    <div className="absolute right-0 top-full mt-3 w-72 sm:w-80 bg-[#fdfbf7] border border-[#eadfc9] rounded-2xl shadow-2xl p-3 z-50 animate-fadeIn">
+                    <div className="absolute right-0 top-full mt-3 w-72 sm:w-80 max-w-[calc(100vw-2rem)] bg-[#fdfbf7] border border-[#eadfc9] rounded-2xl shadow-2xl p-3 z-50 animate-fadeIn">
                       {/* Speech bubble pointer arrow */}
                       <div className="absolute -top-[7px] right-3.5 w-3.5 h-3.5 bg-[#fdfbf7] border-t border-l border-[#eadfc9] rotate-45 rounded-tl-[2px]" />
 

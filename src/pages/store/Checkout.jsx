@@ -645,12 +645,12 @@ export default function Checkout() {
       <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
         <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(360px,1fr)] xl:gap-8">
           {/* Left Column: Form Card */}
-          <div className="rounded-2xl border border-stone-200/90 bg-white p-6 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-7">
+          <div className="rounded-2xl border border-stone-200/90 bg-white p-4 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-6 sm:space-y-7">
             {/* 1. Contact Information */}
             <section className="space-y-4">
               <div className="flex items-center gap-3.5">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f8f3ed] text-[#8c6536]">
-                  <HiOutlineUser className="h-4.5 w-4.5" />
+                  <HiOutlineUser className="h-[18px] w-[18px]" />
                 </span>
                 <div>
                   <h2 className="text-base font-bold text-stone-900">Contact Information</h2>
@@ -673,10 +673,10 @@ export default function Checkout() {
 
             {/* 2. Delivery */}
             <section className="space-y-4 border-t-[1.5px] border-dashed border-stone-400 pt-7">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
                 <div className="flex items-center gap-3.5">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f8f3ed] text-[#8c6536]">
-                    <HiOutlineLocationMarker className="h-4.5 w-4.5" />
+                    <HiOutlineLocationMarker className="h-[18px] w-[18px]" />
                   </span>
                   <h2 className="text-base font-bold text-stone-900">Delivery</h2>
                 </div>
@@ -762,11 +762,11 @@ export default function Checkout() {
                                 : undefined
                             }
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="space-y-1 text-xs text-stone-600">
-                                <p className="font-bold text-sm text-stone-900 capitalize">{fullName}</p>
-                                <p className="leading-relaxed line-clamp-2">{addressLines}</p>
-                                <p>{cityStatePin}</p>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="space-y-1 text-xs text-stone-600 min-w-0 flex-1">
+                                <p className="font-bold text-sm text-stone-900 capitalize truncate">{fullName}</p>
+                                <p className="leading-relaxed line-clamp-2 break-words">{addressLines}</p>
+                                <p className="truncate">{cityStatePin}</p>
                                 <p className="pt-1 font-medium text-stone-800">Ph: {addr.phone || form.phone}</p>
                               </div>
                               <div
@@ -805,7 +805,7 @@ export default function Checkout() {
                 </div>
               ) : (
                 <div className="space-y-3 pt-1">
-                  <div className="flex items-center justify-between gap-2 pb-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
                     <span className="text-xs font-bold text-stone-700 uppercase tracking-wider whitespace-nowrap">
                       New Delivery Address
                     </span>
@@ -952,7 +952,7 @@ export default function Checkout() {
             <section className="space-y-4 border-t-[1.5px] border-dashed border-stone-400 pt-7">
               <div className="flex items-center gap-3.5">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f8f3ed] text-[#8c6536]">
-                  <HiOutlineCreditCard className="h-4.5 w-4.5" />
+                  <HiOutlineCreditCard className="h-[18px] w-[18px]" />
                 </span>
                 <div>
                   <h2 className="text-base font-bold text-stone-900">Payment Method</h2>
@@ -964,7 +964,7 @@ export default function Checkout() {
                 {/* Online Payment (Full) */}
                 <div
                   onClick={() => handlePaymentChange('online')}
-                  className={`rounded-xl p-4 sm:p-4.5 transition cursor-pointer border ${
+                  className={`rounded-xl p-4 sm:p-5 transition cursor-pointer border ${
                     paymentMethod === 'online'
                       ? 'border-2'
                       : 'border-stone-200 bg-white hover:border-stone-300'
@@ -1009,7 +1009,7 @@ export default function Checkout() {
                 {/* Cash on Delivery (Partial) */}
                 <div
                   onClick={() => handlePaymentChange('cod')}
-                  className={`rounded-xl p-4 sm:p-4.5 transition cursor-pointer border ${
+                  className={`rounded-xl p-4 sm:p-5 transition cursor-pointer border ${
                     paymentMethod === 'cod'
                       ? 'border-2'
                       : 'border-stone-200 bg-white hover:border-stone-300'
@@ -1207,12 +1207,12 @@ export default function Checkout() {
             <div className="border-t border-stone-100 pt-4">
               {appliedCoupon ? (
                 <div className="rounded-xl border border-emerald-200/90 bg-gradient-to-br from-[#f2f9f4] via-[#f7fbf8] to-[#edf7f1] p-3.5 shadow-[0_2px_12px_rgba(16,185,129,0.06)] transition-all">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
+                  <div className="flex items-start justify-between gap-2.5 sm:gap-3">
+                    <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
                       <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 shadow-2xs">
-                        <HiSparkles className="h-4.5 w-4.5 text-emerald-600 animate-pulse" />
+                        <HiSparkles className="h-[18px] w-[18px] text-emerald-600 animate-pulse" />
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-emerald-300 bg-white px-2.5 py-0.5 font-mono text-xs font-bold tracking-wider text-emerald-800 shadow-2xs">
                             <HiOutlineTag className="h-3.5 w-3.5 text-emerald-600" />

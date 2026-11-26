@@ -46,21 +46,21 @@ export default function Wishlist() {
           <span aria-current="page" className="text-stone-800">Wishlist</span>
         </nav>
 
-        <header className="mb-5 sm:mb-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-stone-200 pb-3.5 sm:pb-4">
-          <div aria-hidden="true" />
-          <div className="text-center">
+        <header className="mb-5 sm:mb-6 flex items-center justify-between gap-2 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-3 border-b border-stone-200 pb-3.5 sm:pb-4">
+          <div className="hidden sm:block" aria-hidden="true" />
+          <div className="text-left sm:text-center min-w-0">
             <h1
               style={{
                 fontFamily: '"Cormorant Garamond", Georgia, serif',
                 fontVariantNumeric: 'lining-nums',
                 fontFeatureSettings: '"lnum" 1',
               }}
-              className="text-lg sm:text-xl font-medium sm:font-semibold text-[#1c1917] tracking-normal leading-tight lining-nums"
+              className="text-lg sm:text-xl font-medium sm:font-semibold text-[#1c1917] tracking-normal leading-tight lining-nums truncate"
             >
               My Wishlist ({wishlistCount})
             </h1>
           </div>
-          <div className="justify-self-end">
+          <div className="sm:justify-self-end shrink-0">
             {wishlistCount > 0 && (
               <button
                 type="button"

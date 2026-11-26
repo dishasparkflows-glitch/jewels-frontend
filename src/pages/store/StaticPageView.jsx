@@ -13,7 +13,11 @@ export default function StaticPageView() {
   useEffect(() => {
     let isMounted = true;
     const fetchPage = async () => {
-      if (!slug) return;
+      if (!slug) {
+        setError('Page not found');
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         setError(null);

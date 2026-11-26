@@ -197,7 +197,7 @@ export default function SimilarProductsDrawer({
             className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-900 flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Close similar products"
           >
-            <HiOutlineX className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+            <HiOutlineX className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </header>
 

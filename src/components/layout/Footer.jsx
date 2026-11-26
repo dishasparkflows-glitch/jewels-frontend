@@ -426,7 +426,7 @@ const Footer = () => {
             </div>
 
             {/* Payment Gateway Badges (Exact icons matching neirah.in) */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg"
                 className="h-5 md:h-7 bg-white px-2 py-1 rounded shadow-xs"

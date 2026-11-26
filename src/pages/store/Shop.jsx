@@ -769,7 +769,7 @@ export default function Shop({ defaultCategory = '' }) {
         </div>
 
         {/* ─── Top Meta Toolbar (Results Count & Sort) ─── */}
-        <div className="flex items-center justify-between py-3.5 mb-6 border-b border-stone-200/80">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 py-3.5 mb-6 border-b border-stone-200/80">
           <div className="flex items-center gap-1.5 text-xs sm:text-[13px] text-stone-600 font-medium">
             <span>
               {displayCount} {isDiamondCategory ? (displayCount === 1 ? 'diamond' : 'diamonds') : (displayCount === 1 ? 'product' : 'products')} found
@@ -782,11 +782,11 @@ export default function Shop({ defaultCategory = '' }) {
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ml-auto">
             <button
               type="button"
               onClick={() => setMobileFilters(!mobileFilters)}
-              className="flex items-center gap-1.5 rounded border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 lg:hidden cursor-pointer"
+              className="flex items-center gap-1.5 rounded border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 lg:hidden cursor-pointer shrink-0"
             >
               <HiOutlineAdjustments className="w-3.5 h-3.5" />
               <span>Filters</span>
@@ -814,8 +814,8 @@ export default function Shop({ defaultCategory = '' }) {
                     ]
               }
               size="sm"
-              className="w-44 sm:w-48"
-              menuClassName="z-[40] w-48 sm:w-52 right-0 left-auto"
+              className="w-36 sm:w-48"
+              menuClassName="z-[40] w-44 sm:w-52 right-0 left-auto"
             />
           </div>
         </div>
@@ -1133,8 +1133,8 @@ export default function Shop({ defaultCategory = '' }) {
                         ]}
                         size="sm"
                         direction="up"
-                        className="w-18 text-xs"
-                        menuClassName="min-w-[4.5rem]"
+                        className="w-20 text-xs"
+                        menuClassName="min-w-[5rem]"
                         showDivider={false}
                       />
                     </div>

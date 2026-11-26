@@ -128,12 +128,12 @@ export const WishlistProvider = ({ children }) => {
         setWishlistMap(map);
         setWishlistCount(items.length);
         lastFetchTimeRef.current = Date.now();
-        setIsInitialLoaded(true);
         return items;
       } catch (err) {
         console.warn('Failed to fetch wishlist from API:', err);
         return wishlistItemsRef.current;
       } finally {
+        setIsInitialLoaded(true);
         setLoading(false);
         inFlightPromiseRef.current = null;
       }
