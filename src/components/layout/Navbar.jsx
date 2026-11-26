@@ -613,7 +613,13 @@ const Navbar = () => {
                     title="Account"
                     aria-label="Account menu"
                   >
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#8b6f4e] hover:bg-[#785e40] text-white flex items-center justify-center font-serif font-bold text-xs sm:text-[13px] shadow-xs transition-colors">
+                    <div
+                      style={{
+                        backgroundColor: 'var(--btn-primary-bg, #8b6f4e)',
+                        color: 'var(--btn-primary-text, #ffffff)',
+                      }}
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-serif font-bold text-xs sm:text-[13px] shadow-xs transition-opacity hover:opacity-90"
+                    >
                       {user.profile?.firstName?.[0]?.toUpperCase() || user.auth?.email?.[0]?.toUpperCase() || 'U'}
                     </div>
                   </button>
@@ -727,7 +733,14 @@ const Navbar = () => {
             >
               <HiOutlineShoppingBag className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
               {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#bd9462] text-white text-[9px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center font-bold shadow-md ring-2 ring-[#201e1b] transition-transform animate-scaleIn">
+                <span
+                  style={{
+                    backgroundColor: 'var(--btn-primary-bg, #8b6f4e)',
+                    color: 'var(--btn-primary-text, #ffffff)',
+                    '--tw-ring-color': 'var(--storefront-header-bg, #201e1b)',
+                  }}
+                  className="absolute -top-1 -right-1 text-[9px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center font-bold shadow-md ring-2 transition-transform animate-scaleIn"
+                >
                   {totalItems}
                 </span>
               )}

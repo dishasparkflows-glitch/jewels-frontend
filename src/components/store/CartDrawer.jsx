@@ -85,7 +85,7 @@ export default function CartDrawer({ open, onClose }) {
                     <Link
                       to={productLink}
                       onClick={onClose}
-                      className="line-clamp-2 text-xs font-semibold leading-snug text-stone-900 hover:text-[#92704e] transition-colors block cursor-pointer font-sans"
+                      className="line-clamp-2 text-xs font-semibold leading-snug text-stone-900 link-theme-hover transition-colors block cursor-pointer font-sans"
                     >
                       {displayName}
                     </Link>
@@ -161,7 +161,7 @@ export default function CartDrawer({ open, onClose }) {
             <Link
               to="/checkout"
               onClick={onClose}
-              className={`flex w-full items-center justify-center gap-2 rounded-xl bg-[#9c774e] hover:bg-[#85633e] py-3.5 text-xs sm:text-sm font-bold uppercase tracking-[0.18em] text-white transition-all shadow-sm ${
+              className={`flex w-full items-center justify-center gap-2 rounded-xl btn-theme-primary py-3.5 text-xs sm:text-sm font-bold uppercase tracking-[0.18em] transition-all shadow-sm ${
                 cart.length ? '' : 'pointer-events-none opacity-40'
               }`}
               aria-disabled={!cart.length}
@@ -184,7 +184,7 @@ export default function CartDrawer({ open, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="mt-3.5 block w-full text-center text-xs font-bold uppercase tracking-[0.18em] text-stone-800 hover:text-[#9c774e] transition-colors underline underline-offset-4 decoration-stone-800 hover:decoration-[#9c774e] cursor-pointer"
+            className="mt-3.5 block w-full text-center text-xs font-bold uppercase tracking-[0.18em] text-stone-800 link-theme-hover transition-colors underline underline-offset-4 decoration-stone-800 cursor-pointer"
           >
             CONTINUE SHOPPING
           </button>

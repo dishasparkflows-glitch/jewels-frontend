@@ -121,14 +121,19 @@ function FilterOptionsList({ filter, isOptionSelected, handleToggleOption }) {
                 key={opt._id || optVal}
                 type="button"
                 onClick={() => handleToggleOption(filter.key, optVal, optName)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-[#faf6f0] text-[#8b6f4e] border border-[#ebdcc8] hover:bg-[#f3ebe0] transition-colors cursor-pointer"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 10%, white)',
+                  color: 'var(--btn-primary-bg, #8b6f4e)',
+                  borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 28%, transparent)',
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border hover:opacity-85 transition-opacity cursor-pointer"
                 title={`Remove ${optName}`}
               >
                 <span>
                   {optName}
                   {filter.key === 'birthMonth' && opt.stoneName ? ` (${formatStoneName(opt.stoneName)})` : ''}
                 </span>
-                <HiOutlineX className="w-3.5 h-3.5 text-[#8b6f4e]" />
+                <HiOutlineX className="w-3.5 h-3.5" style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }} />
               </button>
             );
           })}
@@ -194,7 +199,8 @@ function FilterOptionsList({ filter, isOptionSelected, handleToggleOption }) {
                         handleToggleOption(filter.key, optVal, optName);
                       }
                     }}
-                    className="h-4 w-4 rounded border-stone-300 text-[#8b6f4e] accent-[#8b6f4e] cursor-pointer shrink-0"
+                    style={{ accentColor: 'var(--btn-primary-bg, #8b6f4e)' }}
+                    className="h-4 w-4 rounded border-stone-300 cursor-pointer shrink-0"
                   />
 
                   {/* Gemstone Swatch Badge (Screenshot 1) */}
@@ -328,9 +334,13 @@ export default function FilterSidebar({
           <button
             type="button"
             onClick={onClearAll}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] text-xs font-medium transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 40%, transparent)',
+              color: 'var(--btn-primary-bg, #8b6f4e)',
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border bg-white hover:bg-stone-50 text-xs font-medium transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
           >
-            <HiOutlineTrash className="w-3.5 h-3.5 text-[#8b6f4e]" />
+            <HiOutlineTrash className="w-3.5 h-3.5" style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }} />
             <span>Clear All</span>
           </button>
         )}

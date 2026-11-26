@@ -127,6 +127,29 @@
   background-color: var(--btn-primary-hover, #755c3e) !important;
 }
 
+.btn-theme-outline {
+  color: var(--btn-primary-bg, #8b6f4e) !important;
+  border-color: color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 40%, transparent) !important;
+  background-color: #ffffff;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-theme-outline:hover:not(:disabled) {
+  border-color: var(--btn-primary-bg, #8b6f4e) !important;
+  background-color: color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 8%, #ffffff) !important;
+}
+
+.pagination-theme-btn:hover:not(:disabled) {
+  border-color: var(--btn-primary-bg, #8b6f4e) !important;
+  color: var(--btn-primary-bg, #8b6f4e) !important;
+  background-color: color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 8%, #ffffff) !important;
+}
+
+.link-theme-hover:hover {
+  color: var(--btn-primary-bg, #8b6f4e) !important;
+  text-decoration-color: var(--btn-primary-bg, #8b6f4e) !important;
+}
+
 /* One visual language for every customer facing route. */
 .store-shell {
   --jewel-ink: #211f1c;

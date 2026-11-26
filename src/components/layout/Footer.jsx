@@ -460,7 +460,12 @@ const Footer = () => {
       {/* ─── 2. POPULAR JEWELRY DIRECTORY SECTION (Matches neirah.in) ─ */}
       {categories.length > 0 && (
         <div className="bg-white border-t border-gray-100">
-          <div className="bg-[#F0E8D8] py-4 mb-10">
+          <div
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 12%, #ffffff)',
+            }}
+            className="py-4 mb-10"
+          >
             <h2 className="text-[17px] sm:text-[19px] font-semibold text-center text-gray-800 tracking-wider">
               Popular Jewelry
             </h2>
@@ -502,7 +507,7 @@ const Footer = () => {
                               <Link
                                 to={link}
                                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                                className="hover:text-[#8B6B42] transition-colors"
+                                className="link-theme-hover transition-colors"
                               >
                                 {item.name || item.title}
                               </Link>
@@ -516,7 +521,7 @@ const Footer = () => {
                         <Link
                           to={`/shop?category=${encodeURIComponent(cat.slug || cat._id)}`}
                           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                          className="hover:text-[#8B6B42] transition-colors"
+                          className="link-theme-hover transition-colors"
                         >
                           Explore {cat.name}
                         </Link>

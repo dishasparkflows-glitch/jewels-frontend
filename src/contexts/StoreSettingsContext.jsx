@@ -162,16 +162,16 @@ export function StoreSettingsProvider({ children }) {
 
   const theme = websiteConfig?.theme?.config || null;
 
-  // Dynamically apply primary button colors across the entire storefront & portals
+  // Dynamically apply Top Announcement Bar as the main accent/button color across the entire storefront
   useEffect(() => {
     const root = document.documentElement;
     const colors = settings?.themeColors || {};
-    const btnBg = colors.buttonColor || settings?.buttonColor || theme?.colors?.primary || '#8b6f4e';
-    const btnHover = colors.buttonHoverColor || settings?.buttonHoverColor || '#755c3e';
-    const btnText = colors.buttonTextColor || '#ffffff';
-
-    const topBarBg = colors.topBarBgColor || '#201e1b';
+    const topBarBg = colors.topBarBgColor || theme?.colors?.primary || '#8b6f4e';
     const topBarText = colors.topBarTextColor || '#ffffff';
+    const btnBg = topBarBg;
+    const btnHover = `color-mix(in srgb, ${topBarBg} 85%, black)`;
+    const btnText = topBarText;
+
     const headerBg = colors.headerBgColor || '#201e1b';
     const headerText = colors.headerTextColor || '#ffffff';
     const couponBg = colors.couponBgColor || '#201e1b';
@@ -208,10 +208,10 @@ export function StoreSettingsProvider({ children }) {
 
   const themeStyle = useMemo(() => {
     const colors = theme?.colors || {};
-    const savedButtonColors = settings?.themeColors || {};
-    const btnBg = savedButtonColors.buttonColor || settings?.buttonColor || colors.primary || '#8b6f4e';
-    const btnHover = savedButtonColors.buttonHoverColor || settings?.buttonHoverColor || '#755c3e';
-    const btnText = savedButtonColors.buttonTextColor || settings?.buttonTextColor || '#ffffff';
+    const savedColors = settings?.themeColors || {};
+    const btnBg = savedColors.topBarBgColor || colors.primary || '#8b6f4e';
+    const btnHover = `color-mix(in srgb, ${btnBg} 85%, black)`;
+    const btnText = savedColors.topBarTextColor || '#ffffff';
 
     return {
       '--btn-primary-bg': btnBg,
@@ -222,12 +222,12 @@ export function StoreSettingsProvider({ children }) {
       '--jewel-paper': colors.background || '#FBF9F5',
       '--jewel-surface': colors.surface || '#FFFFFF',
       '--jewel-ink': colors.text || '#29251F',
-      '--jewel-accent': colors.accent || btnBg,
+      '--jewel-accent': btnBg,
       '--jewel-heading-font': `'${theme?.typography?.headingFont || 'Cormorant Garamond'}', Georgia, serif`,
       '--jewel-body-font': `'${theme?.typography?.bodyFont || 'Montserrat'}', system-ui, sans-serif`,
       '--jewel-radius': `${Math.min(32, Math.max(0, Number(theme?.borderRadius) || 0))}px`,
     };
-  }, [theme, settings?.themeColors, settings?.buttonColor, settings?.buttonHoverColor, settings?.buttonTextColor]);
+  }, [theme, settings?.themeColors]);
 
   return (
     <StoreSettingsContext.Provider

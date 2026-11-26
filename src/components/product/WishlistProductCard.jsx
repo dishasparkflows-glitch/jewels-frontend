@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { HiOutlineX, HiOutlineShoppingBag } from 'react-icons/hi';
 import { useCart } from '../../contexts/CartContext';
@@ -10,7 +10,15 @@ import ColorSwatches from './ColorSwatches';
 export default function WishlistProductCard({ item, onRemove }) {
   const [selectedColorName, setSelectedColorName] = useState(null);
   const [justAdded, setJustAdded] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const removeTimerRef = useRef(null);
   const { addToCart } = useCart();
+
+  useEffect(() => {
+    return () => {
+      if (removeTimerRef.current) clearTimeout(removeTimerRef.current);
+    };
+  }, []);
 
   if (!item) return null;
 
@@ -117,8 +125,24 @@ export default function WishlistProductCard({ item, onRemove }) {
     }
   };
 
+  const handleRemoveClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isRemoving) return;
+    setIsRemoving(true);
+    removeTimerRef.current = setTimeout(() => {
+      onRemove(id);
+    }, 280);
+  };
+
   return (
-    <article className="group min-w-0 flex flex-col justify-between text-center transition-all duration-300">
+    <article
+      className={`group min-w-0 flex flex-col justify-between text-center transition-all duration-300 ease-out ${
+        isRemoving
+          ? 'opacity-0 scale-90 -translate-y-2 pointer-events-none'
+          : 'opacity-100 scale-100 translate-y-0'
+      }`}
+    >
       {/* ─── Image Box ─── */}
       <div className="relative aspect-square bg-[#f6f2ec] rounded-2xl p-4 sm:p-5 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:shadow-sm">
         <Link
@@ -137,9 +161,10 @@ export default function WishlistProductCard({ item, onRemove }) {
         {/* Remove (✕) Button */}
         <button
           type="button"
-          onClick={() => onRemove(id)}
+          onClick={handleRemoveClick}
+          disabled={isRemoving}
           aria-label={`Remove ${name} from wishlist`}
-          className="absolute right-2.5 top-2.5 sm:right-3 sm:top-3 z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white text-stone-500 hover:text-stone-900 border border-stone-200/60 shadow-xs transition-all hover:scale-110 active:scale-95 cursor-pointer"
+          className="absolute right-2.5 top-2.5 sm:right-3 sm:top-3 z-10 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-white/95 backdrop-blur-xs text-stone-500 hover:bg-[#211f1c] hover:text-white hover:border-[#211f1c] border border-stone-200/60 shadow-xs transition-all duration-200 hover:scale-110 hover:rotate-90 active:scale-90 cursor-pointer"
         >
           <HiOutlineX className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </button>

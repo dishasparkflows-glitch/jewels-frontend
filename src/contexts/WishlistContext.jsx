@@ -364,6 +364,10 @@ export const WishlistProvider = ({ children }) => {
   const removeFromWishlist = async (refId) => {
     if (!refId) return;
     const strId = String(refId).trim();
+    const removedItem = wishlistItemsRef.current.find(
+      (i) => String(i.refId || i._id || i.id) === strId
+    );
+    const itemTitle = removedItem?.basicInfo?.title || 'Item';
 
     setWishlistMap((prev) => {
       const next = { ...prev };
@@ -380,13 +384,37 @@ export const WishlistProvider = ({ children }) => {
       }
       return next;
     });
-    toast('Item removed from wishlist', {
-      icon: '🤍',
-      style: {
-        background: '#22201e',
-        color: '#f5f0eb',
-      },
-    });
+
+    toast(
+      (t) => (
+        <div className="flex items-center gap-3 text-xs sm:text-[13px]">
+          <span>
+            Removed <strong className="font-medium text-white">{itemTitle.length > 26 ? `${itemTitle.slice(0, 26)}…` : itemTitle}</strong>
+          </span>
+          {removedItem && (
+            <button
+              type="button"
+              onClick={() => {
+                toast.dismiss(t.id);
+                toggleWishlist(removedItem, false);
+              }}
+              className="shrink-0 rounded-md bg-[#8b6f4e] hover:bg-[#a1825e] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-white transition-colors cursor-pointer"
+            >
+              Undo
+            </button>
+          )}
+        </div>
+      ),
+      {
+        icon: '🤍',
+        duration: 4000,
+        style: {
+          background: '#22201e',
+          color: '#f5f0eb',
+          border: '1px solid rgba(214, 199, 178, 0.25)',
+        },
+      }
+    );
 
     const token = localStorage.getItem('token');
     if (token || user) {

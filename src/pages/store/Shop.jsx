@@ -557,6 +557,27 @@ export default function Shop({ defaultCategory = '' }) {
 
   const featuredTitle = featuredData?.name || titleParam || '';
 
+  const selectedMenuItemObj = useMemo(() => {
+    if (!menuItem) return null;
+    const target = String(menuItem).trim();
+    const searchPool = category ? [category, ...categories] : categories;
+    for (const cat of searchPool) {
+      const sections = cat?.menuSections || [];
+      for (const sec of sections) {
+        const found = (sec?.menuItems || []).find(
+          (m) =>
+            String(m._id) === target ||
+            String(m.id) === target ||
+            slugify(m.slug || m.name || m.title || '') === slugify(target)
+        );
+        if (found) return found;
+      }
+    }
+    return null;
+  }, [menuItem, category, categories]);
+
+  const menuItemName = selectedMenuItemObj?.name || selectedMenuItemObj?.title || '';
+
   // Active chips array
   const activeChips = [];
   if (featuredParam) {
@@ -569,6 +590,12 @@ export default function Shop({ defaultCategory = '' }) {
     activeChips.push({
       label: category.name,
       onRemove: () => updateFilters({ category: '', menuItem: '', promoBanner: '', title: '' }),
+    });
+  }
+  if (menuItem && menuItemName) {
+    activeChips.push({
+      label: menuItemName,
+      onRemove: () => updateFilters({ menuItem: '' }),
     });
   }
   if (promoBanner) {
@@ -649,6 +676,7 @@ export default function Shop({ defaultCategory = '' }) {
   const pageTitle =
     featuredTitle ||
     titleParam ||
+    menuItemName ||
     category?.name ||
     (selectedBirthMonth ? `Birthstone: ${selectedBirthMonth}` : '') ||
     (search ? `Search: "${search}"` : (selectedCollection || 'All Jewellery'));
@@ -866,7 +894,13 @@ export default function Shop({ defaultCategory = '' }) {
                 {/* Subtle luxury shimmer line when updating filters / category */}
                 {isRefetching && (
                   <div className="absolute -top-3 left-0 right-0 h-0.5 overflow-hidden z-20 rounded-full bg-stone-100">
-                    <div className="h-full w-full bg-gradient-to-r from-transparent via-[#8b6f4e] to-transparent animate-pulse" />
+                    <div
+                      style={{
+                        backgroundImage:
+                          'linear-gradient(to right, transparent, var(--btn-primary-bg, #8b6f4e), transparent)',
+                      }}
+                      className="h-full w-full animate-pulse"
+                    />
                   </div>
                 )}
                 <div
@@ -887,9 +921,9 @@ export default function Shop({ defaultCategory = '' }) {
                 {filtersActive && (
                   <button
                     onClick={() => setParams({})}
-                    className="mt-6 inline-flex items-center gap-2 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] px-4 py-2 text-xs sm:text-[13px] font-medium text-[#8b6f4e] bg-white hover:bg-[#FAF7F2] transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
+                    className="mt-6 inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-xs sm:text-[13px] font-medium btn-theme-outline shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer"
                   >
-                    <HiOutlineTrash className="w-4 h-4 text-[#8b6f4e]" />
+                    <HiOutlineTrash className="w-4 h-4" />
                     <span>Clear All Filters</span>
                   </button>
                 )}
@@ -930,7 +964,7 @@ export default function Shop({ defaultCategory = '' }) {
                       type="button"
                       disabled={page <= 1}
                       onClick={() => goToPage(page - 1)}
-                      className="w-9 h-9 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer shadow-2xs"
+                      className="w-9 h-9 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-700 pagination-theme-btn disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer shadow-2xs"
                       aria-label="Previous page"
                       title="Previous page"
                     >
@@ -958,8 +992,8 @@ export default function Shop({ defaultCategory = '' }) {
                           aria-current={isActive ? 'page' : undefined}
                           className={`min-w-[36px] h-9 px-3 flex items-center justify-center text-xs sm:text-sm font-medium rounded-lg transition-all duration-150 cursor-pointer ${
                             isActive
-                              ? 'bg-[#8b6f4e] text-white border border-[#8b6f4e] shadow-2xs font-semibold'
-                              : 'bg-white text-stone-700 border border-stone-200 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e]'
+                              ? 'btn-theme-primary border border-transparent shadow-2xs font-semibold'
+                              : 'bg-white text-stone-700 border border-stone-200 pagination-theme-btn'
                           }`}
                         >
                           {pageNum}
@@ -972,7 +1006,7 @@ export default function Shop({ defaultCategory = '' }) {
                       type="button"
                       disabled={page >= pagination.totalPages}
                       onClick={() => goToPage(page + 1)}
-                      className="w-9 h-9 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-700 hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e] disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer shadow-2xs"
+                      className="w-9 h-9 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-700 pagination-theme-btn disabled:opacity-40 disabled:hover:bg-white disabled:hover:border-stone-200 disabled:hover:text-stone-700 disabled:cursor-not-allowed transition-all duration-150 cursor-pointer shadow-2xs"
                       aria-label="Next page"
                       title="Next page"
                     >
@@ -1016,7 +1050,7 @@ export default function Shop({ defaultCategory = '' }) {
                       type="button"
                       disabled={page <= 1}
                       onClick={() => goToPage(page - 1)}
-                      className="w-9 h-9 flex items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-700 active:bg-[#FAF7F2] active:border-[#8b6f4e] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs"
+                      className="w-9 h-9 flex items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-700 pagination-theme-btn disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs"
                       aria-label="Previous page"
                     >
                       <HiOutlineChevronLeft className="w-4 h-4" />
@@ -1043,7 +1077,7 @@ export default function Shop({ defaultCategory = '' }) {
                           aria-current={isActive ? 'page' : undefined}
                           className={`min-w-[36px] h-9 px-3 flex items-center justify-center text-xs font-semibold rounded-xl transition-all ${
                             isActive
-                              ? 'bg-[#8b6f4e] text-white border border-[#8b6f4e] shadow-xs'
+                              ? 'btn-theme-primary border border-transparent shadow-xs'
                               : 'bg-white text-stone-700 border border-stone-200 active:bg-[#FAF7F2]'
                           }`}
                         >
@@ -1057,7 +1091,7 @@ export default function Shop({ defaultCategory = '' }) {
                       type="button"
                       disabled={page >= pagination.totalPages}
                       onClick={() => goToPage(page + 1)}
-                      className="w-9 h-9 flex items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-700 active:bg-[#FAF7F2] active:border-[#8b6f4e] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs"
+                      className="w-9 h-9 flex items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-700 pagination-theme-btn disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-2xs"
                       aria-label="Next page"
                     >
                       <HiOutlineChevronRight className="w-4 h-4" />

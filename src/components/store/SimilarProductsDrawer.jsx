@@ -181,7 +181,6 @@ export default function SimilarProductsDrawer({
         {/* Drawer Header */}
         <header className="relative px-12 sm:px-14 pt-3 sm:pt-5 pb-3 sm:pb-4 flex items-center justify-center border-b border-stone-100 select-none">
           <div className="flex items-center justify-center gap-2 sm:gap-2.5 flex-wrap text-center">
-            <HiSparkles className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-[#8b6f4e] shrink-0" />
             <h2 className="font-serif text-base sm:text-2xl font-bold text-stone-900 tracking-wide">
               View Similar Products
             </h2>

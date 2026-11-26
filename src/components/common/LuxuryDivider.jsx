@@ -4,11 +4,13 @@
  */
 export default function LuxuryDivider({
   className = '',
-  color = '#8b6f4e',
+  color = 'var(--btn-primary-bg, #8b6f4e)',
   lineWidth = 'w-16 sm:w-24 md:w-28',
   starSize = 'w-3.5 h-3.5 sm:w-4 sm:h-4',
   withDots = false,
 }) {
+  const softColor = `color-mix(in srgb, ${color} 40%, transparent)`;
+
   return (
     <div
       className={`flex items-center justify-center gap-2.5 sm:gap-3 text-stone-400 select-none ${className}`}
@@ -16,9 +18,9 @@ export default function LuxuryDivider({
     >
       {/* Left Line with soft gradient taper */}
       <span
-        className={`h-[1px] ${lineWidth} bg-gradient-to-r from-transparent via-[#8b6f4e]/40 to-[#8b6f4e]/80`}
+        className={`h-[1px] ${lineWidth}`}
         style={{
-          backgroundImage: `linear-gradient(to right, transparent, ${color}66, ${color})`,
+          backgroundImage: `linear-gradient(to right, transparent, ${softColor}, ${color})`,
         }}
       />
 
@@ -48,9 +50,9 @@ export default function LuxuryDivider({
 
       {/* Right Line with soft gradient taper */}
       <span
-        className={`h-[1px] ${lineWidth} bg-gradient-to-l from-transparent via-[#8b6f4e]/40 to-[#8b6f4e]/80`}
+        className={`h-[1px] ${lineWidth}`}
         style={{
-          backgroundImage: `linear-gradient(to left, transparent, ${color}66, ${color})`,
+          backgroundImage: `linear-gradient(to left, transparent, ${softColor}, ${color})`,
         }}
       />
     </div>

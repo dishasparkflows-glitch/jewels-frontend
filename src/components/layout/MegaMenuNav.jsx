@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { HiOutlineChevronDown } from 'react-icons/hi';
-import { getImageUrl } from '../../utils/imageUrl';
+import { getImageUrl, getMediaUrl } from '../../utils/imageUrl';
 
 const categoryLink = (category) => `/shop?category=${encodeURIComponent(category.slug || category._id)}`;
 const itemLink = (category, item) => `${categoryLink(category)}&menuItem=${encodeURIComponent(item._id || item.slug || item.name)}`;
@@ -34,18 +34,36 @@ function MenuContents({ category, onNavigate, mobile = false }) {
               {section.name}
             </h4>
             <ul className="space-y-2.5">
-              {section.menuItems.map((item) => (
-                <li key={item._id}>
-                  <Link
-                    to={itemLink(category, item)}
-                    onClick={onNavigate}
-                    className="group/item flex items-center gap-2 text-xs text-stone-200 hover:text-white transition-colors"
-                  >
-                    <span className="text-stone-500 group-hover/item:text-[#d2b18a] text-[10px] shrink-0 transition-colors">✦</span>
-                    <span>{item.name}</span>
-                  </Link>
-                </li>
-              ))}
+              {section.menuItems.map((item) => {
+                const itemIconUrl = getMediaUrl(item.icon?.url || item.icon || item.iconUrl);
+                return (
+                  <li key={item._id}>
+                    <Link
+                      to={itemLink(category, item)}
+                      onClick={onNavigate}
+                      className="group/item flex items-center gap-2.5 text-xs text-stone-200 hover:text-white transition-colors"
+                    >
+                      <span className="w-4 h-4 flex items-center justify-center shrink-0">
+                        {itemIconUrl ? (
+                          <img
+                            src={itemIconUrl}
+                            alt=""
+                            className="w-3.5 h-3.5 object-contain opacity-85 group-hover/item:opacity-100 transition-all filter brightness-125"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              if (e.currentTarget.nextSibling) {
+                                e.currentTarget.nextSibling.style.display = 'inline-block';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <span className={`text-stone-500 group-hover/item:text-[#d2b18a] text-[10px] shrink-0 transition-colors ${itemIconUrl ? 'hidden' : ''}`}>✦</span>
+                      </span>
+                      <span>{item.name}</span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
             <Link
               to={categoryLink(category)}
@@ -80,18 +98,36 @@ function MenuContents({ category, onNavigate, mobile = false }) {
                 {section.name}
               </h3>
               <ul className="space-y-3">
-                {section.menuItems.map((item) => (
-                  <li key={item._id}>
-                    <Link
-                      to={itemLink(category, item)}
-                      onClick={onNavigate}
-                      className="group/item flex items-center gap-2.5 text-xs sm:text-[13px] text-stone-300 hover:text-white transition-colors"
-                    >
-                      <span className="text-stone-500 group-hover/item:text-[#d2b18a] text-[10px] shrink-0 transition-colors">✦</span>
-                      <span>{item.name}</span>
-                    </Link>
-                  </li>
-                ))}
+                {section.menuItems.map((item) => {
+                  const itemIconUrl = getMediaUrl(item.icon?.url || item.icon || item.iconUrl);
+                  return (
+                    <li key={item._id}>
+                      <Link
+                        to={itemLink(category, item)}
+                        onClick={onNavigate}
+                        className="group/item flex items-center gap-2.5 text-xs sm:text-[13px] text-stone-300 hover:text-white transition-colors"
+                      >
+                        <span className="w-5 h-5 flex items-center justify-center shrink-0">
+                          {itemIconUrl ? (
+                            <img
+                              src={itemIconUrl}
+                              alt=""
+                              className="w-4 h-4 object-contain opacity-85 group-hover/item:opacity-100 group-hover/item:scale-110 transition-all filter brightness-125"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                if (e.currentTarget.nextSibling) {
+                                  e.currentTarget.nextSibling.style.display = 'inline-block';
+                                }
+                              }}
+                            />
+                          ) : null}
+                          <span className={`text-stone-500 group-hover/item:text-[#d2b18a] text-[10px] shrink-0 transition-colors ${itemIconUrl ? 'hidden' : ''}`}>✦</span>
+                        </span>
+                        <span>{item.name}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
               <Link
                 to={categoryLink(category)}

@@ -450,16 +450,21 @@ export default function Dropdown({
                     onClick={(e) => handleSelect(option, e)}
                     onMouseDown={(e) => e.stopPropagation()}
                     onMouseEnter={() => setHighlightedIndex(idx)}
+                    style={
+                      isSelected
+                        ? { backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 12%, white)' }
+                        : isHighlighted
+                        ? { backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 7%, white)' }
+                        : undefined
+                    }
                     className={`relative flex items-center justify-between gap-1.5 cursor-pointer transition-colors duration-150 select-none ${
                       sizeClasses.menuItem
                     } ${
                       option.disabled
                         ? 'opacity-40 cursor-not-allowed text-stone-400'
                         : isSelected
-                        ? 'bg-[#f7efe5] text-stone-900 font-semibold'
-                        : isHighlighted
-                        ? 'bg-[#faf5ee] text-stone-900'
-                        : 'text-stone-700 hover:bg-[#faf5ee] hover:text-stone-900'
+                        ? 'text-stone-900 font-semibold'
+                        : 'text-stone-700 hover:bg-stone-50 hover:text-stone-900'
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -467,10 +472,11 @@ export default function Dropdown({
                       <span className="truncate">{option.label}</span>
                     </div>
 
-                    {/* Brown/Gold Checkmark (✓) for Selected Item */}
+                    {/* Theme Checkmark (✓) for Selected Item */}
                     {isSelected && (
                       <HiCheck
-                        className={`${sizeClasses.check} text-[#8b6f4e] stroke-[2.5] shrink-0`}
+                        style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }}
+                        className={`${sizeClasses.check} stroke-[2.5] shrink-0`}
                       />
                     )}
                   </div>
