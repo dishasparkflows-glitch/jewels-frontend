@@ -162,18 +162,25 @@ export default function BirthstonesSection({ style }) {
       {/* Progress Dots/Pill Indicator */}
       <div className="flex items-center justify-center gap-1.5 mt-4 sm:mt-6">
         <span
+          style={scrollProgress < 0.35 ? { backgroundColor: 'var(--btn-primary-bg, #8c6536)' } : undefined}
           className={`h-1.5 rounded-full transition-all duration-300 ${
-            scrollProgress < 0.35 ? 'w-5 bg-[#8b6f4e]' : 'w-1.5 bg-stone-300'
+            scrollProgress < 0.35 ? 'w-5' : 'w-1.5 bg-stone-300'
           }`}
         />
         <span
+          style={
+            scrollProgress >= 0.35 && scrollProgress <= 0.7
+              ? { backgroundColor: 'var(--btn-primary-bg, #8c6536)' }
+              : undefined
+          }
           className={`h-1.5 rounded-full transition-all duration-300 ${
-            scrollProgress >= 0.35 && scrollProgress <= 0.7 ? 'w-5 bg-[#8b6f4e]' : 'w-1.5 bg-stone-300'
+            scrollProgress >= 0.35 && scrollProgress <= 0.7 ? 'w-5' : 'w-1.5 bg-stone-300'
           }`}
         />
         <span
+          style={scrollProgress > 0.7 ? { backgroundColor: 'var(--btn-primary-bg, #8c6536)' } : undefined}
           className={`h-1.5 rounded-full transition-all duration-300 ${
-            scrollProgress > 0.7 ? 'w-5 bg-[#8b6f4e]' : 'w-1.5 bg-stone-300'
+            scrollProgress > 0.7 ? 'w-5' : 'w-1.5 bg-stone-300'
           }`}
         />
       </div>

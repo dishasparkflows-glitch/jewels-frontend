@@ -612,7 +612,13 @@ export default function Checkout() {
     return (
       <main className="mx-auto flex min-h-[55vh] max-w-2xl flex-col items-center justify-center px-4 py-20 text-center font-sans">
         <SEO title="Secure Luxury Checkout | Neirah Fine Jewellery" noindex={true} />
-        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#f8f5f0] text-[#8c6536]">
+        <div
+          className="mb-5 flex h-16 w-16 items-center justify-center rounded-full"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 10%, #ffffff)',
+            color: 'var(--btn-primary-bg, #8c6536)',
+          }}
+        >
           <HiOutlineLockClosed className="h-7 w-7" />
         </div>
         <h1 className="font-serif text-3xl font-normal text-stone-900">Your bag is empty</h1>
@@ -621,7 +627,11 @@ export default function Checkout() {
         </p>
         <Link
           to="/shop"
-          className="mt-7 inline-flex h-12 items-center justify-center rounded-xl bg-[#8c6536] px-8 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#75522b]"
+          style={{
+            backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+            color: 'var(--btn-primary-text, #ffffff)',
+          }}
+          className="mt-7 inline-flex h-12 items-center justify-center rounded-xl px-8 text-xs font-semibold uppercase tracking-[0.2em] transition hover:opacity-90"
         >
           Continue shopping
         </Link>
@@ -691,7 +701,12 @@ export default function Checkout() {
                           }));
                         }
                       }}
-                      className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full border border-[#8c6536] bg-[#8c6536] hover:bg-[#75522b] text-xs font-semibold text-white transition cursor-pointer shadow-2xs"
+                      className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full border text-xs font-semibold transition hover:opacity-90 cursor-pointer shadow-2xs"
+                      style={{
+                        backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                        borderColor: 'var(--btn-primary-bg, #8c6536)',
+                        color: 'var(--btn-primary-text, #ffffff)',
+                      }}
                     >
                       {isAddingNewAddress ? (
                         <>
@@ -735,9 +750,17 @@ export default function Checkout() {
                             }}
                             className={`relative rounded-xl p-4 transition cursor-pointer border ${
                               isSelected
-                                ? 'border-2 border-[#8c6536] bg-[#faf6f0]'
+                                ? 'border-2'
                                 : 'border-stone-200 bg-white hover:border-stone-300'
                             }`}
+                            style={
+                              isSelected
+                                ? {
+                                    borderColor: 'var(--btn-primary-bg, #8c6536)',
+                                    backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 5%, #ffffff)',
+                                  }
+                                : undefined
+                            }
                           >
                             <div className="flex items-start justify-between">
                               <div className="space-y-1 text-xs text-stone-600">
@@ -746,10 +769,18 @@ export default function Checkout() {
                                 <p>{cityStatePin}</p>
                                 <p className="pt-1 font-medium text-stone-800">Ph: {addr.phone || form.phone}</p>
                               </div>
-                              <div className={`mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                                isSelected ? 'border-[#8c6536]' : 'border-stone-300'
-                              }`}>
-                                {isSelected && <span className="h-2 w-2 rounded-full bg-[#8c6536]" />}
+                              <div
+                                className={`mt-0.5 h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                  isSelected ? '' : 'border-stone-300'
+                                }`}
+                                style={isSelected ? { borderColor: 'var(--btn-primary-bg, #8c6536)' } : undefined}
+                              >
+                                {isSelected && (
+                                  <span
+                                    className="h-2 w-2 rounded-full"
+                                    style={{ backgroundColor: 'var(--btn-primary-bg, #8c6536)' }}
+                                  />
+                                )}
                               </div>
                             </div>
                           </div>
@@ -903,7 +934,11 @@ export default function Checkout() {
                       type="button"
                       onClick={handleSaveNewAddress}
                       disabled={savingAddress}
-                      className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-1.5 px-5 py-2.5 sm:py-2 rounded-xl bg-[#8c6536] hover:bg-[#75522b] text-white text-xs font-semibold tracking-wide transition shadow-sm cursor-pointer disabled:opacity-60 text-center"
+                      style={{
+                        backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                        color: 'var(--btn-primary-text, #ffffff)',
+                      }}
+                      className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center gap-1.5 px-5 py-2.5 sm:py-2 rounded-xl text-xs font-semibold tracking-wide transition shadow-sm hover:opacity-90 cursor-pointer disabled:opacity-60 text-center"
                     >
                       <HiOutlineCheck className="h-3.5 w-3.5 shrink-0" />
                       <span>{savingAddress ? 'Saving...' : 'Save & Use This Address'}</span>
@@ -931,13 +966,27 @@ export default function Checkout() {
                   onClick={() => handlePaymentChange('online')}
                   className={`rounded-xl p-4 sm:p-4.5 transition cursor-pointer border ${
                     paymentMethod === 'online'
-                      ? 'border-2 border-[#8c6536] bg-[#faf6f0]'
+                      ? 'border-2'
                       : 'border-stone-200 bg-white hover:border-stone-300'
                   }`}
+                  style={
+                    paymentMethod === 'online'
+                      ? {
+                          borderColor: 'var(--btn-primary-bg, #8c6536)',
+                          backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 5%, #ffffff)',
+                        }
+                      : undefined
+                  }
                 >
                   <div className="flex items-start justify-between gap-3 sm:gap-4">
                     <div className="flex items-start gap-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[#f0e8dc] text-[#8c6536]">
+                      <span
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded"
+                        style={{
+                          color: 'var(--btn-primary-bg, #8c6536)',
+                          backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 12%, #ffffff)',
+                        }}
+                      >
                         <HiOutlineCreditCard className="h-3.5 w-3.5" />
                       </span>
                       <div>
@@ -962,13 +1011,27 @@ export default function Checkout() {
                   onClick={() => handlePaymentChange('cod')}
                   className={`rounded-xl p-4 sm:p-4.5 transition cursor-pointer border ${
                     paymentMethod === 'cod'
-                      ? 'border-2 border-[#8c6536] bg-[#faf6f0]'
+                      ? 'border-2'
                       : 'border-stone-200 bg-white hover:border-stone-300'
                   }`}
+                  style={
+                    paymentMethod === 'cod'
+                      ? {
+                          borderColor: 'var(--btn-primary-bg, #8c6536)',
+                          backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 5%, #ffffff)',
+                        }
+                      : undefined
+                  }
                 >
                   <div className="flex items-start justify-between gap-3 sm:gap-4">
                     <div className="flex items-start gap-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[#f0e8dc] text-[#8c6536]">
+                      <span
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded"
+                        style={{
+                          color: 'var(--btn-primary-bg, #8c6536)',
+                          backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 12%, #ffffff)',
+                        }}
+                      >
                         <HiOutlineCube className="h-3.5 w-3.5" />
                       </span>
                       <div>
@@ -985,7 +1048,13 @@ export default function Checkout() {
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="inline-block rounded bg-[#fbf5ee] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#8c6536]">
+                      <span
+                        className="inline-block rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                        style={{
+                          color: 'var(--btn-primary-bg, #8c6536)',
+                          backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 10%, #ffffff)',
+                        }}
+                      >
                         Due Now
                       </span>
                       <span className="block mt-1 text-xs font-bold text-stone-900 sm:text-sm">
@@ -1000,13 +1069,17 @@ export default function Checkout() {
             {/* Bottom Row / Submit */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-6 border-t-[1.5px] border-dashed border-stone-400">
               <p className="flex items-center gap-1.5 text-xs text-stone-500">
-                <HiOutlineLockClosed className="h-4 w-4 shrink-0 text-[#8c6536]" />
+                <HiOutlineLockClosed className="h-4 w-4 shrink-0" style={{ color: 'var(--btn-primary-bg, #8c6536)' }} />
                 <span>Your information is secure and encrypted</span>
               </p>
               <button
                 type="submit"
                 disabled={submitting || isSendingOtp}
-                className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2.5 rounded-xl bg-[#8c6536] px-8 text-xs sm:text-sm font-semibold text-white transition hover:bg-[#75522b] disabled:opacity-60 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+                className="w-full sm:w-auto inline-flex h-12 items-center justify-center gap-2.5 rounded-xl px-8 text-xs sm:text-sm font-semibold transition hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed shadow-xs cursor-pointer"
+                style={{
+                  backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                  color: 'var(--btn-primary-text, #ffffff)',
+                }}
               >
                 <span>
                   {submitting

@@ -84,7 +84,13 @@ export default function CustomerTrackingModal({
         {/* Luxury Header */}
         <div className="bg-gradient-to-r from-[#1c1917] via-[#292524] to-[#1c1917] text-white p-5 flex items-center justify-between border-b border-amber-900/30">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#8b6f4e] flex items-center justify-center text-white shadow-sm">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm"
+              style={{
+                backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                color: 'var(--btn-primary-text, #ffffff)',
+              }}
+            >
               <HiOutlineTruck className="w-5 h-5" />
             </div>
             <div>
@@ -185,7 +191,10 @@ export default function CustomerTrackingModal({
 
             {loading ? (
               <div className="py-10 text-center space-y-2">
-                <div className="w-6 h-6 border-2 border-stone-300 border-t-[#8b6f4e] rounded-full animate-spin mx-auto" />
+                <div
+                  className="w-6 h-6 border-2 border-stone-300 rounded-full animate-spin mx-auto"
+                  style={{ borderTopColor: 'var(--btn-primary-bg, #8c6536)' }}
+                />
                 <p className="text-stone-500 text-xs">Connecting to courier tracking network...</p>
               </div>
             ) : scans.length > 0 ? (
@@ -193,10 +202,16 @@ export default function CustomerTrackingModal({
                 {scans.map((scan, i) => (
                   <div key={i} className="relative">
                     <div
-                      className={`absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 ${
+                      style={
                         i === 0
-                          ? 'bg-[#8b6f4e] border-white ring-2 ring-[#8b6f4e]'
-                          : 'bg-stone-300 border-white'
+                          ? {
+                              backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                              boxShadow: '0 0 0 2px var(--btn-primary-bg, #8c6536)',
+                            }
+                          : undefined
+                      }
+                      className={`absolute -left-6 top-1 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                        i === 0 ? '' : 'bg-stone-300'
                       }`}
                     />
                     <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-200/80 space-y-0.5">

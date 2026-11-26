@@ -177,7 +177,7 @@ export default function OtpVerificationModal({
         }
       }}
     >
-      <div className="relative w-full max-w-[420px] rounded-2xl bg-white p-6 sm:p-8 text-center shadow-2xl transition-all">
+      <div className="relative w-full max-w-[420px] rounded-2xl bg-white p-5 sm:p-8 text-center shadow-2xl transition-all">
         {/* Close Button */}
         <button
           type="button"
@@ -190,7 +190,14 @@ export default function OtpVerificationModal({
         </button>
 
         {/* Shield Icon */}
-        <div className="mx-auto mb-3.5 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#ebd9c8] bg-[#faf6f0] text-[#8c6536] shadow-2xs">
+        <div
+          className="mx-auto mb-3.5 flex h-14 w-14 items-center justify-center rounded-2xl border shadow-2xs"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 10%, #ffffff)',
+            borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 25%, #ffffff)',
+            color: 'var(--btn-primary-bg, #8c6536)',
+          }}
+        >
           <HiOutlineShieldCheck className="h-7 w-7 stroke-[1.8]" />
         </div>
 
@@ -208,7 +215,14 @@ export default function OtpVerificationModal({
 
         {/* Dev OTP Helper in development */}
         {currentDevOtp && (
-          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-0.5 text-[11px] font-medium text-amber-800">
+          <div
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-[11px] font-medium"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 10%, #ffffff)',
+              borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 28%, #ffffff)',
+              color: 'var(--btn-primary-bg, #8c6536)',
+            }}
+          >
             <span>Dev OTP:</span>
             <span className="font-mono font-bold tracking-widest">{currentDevOtp}</span>
             <button
@@ -218,7 +232,7 @@ export default function OtpVerificationModal({
                 setDigits(chars);
                 setErrorMsg('');
               }}
-              className="ml-1 text-[10px] underline hover:text-amber-950 cursor-pointer"
+              className="ml-1 text-[10px] underline hover:opacity-80 cursor-pointer"
             >
               Fill
             </button>
@@ -226,7 +240,7 @@ export default function OtpVerificationModal({
         )}
 
         {/* 4 Digit OTP Inputs */}
-        <div className="my-6 flex justify-center gap-3">
+        <div className="my-6 flex justify-center gap-2.5 sm:gap-3">
           {[0, 1, 2, 3].map((index) => {
             const hasVal = Boolean(digits[index]);
             return (
@@ -243,12 +257,20 @@ export default function OtpVerificationModal({
                 onPaste={handlePaste}
                 disabled={isVerifying}
                 aria-label={`Digit ${index + 1}`}
-                className={`h-13 w-13 sm:h-14 sm:w-14 rounded-xl border text-center text-xl font-bold transition outline-none shadow-2xs ${
+                style={
+                  !errorMsg && hasVal
+                    ? {
+                        borderColor: 'var(--btn-primary-bg, #8c6536)',
+                        backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 8%, #ffffff)',
+                      }
+                    : undefined
+                }
+                className={`h-12 w-12 sm:h-14 sm:w-14 shrink-0 rounded-xl border text-center text-xl font-bold transition outline-none shadow-2xs ${
                   errorMsg
                     ? 'border-red-400 bg-red-50/20 text-red-900 focus:border-red-500'
                     : hasVal
-                    ? 'border-[#8c6536] bg-[#faf6f1] text-stone-900 ring-1 ring-[#8c6536]/20'
-                    : 'border-stone-200 bg-white text-stone-800 focus:border-[#8c6536] focus:ring-2 focus:ring-[#8c6536]/15'
+                    ? 'text-stone-900'
+                    : 'border-stone-200 bg-white text-stone-800 focus:border-stone-400'
                 }`}
               />
             );
@@ -276,7 +298,8 @@ export default function OtpVerificationModal({
                 type="button"
                 onClick={handleResend}
                 disabled={isResending}
-                className="font-bold text-[#8c6536] underline hover:text-[#704d23] cursor-pointer disabled:opacity-50"
+                style={{ color: 'var(--btn-primary-bg, #8c6536)' }}
+                className="font-bold underline hover:opacity-80 cursor-pointer disabled:opacity-50"
               >
                 {isResending ? 'Resending...' : 'Resend OTP'}
               </button>
@@ -289,7 +312,11 @@ export default function OtpVerificationModal({
           type="button"
           onClick={handleVerify}
           disabled={isVerifying || otpString.length !== 4}
-          className="w-full rounded-xl bg-[#8c6536] hover:bg-[#75522b] py-3.5 text-xs font-bold tracking-wider text-white uppercase transition shadow-md hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:scale-[0.99] flex items-center justify-center gap-2"
+          style={{
+            backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+            color: 'var(--btn-primary-text, #ffffff)',
+          }}
+          className="w-full rounded-xl py-3.5 text-xs font-bold tracking-wider uppercase transition shadow-md hover:opacity-90 hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:scale-[0.99] flex items-center justify-center gap-2"
         >
           {isVerifying ? (
             <>

@@ -871,13 +871,13 @@ export default function Shop({ defaultCategory = '' }) {
 
             {/* Products Grid / Skeletons / Empty */}
             {isInitialLoading && products.length === 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-2 sm:gap-x-3.5 gap-y-3 sm:gap-y-6">
-                {Array.from({ length: 8 }, (_, index) => (
-                  <div key={index} className="animate-pulse rounded-lg sm:rounded-xl border border-gray-100 bg-white p-2 sm:p-2.5">
-                    <div className="aspect-square rounded-md sm:rounded-lg bg-stone-100" />
-                    <div className="mt-2.5 h-3 w-4/5 bg-stone-100 rounded" />
-                    <div className="mt-1.5 h-3 w-1/2 bg-stone-100 rounded" />
-                    <div className="mt-2.5 h-3.5 w-1/3 bg-stone-100 rounded" />
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-x-3 sm:gap-x-5 gap-y-4 sm:gap-y-7">
+                {Array.from({ length: 9 }, (_, index) => (
+                  <div key={index} className="animate-pulse rounded-xl border border-gray-100 bg-white p-3 sm:p-4">
+                    <div className="aspect-square rounded-lg bg-stone-100" />
+                    <div className="mt-3 h-3.5 w-4/5 mx-auto bg-stone-100 rounded" />
+                    <div className="mt-2 h-3.5 w-1/2 mx-auto bg-stone-100 rounded" />
+                    <div className="mt-3 h-4 w-1/3 mx-auto bg-stone-100 rounded" />
                   </div>
                 ))}
               </div>
@@ -906,12 +906,12 @@ export default function Shop({ defaultCategory = '' }) {
                   </div>
                 )}
                 <div
-                  className={`grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-2 sm:gap-x-3.5 gap-y-3 sm:gap-y-6 transition-all duration-300 ${
+                  className={`grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-x-3 sm:gap-x-5 gap-y-4 sm:gap-y-7 transition-all duration-300 ${
                     isRefetching ? 'opacity-65 pointer-events-none' : 'opacity-100'
                   }`}
                 >
                   {sortedDisplayedProducts.map((product) => (
-                    <ProductCard key={product._id || product.id} product={product} />
+                    <ProductCard key={product._id || product.id} product={product} size="lg" />
                   ))}
                 </div>
               </div>

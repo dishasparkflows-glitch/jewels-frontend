@@ -646,8 +646,8 @@ const Home = () => {
               type="button"
               onClick={() => scrollCelebrate('prev')}
               aria-label="Previous categories"
-              className={`absolute -left-2 sm:-left-3 lg:-left-5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer ${
-                effectiveCategoryItems.length <= 4 ? 'lg:hidden' : ''
+              className={`absolute -left-2 sm:-left-3 lg:-left-4 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer ${
+                effectiveCategoryItems.length <= 1 ? 'hidden' : ''
               }`}
             >
               <HiOutlineChevronLeft className="h-5 w-5" />
@@ -690,8 +690,8 @@ const Home = () => {
               type="button"
               onClick={() => scrollCelebrate('next')}
               aria-label="Next categories"
-              className={`absolute -right-2 sm:-right-3 lg:-right-5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer ${
-                effectiveCategoryItems.length <= 4 ? 'lg:hidden' : ''
+              className={`absolute -right-2 sm:-right-3 lg:-right-4 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer ${
+                effectiveCategoryItems.length <= 1 ? 'hidden' : ''
               }`}
             >
               <HiOutlineChevronRight className="h-5 w-5" />
@@ -969,8 +969,8 @@ const Home = () => {
               type="button"
               onClick={() => scrollGifts('prev')}
               aria-label="Previous gifts"
-              className={`absolute -left-2 sm:-left-3 lg:-left-5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer ${
-                giftItems.length <= 4 ? 'lg:hidden' : ''
+              className={`absolute -left-2 sm:-left-3 lg:-left-4 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer ${
+                giftItems.length <= 1 ? 'hidden' : ''
               }`}
             >
               <HiOutlineChevronLeft className="h-5 w-5" />
@@ -1013,8 +1013,8 @@ const Home = () => {
               type="button"
               onClick={() => scrollGifts('next')}
               aria-label="Next gifts"
-              className={`absolute -right-2 sm:-right-3 lg:-right-5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer ${
-                giftItems.length <= 4 ? 'lg:hidden' : ''
+              className={`absolute -right-2 sm:-right-3 lg:-right-4 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-white text-stone-700 shadow-md border border-stone-200/90 transition-all hover:bg-stone-50 hover:scale-110 active:scale-95 cursor-pointer ${
+                giftItems.length <= 1 ? 'hidden' : ''
               }`}
             >
               <HiOutlineChevronRight className="h-5 w-5" />

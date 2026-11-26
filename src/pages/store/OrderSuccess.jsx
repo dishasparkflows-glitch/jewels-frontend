@@ -308,7 +308,11 @@ export default function OrderSuccess() {
         <div className="mt-8 flex justify-center">
           <Link
             to="/shop"
-            className="inline-flex h-11 sm:h-12 items-center justify-center gap-2 rounded-xl bg-[#8c6536] px-8 text-xs sm:text-[13px] font-medium text-white transition hover:bg-[#75522b] shadow-xs active:scale-95 cursor-pointer"
+            style={{
+              backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+              color: 'var(--btn-primary-text, #ffffff)',
+            }}
+            className="inline-flex h-11 sm:h-12 items-center justify-center gap-2 rounded-xl px-8 text-xs sm:text-[13px] font-medium transition hover:opacity-90 shadow-xs active:scale-95 cursor-pointer"
           >
             <HiOutlineShoppingBag className="h-4 w-4" />
             <span>Continue Shopping</span>

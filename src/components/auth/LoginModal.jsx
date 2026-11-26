@@ -251,7 +251,11 @@ export default function LoginModal({ isOpen, onClose }) {
             <button
               type="submit"
               disabled={loading}
-              className="!mt-4 flex h-11 sm:h-12 w-full items-center justify-center rounded-xl bg-[#715538] hover:bg-[#5f472e] text-white text-sm sm:text-[15px] font-semibold tracking-wide shadow-xs transition-all active:scale-[0.99] disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+              style={{
+                backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                color: 'var(--btn-primary-text, #ffffff)',
+              }}
+              className="!mt-4 flex h-11 sm:h-12 w-full items-center justify-center rounded-xl hover:opacity-90 text-sm sm:text-[15px] font-semibold tracking-wide shadow-xs transition-all active:scale-[0.99] disabled:cursor-wait disabled:opacity-60 cursor-pointer"
             >
               {loading ? 'Signing In…' : 'Sign In'}
             </button>

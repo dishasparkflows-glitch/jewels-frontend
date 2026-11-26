@@ -170,7 +170,11 @@ export default function ProductCertificateModal({
               href={certificateUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#92704E] hover:bg-[#7e5f40] text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
+              style={{
+                backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                color: 'var(--btn-primary-text, #ffffff)',
+              }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 hover:opacity-90 text-xs font-semibold rounded-lg shadow-sm transition-colors"
               title="Open Original Document"
             >
               <span>Open Original</span>

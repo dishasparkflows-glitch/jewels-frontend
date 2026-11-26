@@ -458,7 +458,11 @@ export default function CustomJewellery() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
               <Link
                 to="/shop"
-                className="w-full sm:w-auto px-7 py-3 rounded-lg btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-xs font-bold tracking-[0.18em] uppercase transition shadow-sm"
+                style={{
+                  backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                  color: 'var(--btn-primary-text, #ffffff)',
+                }}
+                className="w-full sm:w-auto px-7 py-3 rounded-lg btn-theme-primary text-xs font-bold tracking-[0.18em] uppercase transition shadow-sm hover:opacity-90"
               >
                 EXPLORE COLLECTION
               </Link>
@@ -800,7 +804,11 @@ export default function CustomJewellery() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full sm:w-auto min-w-[200px] px-12 py-3.5 rounded-xl btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-xs font-bold tracking-[0.2em] uppercase active:scale-95 transition-all shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                style={{
+                  backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                  color: 'var(--btn-primary-text, #ffffff)',
+                }}
+                className="w-full sm:w-auto min-w-[200px] px-12 py-3.5 rounded-xl btn-theme-primary text-xs font-bold tracking-[0.2em] uppercase active:scale-95 transition-all shadow-md hover:opacity-90 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isSubmitting ? 'SUBMITTING...' : 'SUBMIT'}
               </button>

@@ -951,7 +951,13 @@ const Profile = () => {
           <div className="lg:col-span-3 bg-white rounded-2xl border border-stone-200/80 shadow-xs overflow-hidden">
             {/* User Greeting Header */}
             <div className="px-4 py-4 border-b border-stone-100 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#8b6f4e] text-white flex items-center justify-center shrink-0 shadow-2xs">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-2xs"
+                style={{
+                  backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                  color: 'var(--btn-primary-text, #ffffff)',
+                }}
+              >
                 <HiUser className="w-5 h-5" />
               </div>
               <div className="min-w-0">
@@ -971,9 +977,17 @@ const Profile = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('profile')}
+                style={
+                  activeTab === 'profile'
+                    ? {
+                        backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 12%, #ffffff)',
+                        boxShadow: 'inset 4px 0 0 var(--btn-primary-bg, #8c6536)',
+                      }
+                    : undefined
+                }
                 className={`relative flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer ${
                   activeTab === 'profile'
-                    ? 'bg-[#f7ebdc]/80 text-stone-900 font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:rounded-r-full before:bg-[#8b6f4e]'
+                    ? 'text-stone-900 font-semibold'
                     : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
                 }`}
               >
@@ -991,9 +1005,17 @@ const Profile = () => {
                 onTouchStart={() => {
                   if (orders.length === 0) fetchOrders(true, 1, orderLimit);
                 }}
+                style={
+                  activeTab === 'orders'
+                    ? {
+                        backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 12%, #ffffff)',
+                        boxShadow: 'inset 4px 0 0 var(--btn-primary-bg, #8c6536)',
+                      }
+                    : undefined
+                }
                 className={`relative flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer ${
                   activeTab === 'orders'
-                    ? 'bg-[#f7ebdc]/80 text-stone-900 font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:rounded-r-full before:bg-[#8b6f4e]'
+                    ? 'text-stone-900 font-semibold'
                     : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
                 }`}
               >
@@ -1002,7 +1024,13 @@ const Profile = () => {
                   <span>My Orders</span>
                 </div>
                 {(orders.length > 0 || (orderPagination.totalDocs || orderCount || 0) > 0) && (
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#f5e6d3] text-[#8b6f4e]">
+                  <span
+                    className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 14%, #ffffff)',
+                      color: 'var(--btn-primary-bg, #8c6536)',
+                    }}
+                  >
                     ({orderPagination.totalDocs || orders.length || orderCount})
                   </span>
                 )}
@@ -1012,9 +1040,17 @@ const Profile = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('returns')}
+                style={
+                  activeTab === 'returns'
+                    ? {
+                        backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 12%, #ffffff)',
+                        boxShadow: 'inset 4px 0 0 var(--btn-primary-bg, #8c6536)',
+                      }
+                    : undefined
+                }
                 className={`relative flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer ${
                   activeTab === 'returns'
-                    ? 'bg-[#f7ebdc]/80 text-stone-900 font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:rounded-r-full before:bg-[#8b6f4e]'
+                    ? 'text-stone-900 font-semibold'
                     : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
                 }`}
               >
@@ -1023,7 +1059,13 @@ const Profile = () => {
                   <span>Returns &amp; Refunds</span>
                 </div>
                 {(returnOrderCount || 0) > 0 && (
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#f5e6d3] text-[#8b6f4e]">
+                  <span
+                    className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 14%, #ffffff)',
+                      color: 'var(--btn-primary-bg, #8c6536)',
+                    }}
+                  >
                     ({returnOrderCount})
                   </span>
                 )}
@@ -1033,9 +1075,17 @@ const Profile = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('wishlist')}
+                style={
+                  activeTab === 'wishlist'
+                    ? {
+                        backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 12%, #ffffff)',
+                        boxShadow: 'inset 4px 0 0 var(--btn-primary-bg, #8c6536)',
+                      }
+                    : undefined
+                }
                 className={`relative flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer ${
                   activeTab === 'wishlist'
-                    ? 'bg-[#f7ebdc]/80 text-stone-900 font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:rounded-r-full before:bg-[#8b6f4e]'
+                    ? 'text-stone-900 font-semibold'
                     : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
                 }`}
               >
@@ -1047,9 +1097,17 @@ const Profile = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('addresses')}
+                style={
+                  activeTab === 'addresses'
+                    ? {
+                        backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 12%, #ffffff)',
+                        boxShadow: 'inset 4px 0 0 var(--btn-primary-bg, #8c6536)',
+                      }
+                    : undefined
+                }
                 className={`relative flex items-center gap-3 px-4 py-3 text-left transition-colors cursor-pointer ${
                   activeTab === 'addresses'
-                    ? 'bg-[#f7ebdc]/80 text-stone-900 font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-1 before:rounded-r-full before:bg-[#8b6f4e]'
+                    ? 'text-stone-900 font-semibold'
                     : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900'
                 }`}
               >
@@ -1338,7 +1396,11 @@ const Profile = () => {
                     <button
                       type="button"
                       onClick={() => openAddressModal('add-additional')}
-                      className="bg-[#8b6f4e] hover:bg-[#785e40] text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-2xs hover:shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                      style={{
+                        backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                        color: 'var(--btn-primary-text, #ffffff)',
+                      }}
+                      className="hover:opacity-90 text-xs font-semibold px-4 py-2 rounded-lg shadow-2xs hover:shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                     >
                       <HiOutlinePlus className="w-3.5 h-3.5 stroke-[2.5]" />
                       <span>Add New Address</span>
@@ -1441,7 +1503,11 @@ const Profile = () => {
                     <div className="pt-2">
                       <Link
                         to="/shop"
-                        className="inline-block btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-xs font-semibold uppercase tracking-wider px-6 py-2.5 rounded-lg shadow-sm hover:shadow transition-all"
+                        style={{
+                          backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                          color: 'var(--btn-primary-text, #ffffff)',
+                        }}
+                        className="inline-block btn-theme-primary hover:opacity-90 text-xs font-semibold uppercase tracking-wider px-6 py-2.5 rounded-lg shadow-sm hover:shadow transition-all"
                       >
                         Shop Collection
                       </Link>
@@ -1659,7 +1725,12 @@ const Profile = () => {
                                   type="button"
                                   disabled={reorderingId === (order._id || order.id)}
                                   onClick={() => handleBuyAgain(order)}
-                                  className="px-4 sm:px-5 py-1.5 sm:py-2 rounded-xl border border-[#78552B] bg-[#78552B] hover:bg-[#644621] text-white text-xs font-semibold transition-all inline-flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs active:scale-95 disabled:opacity-60 whitespace-nowrap"
+                                  style={{
+                                    backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                                    color: 'var(--btn-primary-text, #ffffff)',
+                                    borderColor: 'var(--btn-primary-bg, #8c6536)',
+                                  }}
+                                  className="px-4 sm:px-5 py-1.5 sm:py-2 rounded-xl border hover:opacity-90 text-xs font-semibold transition-all inline-flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs active:scale-95 disabled:opacity-60 whitespace-nowrap"
                                 >
                                   <HiOutlineShoppingCart
                                     className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-white ${
@@ -1742,10 +1813,19 @@ const Profile = () => {
                                   disabled={ordersLoading}
                                   onClick={() => handleOrderPageChange(pageNum)}
                                   aria-current={isActive ? 'page' : undefined}
+                                  style={
+                                    isActive
+                                      ? {
+                                          backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                                          color: 'var(--btn-primary-text, #ffffff)',
+                                          borderColor: 'var(--btn-primary-bg, #8c6536)',
+                                        }
+                                      : undefined
+                                  }
                                   className={`min-w-[36px] h-9 px-3 flex items-center justify-center text-xs sm:text-sm font-medium rounded-lg transition-all duration-150 cursor-pointer ${
                                     isActive
-                                      ? 'bg-[#8b6f4e] text-white border border-[#8b6f4e] shadow-2xs font-semibold'
-                                      : 'bg-white text-stone-700 border border-[#EFE8DD] hover:bg-[#FAF7F2] hover:border-[#8b6f4e] hover:text-[#8b6f4e]'
+                                      ? 'border shadow-2xs font-semibold'
+                                      : 'bg-white text-stone-700 border border-[#EFE8DD] hover:bg-[#FAF7F2]'
                                   }`}
                                 >
                                   {pageNum}
@@ -1819,9 +1899,18 @@ const Profile = () => {
                                   disabled={ordersLoading}
                                   onClick={() => handleOrderPageChange(pageNum)}
                                   aria-current={isActive ? 'page' : undefined}
+                                  style={
+                                    isActive
+                                      ? {
+                                          backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                                          color: 'var(--btn-primary-text, #ffffff)',
+                                          borderColor: 'var(--btn-primary-bg, #8c6536)',
+                                        }
+                                      : undefined
+                                  }
                                   className={`min-w-[36px] h-9 px-3 flex items-center justify-center text-xs font-semibold rounded-xl transition-all ${
                                     isActive
-                                      ? 'bg-[#8b6f4e] text-white border border-[#8b6f4e] shadow-xs'
+                                      ? 'border shadow-xs'
                                       : 'bg-white text-stone-700 border border-[#EFE8DD] active:bg-[#FAF7F2]'
                                   }`}
                                 >
@@ -1953,7 +2042,11 @@ const Profile = () => {
                     </p>
                     <Link
                       to="/shop"
-                      className="inline-flex items-center gap-2 btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white px-5 py-2.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors"
+                      style={{
+                        backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                        color: 'var(--btn-primary-text, #ffffff)',
+                      }}
+                      className="inline-flex items-center gap-2 btn-theme-primary hover:opacity-90 px-5 py-2.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors"
                     >
                       <span>Explore Jewellery</span>
                       <HiArrowRight className="w-3.5 h-3.5" />
@@ -2068,7 +2161,11 @@ const Profile = () => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2 btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white rounded-lg font-medium shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
+                  style={{
+                    backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                    color: 'var(--btn-primary-text, #ffffff)',
+                  }}
+                  className="px-6 py-2 btn-theme-primary hover:opacity-90 rounded-lg font-medium shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {saving ? 'Saving...' : 'Save Profile'}
                 </button>
@@ -2132,9 +2229,18 @@ const Profile = () => {
                       key={t}
                       type="button"
                       onClick={() => setAddressForm({ ...addressForm, type: t })}
+                      style={
+                        (addressForm.type || 'home') === t
+                          ? {
+                              backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                              color: 'var(--btn-primary-text, #ffffff)',
+                              borderColor: 'var(--btn-primary-bg, #8c6536)',
+                            }
+                          : undefined
+                      }
                       className={`px-3.5 py-1.5 text-xs font-medium rounded-lg border capitalize transition-all cursor-pointer ${
                         (addressForm.type || 'home') === t
-                          ? 'bg-[#8b6f4e] text-white border-[#8b6f4e]'
+                          ? ''
                           : 'bg-white text-stone-700 border-stone-200 hover:border-stone-300'
                       }`}
                     >
@@ -2278,7 +2384,11 @@ const Profile = () => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white text-xs sm:text-sm font-medium transition shadow-sm disabled:opacity-50 cursor-pointer text-center"
+                  style={{
+                    backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                    color: 'var(--btn-primary-text, #ffffff)',
+                  }}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl btn-theme-primary hover:opacity-90 text-xs sm:text-sm font-medium transition shadow-sm disabled:opacity-50 cursor-pointer text-center"
                 >
                   {saving ? 'Saving...' : 'Save Address'}
                 </button>
@@ -2622,7 +2732,12 @@ const Profile = () => {
                         handleBuyAgain(selectedOrder);
                         setSelectedOrder(null);
                       }}
-                      className="px-3.5 sm:px-4.5 py-2 sm:py-2 rounded-xl border border-[#785736] bg-[#785736] hover:bg-[#67492c] text-white text-xs font-semibold transition-all inline-flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-wait shadow-2xs whitespace-nowrap active:scale-95"
+                      style={{
+                        backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                        color: 'var(--btn-primary-text, #ffffff)',
+                        borderColor: 'var(--btn-primary-bg, #8c6536)',
+                      }}
+                      className="px-3.5 sm:px-4.5 py-2 sm:py-2 rounded-xl border hover:opacity-90 text-xs font-semibold transition-all inline-flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-wait shadow-2xs whitespace-nowrap active:scale-95"
                     >
                       <HiOutlineShoppingCart className={`w-4 h-4 shrink-0 ${reorderingId === (selectedOrder._id || selectedOrder.id) ? 'animate-spin' : ''}`} />
                       <span>{reorderingId === (selectedOrder._id || selectedOrder.id) ? 'Adding…' : 'Buy Again'}</span>
@@ -2821,7 +2936,11 @@ const Profile = () => {
                 <button
                   type="submit"
                   disabled={submittingReview || !reviewComment.trim()}
-                  className="px-6 py-2.5 rounded-xl btn-theme-primary bg-[#8b6f4e] hover:bg-[#785e40] text-white font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                    color: 'var(--btn-primary-text, #ffffff)',
+                  }}
+                  className="px-6 py-2.5 rounded-xl btn-theme-primary hover:opacity-90 font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submittingReview ? (
                     <>

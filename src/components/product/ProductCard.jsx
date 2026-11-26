@@ -13,6 +13,7 @@ import { formatProductPrice } from "../../utils/productCard";
 import { useProductCard } from "../../hooks/useProductCard";
 import ProductMediaImage from "./ProductMediaImage";
 import ColorSwatches from "./ColorSwatches";
+import SimilarProductsButton from "../store/SimilarProductsButton";
 
 function ImagePreview({ images, name, onClose }) {
   const dialog = useRef(null);
@@ -98,7 +99,8 @@ function ImagePreview({ images, name, onClose }) {
   );
 }
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, showSimilarButton = true, size = "default" }) {
+  const isLarge = size === "lg";
   const navigate = useNavigate();
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -154,16 +156,30 @@ export default function ProductCard({ product }) {
       onMouseEnter={handlePrefetch}
       onFocus={handlePrefetch}
       onTouchStart={handlePrefetch}
-      className="group cursor-pointer flex flex-col justify-between h-full bg-white p-2 sm:p-2.5 border border-gray-100 hover:shadow-md transition-all rounded-lg sm:rounded-xl"
+      className={`group cursor-pointer flex flex-col justify-between h-full bg-white border border-gray-100 hover:shadow-md transition-all ${
+        isLarge
+          ? "p-2.5 sm:p-3.5 lg:p-4 rounded-xl"
+          : "p-2 sm:p-2.5 rounded-lg sm:rounded-xl"
+      }`}
     >
       <div>
         {/* Product Image Area */}
-        <div className="relative aspect-square flex items-center justify-center bg-[#FAF8F5] mb-1 sm:mb-2 overflow-hidden group/img rounded-md sm:rounded-lg">
+        <div
+          className={`relative aspect-square flex items-center justify-center bg-[#FAF8F5] overflow-hidden group/img ${
+            isLarge
+              ? "mb-2 sm:mb-3 rounded-lg"
+              : "mb-1 sm:mb-2 rounded-md sm:rounded-lg"
+          }`}
+        >
           <ProductMediaImage
             src={activeImage}
             alt={title}
-            className="w-full h-full object-contain p-1.5 sm:p-2 transition-transform duration-700 group-hover:scale-105"
-            videoClassName="w-full h-full object-contain p-1.5 sm:p-2 transition-transform duration-700 group-hover:scale-105 pointer-events-none"
+            className={`w-full h-full object-contain transition-transform duration-700 group-hover:scale-105 ${
+              isLarge ? "p-2 sm:p-3" : "p-1.5 sm:p-2"
+            }`}
+            videoClassName={`w-full h-full object-contain transition-transform duration-700 group-hover:scale-105 pointer-events-none ${
+              isLarge ? "p-2 sm:p-3" : "p-1.5 sm:p-2"
+            }`}
           />
 
           {/* Wishlist Button (Top Right) */}
@@ -176,14 +192,37 @@ export default function ProductCard({ product }) {
               e.stopPropagation();
               handleWishlist(e);
             }}
-            className="absolute top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-colors z-20 bg-white/90 backdrop-blur-xs shadow-xs border border-gray-100 hover:bg-white cursor-pointer disabled:opacity-50"
+            className={`absolute rounded-full flex items-center justify-center transition-colors z-20 bg-white/90 backdrop-blur-xs shadow-xs border border-gray-100 hover:bg-white cursor-pointer disabled:opacity-50 ${
+              isLarge
+                ? "top-2 right-2 sm:top-3 sm:right-3 w-7 h-7 sm:w-8 sm:h-8"
+                : "top-1.5 right-1.5 sm:top-2.5 sm:right-2.5 w-6 h-6 sm:w-7 sm:h-7"
+            }`}
           >
             <LuHeart
-              size={12}
+              size={isLarge ? 14 : 12}
               fill={wished ? "black" : "none"}
-              className={wished ? "text-black" : "text-gray-400 sm:w-3.5 sm:h-3.5"}
+              className={
+                wished
+                  ? "text-black"
+                  : isLarge
+                    ? "text-gray-400 sm:w-4 sm:h-4"
+                    : "text-gray-400 sm:w-3.5 sm:h-3.5"
+              }
             />
           </button>
+
+          {/* Similar Products Button (Bottom Left) */}
+          {showSimilarButton && !isDiamond && (
+            <SimilarProductsButton
+              product={product}
+              variant="icon"
+              className={
+                isLarge
+                  ? "absolute bottom-2 left-2 sm:bottom-3 sm:left-3"
+                  : "absolute bottom-1.5 left-1.5 sm:bottom-2.5 sm:left-2.5"
+              }
+            />
+          )}
 
           {/* Carousel Arrows */}
           {cardImages.length > 1 && (
@@ -227,13 +266,21 @@ export default function ProductCard({ product }) {
         {/* Product Title (Centered) */}
         <div className="text-center px-1">
           <h3
-            className="text-[11px] sm:text-[12.5px] text-gray-800 font-medium leading-[1.25] mb-1 min-h-[26px] sm:min-h-[30px] line-clamp-2 text-center"
+            className={`text-gray-800 font-medium line-clamp-2 text-center ${
+              isLarge
+                ? "text-xs sm:text-[14px] lg:text-[15px] leading-[1.35] mb-1.5 min-h-[34px] sm:min-h-[40px]"
+                : "text-[11px] sm:text-[12.5px] leading-[1.25] mb-1 min-h-[26px] sm:min-h-[30px]"
+            }`}
             title={title}
           >
             {title}
           </h3>
           {diamondMetaLine && (
-            <p className="text-[10px] sm:text-[11px] text-[#8b6f4e] font-medium mb-1 truncate">
+            <p
+              className={`text-[#8b6f4e] font-medium mb-1 truncate ${
+                isLarge ? "text-[11px] sm:text-xs" : "text-[10px] sm:text-[11px]"
+              }`}
+            >
               {diamondMetaLine}
             </p>
           )}
@@ -247,13 +294,19 @@ export default function ProductCard({ product }) {
           activeColorName={activeColorName}
           onSelectColor={selectColor}
           maxVisible={5}
-          className="flex justify-center items-center gap-1 sm:gap-1.5 mb-1 sm:mb-1 mt-0.5"
-          sizeClass="w-2.5 h-2.5 sm:w-3 sm:h-3"
+          className={`flex justify-center items-center mt-0.5 ${
+            isLarge ? "gap-1.5 mb-1.5 sm:mb-2" : "gap-1 sm:gap-1.5 mb-1 sm:mb-1"
+          }`}
+          sizeClass={isLarge ? "w-3 h-3 sm:w-3.5 sm:h-3.5" : "w-2.5 h-2.5 sm:w-3 sm:h-3"}
           extraBadgeClass="text-[10px] text-gray-400 self-center"
         />
 
         <div className="flex flex-wrap items-center justify-center gap-1.5 text-center">
-          <p className="text-[11px] sm:text-[13px] text-gray-900 font-bold tracking-tight">
+          <p
+            className={`text-gray-900 font-bold tracking-tight ${
+              isLarge ? "text-xs sm:text-[14.5px] lg:text-[15px]" : "text-[11px] sm:text-[13px]"
+            }`}
+          >
             {hasRange ? (
               `${formatProductPrice(minPrice)} – ${formatProductPrice(maxPrice)}`
             ) : (
@@ -261,7 +314,11 @@ export default function ProductCard({ product }) {
             )}
           </p>
           {!hasRange && hasDiscount && (
-            <p className="text-[9px] sm:text-[10.5px] text-gray-400 line-through font-normal">
+            <p
+              className={`text-gray-400 line-through font-normal ${
+                isLarge ? "text-[10px] sm:text-xs" : "text-[9px] sm:text-[10.5px]"
+              }`}
+            >
               {formatProductPrice(mrp)}
             </p>
           )}

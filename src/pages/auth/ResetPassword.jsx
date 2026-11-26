@@ -180,7 +180,11 @@ const ResetPassword = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-[#715538] hover:bg-[#5f472e] active:scale-[0.99] h-11 sm:h-12 px-4 text-xs sm:text-sm font-semibold uppercase tracking-[0.14em] text-white transition-all shadow-xs hover:shadow-md disabled:cursor-wait disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
+                style={{
+                  backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                  color: 'var(--btn-primary-text, #ffffff)',
+                }}
+                className="w-full rounded-xl hover:opacity-90 active:scale-[0.99] h-11 sm:h-12 px-4 text-xs sm:text-sm font-semibold uppercase tracking-[0.14em] transition-all shadow-xs hover:shadow-md disabled:cursor-wait disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>

@@ -136,7 +136,11 @@ const ForgotPassword = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] active:scale-[0.99] py-3.5 px-4 text-xs font-bold uppercase tracking-[0.16em] text-white transition-all shadow-xs hover:shadow-md disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
+                style={{
+                  backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                  color: 'var(--btn-primary-text, #ffffff)',
+                }}
+                className="w-full rounded-xl btn-theme-primary active:scale-[0.99] py-3.5 px-4 text-xs font-bold uppercase tracking-[0.16em] transition-all shadow-xs hover:opacity-90 hover:shadow-md disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>

@@ -179,13 +179,13 @@ export default function SimilarProductsDrawer({
         </div>
 
         {/* Drawer Header */}
-        <header className="relative px-12 sm:px-14 pt-3 sm:pt-5 pb-3 sm:pb-4 flex items-center justify-center border-b border-stone-100 select-none">
-          <div className="flex items-center justify-center gap-2 sm:gap-2.5 flex-wrap text-center">
-            <h2 className="font-serif text-base sm:text-2xl font-bold text-stone-900 tracking-wide">
+        <header className="relative px-10 sm:px-12 py-2.5 sm:py-3 flex items-center justify-center border-b border-stone-100 select-none">
+          <div className="flex items-center justify-center gap-2 flex-wrap text-center">
+            <h2 className="font-serif text-base sm:text-xl font-bold text-stone-900 tracking-wide">
               View Similar Products
             </h2>
             {products.length > 0 && (
-              <span className="text-[11px] sm:text-xs font-medium text-stone-500 bg-stone-100 px-2 sm:px-2.5 py-0.5 rounded-full transition-opacity duration-200">
+              <span className="text-[11px] sm:text-xs font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full transition-opacity duration-200">
                 {products.length} {products.length === 1 ? 'piece' : 'pieces'}
               </span>
             )}
@@ -194,15 +194,15 @@ export default function SimilarProductsDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-900 flex items-center justify-center transition-colors cursor-pointer"
+            className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-500 hover:text-stone-900 flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Close similar products"
           >
-            <HiOutlineX className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+            <HiOutlineX className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
           </button>
         </header>
 
         {/* Products Scrollable Area */}
-        <div className="relative flex-1 p-4 sm:p-6 overflow-hidden">
+        <div className="relative flex-1 px-3 py-2.5 sm:px-5 sm:py-3.5 overflow-hidden">
           {/* Desktop Left/Right Navigation Chevrons */}
           {products.length > 3 && (
             <>
@@ -245,7 +245,7 @@ export default function SimilarProductsDrawer({
           {products.length > 0 && (
             <div
               ref={scrollContainerRef}
-              className={`flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar py-2 scroll-smooth transition-opacity duration-300 ${
+              className={`flex gap-3 sm:gap-4 overflow-x-auto no-scrollbar py-0.5 scroll-smooth transition-opacity duration-300 ${
                 loading ? 'opacity-50 pointer-events-none' : 'opacity-100'
               }`}
             >
@@ -255,7 +255,7 @@ export default function SimilarProductsDrawer({
                   className="w-[190px] sm:w-[220px] md:w-[240px] shrink-0"
                   onClick={() => onClose?.()}
                 >
-                  <ProductCard product={item} />
+                  <ProductCard product={item} showSimilarButton={false} />
                 </div>
               ))}
             </div>

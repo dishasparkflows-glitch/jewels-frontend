@@ -69,10 +69,13 @@ export default function ProductGallery({
                     key={dotIdx}
                     type="button"
                     onClick={() => scrollToMobileSlide(dotIdx)}
-                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                    style={
                       activeMobileSlide === dotIdx
-                        ? 'w-5 bg-[#8b6f4e]'
-                        : 'w-1.5 bg-stone-300'
+                        ? { backgroundColor: 'var(--btn-primary-bg, #8c6536)' }
+                        : undefined
+                    }
+                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                      activeMobileSlide === dotIdx ? 'w-5' : 'w-1.5 bg-stone-300'
                     }`}
                     aria-label={`Go to slide ${dotIdx + 1}`}
                   />

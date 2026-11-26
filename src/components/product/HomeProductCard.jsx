@@ -92,11 +92,9 @@ export default function HomeProductCard({ product, isSilver: isSilverProp }) {
       className="group cursor-pointer relative max-w-[280px] sm:max-w-none mx-auto w-full flex flex-col justify-between h-full bg-white rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all"
     >
       <div>
-        {/* Image Container with Signature Background */}
+        {/* Image Container */}
         <div
-          className={`relative aspect-square overflow-hidden mb-1.5 sm:mb-2.5 flex items-center justify-center rounded-xl ${
-            isSilver ? "bg-[#FAF8F5] border border-[#e8dfd0]" : "bg-[#F0E8D8]"
-          }`}
+          className="relative aspect-square overflow-hidden mb-1.5 sm:mb-2.5 flex items-center justify-center rounded-xl bg-white"
         >
           {/* Wishlist Button (Top Right) */}
           <button
@@ -130,7 +128,11 @@ export default function HomeProductCard({ product, isSilver: isSilverProp }) {
             <button
               type="button"
               onClick={handleAddToCart}
-              className="w-full btn-theme-primary bg-[#8b6f4e] hover:bg-[#755c3e] text-white py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
+              style={{
+                backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                color: 'var(--btn-primary-text, #ffffff)',
+              }}
+              className="w-full btn-theme-primary py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all shadow-sm hover:opacity-90 flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
             >
               {justAdded ? (
                 <span className="text-white font-bold flex items-center gap-1 animate-fadeIn">

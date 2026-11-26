@@ -20,6 +20,7 @@ export default function ProductSimilarPieces({ mostLikedProducts = [] }) {
           <ProductCard
             key={item._id || item.id || item.basicInfo?.slug || item.slug}
             product={item}
+            showSimilarButton={false}
           />
         ))}
       </div>

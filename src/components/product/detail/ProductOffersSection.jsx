@@ -50,24 +50,40 @@ export default function ProductOffersSection({ coupons = [], defaultOpen = true 
         onClick={() => setOffersOpen((prev) => !prev)}
       >
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <div className="w-5 h-5 rounded-full bg-[#8b6f4e]/10 border border-[#8b6f4e]/20 flex items-center justify-center text-[#8b6f4e] shadow-2xs">
+          <div
+            className="w-5 h-5 rounded-full border flex items-center justify-center shadow-2xs"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 10%, #ffffff)',
+              borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 22%, #ffffff)',
+              color: 'var(--btn-primary-bg, #8c6536)',
+            }}
+          >
             <HiOutlineTag className="w-3 h-3 -rotate-12 stroke-[1.8]" />
           </div>
-          <span className="text-[10px] sm:text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#8b6f4e] font-poppins">
+          <span
+            className="text-[10px] sm:text-[10.5px] font-semibold uppercase tracking-[0.14em] font-poppins"
+            style={{ color: 'var(--btn-primary-bg, #8c6536)' }}
+          >
             AVAILABLE OFFERS
           </span>
           {coupons.length > 1 && (
-            <span className="px-1.5 py-0.5 rounded-full text-[8.5px] font-bold bg-[#8b6f4e]/12 text-[#8b6f4e]">
+            <span
+              className="px-1.5 py-0.5 rounded-full text-[8.5px] font-bold"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 12%, #ffffff)',
+                color: 'var(--btn-primary-bg, #8c6536)',
+              }}
+            >
               {coupons.length} Offers
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-1 text-[#8b6f4e]">
+        <div className="flex items-center gap-1" style={{ color: 'var(--btn-primary-bg, #8c6536)' }}>
           <span className="text-[10px] font-medium text-stone-500 hidden sm:inline">
             {offersOpen ? 'Hide' : 'View Offers'}
           </span>
-          <div className="w-4 h-4 rounded flex items-center justify-center hover:bg-[#8b6f4e]/10 transition-colors">
+          <div className="w-4 h-4 rounded flex items-center justify-center transition-colors">
             <HiChevronDown
               className={`w-3.5 h-3.5 transition-transform duration-200 ${
                 offersOpen ? 'rotate-180' : ''

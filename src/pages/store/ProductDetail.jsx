@@ -17,7 +17,8 @@ import { getValidProductImages, getPrimaryProductImage, isOrnateImage } from '..
 import { trackProductView } from '../../config/firebase';
 import { useLiveViewers } from '../../hooks/useLiveViewers';
 import Dropdown from '../../components/common/Dropdown';
-import SimilarProductsDrawer, { prefetchSimilarProducts } from '../../components/store/SimilarProductsDrawer';
+import { prefetchSimilarProducts } from '../../components/store/SimilarProductsDrawer';
+import SimilarProductsButton from '../../components/store/SimilarProductsButton';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
 import {
   calculateSizeAdjustedMetalWeight,
@@ -1665,32 +1666,7 @@ export default function ProductDetail() {
                 </div>
 
                 {/* View Similar Products Button */}
-                <div className="relative group">
-                  <button
-                    type="button"
-                    onClick={() => setSimilarDrawerOpen(true)}
-                    onMouseEnter={() => {
-                      const pid = product?._id || product?.id;
-                      if (pid) prefetchSimilarProducts(pid);
-                    }}
-                    onTouchStart={() => {
-                      const pid = product?._id || product?.id;
-                      if (pid) prefetchSimilarProducts(pid);
-                    }}
-                    className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-stone-200 hover:border-[#8b6f4e]/60 bg-stone-50/80 hover:bg-[#FAF7F2] text-stone-700 hover:text-[#8b6f4e] transition-all cursor-pointer text-xs font-medium active:scale-95 shadow-2xs"
-                    aria-label="View similar products"
-                    title="View Similar Products"
-                  >
-                    <HiSparkles className="w-3.5 h-3.5 text-[#8b6f4e] shrink-0" />
-                    <span className="text-[11px] sm:text-[11.5px] font-semibold tracking-wide">Similar</span>
-                  </button>
-                  <div className="absolute bottom-full right-0 mb-2 hidden md:group-hover:flex flex-col items-end pointer-events-none z-30">
-                    <div className="bg-black text-white text-[11px] font-medium px-2.5 py-1 rounded shadow-lg whitespace-nowrap">
-                      View Similar Products
-                    </div>
-                    <div className="w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-black mr-4" />
-                  </div>
-                </div>
+                <SimilarProductsButton product={product} variant="pill" stopPropagation={false} />
               </div>
             </div>
 
@@ -2083,13 +2059,6 @@ export default function ProductDetail() {
         submittingReview={submittingReview}
       />
 
-      {/* Similar Products Bottom Slide-Up Drawer */}
-      <SimilarProductsDrawer
-        open={similarDrawerOpen}
-        onClose={() => setSimilarDrawerOpen(false)}
-        productId={product?._id || product?.id}
-        currentProduct={product}
-      />
     </div>
   );
 }

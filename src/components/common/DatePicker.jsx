@@ -616,9 +616,17 @@ export default function DatePicker({
                       key={mName}
                       type="button"
                       onClick={() => handleSelectMonth(idx)}
+                      style={
+                        isCur
+                          ? {
+                              backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                              color: 'var(--btn-primary-text, #ffffff)',
+                            }
+                          : undefined
+                      }
                       className={`py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                         isCur
-                          ? 'bg-[#8c6b45] text-white shadow-xs font-semibold'
+                          ? 'shadow-xs font-semibold'
                           : 'bg-stone-50 text-stone-700 hover:bg-stone-100'
                       }`}
                     >
@@ -655,15 +663,30 @@ export default function DatePicker({
                       type="button"
                       disabled={disabledDay}
                       onClick={() => !disabledDay && handleDayClick(cell)}
+                      style={
+                        disabledDay
+                          ? undefined
+                          : selected
+                          ? {
+                              backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                              color: 'var(--btn-primary-text, #ffffff)',
+                            }
+                          : isToday && cell.isCurrentMonth
+                          ? {
+                              backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 12%, #ffffff)',
+                              color: 'var(--btn-primary-bg, #8c6536)',
+                            }
+                          : undefined
+                      }
                       className={`h-7 w-7 sm:h-8 sm:w-8 mx-auto rounded-lg flex items-center justify-center text-xs transition-all duration-150 cursor-pointer ${
                         disabledDay
                           ? 'opacity-25 cursor-not-allowed hover:bg-transparent'
                           : selected
-                          ? 'bg-[#8c6b45] text-white font-bold shadow-xs hover:opacity-90'
+                          ? 'font-bold shadow-xs hover:opacity-90'
                           : !cell.isCurrentMonth
                           ? 'text-stone-300 hover:text-stone-600 hover:bg-stone-50'
                           : isToday
-                          ? 'font-bold text-[#8c6b45] bg-[#8c6b45]/10'
+                          ? 'font-bold'
                           : 'text-stone-800 hover:bg-stone-100 hover:text-stone-900 font-normal'
                       }`}
                     >
@@ -737,7 +760,11 @@ export default function DatePicker({
                 <button
                   type="button"
                   onClick={handleApply}
-                  className="px-3 py-1 rounded-lg bg-[#8c6b45] text-white text-xs font-semibold transition-colors shadow-xs cursor-pointer hover:opacity-90"
+                  style={{
+                    backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                    color: 'var(--btn-primary-text, #ffffff)',
+                  }}
+                  className="px-3 py-1 rounded-lg text-xs font-semibold transition-colors shadow-xs cursor-pointer hover:opacity-90"
                 >
                   Apply
                 </button>

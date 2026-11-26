@@ -168,6 +168,30 @@ export default function WishlistProductCard({ item, onRemove }) {
         >
           <HiOutlineX className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </button>
+
+        {/* Slide-Up Add to Cart Overlay on Hover */}
+        <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm p-1.5 sm:p-2 translate-y-full group-hover:translate-y-0 group-focus-within:translate-y-0 transition-transform duration-300 ease-out z-20">
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            style={{
+              backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+              color: 'var(--btn-primary-text, #ffffff)',
+            }}
+            className="w-full py-2 sm:py-2.5 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer hover:opacity-90 active:scale-[0.98]"
+          >
+            {justAdded ? (
+              <span className="font-bold flex items-center gap-1 animate-fadeIn">
+                ✓ Added
+              </span>
+            ) : (
+              <>
+                <HiOutlineShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <span>Add to Cart</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* ─── Product Title & Info ─── */}
@@ -209,26 +233,6 @@ export default function WishlistProductCard({ item, onRemove }) {
               )}
             </>
           )}
-        </div>
-
-        {/* ─── Add to Cart Button ─── */}
-        <div className="mt-3 w-full pt-1">
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            className="w-full h-9 sm:h-10 px-3 flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-[#211f1c] hover:bg-[#8b6f4e] text-white text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-[0.98] cursor-pointer group/btn"
-          >
-            {justAdded ? (
-              <span className="text-emerald-300 font-bold flex items-center gap-1 animate-fadeIn">
-                ✓ Added
-              </span>
-            ) : (
-              <>
-                <HiOutlineShoppingBag className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover/btn:scale-110" />
-                <span>Add to Cart</span>
-              </>
-            )}
-          </button>
         </div>
       </div>
     </article>

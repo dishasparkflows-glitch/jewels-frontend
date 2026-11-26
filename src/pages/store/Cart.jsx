@@ -88,9 +88,13 @@ const Cart = () => {
         </div>
         <Link
           to="/shop"
-          className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border border-[#d6c7b2] bg-white hover:bg-[#FAF7F2] hover:border-[#8b6f4e] text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-[#8b6f4e] transition-all shadow-2xs cursor-pointer group shrink-0"
+          style={{
+            color: 'var(--btn-primary-bg, #8c6536)',
+            borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 35%, #ffffff)',
+          }}
+          className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border bg-white hover:opacity-85 text-[11px] sm:text-xs font-semibold uppercase tracking-wider transition-all shadow-2xs cursor-pointer group shrink-0"
         >
-          <HiOutlineArrowNarrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8b6f4e] group-hover:-translate-x-0.5 transition-transform" />
+          <HiOutlineArrowNarrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:-translate-x-0.5 transition-transform" />
           <span>Continue Exploring</span>
         </Link>
       </div>
@@ -282,7 +286,14 @@ const Cart = () => {
                 className="absolute -bottom-1 left-0 right-0 h-9 bg-gradient-to-t from-white via-white/85 to-transparent flex items-end justify-center pb-0.5 cursor-pointer z-10 select-none group"
                 title="Scroll for more items"
               >
-                <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-[#f8f4ee]/95 border border-[#e6dacb] text-[10px] font-semibold text-[#8c6536] shadow-xs group-hover:bg-[#f2e8dc] transition-all">
+                <span
+                  className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full border text-[10px] font-semibold shadow-xs transition-all"
+                  style={{
+                    backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 10%, #ffffff)',
+                    borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 28%, #ffffff)',
+                    color: 'var(--btn-primary-bg, #8c6536)',
+                  }}
+                >
                   <span>Scroll for more items ({cart.length})</span>
                   <HiChevronDown className="w-3 h-3 animate-bounce" />
                 </span>
@@ -304,7 +315,7 @@ const Cart = () => {
             </div>
             <div className="flex justify-between text-stone-500">
               <span>Insured Courier Shipping</span>
-              <span className="text-[#8b6b47] font-medium">
+              <span className="font-medium" style={{ color: 'var(--btn-primary-bg, #8c6536)' }}>
                 {shipping === 0 ? 'Complimentary' : formatPrice(shipping)}
               </span>
             </div>
@@ -320,7 +331,7 @@ const Cart = () => {
             )}
             <div className="border-t border-stone-200 pt-3 flex justify-between text-base font-bold text-[#2c2722]">
               <span>Total</span>
-              <span className="text-xl text-[#8b6b47] font-serif">
+              <span className="text-xl font-serif" style={{ color: 'var(--btn-primary-bg, #8c6536)' }}>
                 {formatPrice(finalTotal)}
               </span>
             </div>
@@ -350,7 +361,12 @@ const Cart = () => {
               />
               <button
                 type="submit"
-                className="px-4 py-2.5 bg-[#f7f3ed] hover:bg-[#8b6b47] text-[#705638] hover:text-white border border-[#e8ddce] rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 10%, #ffffff)',
+                  borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 28%, #ffffff)',
+                  color: 'var(--btn-primary-bg, #8c6536)',
+                }}
+                className="px-4 py-2.5 border rounded-xl text-xs font-semibold uppercase tracking-wider hover:opacity-85 transition-all cursor-pointer"
               >
                 Apply
               </button>
@@ -374,7 +390,11 @@ const Cart = () => {
           {/* Checkout CTA */}
           <button
             onClick={() => navigate('/checkout')}
-            className="w-full rounded-xl bg-[#8b6b47] hover:bg-[#745735] text-white flex items-center justify-center gap-2 text-xs sm:text-sm uppercase tracking-wider py-3.5 transition-colors"
+            style={{
+              backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+              color: 'var(--btn-primary-text, #ffffff)',
+            }}
+            className="w-full rounded-xl hover:opacity-90 flex items-center justify-center gap-2 text-xs sm:text-sm uppercase tracking-wider py-3.5 transition-all cursor-pointer shadow-sm"
           >
             <HiOutlineLockClosed className="w-5 h-5" />
             <span>Proceed to Checkout</span>

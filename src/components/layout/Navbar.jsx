@@ -497,7 +497,11 @@ const Navbar = () => {
               <button
                 type="submit"
                 aria-label="Submit search"
-                className="mr-1 w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full bg-[#8c6f4b] hover:bg-[#785d3c] active:scale-95 text-white flex items-center justify-center shadow-2xs transition-all cursor-pointer shrink-0"
+                style={{
+                  backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                  color: 'var(--btn-primary-text, #ffffff)',
+                }}
+                className="mr-1 w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full hover:opacity-90 active:scale-95 flex items-center justify-center shadow-2xs transition-all cursor-pointer shrink-0"
                 title="Search"
               >
                 <HiOutlineSearch className="w-3.5 h-3.5 stroke-[2.2]" />
@@ -513,9 +517,15 @@ const Navbar = () => {
                 {/* Top Header: Products ({allCount}) | View all -> */}
                 <div className="flex items-center justify-between border-b border-stone-100 pb-3 mb-4">
                   <div className="flex items-center text-xs sm:text-sm">
-                    <span className="font-bold text-[#8b6f4e] relative pb-2">
+                    <span
+                      className="font-bold relative pb-2"
+                      style={{ color: 'var(--btn-primary-bg, #8c6536)' }}
+                    >
                       <span>Products ({allCount})</span>
-                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8b6f4e] rounded-full" />
+                      <span
+                        className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                        style={{ backgroundColor: 'var(--btn-primary-bg, #8c6536)' }}
+                      />
                     </span>
                   </div>
 
@@ -784,7 +794,11 @@ const Navbar = () => {
             )}
             <button
               type="submit"
-              className="mr-1 w-8 h-8 rounded-full bg-[#8c6f4b] hover:bg-[#785d3c] text-white flex items-center justify-center shrink-0 cursor-pointer shadow-xs active:scale-95"
+              style={{
+                backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                color: 'var(--btn-primary-text, #ffffff)',
+              }}
+              className="mr-1 w-8 h-8 rounded-full hover:opacity-90 flex items-center justify-center shrink-0 cursor-pointer shadow-xs active:scale-95"
             >
               <HiOutlineSearch className="w-3.5 h-3.5 stroke-[2.2]" />
             </button>
@@ -866,7 +880,11 @@ const Navbar = () => {
               )}
               <button
                 type="submit"
-                className="mr-1 w-8 h-8 rounded-full bg-[#8c6f4b] hover:bg-[#785d3c] text-white flex items-center justify-center shrink-0 cursor-pointer shadow-xs active:scale-95"
+                style={{
+                  backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                  color: 'var(--btn-primary-text, #ffffff)',
+                }}
+                className="mr-1 w-8 h-8 rounded-full hover:opacity-90 flex items-center justify-center shrink-0 cursor-pointer shadow-xs active:scale-95"
               >
                 <HiOutlineSearch className="w-3.5 h-3.5 stroke-[2.2]" />
               </button>
@@ -960,8 +978,32 @@ const Navbar = () => {
                   Sign In
                 </button>
               )}
-              {!user && <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="rounded-lg bg-[#8b6b47] px-3 py-3 text-center text-xs uppercase tracking-wider text-white hover:bg-[#745735]">Create Account</Link>}
-              {user && <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="rounded-lg bg-[#8b6b47] px-3 py-3 text-center text-xs uppercase tracking-wider text-white hover:bg-[#745735]">My Account</Link>}
+              {!user && (
+                <Link
+                  to="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{
+                    backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                    color: 'var(--btn-primary-text, #ffffff)',
+                  }}
+                  className="rounded-lg px-3 py-3 text-center text-xs uppercase tracking-wider hover:opacity-90"
+                >
+                  Create Account
+                </Link>
+              )}
+              {user && (
+                <Link
+                  to="/profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{
+                    backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+                    color: 'var(--btn-primary-text, #ffffff)',
+                  }}
+                  className="rounded-lg px-3 py-3 text-center text-xs uppercase tracking-wider hover:opacity-90"
+                >
+                  My Account
+                </Link>
+              )}
             </div>
           </nav>
         </div>

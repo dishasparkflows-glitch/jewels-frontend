@@ -35,7 +35,11 @@ export default function OrderFailed() {
         <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Link
             to="/checkout"
-            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#8c6536] px-8 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-[#75522b] shadow-xs active:scale-95 cursor-pointer"
+            style={{
+              backgroundColor: 'var(--btn-primary-bg, #8c6536)',
+              color: 'var(--btn-primary-text, #ffffff)',
+            }}
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl px-8 text-xs font-semibold uppercase tracking-[0.16em] transition hover:opacity-90 shadow-xs active:scale-95 cursor-pointer"
           >
             <HiOutlineRefresh className="h-4 w-4" /> Try Again
           </Link>
@@ -43,7 +47,7 @@ export default function OrderFailed() {
             href="tel:+919726237723"
             className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-stone-300 bg-white px-6 text-xs font-semibold text-stone-700 transition hover:bg-stone-50"
           >
-            <HiOutlinePhone className="h-4 w-4 text-[#bd9462]" /> Contact Support
+            <HiOutlinePhone className="h-4 w-4" style={{ color: 'var(--btn-primary-bg, #8c6536)' }} /> Contact Support
           </a>
         </div>
       </div>
