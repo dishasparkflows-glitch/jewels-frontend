@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
+import { prefetchProductBySku } from "../../api/services";
 import {
   LuHeart,
   LuChevronLeft,
@@ -135,15 +136,24 @@ export default function ProductCard({ product }) {
         .join(' · ')
     : '';
 
+  const handlePrefetch = () => {
+    if (isDiamond) return;
+    const code = product.basicInfo?.slug || product.basicInfo?.sku || product.sku || product._id || product.id;
+    if (code) prefetchProductBySku(code);
+  };
+
   const handleCardClick = () => {
     sessionStorage.setItem("cameFromProduct", "1");
     sessionStorage.setItem("shopScrollPos", String(window.scrollY));
-    navigate(href);
+    navigate(href, { state: { previewProduct: product } });
   };
 
   return (
     <div
       onClick={handleCardClick}
+      onMouseEnter={handlePrefetch}
+      onFocus={handlePrefetch}
+      onTouchStart={handlePrefetch}
       className="group cursor-pointer flex flex-col justify-between h-full bg-white p-2 sm:p-2.5 border border-gray-100 hover:shadow-md transition-all rounded-lg sm:rounded-xl"
     >
       <div>

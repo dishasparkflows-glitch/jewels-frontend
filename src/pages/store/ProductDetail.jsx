@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import SEO from '../../components/common/SEO';
 import {
   HiOutlineHeart,
@@ -8,7 +8,7 @@ import {
   HiSparkles,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
-import { productsAPI, couponsAPI, reviewsAPI } from '../../api/services';
+import { productsAPI, couponsAPI, reviewsAPI, getCachedProductBySku } from '../../api/services';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
@@ -64,12 +64,14 @@ export default function ProductDetail() {
   const { id, slug } = useParams();
   const identifier = slug || id;
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
+  const initialProduct = getCachedProductBySku(identifier) || location.state?.previewProduct || null;
   // Product state
-  const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [product, setProduct] = useState(initialProduct);
+  const [loading, setLoading] = useState(!initialProduct);
   const [mostLikedProducts, setMostLikedProducts] = useState([]);
   const [sizes, setSizes] = useState([]);
   const [coupons, setCoupons] = useState([]);
@@ -1141,13 +1143,21 @@ export default function ProductDetail() {
 
   // Fetch product data
   useEffect(() => {
+    let active = true;
     const fetchProductDetails = async () => {
+      const cachedOrPreview = getCachedProductBySku(identifier) || location.state?.previewProduct || null;
       try {
-        setLoading(true);
-        setProduct(null);
+        if (cachedOrPreview) {
+          setProduct(cachedOrPreview);
+          setLoading(false);
+        } else {
+          setLoading(true);
+          setProduct(null);
+        }
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         const res = await productsAPI.getBySku(identifier);
+        if (!active) return;
         const prodData = res.data?.data || res.data;
         if (prodData) {
           setProduct(prodData);
@@ -1199,7 +1209,10 @@ export default function ProductDetail() {
     };
 
     fetchProductDetails();
-  }, [identifier, navigate]);
+    return () => {
+      active = false;
+    };
+  }, [identifier, navigate, location.state]);
 
   // Format INR Currency
     // Price Breakup specific formatting matching screenshot

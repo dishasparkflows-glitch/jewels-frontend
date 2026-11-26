@@ -159,6 +159,67 @@ export const featuredAPI = {
 };
 
 // ─── Products ─────────────────────────────────────
+const PRODUCT_DETAIL_CACHE_TTL_MS = 60_000;
+const productDetailCache = new Map();
+const inFlightProductDetail = new Map();
+
+export function getCachedProductBySku(code) {
+  const key = String(code || '').trim();
+  if (!key) return null;
+  const entry = productDetailCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.at > PRODUCT_DETAIL_CACHE_TTL_MS) {
+    productDetailCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function fetchProductBySkuCached(code) {
+  const key = String(code || '').trim();
+  if (!key) return Promise.reject(new Error('Missing product code'));
+
+  const cached = getCachedProductBySku(key);
+  if (cached) {
+    return Promise.resolve({ data: { success: true, data: cached } });
+  }
+
+  if (inFlightProductDetail.has(key)) {
+    return inFlightProductDetail.get(key);
+  }
+
+  const req = getOnce(`/products/sku/${encodeURIComponent(key)}`)
+    .then((res) => {
+      const prodData = res?.data?.data || res?.data;
+      if (prodData && typeof prodData === 'object') {
+        if (productDetailCache.size >= 60) {
+          const oldest = productDetailCache.keys().next().value;
+          if (oldest !== undefined) productDetailCache.delete(oldest);
+        }
+        const entry = { data: prodData, at: Date.now() };
+        productDetailCache.set(key, entry);
+        if (prodData.basicInfo?.slug) {
+          productDetailCache.set(String(prodData.basicInfo.slug), entry);
+        }
+      }
+      return res;
+    })
+    .finally(() => {
+      inFlightProductDetail.delete(key);
+    });
+
+  inFlightProductDetail.set(key, req);
+  return req;
+}
+
+export function prefetchProductBySku(code) {
+  const key = String(code || '').trim();
+  if (!key || getCachedProductBySku(key) || inFlightProductDetail.has(key)) return;
+  fetchProductBySkuCached(key).catch(() => {
+    // Ignore background prefetch errors
+  });
+}
+
 export const productsAPI = {
   getAll: (params) => getOnce('/products/storefront', { params: { forweb: true, ...params } }),
   getStorefront: (params) => productsAPI.getAll(params),
@@ -168,7 +229,7 @@ export const productsAPI = {
   getHomeSections: (params) => getOnce('/products/home-sections', { params: { forweb: true, ...params } }),
   getMostLiked: (params) => api.get('/products/most-liked', { params: { forweb: true, ...params } }),
   getById: (id) => getOnce(`/products/${id}`),
-  getBySku: (code) => getOnce(`/products/sku/${encodeURIComponent(code)}`),
+  getBySku: (code) => fetchProductBySkuCached(code),
   getSimilar: (id, params) => api.get(`/products/${id}/similar`, { params: { forweb: true, ...params } }),
 };
 

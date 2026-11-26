@@ -1449,12 +1449,15 @@ const Profile = () => {
                   </div>
                 ) : (
                   <div className="bg-[#FAF7F2] rounded-2xl border border-[#EFE8DD] p-3 sm:p-4.5 space-y-3 sm:space-y-3.5">
-                    <div className="flex items-center justify-center gap-2 text-center pb-0.5">
-                      <HiOutlineCube className="w-4.5 h-4.5 text-[#6d4a27] shrink-0" />
+                    <div className="flex items-center justify-center text-center pb-0.5">
                       <h2
                         id="orders-section-heading"
-                        style={{ fontFamily: '"Cormorant Garamond", Georgia, serif' }}
-                        className="text-lg sm:text-xl font-medium sm:font-semibold text-[#1c1917] tracking-normal leading-tight"
+                        style={{
+                          fontFamily: '"Cormorant Garamond", Georgia, serif',
+                          fontVariantNumeric: 'lining-nums',
+                          fontFeatureSettings: '"lnum" 1',
+                        }}
+                        className="text-lg sm:text-xl font-medium sm:font-semibold text-[#1c1917] tracking-normal leading-tight lining-nums"
                       >
                         Order History ({orderPagination.totalDocs || orders.length})
                       </h2>
@@ -1893,20 +1896,32 @@ const Profile = () => {
             {/* ─── TAB 5: WISHLIST ──────────────────────────────────── */}
             {activeTab === 'wishlist' && (
               <div className="bg-white rounded-xl border border-stone-200/80 shadow-xs p-4 sm:p-6 space-y-5">
-                <div className="flex items-center justify-between border-b border-stone-100 pb-3.5">
-                  <h3 className="font-serif text-lg sm:text-xl font-normal text-stone-800">
-                    My Wishlist <span className="text-sm text-stone-500">({wishlistCount})</span>
-                  </h3>
-                  {wishlistCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={clearWishlist}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] text-xs font-medium transition-colors cursor-pointer"
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-stone-100 pb-4">
+                  <div aria-hidden="true" />
+                  <div className="text-center">
+                    <h3
+                      style={{
+                        fontFamily: '"Cormorant Garamond", Georgia, serif',
+                        fontVariantNumeric: 'lining-nums',
+                        fontFeatureSettings: '"lnum" 1',
+                      }}
+                      className="text-lg sm:text-xl font-medium sm:font-semibold text-[#1c1917] tracking-normal leading-tight lining-nums"
                     >
-                      <HiOutlineTrash className="w-3.5 h-3.5" />
-                      <span>Clear All</span>
-                    </button>
-                  )}
+                      My Wishlist ({wishlistCount})
+                    </h3>
+                  </div>
+                  <div className="justify-self-end">
+                    {wishlistCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={clearWishlist}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        <HiOutlineTrash className="w-3.5 h-3.5" />
+                        <span>Clear All</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {(!wishlistLoaded || wishlistLoading) && wishlistItems.length === 0 ? (

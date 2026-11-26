@@ -46,21 +46,33 @@ export default function Wishlist() {
           <span aria-current="page" className="text-stone-800">Wishlist</span>
         </nav>
 
-        <header className="mb-5 sm:mb-6 flex items-center justify-between border-b border-stone-200 pb-3 sm:pb-3.5">
-          <h1 className="text-xl font-medium text-[#211f1c] sm:text-2xl">
-            My Wishlist <span className="font-normal text-stone-500">({wishlistCount})</span>
-          </h1>
-          {wishlistCount > 0 && (
-            <button
-              type="button"
-              onClick={handleClearAll}
-              disabled={isClearing}
-              className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] text-xs sm:text-[13px] font-medium transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 disabled:opacity-60 cursor-pointer"
+        <header className="mb-5 sm:mb-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-stone-200 pb-3.5 sm:pb-4">
+          <div aria-hidden="true" />
+          <div className="text-center">
+            <h1
+              style={{
+                fontFamily: '"Cormorant Garamond", Georgia, serif',
+                fontVariantNumeric: 'lining-nums',
+                fontFeatureSettings: '"lnum" 1',
+              }}
+              className="text-lg sm:text-xl font-medium sm:font-semibold text-[#1c1917] tracking-normal leading-tight lining-nums"
             >
-              <HiOutlineTrash className="w-4 h-4 text-[#8b6f4e]" />
-              <span>Clear All</span>
-            </button>
-          )}
+              My Wishlist ({wishlistCount})
+            </h1>
+          </div>
+          <div className="justify-self-end">
+            {wishlistCount > 0 && (
+              <button
+                type="button"
+                onClick={handleClearAll}
+                disabled={isClearing}
+                className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] text-xs sm:text-[13px] font-medium transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 disabled:opacity-60 cursor-pointer"
+              >
+                <HiOutlineTrash className="w-4 h-4 text-[#8b6f4e]" />
+                <span>Clear All</span>
+              </button>
+            )}
+          </div>
         </header>
 
         {showSkeleton ? (
