@@ -386,25 +386,9 @@ export const WishlistProvider = ({ children }) => {
     });
 
     toast(
-      (t) => (
-        <div className="flex items-center gap-3 text-xs sm:text-[13px]">
-          <span>
-            Removed <strong className="font-medium text-white">{itemTitle.length > 26 ? `${itemTitle.slice(0, 26)}…` : itemTitle}</strong>
-          </span>
-          {removedItem && (
-            <button
-              type="button"
-              onClick={() => {
-                toast.dismiss(t.id);
-                toggleWishlist(removedItem, false);
-              }}
-              className="shrink-0 rounded-md bg-[#8b6f4e] hover:bg-[#a1825e] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-white transition-colors cursor-pointer"
-            >
-              Undo
-            </button>
-          )}
-        </div>
-      ),
+      <span className="text-xs sm:text-[13px]">
+        Removed <strong className="font-medium text-white">{itemTitle.length > 26 ? `${itemTitle.slice(0, 26)}…` : itemTitle}</strong>
+      </span>,
       {
         icon: '🤍',
         duration: 4000,

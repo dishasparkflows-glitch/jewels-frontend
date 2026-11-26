@@ -57,8 +57,15 @@ export function getItemSpecs(item) {
   const hasRightCol = Boolean(metalColor || caratWeight != null || (metalDisplay && sizeDisplay));
   const hasSpecs = Boolean(metalDisplay || metalColor || clarityDisplay || caratWeight != null || diamondShape || sizeDisplay);
 
-  const displayName = item.title || item.name || item.basicInfo?.title || 'Fine Jewellery';
-  const targetIdentifier = item.slug || item.basicInfo?.slug || item.sku || item.refId || item.id || (displayName ? displayName.toLowerCase().trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') : '');
+  const displayName = item.basicInfo?.title || item.title || item.name || 'Fine Jewellery';
+  const targetIdentifier =
+    item.basicInfo?.slug ||
+    item.slug ||
+    item.basicInfo?.sku ||
+    item.sku ||
+    item.refId ||
+    item.id ||
+    (displayName ? displayName.toLowerCase().trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') : '');
   const productLink = isDiamond
     ? `/diamond/${encodeURIComponent(targetIdentifier)}`
     : `/product/${encodeURIComponent(targetIdentifier)}`;

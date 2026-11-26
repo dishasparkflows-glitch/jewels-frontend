@@ -94,8 +94,8 @@ export default function DiamondDetail() {
         if (!active) return;
         const d = res?.data?.data || res?.data || null;
         setDiamond(d);
-        if (d?.title) {
-          document.title = `${d.title} | Neirah Fine Jewellery`;
+        if (d?.basicInfo?.title) {
+          document.title = `${d.basicInfo.title} | Neirah Fine Jewellery`;
         }
       })
       .catch(() => {
@@ -130,9 +130,13 @@ export default function DiamondDetail() {
             id: d._id,
             itemType: 'diamond',
             productType: 'diamond',
-            sku: d.sku || '',
-            title: d.title || '',
-            basicInfo: { title: d.title || '', slug: d.sku || String(d._id) },
+            sku: d.basicInfo?.sku || '',
+            title: d.basicInfo?.title || '',
+            basicInfo: {
+              title: d.basicInfo?.title || '',
+              sku: d.basicInfo?.sku || '',
+              slug: d.basicInfo?.slug || d.basicInfo?.sku || String(d._id),
+            },
             pricing: { salePrice: Number(d.price) || 0, mrp: Number(d.price) || 0 },
             image: d.image?.url || '',
             images: d.image?.url ? [d.image.url] : [],
@@ -236,16 +240,16 @@ export default function DiamondDetail() {
       id: diamond._id,
       itemType: 'diamond',
       productType: 'diamond',
-      sku: diamond.sku,
-      title: diamond.title,
-      name: diamond.title,
+      sku: diamond.basicInfo?.sku,
+      title: diamond.basicInfo?.title,
+      name: diamond.basicInfo?.title,
       price: currentPrice,
       image: galleryImages[0] || '',
       basicInfo: {
-        title: diamond.title,
-        slug: diamond.sku || String(diamond._id),
-        sku: diamond.sku,
-        description: diamond.description || '',
+        title: diamond.basicInfo?.title,
+        slug: diamond.basicInfo?.slug || diamond.basicInfo?.sku || String(diamond._id),
+        sku: diamond.basicInfo?.sku,
+        description: diamond.basicInfo?.description || '',
       },
       pricing: {
         salePrice: currentPrice,
@@ -313,9 +317,9 @@ export default function DiamondDetail() {
           id: diamond._id,
           itemType: 'diamond',
           productType: 'diamond',
-          title: diamond.title,
-          sku: diamond.sku || '',
-          slug: diamond.sku || String(diamond._id),
+          title: diamond.basicInfo?.title,
+          sku: diamond.basicInfo?.sku || '',
+          slug: diamond.basicInfo?.slug || diamond.basicInfo?.sku || String(diamond._id),
           price: currentPrice,
           totalItemPrice: currentPrice,
           quantity: 1,
@@ -341,8 +345,8 @@ export default function DiamondDetail() {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: diamond?.title || 'Neirah Certified Diamond',
-          text: `Discover ${diamond?.title || 'this certified diamond'} on Neirah Fine Jewellery`,
+          title: diamond?.basicInfo?.title || 'Neirah Certified Diamond',
+          text: `Discover ${diamond?.basicInfo?.title || 'this certified diamond'} on Neirah Fine Jewellery`,
           url: window.location.href,
         });
         return;
@@ -386,7 +390,7 @@ export default function DiamondDetail() {
   const displayReviewCount = reviews.length > 0 ? reviews.length : Number(diamond?.demoMetrics?.reviewCount ?? spConfig.defaultReviewCount ?? 13);
 
   const specsRows = [
-    { label: 'SKU', value: diamond.sku },
+    { label: 'SKU', value: diamond.basicInfo?.sku },
     { label: 'Diamond Type', value: diamondTypeName },
     { label: 'Shape', value: diamondShapeName },
     { label: 'Carat Weight', value: caratWeight ? `${caratWeight} CT` : '' },
@@ -395,25 +399,25 @@ export default function DiamondDetail() {
     { label: 'Rate per Carat', value: ratePerCarat > 0 ? `${formatPrice(ratePerCarat)} / ct` : '' },
   ].filter((r) => Boolean(r.value));
 
-  const seoTitle = diamond.title
-    ? `${diamond.title} | Certified Diamond`
+  const seoTitle = diamond.basicInfo?.title
+    ? `${diamond.basicInfo.title} | Certified Diamond`
     : `${caratWeight ? `${caratWeight} CT ` : ''}${diamondShapeName || ''} Certified Diamond`;
   const seoDescription =
-    diamond.description ||
+    diamond.basicInfo?.description ||
     `Certified ${caratWeight || ''} CT ${diamondShapeName || ''} diamond with ${diamondColorName || ''} color and ${diamondClarityName || ''} clarity. Hand-selected for brilliance and certified authenticity.`;
   const seoPrice = currentPrice || diamond?.price || diamond?.priceINR || 0;
   const canonicalUrl =
     typeof window !== 'undefined'
-      ? `${window.location.origin}/diamond/${diamond.sku || identifier}`
+      ? `${window.location.origin}/diamond/${diamond.basicInfo?.slug || diamond.basicInfo?.sku || identifier}`
       : undefined;
 
   const diamondSchema = {
     '@context': 'https://schema.org/',
     '@type': 'Product',
-    name: diamond.title || seoTitle,
+    name: diamond.basicInfo?.title || seoTitle,
     image: galleryImages?.map((img) => img.url).filter(Boolean) || [],
     description: seoDescription,
-    sku: diamond.sku || identifier,
+    sku: diamond.basicInfo?.sku || identifier,
     brand: {
       '@type': 'Brand',
       name: 'Neirah Jewels',
@@ -436,7 +440,7 @@ export default function DiamondDetail() {
         type="product"
         price={seoPrice}
         currency="INR"
-        sku={diamond.sku}
+        sku={diamond.basicInfo?.sku}
         canonical={canonicalUrl}
         schema={diamondSchema}
       />
@@ -452,7 +456,7 @@ export default function DiamondDetail() {
           </Link>
           <span>/</span>
           <span className="text-stone-700 font-semibold truncate max-w-[200px] sm:max-w-md">
-            {diamond.title}
+            {diamond.basicInfo?.title}
           </span>
         </nav>
 
@@ -471,13 +475,13 @@ export default function DiamondDetail() {
             {/* Title & SKU */}
             <div className="space-y-1.5">
               <h1 className="text-xl sm:text-2xl text-gray-900 font-medium leading-tight tracking-[0.02em] font-poppins">
-                {diamond.title}
+                {diamond.basicInfo?.title}
               </h1>
 
-              {diamond.sku && (
+              {diamond.basicInfo?.sku && (
                 <div className="pt-0.5 pb-1">
                   <span className="text-[11px] sm:text-xs text-stone-500 font-medium tracking-wide">
-                    SKU: <span className="font-semibold text-stone-700 tracking-wider font-mono">{diamond.sku}</span>
+                    SKU: <span className="font-semibold text-stone-700 tracking-wider font-mono">{diamond.basicInfo.sku}</span>
                   </span>
                 </div>
               )}
@@ -656,7 +660,7 @@ export default function DiamondDetail() {
 
             {/* Accordions: Description, Diamond Specifications, Price Break Up */}
             <div className="border border-[#EFE8DD] divide-y divide-[#EFE8DD] rounded-none sm:rounded-sm overflow-hidden text-xs bg-white">
-              {Boolean((diamond.description || '').trim()) && (
+              {Boolean((diamond.basicInfo?.description || '').trim()) && (
                 <div>
                   <button
                     type="button"
@@ -672,7 +676,7 @@ export default function DiamondDetail() {
                   </button>
                   {openAccordions.desc && (
                     <div className="px-5 pb-5 pt-3 bg-white border-t border-[#EFE8DD] text-stone-600 leading-relaxed whitespace-pre-line">
-                      {diamond.description}
+                      {diamond.basicInfo?.description}
                     </div>
                   )}
                 </div>

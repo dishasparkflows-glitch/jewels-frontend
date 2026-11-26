@@ -379,7 +379,7 @@ export default function Shop({ defaultCategory = '' }) {
 
     if (isDiamondCategory) {
       const diamondQuery = {
-        status: 'active',
+        status: 'approved',
         forweb: true,
         page,
         limit,
@@ -405,12 +405,14 @@ export default function Shop({ defaultCategory = '' }) {
               id: d._id,
               itemType: 'diamond',
               productType: 'diamond',
-              sku: d.sku || '',
-              title: d.title || '',
-              description: d.description || '',
+              sku: d.basicInfo?.sku || '',
+              title: d.basicInfo?.title || '',
+              description: d.basicInfo?.description || '',
               basicInfo: {
-                title: d.title || '',
-                slug: d.sku || String(d._id),
+                title: d.basicInfo?.title || '',
+                sku: d.basicInfo?.sku || '',
+                slug: d.basicInfo?.slug || d.basicInfo?.sku || String(d._id),
+                description: d.basicInfo?.description || '',
               },
               pricing: {
                 salePrice: Number(d.price) || 0,
