@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
+import { useCurrency } from '../../contexts/CurrencyContext';
 import MegaMenuNav from './MegaMenuNav';
 import { getOnce } from '../../api/axios';
 import { productsAPI } from '../../api/services';
@@ -21,6 +22,8 @@ import {
   HiOutlineCube,
   HiOutlineLocationMarker,
   HiOutlineChevronRight,
+  HiOutlineChevronDown,
+  HiOutlineCheck,
   HiOutlineLogout,
 } from 'react-icons/hi';
 import { IoDiamondOutline } from 'react-icons/io5';
@@ -164,7 +167,9 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
   const [closeMegaMenuSignal, setCloseMegaMenuSignal] = useState(0);
+  const { currencies, selectedCurrency, selectCurrency, showOnStorefront: showCurrencyOnStorefront } = useCurrency();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchTotal, setSearchTotal] = useState(0);
@@ -173,6 +178,7 @@ const Navbar = () => {
   const searchContainerRef = useRef(null);
   const searchInputRef = useRef(null);
   const userDropdownRef = useRef(null);
+  const currencyDropdownRef = useRef(null);
   const [appointmentModalOpen, setAppointmentModalOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -225,6 +231,7 @@ const Navbar = () => {
   useEffect(() => {
     setShowSearchDropdown(false);
     setUserDropdownOpen(false);
+    setCurrencyDropdownOpen(false);
     setMobileMenuOpen(false);
     setMobileSearchOpen(false);
   }, [location.pathname, location.search]);
@@ -236,6 +243,9 @@ const Navbar = () => {
       }
       if (userDropdownRef.current && !userDropdownRef.current.contains(e.target)) {
         setUserDropdownOpen(false);
+      }
+      if (currencyDropdownRef.current && !currencyDropdownRef.current.contains(e.target)) {
+        setCurrencyDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -262,11 +272,14 @@ const Navbar = () => {
         if (userDropdownOpen) {
           setUserDropdownOpen(false);
         }
+        if (currencyDropdownOpen) {
+          setCurrencyDropdownOpen(false);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showSearchDropdown, userDropdownOpen]);
+  }, [showSearchDropdown, userDropdownOpen, currencyDropdownOpen]);
 
   // Listen for open appointment modal event from anywhere in the app
   useEffect(() => {
@@ -324,6 +337,7 @@ const Navbar = () => {
 
   const handleCategoryMenuOpen = useCallback(() => {
     setUserDropdownOpen(false);
+    setCurrencyDropdownOpen(false);
     setShowSearchDropdown(false);
   }, []);
 
@@ -472,6 +486,7 @@ const Navbar = () => {
                 value={searchQuery}
                 onFocus={() => {
                   setUserDropdownOpen(false);
+                  setCurrencyDropdownOpen(false);
                   setCloseMegaMenuSignal((n) => n + 1);
                   if (searchQuery.trim().length >= 2) setShowSearchDropdown(true);
                 }}
@@ -480,6 +495,7 @@ const Navbar = () => {
                   setSearchQuery(val);
                   if (val.trim().length >= 2) {
                     setUserDropdownOpen(false);
+                    setCurrencyDropdownOpen(false);
                     setCloseMegaMenuSignal((n) => n + 1);
                     setShowSearchDropdown(true);
                   } else {
@@ -580,8 +596,8 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Actions: Wishlist, Profile, Shopping Bag */}
-          <div className="order-2 flex items-center space-x-1 sm:space-x-4">
+          {/* Actions: Currency, Wishlist, Profile, Shopping Bag */}
+          <div className="order-2 flex items-center space-x-1 sm:space-x-3">
             {/* Mobile Search Icon */}
             <button
               type="button"
@@ -592,6 +608,86 @@ const Navbar = () => {
             >
               <HiOutlineSearch className="w-[18px] h-[18px]" />
             </button>
+
+            {/* Currency Dropdown */}
+            {showCurrencyOnStorefront && currencies.length > 0 && (
+              <div className="relative" ref={currencyDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrencyDropdownOpen((prev) => {
+                      const next = !prev;
+                      if (next) {
+                        setUserDropdownOpen(false);
+                        setShowSearchDropdown(false);
+                        setCloseMegaMenuSignal((n) => n + 1);
+                      }
+                      return next;
+                    });
+                  }}
+                  aria-label="Select currency"
+                  aria-expanded={currencyDropdownOpen}
+                  title="Select currency"
+                  className="inline-flex items-center gap-1.5 h-8 sm:h-9 px-2.5 sm:px-3 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 text-stone-200 hover:text-white text-xs font-medium transition-colors cursor-pointer shrink-0"
+                >
+                  <span className="font-semibold text-[#d2b18a]">
+                    {selectedCurrency?.symbol || '₹'}
+                  </span>
+                  <span className="tracking-wide">{selectedCurrency?.code || 'INR'}</span>
+                  <HiOutlineChevronDown
+                    className={`w-3.5 h-3.5 text-stone-400 transition-transform duration-200 ${
+                      currencyDropdownOpen ? 'rotate-180 text-[#d2b18a]' : ''
+                    }`}
+                  />
+                </button>
+
+                {currencyDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-3 w-60 bg-[#fdfbf7] border border-[#eadfc9] rounded-2xl shadow-2xl p-1.5 z-50 animate-fadeIn">
+                    <div className="absolute -top-[7px] right-4 w-3.5 h-3.5 bg-[#fdfbf7] border-t border-l border-[#eadfc9] rotate-45 rounded-tl-[2px]" />
+                    <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                      Select Currency
+                    </div>
+                    <div className="max-h-64 overflow-y-auto space-y-0.5">
+                      {currencies.map((cur) => {
+                        const isSelected = cur.code === selectedCurrency?.code;
+                        return (
+                          <button
+                            key={cur._id || cur.code}
+                            type="button"
+                            onClick={() => {
+                              selectCurrency(cur);
+                              setCurrencyDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#f3ede3] text-stone-950 font-semibold'
+                                : 'text-stone-700 hover:bg-[#f3ede3]/70 hover:text-stone-950'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="min-w-[40px] h-7 px-2 rounded-full bg-[#eedac3]/70 text-[#785b3a] text-[11px] font-bold leading-none whitespace-nowrap flex items-center justify-center shrink-0">
+                                {cur.symbol}
+                              </span>
+                              <div className="min-w-0">
+                                <div className="text-xs font-bold text-stone-900 leading-tight">
+                                  {cur.code}
+                                </div>
+                                <div className="text-[10.5px] text-stone-500 truncate">
+                                  {cur.name}
+                                </div>
+                              </div>
+                            </div>
+                            {isSelected && (
+                              <HiOutlineCheck className="w-4 h-4 text-[#8b6f4e] shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Wishlist Icon */}
             {user ? (
@@ -632,6 +728,7 @@ const Navbar = () => {
                       setUserDropdownOpen((prev) => {
                         const next = !prev;
                         if (next) {
+                          setCurrencyDropdownOpen(false);
                           setShowSearchDropdown(false);
                           setCloseMegaMenuSignal((n) => n + 1);
                         }

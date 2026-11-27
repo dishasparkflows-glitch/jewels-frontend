@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useWishlist } from '../contexts/WishlistContext';
+import { useCurrency } from '../contexts/CurrencyContext';
 import { getProductCardData } from '../utils/productCard';
 
 /**
@@ -8,6 +9,7 @@ import { getProductCardData } from '../utils/productCard';
  * title/slug/URL formatting, and price calculation.
  */
 export function useProductCard(product, options = {}) {
+  useCurrency();
   const data = getProductCardData(product);
   const { isWishlisted, toggleWishlist, wishlistMap } = useWishlist();
 

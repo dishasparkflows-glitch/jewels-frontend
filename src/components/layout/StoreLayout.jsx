@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
+import { useCurrency } from '../../contexts/CurrencyContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import Navbar from './Navbar';
@@ -9,10 +10,16 @@ import CartDrawer from '../store/CartDrawer';
 
 const StoreLayout = () => {
   const { websiteConfig, themeStyle } = useStoreSettings();
+  const { selectedCurrency } = useCurrency();
   const { loginModalOpen, closeLoginModal } = useAuth();
   const { cartDrawerOpen, closeCartDrawer } = useCart();
   return (
-    <div className="store-shell min-h-screen flex flex-col bg-[#fbfaf8] text-[#2b2926] selection:bg-[#d7c4a4] selection:text-[#2b2926]" style={themeStyle} data-theme-revision={websiteConfig?.revision || 0}>
+    <div
+      className="store-shell min-h-screen flex flex-col bg-[#fbfaf8] text-[#2b2926] selection:bg-[#d7c4a4] selection:text-[#2b2926]"
+      style={themeStyle}
+      data-theme-revision={websiteConfig?.revision || 0}
+      data-currency={selectedCurrency?.code || 'INR'}
+    >
       <Navbar />
       <main className="flex-1">
         <Outlet />

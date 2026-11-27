@@ -97,6 +97,11 @@ export const sizesAPI = {
   getLookup: (params) => getOnce('/sizes/lookup', { params }),
 };
 
+// ─── Currencies ───────────────────────────────────
+export const currenciesAPI = {
+  getLookup: (params) => getOnce('/currencies/lookup', { params }),
+};
+
 // ─── Coupons ───────────────────────────────────────
 export const couponsAPI = {
   getLookup: (params) => getOnce('/coupons/lookup', { params }),

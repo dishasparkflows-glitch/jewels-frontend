@@ -75,6 +75,10 @@ export function StoreSettingsProvider({ children }) {
             data.settings?.birthstones?.showOnStorefront ?? data.birthstones?.showOnStorefront
           ),
         },
+        currency: {
+          showOnStorefront:
+            (data.settings?.currency?.showOnStorefront ?? data.currency?.showOnStorefront) !== false,
+        },
       });
     }
     if (data.footerSettings) setFooterSettings(data.footerSettings);

@@ -1,7 +1,24 @@
 import { getValidProductImages, isOrnateImage } from './productImages.js';
+import { convertPrice, getActiveCurrency } from './currency.js';
 
-const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
-export const formatProductPrice = (value) => Number.isFinite(Number(value)) && Number(value) > 0 ? money.format(Number(value)) : '';
+export const formatProductPrice = (value) => {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) return '';
+  const converted = convertPrice(num);
+  const cur = getActiveCurrency();
+  const code = cur?.code || 'INR';
+  const locale = code === 'INR' ? 'en-IN' : 'en-US';
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: code,
+      maximumFractionDigits: 2,
+    }).format(converted);
+  } catch {
+    const symbol = cur?.symbol || `${code} `;
+    return `${symbol}${converted.toLocaleString(locale, { maximumFractionDigits: 2 })}`;
+  }
+};
 const firstPrice = (...values) => values.map(Number).find((value) => Number.isFinite(value) && value > 0) || null;
 const colorHex = { 'white gold': '#dedede', 'rose gold': '#c88c88', 'yellow gold': '#d4b85b', silver: '#d4d4d4', platinum: '#e5e4e2', gold: '#d4b85b' };
 const imageOnly = (image) => image?.mediaType !== 'video' && !/\.(mp4|webm|mov)(?:[?#]|$)/i.test(typeof image === 'string' ? image : image?.url || '') && !isOrnateImage(image);

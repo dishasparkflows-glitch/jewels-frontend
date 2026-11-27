@@ -26,6 +26,7 @@ import {
 } from 'react-icons/hi';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { checkoutAPI, addressesAPI } from '../../api/services';
 import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 import { trackBeginCheckout } from '../../config/firebase';
@@ -97,6 +98,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { cart, updateQuantity, clearCart, subtotal, shipping, tax, total } = useCart();
   const { user, isAuthenticated } = useAuth();
+  const { settings } = useStoreSettings();
   const [form, setForm] = useState(() => ({
     ...emptyAddress,
     email: user?.auth?.email || '',
@@ -584,6 +586,15 @@ export default function Checkout() {
     const cleanPhone = String(form.phone || '').replace(/\D/g, '');
     if (cleanPhone.length < 10) {
       toast.error('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
+    // Check if Order OTP verification is dynamically enabled by admin in settings
+    const isOrderOtpEnabled = settings?.otpSettings?.enableOrderOtp !== false;
+
+    if (!isOrderOtpEnabled) {
+      // Direct order placement without OTP pop-up
+      proceedWithOrderPlacement(null);
       return;
     }
 

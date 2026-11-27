@@ -98,6 +98,46 @@ const Register = () => {
       return;
     }
 
+    // Check if Registration OTP verification is dynamically enabled by admin in settings
+    const isRegistrationOtpEnabled = settings?.otpSettings?.enableRegistrationOtp !== false;
+
+    if (!isRegistrationOtpEnabled) {
+      // Direct registration without OTP pop-up
+      setLoading(true);
+      const toastId = toast.loading('Creating your account...');
+      try {
+        // Verify availability of email and phone first
+        await authAPI.checkAvailability({ email, phone: cleanPhone });
+
+        const formattedCountryCode = (countryCode || '+91').trim().startsWith('+')
+          ? (countryCode || '+91').trim()
+          : `+${(countryCode || '91').trim()}`;
+
+        await register({
+          profile: {
+            firstName: nameParts[0],
+            lastName: nameParts.slice(1).join(' ') || 'Customer',
+            phone: cleanPhone,
+            countryCode: formattedCountryCode,
+            isPhoneVerified: false,
+          },
+          auth: {
+            email,
+            password: form.password,
+          },
+        });
+        toast.success('Welcome to Neirah Jewellers!', { id: toastId, icon: '✨' });
+        navigate(destination, { replace: true });
+      } catch (error) {
+        const msg = error.response?.data?.message || 'Registration failed';
+        setErrorMessage(msg);
+        toast.error(msg, { id: toastId });
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     setSendingOtp(true);
     const toastId = toast.loading('Sending verification code...');
     try {
