@@ -213,7 +213,7 @@ const Login = () => {
                 value={identifier}
                 onChange={(event) => setIdentifier(event.target.value)}
                 placeholder="Email or Mobile Number"
-                className="h-11 sm:h-12 w-full rounded-xl border border-stone-200/90 bg-[#F8F7F5] pl-11 pr-3 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-[#7A5B3E] focus:bg-white focus:ring-2 focus:ring-[#7A5B3E]/15 autofill-neutral"
+                className="h-11 sm:h-12 w-full rounded-xl border border-stone-200/90 bg-[#F8F7F5] pl-11 pr-3 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:bg-white input-theme-focus autofill-neutral"
                 required
               />
             </div>
@@ -228,7 +228,7 @@ const Login = () => {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Password"
-                className="h-11 sm:h-12 w-full rounded-xl border border-stone-200/90 bg-[#F8F7F5] pl-11 pr-11 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-[#7A5B3E] focus:bg-white focus:ring-2 focus:ring-[#7A5B3E]/15 autofill-neutral"
+                className="h-11 sm:h-12 w-full rounded-xl border border-stone-200/90 bg-[#F8F7F5] pl-11 pr-11 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:bg-white input-theme-focus autofill-neutral"
                 required
               />
               <button

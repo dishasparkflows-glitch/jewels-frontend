@@ -343,7 +343,7 @@ const Register = () => {
                 value={form.fullName}
                 onChange={updateField('fullName')}
                 placeholder="Full Name"
-                className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-[#8c6b45] focus:ring-2 focus:ring-[#8c6b45]/15"
+                className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 input-theme-focus"
                 required
               />
             </div>
@@ -358,7 +358,7 @@ const Register = () => {
                 value={form.email}
                 onChange={updateField('email')}
                 placeholder="Email Address"
-                className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-[#8c6b45] focus:ring-2 focus:ring-[#8c6b45]/15"
+                className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 input-theme-focus"
                 required
               />
             </div>
@@ -384,7 +384,7 @@ const Register = () => {
                 value={form.password}
                 onChange={updateField('password')}
                 placeholder="Password"
-                className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-10 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-[#8c6b45] focus:ring-2 focus:ring-[#8c6b45]/15"
+                className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-10 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 input-theme-focus"
                 required
               />
               <button
@@ -408,7 +408,7 @@ const Register = () => {
 
           <p className="mt-4 text-center text-xs text-stone-500">
             Already have an account?{' '}
-            <Link to="/login" state={{ from: returnTo }} className="font-semibold text-stone-800 hover:text-[#8c6b45] transition-colors">
+            <Link to="/login" state={{ from: returnTo }} className="font-semibold text-stone-800 link-theme-hover transition-colors">
               Sign In
             </Link>
           </p>

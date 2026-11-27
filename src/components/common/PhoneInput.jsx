@@ -62,9 +62,9 @@ export default function PhoneInput({
   // ------------------------------- container variants ----------------------------
   const variantStyles = {
     default:
-      'rounded-xl border border-stone-200 bg-white focus-within:border-[#8c6b45] focus-within:ring-2 focus-within:ring-[#8c6b45]/15',
+      'rounded-xl border border-stone-200 bg-white input-theme-focus-within',
     profile:
-      'rounded-xl border border-[#e5ded5] hover:border-[#bdae99] bg-white shadow-2xs focus-within:border-[#9e7a46] focus-within:ring-2 focus-within:ring-[#9e7a46]/10',
+      'rounded-xl border border-[#e5ded5] hover:border-[#bdae99] bg-white shadow-2xs input-theme-focus-within',
   };
   const containerVariant = variantStyles[variant] || variantStyles.default;
 

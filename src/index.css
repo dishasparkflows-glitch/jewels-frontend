@@ -150,6 +150,16 @@
   text-decoration-color: var(--btn-primary-bg, #8b6f4e) !important;
 }
 
+.input-theme-focus:focus {
+  border-color: var(--btn-primary-bg, #8b6f4e) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 15%, transparent);
+}
+
+.input-theme-focus-within:focus-within {
+  border-color: var(--btn-primary-bg, #8b6f4e) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 15%, transparent);
+}
+
 /* One visual language for every customer facing route. */
 .store-shell {
   --jewel-ink: #211f1c;

@@ -226,7 +226,13 @@ const Cart = () => {
                       {(formatCategoryName(item.category) || diamondType) && (
                         <div className="flex items-center gap-1.5 flex-wrap pb-0.5">
                           {formatCategoryName(item.category) && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-medium bg-[#F3E5D1] text-[#7F4F27]">
+                            <span
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-medium"
+                              style={{
+                                backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 14%, #ffffff)',
+                                color: 'var(--btn-primary-bg, #8c6536)',
+                              }}
+                            >
                               {formatCategoryName(item.category)}
                             </span>
                           )}
@@ -239,7 +245,7 @@ const Cart = () => {
                       )}
                       <Link
                         to={productLink}
-                        className="block font-sans font-bold text-xs sm:text-base text-stone-900 hover:text-[#8b6b47] transition-colors line-clamp-2 sm:truncate leading-snug"
+                        className="block font-sans font-bold text-xs sm:text-base text-stone-900 hover:text-[var(--btn-primary-bg,#8c6536)] transition-colors line-clamp-2 sm:truncate leading-snug"
                         title={item.name}
                       >
                         {item.name}
@@ -460,7 +466,7 @@ const Cart = () => {
             ) : (
               <div>
                 <label className="mb-2 flex items-center gap-1.5 text-xs font-bold text-stone-900">
-                  <HiOutlineTag className="h-4 w-4 text-[#8c6536]" />
+                  <HiOutlineTag className="h-4 w-4" style={{ color: 'var(--btn-primary-bg, #8c6536)' }} />
                   <span>Apply Coupon Code</span>
                 </label>
                 <div className="flex items-center gap-2">
@@ -469,7 +475,7 @@ const Cart = () => {
                     className={`h-10 min-w-0 flex-1 rounded-xl border bg-white px-3 sm:px-3.5 text-base sm:text-xs text-stone-800 placeholder:text-stone-400 outline-none transition ${
                       couponError
                         ? 'border-red-400 focus:border-red-500 bg-red-50/20'
-                        : 'border-stone-200 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]'
+                        : 'border-stone-200 focus:border-[var(--btn-primary-bg,#8c6536)] focus:ring-1 focus:ring-[var(--btn-primary-bg,#8c6536)]'
                     }`}
                     value={couponCode}
                     onChange={(event) => {
@@ -489,7 +495,12 @@ const Cart = () => {
                     type="button"
                     onClick={handleApplyCoupon}
                     disabled={couponLoading || !couponCode.trim()}
-                    className="h-10 px-4 sm:px-5 rounded-xl bg-[#f2e6db] hover:bg-[#e8dacb] active:scale-[0.98] text-xs font-bold text-stone-900 transition disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center shrink-0 shadow-2xs"
+                    style={{
+                      backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 14%, white)',
+                      color: 'var(--btn-primary-bg, #8c6536)',
+                      borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 28%, white)',
+                    }}
+                    className="h-10 px-4 sm:px-5 rounded-xl border hover:opacity-85 active:scale-[0.98] text-xs font-bold transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center shrink-0 shadow-2xs"
                   >
                     {couponLoading ? 'Verifying...' : 'Apply'}
                   </button>

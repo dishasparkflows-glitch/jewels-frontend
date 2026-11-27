@@ -128,7 +128,7 @@ const ForgotPassword = () => {
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     placeholder="you@example.com"
-                    className="w-full rounded-xl border border-[#cbb89e] bg-white py-3 pl-11 pr-4 text-sm text-[#1f1a16] placeholder-[#9c8e80] outline-none transition-all focus:border-[#8b6f4e] focus:ring-2 focus:ring-[#8b6f4e]/15"
+                    className="w-full rounded-xl border border-[#cbb89e] bg-white py-3 pl-11 pr-4 text-sm text-[#1f1a16] placeholder-[#9c8e80] outline-none transition-all input-theme-focus"
                   />
                 </div>
               </div>
@@ -167,7 +167,13 @@ const ForgotPassword = () => {
             </form>
           ) : (
             <div className="text-center py-2 space-y-4">
-              <div className="w-12 h-12 rounded-full bg-[#f4ebe1] text-[#8b6f4e] flex items-center justify-center mx-auto shadow-2xs">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center mx-auto shadow-2xs"
+                style={{
+                  backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 12%, #ffffff)',
+                  color: 'var(--btn-primary-bg, #8b6f4e)',
+                }}
+              >
                 <HiOutlineMail className="w-6 h-6 stroke-[1.8]" />
               </div>
               <p className="text-xs text-[#75685c] leading-relaxed">
@@ -176,7 +182,8 @@ const ForgotPassword = () => {
               <button
                 type="button"
                 onClick={() => setSent(false)}
-                className="text-xs font-semibold text-[#8b6f4e] hover:underline cursor-pointer block mx-auto"
+                style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }}
+                className="text-xs font-semibold hover:underline cursor-pointer block mx-auto"
               >
                 Didn&apos;t receive the email? Try again
               </button>
