@@ -163,6 +163,7 @@ export default function Shop({ defaultCategory = '' }) {
   const search = params.get('search') || '';
   const minPrice = params.get('minPrice') || '';
   const maxPrice = params.get('maxPrice') || '';
+  const selectedPriceRanges = params.get('priceRanges') || '';
   const selectedDiamondType = params.get('diamondType') || '';
   const selectedDiamondShape = params.get('diamondShape') || params.get('shape') || '';
   const selectedDiamondColor = params.get('diamondColor') || params.get('color') || '';
@@ -339,6 +340,7 @@ export default function Shop({ defaultCategory = '' }) {
             'limit',
             'minPrice',
             'maxPrice',
+            'priceRanges',
             'birthMonth',
             ...(isDiamondCategory ? ['diamondType', 'diamondShape', 'shape', 'diamondColor', 'color', 'diamondClarity', 'clarity', 'carat'] : []),
             ...filterList.map((f) => f.key),
@@ -388,6 +390,7 @@ export default function Shop({ defaultCategory = '' }) {
       if (search) diamondQuery.search = search;
       if (minPrice) diamondQuery.minPrice = minPrice;
       if (maxPrice) diamondQuery.maxPrice = maxPrice;
+      if (selectedPriceRanges) diamondQuery.priceRanges = selectedPriceRanges;
       if (selectedDiamondType) diamondQuery.diamondType = selectedDiamondType;
       if (selectedDiamondShape) diamondQuery.diamondShape = selectedDiamondShape;
       if (selectedDiamondColor) diamondQuery.diamondColor = selectedDiamondColor;
@@ -464,6 +467,7 @@ export default function Shop({ defaultCategory = '' }) {
     if (search) query.search = search;
     if (minPrice) query.minPrice = minPrice;
     if (maxPrice) query.maxPrice = maxPrice;
+    if (selectedPriceRanges) query.priceRanges = selectedPriceRanges;
     if (selectedDiamondType) query.diamondType = selectedDiamondType;
     if (selectedClarity) query.clarity = selectedClarity;
     if (selectedCarat) query.carat = selectedCarat;
@@ -510,6 +514,7 @@ export default function Shop({ defaultCategory = '' }) {
     search,
     minPrice,
     maxPrice,
+    selectedPriceRanges,
     sort,
     page,
     limit,
@@ -544,6 +549,7 @@ export default function Shop({ defaultCategory = '' }) {
     !!search ||
     !!minPrice ||
     !!maxPrice ||
+    !!selectedPriceRanges ||
     !!shopFor ||
     !!selectedDiamondType ||
     !!selectedDiamondShape ||
@@ -623,6 +629,31 @@ export default function Shop({ defaultCategory = '' }) {
         }
         updateFilters(nextFilter);
       },
+    });
+  }
+  if (selectedPriceRanges) {
+    const rangeFilterObj = dynamicFilters.find(
+      (f) => f.type === 'range' || f.key === 'price' || f.filterId === 'price-range'
+    );
+    const rangeOpts = rangeFilterObj?.options || [];
+    const tokens = selectedPriceRanges.split(',').map((s) => s.trim()).filter(Boolean);
+    tokens.forEach((token) => {
+      const matchedOpt = rangeOpts.find((o) => o.value === token);
+      let label = matchedOpt?.label || matchedOpt?.name;
+      if (!label) {
+        const [minS, maxS] = token.split('-');
+        const fmt = (v) => `₹${Number(v).toLocaleString('en-IN')}`;
+        if (!minS && maxS) label = `Below ${fmt(maxS)}`;
+        else if (minS && !maxS) label = `Above ${fmt(minS)}`;
+        else label = `${fmt(minS)} - ${fmt(maxS)}`;
+      }
+      activeChips.push({
+        label,
+        onRemove: () => {
+          const next = tokens.filter((t) => t !== token);
+          updateFilters({ priceRanges: next.join(',') });
+        },
+      });
     });
   }
 

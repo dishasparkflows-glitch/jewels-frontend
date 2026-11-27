@@ -178,6 +178,12 @@ export function StoreSettingsProvider({ children }) {
 
     const headerBg = colors.headerBgColor || '#201e1b';
     const headerText = colors.headerTextColor || '#ffffff';
+    const navBg = colors.navBgColor || headerBg;
+    const navText = colors.navTextColor || colors.headerTextColor || '#d6d3d1';
+    const navAccent = theme?.colors?.accent || theme?.colors?.secondary || '#d2b18a';
+    const megaMenuBg = colors.megaMenuBgColor || '#1c1a19';
+    const megaMenuText = colors.megaMenuTextColor || '#e7e5e4';
+    const megaMenuAccent = theme?.colors?.accent || theme?.colors?.secondary || '#d2b18a';
     const couponBg = colors.couponBgColor || '#201e1b';
     const couponText = colors.couponTextColor || '#ffffff';
     const footerBg = colors.footerBgColor || '#0f0d0b';
@@ -191,11 +197,17 @@ export function StoreSettingsProvider({ children }) {
     root.style.setProperty('--storefront-topbar-text', topBarText);
     root.style.setProperty('--storefront-header-bg', headerBg);
     root.style.setProperty('--storefront-header-text', headerText);
+    root.style.setProperty('--storefront-nav-bg', navBg);
+    root.style.setProperty('--storefront-nav-text', navText);
+    root.style.setProperty('--storefront-nav-accent', navAccent);
+    root.style.setProperty('--storefront-megamenu-bg', megaMenuBg);
+    root.style.setProperty('--storefront-megamenu-text', megaMenuText);
+    root.style.setProperty('--storefront-megamenu-accent', megaMenuAccent);
     root.style.setProperty('--storefront-coupon-bg', couponBg);
     root.style.setProperty('--storefront-coupon-text', couponText);
     root.style.setProperty('--storefront-footer-bg', footerBg);
     root.style.setProperty('--storefront-footer-text', footerText);
-  }, [settings?.themeColors, theme?.colors?.primary]);
+  }, [settings?.themeColors, theme?.colors?.primary, theme?.colors?.accent, theme?.colors?.secondary]);
 
   useEffect(() => {
     const title = theme?.seo?.metaTitle;

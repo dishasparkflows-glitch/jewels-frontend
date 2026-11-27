@@ -1,7 +1,9 @@
 /* eslint-disable react/prop-types */
-import { useState, useMemo } from 'react';
-import { HiOutlineTrash, HiOutlineSearch, HiOutlineX } from 'react-icons/hi';
+import { useState, useMemo, useEffect } from 'react';
+import { HiOutlineTrash, HiOutlineSearch, HiOutlineX, HiOutlinePlus, HiOutlineMinus } from 'react-icons/hi';
 import FilterGroup from './FilterGroup';
+import { useCurrency } from '../../contexts/CurrencyContext';
+import { formatPrice } from '../../utils/currency';
 
 /**
  * Shape Silhouette Line-Art Icon matching Angara Reference
@@ -264,12 +266,60 @@ export default function FilterSidebar({
   filtersActive = false,
   currentCategoryParam = '',
 }) {
+  const { selectedCurrency } = useCurrency();
   const minPrice = params.get('minPrice') || '';
   const maxPrice = params.get('maxPrice') || '';
+  const priceRangesParam = params.get('priceRanges') || '';
+
+  const selectedPriceRanges = useMemo(
+    () =>
+      priceRangesParam
+        ? priceRangesParam
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [],
+    [priceRangesParam]
+  );
 
   // Local state for price inputs to prevent premature submission while typing
   const [localMin, setLocalMin] = useState(minPrice);
   const [localMax, setLocalMax] = useState(maxPrice);
+  const [showCustomPrice, setShowCustomPrice] = useState(Boolean(minPrice || maxPrice));
+
+  useEffect(() => {
+    setLocalMin(minPrice);
+  }, [minPrice]);
+
+  useEffect(() => {
+    setLocalMax(maxPrice);
+  }, [maxPrice]);
+
+  useEffect(() => {
+    if (minPrice || maxPrice) {
+      setShowCustomPrice(true);
+    }
+  }, [minPrice, maxPrice]);
+
+  const handleTogglePricePreset = (rangeVal) => {
+    const val = String(rangeVal || '').trim();
+    if (!val) return;
+    const exists = selectedPriceRanges.includes(val);
+    const next = exists
+      ? selectedPriceRanges.filter((item) => item !== val)
+      : [...selectedPriceRanges, val];
+    onFilterChange('priceRanges', next.join(','));
+  };
+
+  const formatPresetRangeLabel = (opt) => {
+    if (opt?.label) return opt.label;
+    const hasMin = opt?.min !== null && opt?.min !== undefined && opt?.min !== '';
+    const hasMax = opt?.max !== null && opt?.max !== undefined && opt?.max !== '';
+    if (!hasMin && hasMax) return `Below ${formatPrice(opt.max)}`;
+    if (hasMin && !hasMax) return `Above ${formatPrice(opt.min)}`;
+    if (hasMin && hasMax) return `${formatPrice(opt.min)} - ${formatPrice(opt.max)}`;
+    return opt?.name || opt?.value || '';
+  };
 
   const handlePriceSubmit = (e) => {
     e.preventDefault();
@@ -361,65 +411,136 @@ export default function FilterSidebar({
               return true;
             })
             .map((filter) => {
-              // Range Filter (Price Range)
+              // Range Filter (Price Range: Preset Checkboxes + Custom Min/Max)
               if (filter.type === 'range' || filter.key === 'price') {
-                const hasPriceActive = !!(minPrice || maxPrice);
+                const presetOptions =
+                  Array.isArray(filter.options) && filter.options.length > 0
+                    ? filter.options
+                    : Array.isArray(filter.priceRanges)
+                    ? filter.priceRanges
+                    : [];
+                const hasPriceActive = !!(minPrice || maxPrice || selectedPriceRanges.length > 0);
                 const rawTitle = String(filter.title || '').trim();
                 const rangeTitle = /price|budget|cost/i.test(rawTitle) ? rawTitle : 'Price Range';
                 return (
                   <FilterGroup
                     key={filter.id || filter.key}
                     title={rangeTitle}
-                    defaultOpen={hasPriceActive}
+                    defaultOpen={hasPriceActive || presetOptions.length > 0}
                   >
-                    <form onSubmit={handlePriceSubmit} className="space-y-3 pt-1">
-                      <div className="grid grid-cols-2 gap-2.5">
-                        <div>
-                          <label
-                            htmlFor="filter-price-min"
-                            className="block text-xs font-medium text-stone-600 mb-1.5"
-                          >
-                            Min (₹)
-                          </label>
-                          <input
-                            id="filter-price-min"
-                            name="minPrice"
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={localMin}
-                            onChange={(e) => setLocalMin(e.target.value)}
-                            placeholder="0"
-                            className="w-full h-9 rounded-lg border border-stone-200 bg-white px-2.5 text-xs sm:text-sm text-stone-900 shadow-2xs hover:border-stone-300 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all"
-                          />
+                    <div className="space-y-3 pt-1" data-currency={selectedCurrency?.code || 'INR'}>
+                      {presetOptions.length > 0 && (
+                        <div className="space-y-1.5">
+                          {presetOptions.map((opt, idx) => {
+                            const optMin = opt.min === undefined || opt.min === '' ? null : opt.min;
+                            const optMax = opt.max === undefined || opt.max === '' ? null : opt.max;
+                            const optVal = opt.value || `${optMin ?? ''}-${optMax ?? ''}`;
+                            const isChecked = selectedPriceRanges.includes(optVal);
+                            const displayLabel = formatPresetRangeLabel(opt);
+
+                            return (
+                              <label
+                                key={opt._id || optVal || idx}
+                                className="flex cursor-pointer items-center gap-2.5 text-[13.5px] sm:text-sm text-stone-700 hover:text-stone-950 py-1 select-none transition-colors"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => handleTogglePricePreset(optVal)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      handleTogglePricePreset(optVal);
+                                    }
+                                  }}
+                                  style={{ accentColor: 'var(--btn-primary-bg, #8b6f4e)' }}
+                                  className="h-4 w-4 rounded border-stone-300 cursor-pointer shrink-0"
+                                />
+                                <span
+                                  className={`text-[13.5px] sm:text-sm truncate ${
+                                    isChecked ? 'font-semibold text-stone-900' : 'text-stone-700'
+                                  }`}
+                                >
+                                  {displayLabel}
+                                </span>
+                              </label>
+                            );
+                          })}
                         </div>
-                        <div>
-                          <label
-                            htmlFor="filter-price-max"
-                            className="block text-xs font-medium text-stone-600 mb-1.5"
+                      )}
+
+                      {presetOptions.length > 0 && (
+                        <div className="pt-2 border-t border-stone-100">
+                          <button
+                            type="button"
+                            onClick={() => setShowCustomPrice((prev) => !prev)}
+                            className="flex w-full items-center justify-between py-1 text-xs font-semibold text-stone-700 hover:text-stone-950 transition-colors cursor-pointer select-none"
+                            aria-expanded={showCustomPrice}
                           >
-                            Max (₹)
-                          </label>
-                          <input
-                            id="filter-price-max"
-                            name="maxPrice"
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={localMax}
-                            onChange={(e) => setLocalMax(e.target.value)}
-                            placeholder="Any"
-                            className="w-full h-9 rounded-lg border border-stone-200 bg-white px-2.5 text-xs sm:text-sm text-stone-900 shadow-2xs hover:border-stone-300 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all"
-                          />
+                            <span>Custom Min / Max Price</span>
+                            {showCustomPrice ? (
+                              <HiOutlineMinus className="h-3.5 w-3.5 text-stone-400 shrink-0" />
+                            ) : (
+                              <HiOutlinePlus className="h-3.5 w-3.5 text-stone-400 shrink-0" />
+                            )}
+                          </button>
                         </div>
-                      </div>
-                      <button
-                        type="submit"
-                        className="w-full h-9 rounded-lg border border-stone-300 hover:border-stone-400 bg-white hover:bg-stone-50 text-xs sm:text-sm font-semibold text-stone-800 shadow-2xs cursor-pointer transition-all active:scale-[0.99]"
-                      >
-                        Apply Price
-                      </button>
-                    </form>
+                      )}
+
+                      {(showCustomPrice || presetOptions.length === 0) && (
+                        <form
+                          onSubmit={handlePriceSubmit}
+                          className="space-y-3 pt-1 animate-fadeIn"
+                        >
+                          <div className="grid grid-cols-2 gap-2.5">
+                            <div>
+                              <label
+                                htmlFor="filter-price-min"
+                                className="block text-xs font-medium text-stone-600 mb-1.5"
+                              >
+                                Min (₹)
+                              </label>
+                              <input
+                                id="filter-price-min"
+                                name="minPrice"
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={localMin}
+                                onChange={(e) => setLocalMin(e.target.value)}
+                                placeholder="0"
+                                className="w-full h-9 rounded-lg border border-stone-200 bg-white px-2.5 text-xs sm:text-sm text-stone-900 shadow-2xs hover:border-stone-300 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all"
+                              />
+                            </div>
+                            <div>
+                              <label
+                                htmlFor="filter-price-max"
+                                className="block text-xs font-medium text-stone-600 mb-1.5"
+                              >
+                                Max (₹)
+                              </label>
+                              <input
+                                id="filter-price-max"
+                                name="maxPrice"
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={localMax}
+                                onChange={(e) => setLocalMax(e.target.value)}
+                                placeholder="Any"
+                                className="w-full h-9 rounded-lg border border-stone-200 bg-white px-2.5 text-xs sm:text-sm text-stone-900 shadow-2xs hover:border-stone-300 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 transition-all"
+                              />
+                            </div>
+                          </div>
+                          <button
+                            type="submit"
+                            className="w-full h-9 rounded-lg border border-stone-300 hover:border-stone-400 bg-white hover:bg-stone-50 text-xs sm:text-sm font-semibold text-stone-800 shadow-2xs cursor-pointer transition-all active:scale-[0.99]"
+                          >
+                            Apply Price
+                          </button>
+                        </form>
+                      )}
+                    </div>
                   </FilterGroup>
                 );
               }

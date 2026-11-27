@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
 import WishlistProductCard from '../../components/product/WishlistProductCard';
-import { usersAPI, addressesAPI, ordersAPI, reviewsAPI } from '../../api/services';
+import { addressesAPI, ordersAPI, reviewsAPI } from '../../api/services';
 import { toast } from 'react-hot-toast';
 import Dropdown from '../../components/common/Dropdown';
 import PhoneInput from '../../components/common/PhoneInput';
@@ -227,7 +227,7 @@ const getStatusBannerInfo = (status = '') => {
 };
 
 const Profile = () => {
-  const { user, logout, updateUser } = useAuth();
+  const { user, logout } = useAuth();
   const { addToCart, openCartDrawer, orderCount, returnOrderCount } = useCart();
   const {
     wishlistItems,
@@ -335,17 +335,6 @@ const Profile = () => {
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [, setReviewedProductIds] = useState(new Set());
-  
-  // Profile edit state
-  const [editProfileOpen, setEditProfileOpen] = useState(false);
-  const [profileForm, setProfileForm] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    countryCode: '+91',
-    location: '',
-    bio: '',
-  });
 
   // Dedicated Address state
   const [addresses, setAddresses] = useState([]);
@@ -366,20 +355,6 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
   const modalRef = useRef(null);
-
-  // Sync profile form when user loads
-  useEffect(() => {
-    if (user) {
-      setProfileForm({
-        firstName: user.profile?.firstName || '',
-        lastName: user.profile?.lastName || '',
-        phone: user.profile?.phone || '',
-        countryCode: user.profile?.countryCode || '+91',
-        location: user.profile?.location || '',
-        bio: user.profile?.bio || '',
-      });
-    }
-  }, [user]);
 
   // Load addresses from dedicated Address model
   const fetchAddresses = async () => {
@@ -704,17 +679,16 @@ const Profile = () => {
         return;
       }
       if (modalRef.current && !modalRef.current.contains(e.target)) {
-        setEditProfileOpen(false);
         setAddressModalOpen(false);
       }
     };
-    if (editProfileOpen || addressModalOpen) {
+    if (addressModalOpen) {
       document.addEventListener('mousedown', handleOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleOutside);
     };
-  }, [editProfileOpen, addressModalOpen]);
+  }, [addressModalOpen]);
 
   // User display name helper
   const userFullName = useMemo(() => {
@@ -737,35 +711,6 @@ const Profile = () => {
   const additionalAddresses = useMemo(() => {
     return addresses.filter((a) => a._id !== billingAddress?._id && a._id !== shippingAddress?._id);
   }, [addresses, billingAddress?._id, shippingAddress?._id]);
-
-  // ─── Save Profile Updates to API ───────────────────────────────
-  const handleSaveProfile = async (e) => {
-    e.preventDefault();
-    try {
-      setSaving(true);
-      const res = await usersAPI.updateMe({
-        profile: {
-          firstName: profileForm.firstName,
-          lastName: profileForm.lastName,
-          phone: profileForm.phone,
-          countryCode: profileForm.countryCode || '+91',
-          location: profileForm.location,
-          bio: profileForm.bio,
-        },
-      });
-      const updated = res?.data?.data || res?.data;
-      if (updated) {
-        updateUser({ ...user, ...updated });
-      }
-      toast.success('Profile information updated successfully!');
-      setEditProfileOpen(false);
-    } catch (err) {
-      console.error('Failed to update profile:', err);
-      toast.error(err.response?.data?.message || 'Failed to update profile');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // ─── Open Address Modal ─────────────────────────────────────────
   const openAddressModal = (type, addr = null) => {
@@ -1139,13 +1084,6 @@ const Profile = () => {
                     <span className="text-[11px] font-bold tracking-wider uppercase text-stone-800">
                       PROFILE INFORMATION
                     </span>
-                    <button
-                      onClick={() => setEditProfileOpen(true)}
-                      className="inline-flex items-center gap-1.5 text-xs text-[#8b6f4e] hover:text-[#745735] font-medium transition-colors"
-                    >
-                      <HiOutlinePencilAlt className="w-3.5 h-3.5" />
-                      <span>Edit Profile</span>
-                    </button>
                   </div>
 
                   {/* Card Body: single horizontal row matching screenshot */}
@@ -1154,7 +1092,14 @@ const Profile = () => {
                       
                       {/* 1. Avatar + Name & Email */}
                       <div className="flex items-center gap-3.5 shrink-0 min-w-0">
-                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#f4ebe1] text-[#8b6f4e] font-serif text-xl sm:text-2xl font-medium flex items-center justify-center shrink-0 border border-[#e8dfd5]">
+                        <div
+                          style={{
+                            backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 12%, white)',
+                            color: 'var(--btn-primary-bg, #8b6f4e)',
+                            borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 28%, white)',
+                          }}
+                          className="w-12 h-12 sm:w-14 sm:h-14 rounded-full font-serif text-xl sm:text-2xl font-medium flex items-center justify-center shrink-0 border"
+                        >
                           {(userFullName?.[0] || user?.profile?.firstName?.[0] || 'D').toUpperCase()}
                         </div>
                         <div className="space-y-0.5 min-w-0">
@@ -1237,7 +1182,8 @@ const Profile = () => {
                     </span>
                     <button
                       onClick={() => setActiveTab('addresses')}
-                      className="inline-flex items-center gap-1 text-xs text-[#8b6f4e] hover:text-[#745735] font-medium transition-colors"
+                      style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }}
+                      className="inline-flex items-center gap-1 text-xs font-medium hover:opacity-80 transition-opacity cursor-pointer"
                     >
                       <span>Manage Addresses</span>
                       <HiArrowRight className="w-3.5 h-3.5" />
@@ -1247,11 +1193,17 @@ const Profile = () => {
                   {/* Two Address Columns */}
                   <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Default Billing Address Box */}
-                    <div className="border border-stone-200/90 rounded-2xl p-4 sm:p-5 bg-white space-y-2 text-xs sm:text-sm text-stone-700 shadow-2xs hover:border-[#8b6f4e]/40 transition-colors">
+                    <div className="border border-stone-200/90 rounded-2xl p-4 sm:p-5 bg-white space-y-2 text-xs sm:text-sm text-stone-700 shadow-2xs hover:border-stone-300 transition-colors">
                       <div className="flex items-center justify-between pb-1">
                         <div className="flex items-center gap-2">
                           <HiOutlineHome className="w-5 h-5 text-stone-700 shrink-0" />
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#faf2e5] text-[#5c3715] tracking-normal select-none">
+                          <span
+                            style={{
+                              backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 12%, white)',
+                              color: 'var(--btn-primary-bg, #8b6f4e)',
+                            }}
+                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-normal select-none"
+                          >
                             Default Billing Address
                           </span>
                         </div>
@@ -1259,7 +1211,7 @@ const Profile = () => {
                           <button
                             type="button"
                             onClick={() => openAddressModal('billing')}
-                            className="p-1 text-stone-500 hover:text-[#8b6f4e] hover:bg-stone-50 rounded transition-colors cursor-pointer"
+                            className="p-1 text-stone-500 link-theme-hover hover:bg-stone-50 rounded transition-colors cursor-pointer"
                             title="Edit billing address"
                             aria-label="Edit billing address"
                           >
@@ -1278,11 +1230,17 @@ const Profile = () => {
                     </div>
 
                     {/* Default Shipping Address Box */}
-                    <div className="border border-stone-200/90 rounded-2xl p-4 sm:p-5 bg-white space-y-2 text-xs sm:text-sm text-stone-700 shadow-2xs hover:border-[#8b6f4e]/40 transition-colors">
+                    <div className="border border-stone-200/90 rounded-2xl p-4 sm:p-5 bg-white space-y-2 text-xs sm:text-sm text-stone-700 shadow-2xs hover:border-stone-300 transition-colors">
                       <div className="flex items-center justify-between pb-1">
                         <div className="flex items-center gap-2">
                           <HiOutlineHome className="w-5 h-5 text-stone-700 shrink-0" />
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#faf2e5] text-[#5c3715] tracking-normal select-none">
+                          <span
+                            style={{
+                              backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 12%, white)',
+                              color: 'var(--btn-primary-bg, #8b6f4e)',
+                            }}
+                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-normal select-none"
+                          >
                             Default Shipping Address
                           </span>
                         </div>
@@ -1290,7 +1248,7 @@ const Profile = () => {
                           <button
                             type="button"
                             onClick={() => openAddressModal('shipping')}
-                            className="p-1 text-stone-500 hover:text-[#8b6f4e] hover:bg-stone-50 rounded transition-colors cursor-pointer"
+                            className="p-1 text-stone-500 link-theme-hover hover:bg-stone-50 rounded transition-colors cursor-pointer"
                             title="Edit shipping address"
                             aria-label="Edit shipping address"
                           >
@@ -1324,11 +1282,17 @@ const Profile = () => {
                   </div>
                   <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Default Billing Address Box */}
-                    <div className="border border-stone-200/90 rounded-2xl p-4 sm:p-5 bg-white space-y-2 text-xs sm:text-sm text-stone-700 shadow-2xs hover:border-[#8b6f4e]/40 transition-colors">
+                    <div className="border border-stone-200/90 rounded-2xl p-4 sm:p-5 bg-white space-y-2 text-xs sm:text-sm text-stone-700 shadow-2xs hover:border-stone-300 transition-colors">
                       <div className="flex items-center justify-between pb-1">
                         <div className="flex items-center gap-2">
                           <HiOutlineHome className="w-5 h-5 text-stone-700 shrink-0" />
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#faf2e5] text-[#5c3715] tracking-normal select-none">
+                          <span
+                            style={{
+                              backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 12%, white)',
+                              color: 'var(--btn-primary-bg, #8b6f4e)',
+                            }}
+                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-normal select-none"
+                          >
                             Default Billing Address
                           </span>
                         </div>
@@ -1336,7 +1300,7 @@ const Profile = () => {
                           <button
                             type="button"
                             onClick={() => openAddressModal('billing')}
-                            className="p-1 text-stone-500 hover:text-[#8b6f4e] hover:bg-stone-50 rounded transition-colors cursor-pointer"
+                            className="p-1 text-stone-500 link-theme-hover hover:bg-stone-50 rounded transition-colors cursor-pointer"
                             title="Edit billing address"
                             aria-label="Edit billing address"
                           >
@@ -1355,11 +1319,17 @@ const Profile = () => {
                     </div>
 
                     {/* Default Shipping Address Box */}
-                    <div className="border border-stone-200/90 rounded-2xl p-4 sm:p-5 bg-white space-y-2 text-xs sm:text-sm text-stone-700 shadow-2xs hover:border-[#8b6f4e]/40 transition-colors">
+                    <div className="border border-stone-200/90 rounded-2xl p-4 sm:p-5 bg-white space-y-2 text-xs sm:text-sm text-stone-700 shadow-2xs hover:border-stone-300 transition-colors">
                       <div className="flex items-center justify-between pb-1">
                         <div className="flex items-center gap-2">
                           <HiOutlineHome className="w-5 h-5 text-stone-700 shrink-0" />
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#faf2e5] text-[#5c3715] tracking-normal select-none">
+                          <span
+                            style={{
+                              backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 12%, white)',
+                              color: 'var(--btn-primary-bg, #8b6f4e)',
+                            }}
+                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold tracking-normal select-none"
+                          >
                             Default Shipping Address
                           </span>
                         </div>
@@ -1367,7 +1337,7 @@ const Profile = () => {
                           <button
                             type="button"
                             onClick={() => openAddressModal('shipping')}
-                            className="p-1 text-stone-500 hover:text-[#8b6f4e] hover:bg-stone-50 rounded transition-colors cursor-pointer"
+                            className="p-1 text-stone-500 link-theme-hover hover:bg-stone-50 rounded transition-colors cursor-pointer"
                             title="Edit shipping address"
                             aria-label="Edit shipping address"
                           >
@@ -1691,19 +1661,29 @@ const Profile = () => {
                                 type="button"
                                 onClick={() => handleDownloadInvoice(order)}
                                 disabled={downloadingOrderId === (order._id || order.id)}
-                                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
+                                style={{
+                                  borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 30%, transparent)',
+                                  backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 6%, white)',
+                                  color: 'var(--btn-primary-bg, #8b6f4e)',
+                                }}
+                                className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border hover:opacity-90 text-xs font-medium transition-all inline-flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap disabled:opacity-50"
                                 title="Download Official Tax Invoice (PDF)"
                               >
-                                <HiOutlineDocumentText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#7A5B3A]" />
+                                <HiOutlineDocumentText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 <span>{downloadingOrderId === (order._id || order.id) ? 'Downloading...' : 'Download Invoice'}</span>
                               </button>
                               {Boolean(order.shiprocketInfo?.awbCode) && (
                                 <button
                                   type="button"
                                   onClick={() => setTrackingOrder(order)}
-                                  className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
+                                  style={{
+                                    borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 30%, transparent)',
+                                    backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 6%, white)',
+                                    color: 'var(--btn-primary-bg, #8b6f4e)',
+                                  }}
+                                  className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border hover:opacity-90 text-xs font-medium transition-all inline-flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
                                 >
-                                  <HiOutlineCube className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#7A5B3A]" />
+                                  <HiOutlineCube className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                   <span>Track Package</span>
                                 </button>
                               )}
@@ -1714,9 +1694,14 @@ const Profile = () => {
                                     const target = order.items?.[0];
                                     if (target) openReviewModal(target, order);
                                   }}
-                                  className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border border-[#D5C7B6] bg-[#FAF7F2] hover:bg-[#F4ECE3] text-[#7A5B3A] text-xs font-medium transition-all inline-flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
+                                  style={{
+                                    borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 30%, transparent)',
+                                    backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 6%, white)',
+                                    color: 'var(--btn-primary-bg, #8b6f4e)',
+                                  }}
+                                  className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl border hover:opacity-90 text-xs font-medium transition-all inline-flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
                                 >
-                                  <FaStar className="w-3.5 h-3.5 text-[#B88746]" />
+                                  <FaStar className="w-3.5 h-3.5" />
                                   <span>Write Review</span>
                                 </button>
                               )}
@@ -2004,7 +1989,7 @@ const Profile = () => {
                       <button
                         type="button"
                         onClick={clearWishlist}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] text-xs font-medium transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border btn-theme-outline text-xs font-medium transition-colors cursor-pointer"
                       >
                         <HiOutlineTrash className="w-3.5 h-3.5" />
                         <span>Clear All</span>
@@ -2059,125 +2044,6 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* ─── EDIT PROFILE MODAL ─────────────────────────────────────── */}
-      {editProfileOpen && (
-        <div
-          onClick={() => setEditProfileOpen(false)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto cursor-pointer"
-        >
-          <div
-            ref={modalRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Edit Profile Information"
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-visible animate-scale-in my-auto cursor-default"
-          >
-            <div className="bg-[#22201e] text-white px-6 py-4 rounded-t-2xl flex items-center justify-between">
-              <h3 className="font-cinzel text-base tracking-wider uppercase text-white">
-                Edit Profile Information
-              </h3>
-              <button
-                onClick={() => setEditProfileOpen(false)}
-                className="text-stone-400 hover:text-white"
-              >
-                <HiOutlineX className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveProfile} className="p-6 space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="font-bold text-stone-700 uppercase tracking-wider text-[10px]">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    value={profileForm.firstName}
-                    onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
-                    required
-                    className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 text-stone-900"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="font-bold text-stone-700 uppercase tracking-wider text-[10px]">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    value={profileForm.lastName}
-                    onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
-                    required
-                    className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 text-stone-900"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-stone-700 uppercase tracking-wider text-[10px]">
-                  Phone Number
-                </label>
-                <PhoneInput
-                  value={profileForm.phone}
-                  onChange={(val) => setProfileForm({ ...profileForm, phone: val })}
-                  countryCode={profileForm.countryCode}
-                  onCountryCodeChange={(code) => setProfileForm({ ...profileForm, countryCode: code })}
-                  placeholder="Enter phone number"
-                  size="md"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-stone-700 uppercase tracking-wider text-[10px]">
-                  Location
-                </label>
-                <input
-                  type="text"
-                  value={profileForm.location}
-                  onChange={(e) => setProfileForm({ ...profileForm, location: e.target.value })}
-                  placeholder="e.g. Gandhinagar, Gujarat"
-                  className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 text-stone-900"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-bold text-stone-700 uppercase tracking-wider text-[10px]">
-                  Bio
-                </label>
-                <textarea
-                  rows={2}
-                  value={profileForm.bio}
-                  onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
-                  placeholder="Tell us about your jewellery preferences..."
-                  className="w-full border border-stone-200 rounded-lg p-2.5 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/20 text-stone-900"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-stone-100">
-                <button
-                  type="button"
-                  onClick={() => setEditProfileOpen(false)}
-                  className="px-4 py-2 border border-stone-200 rounded-lg hover:bg-stone-50 text-stone-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  style={{
-                    backgroundColor: 'var(--btn-primary-bg, #8c6536)',
-                    color: 'var(--btn-primary-text, #ffffff)',
-                  }}
-                  className="px-6 py-2 btn-theme-primary hover:opacity-90 rounded-lg font-medium shadow-sm transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {saving ? 'Saving...' : 'Save Profile'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* ─── EDIT / ADD ADDRESS MODAL ───────────────────────────────── */}
       {addressModalOpen && (
         <div
@@ -2190,7 +2056,7 @@ const Profile = () => {
             aria-modal="true"
             aria-label={addressModalType === 'add-additional' ? 'Add New Address' : 'Address Form'}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[540px] bg-white rounded-2xl shadow-2xl overflow-visible animate-scale-in my-auto relative cursor-default"
+            className="w-full max-w-[540px] rounded-2xl shadow-2xl overflow-visible animate-scale-in my-auto relative cursor-default"
           >
             {/* Dark Header */}
             <div className="bg-[#262320] text-white px-5 sm:px-7 py-4 sm:py-5 rounded-t-2xl flex items-center justify-between">
@@ -2210,7 +2076,7 @@ const Profile = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveAddress} className="p-5 sm:p-7 space-y-4">
+            <form onSubmit={handleSaveAddress} className="bg-white rounded-b-2xl p-5 sm:p-7 space-y-4">
               {/* Use My Location button */}
               <div className="flex justify-end">
                 <button
@@ -2370,7 +2236,8 @@ const Profile = () => {
                     type="checkbox"
                     checked={Boolean(addressForm.isDefault)}
                     onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })}
-                    className="w-4 h-4 rounded text-[#9e7a46] focus:ring-[#9e7a46] border-stone-300 accent-[#9e7a46] cursor-pointer"
+                    style={{ accentColor: 'var(--btn-primary-bg, #9e7a46)' }}
+                    className="w-4 h-4 rounded border-stone-300 cursor-pointer"
                   />
                   <span className="text-xs sm:text-sm font-medium text-stone-800">
                     Set as default address
@@ -2773,7 +2640,7 @@ const Profile = () => {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in my-6 cursor-default border border-stone-200"
+            className="w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-scale-in my-6 cursor-default"
           >
             {/* Header */}
             <div className="bg-[#22201e] text-white px-6 py-4 flex items-center justify-between">
@@ -2792,7 +2659,7 @@ const Profile = () => {
               </button>
             </div>
 
-            <form onSubmit={handleReviewSubmit} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleReviewSubmit} className="bg-white p-6 space-y-4 text-xs">
               {/* If order has multiple items, allow switching */}
               {Array.isArray(reviewOrder?.items) && reviewOrder.items.length > 1 && (
                 <div className="space-y-1.5">

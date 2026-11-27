@@ -20,7 +20,7 @@ function normalizeCurrency(doc) {
   if (!doc) return null;
   const code = String(doc.currencyInfo?.code || doc.code || '').trim().toUpperCase();
   if (!code) return null;
-  const isBase = Boolean(doc.settings?.isBaseCurrency ?? doc.isBaseCurrency);
+  const isBase = Boolean(doc.settings?.isBaseCurrency ?? doc.isBaseCurrency) || code === 'INR';
   const rawInrRate = Number(doc.exchangeRate?.inrRate);
   const rawRate = Number(doc.exchangeRate?.rate);
   const effectiveRate = isBase
@@ -79,7 +79,12 @@ export function CurrencyProvider({ children }) {
             ? res.data.items
             : [];
         const normalized = rawList.map(normalizeCurrency).filter(Boolean);
-        setCurrencies(normalized);
+        // Always keep INR available as the default base option regardless of lookup sort order or entries
+        const withInrDefault =
+          normalized.length > 0 && !normalized.some((c) => c.code === 'INR')
+            ? [DEFAULT_CURRENCY, ...normalized]
+            : normalized;
+        setCurrencies(withInrDefault);
         setHasFetchedCurrencies(true);
       })
       .catch(() => {
@@ -94,23 +99,20 @@ export function CurrencyProvider({ children }) {
     };
   }, [shouldLoadCurrencies, hasFetchedCurrencies]);
 
-  const baseCurrency = useMemo(
-    () =>
-      currencies.find((c) => c.isBaseCurrency) ||
-      currencies.find((c) => c.code === 'INR') ||
-      DEFAULT_CURRENCY,
+  const defaultInrCurrency = useMemo(
+    () => currencies.find((c) => c.code === 'INR') || DEFAULT_CURRENCY,
     [currencies]
   );
 
   const selectedCurrency = useMemo(() => {
-    if (!showOnStorefront) return baseCurrency;
+    if (!showOnStorefront) return defaultInrCurrency;
     if (!currencies.length) return DEFAULT_CURRENCY;
     const savedMatch = selectedCode
       ? currencies.find((c) => c.code === selectedCode.toUpperCase())
       : null;
     if (savedMatch) return savedMatch;
-    return baseCurrency || currencies[0];
-  }, [showOnStorefront, currencies, selectedCode, baseCurrency]);
+    return defaultInrCurrency;
+  }, [showOnStorefront, currencies, selectedCode, defaultInrCurrency]);
 
   useEffect(() => {
     setActiveCurrency(selectedCurrency);

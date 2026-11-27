@@ -269,7 +269,8 @@ export default function LoginModal({ isOpen, onClose }) {
                 handleClose();
                 navigate('/register');
               }}
-              className="font-bold text-[#715538] hover:text-[#523d26] transition-colors cursor-pointer ml-0.5"
+              style={{ color: 'var(--btn-primary-bg, #715538)' }}
+              className="font-bold hover:opacity-80 transition-opacity cursor-pointer ml-0.5"
             >
               Create Account
             </button>

@@ -30,7 +30,10 @@ function MenuContents({ category, onNavigate, mobile = false }) {
       <div className="space-y-6 pt-2 pb-3 text-left">
         {sections.map((section) => (
           <div key={section._id} className="space-y-3">
-            <h4 className="text-[11px] font-bold uppercase tracking-[0.14em] text-stone-400">
+            <h4
+              style={{ color: 'color-mix(in srgb, currentColor 65%, transparent)' }}
+              className="text-[11px] font-bold uppercase tracking-[0.14em]"
+            >
               {section.name}
             </h4>
             <ul className="space-y-2.5">
@@ -41,14 +44,14 @@ function MenuContents({ category, onNavigate, mobile = false }) {
                     <Link
                       to={itemLink(category, item)}
                       onClick={onNavigate}
-                      className="group/item flex items-center gap-2.5 text-xs text-stone-200 hover:text-white transition-colors"
+                      className="group/item flex items-center gap-2.5 text-xs opacity-85 hover:opacity-100 transition-opacity"
                     >
                       <span className="w-4 h-4 flex items-center justify-center shrink-0">
                         {itemIconUrl ? (
                           <img
                             src={itemIconUrl}
                             alt=""
-                            className="w-3.5 h-3.5 object-contain opacity-85 group-hover/item:opacity-100 transition-all filter brightness-125"
+                            className="w-3.5 h-3.5 object-contain opacity-85 group-hover/item:opacity-100 transition-all"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                               if (e.currentTarget.nextSibling) {
@@ -57,7 +60,12 @@ function MenuContents({ category, onNavigate, mobile = false }) {
                             }}
                           />
                         ) : null}
-                        <span className={`text-stone-500 group-hover/item:text-[#d2b18a] text-[10px] shrink-0 transition-colors ${itemIconUrl ? 'hidden' : ''}`}>✦</span>
+                        <span
+                          style={{ color: 'var(--storefront-megamenu-accent, #d2b18a)' }}
+                          className={`text-[10px] shrink-0 opacity-75 group-hover/item:opacity-100 transition-opacity ${itemIconUrl ? 'hidden' : ''}`}
+                        >
+                          ✦
+                        </span>
                       </span>
                       <span>{item.name}</span>
                     </Link>
@@ -68,7 +76,8 @@ function MenuContents({ category, onNavigate, mobile = false }) {
             <Link
               to={categoryLink(category)}
               onClick={onNavigate}
-              className="inline-block pt-1 text-[10px] font-bold uppercase tracking-widest text-[#d2b18a] hover:text-white underline underline-offset-2"
+              style={{ color: 'var(--storefront-megamenu-accent, #d2b18a)' }}
+              className="inline-block pt-1 text-[10px] font-bold uppercase tracking-widest hover:opacity-80 underline underline-offset-2 transition-opacity"
             >
               EXPLORE ALL
             </Link>
@@ -78,7 +87,7 @@ function MenuContents({ category, onNavigate, mobile = false }) {
           <Link
             to={categoryLink(category)}
             onClick={onNavigate}
-            className="text-xs text-stone-300 underline underline-offset-4"
+            className="text-xs opacity-85 hover:opacity-100 underline underline-offset-4 transition-opacity"
           >
             Explore all {category.name}
           </Link>
@@ -90,11 +99,21 @@ function MenuContents({ category, onNavigate, mobile = false }) {
   return (
     <div className="mx-auto flex max-h-[calc(100vh-200px)] max-w-7xl overflow-y-auto px-4 sm:px-6 lg:px-8 py-8 justify-between gap-10">
       {/* ─── Left Section: Menu Columns (Featured, Styles, Metals) ─── */}
-      <div className="flex-1 grid grid-cols-2 lg:grid-cols-3 gap-8 divide-x divide-stone-800/80">
+      <div
+        style={{ borderColor: 'color-mix(in srgb, currentColor 12%, transparent)' }}
+        className="flex-1 grid grid-cols-2 lg:grid-cols-3 gap-8 divide-x"
+      >
         {sections.length > 0 ? (
           sections.map((section, idx) => (
-            <div key={section._id} className={`space-y-4 ${idx > 0 ? 'pl-8' : ''}`}>
-              <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-stone-400 font-sans">
+            <div
+              key={section._id}
+              style={idx > 0 ? { borderColor: 'color-mix(in srgb, currentColor 12%, transparent)' } : undefined}
+              className={`space-y-4 ${idx > 0 ? 'pl-8' : ''}`}
+            >
+              <h3
+                style={{ color: 'color-mix(in srgb, currentColor 65%, transparent)' }}
+                className="text-xs font-bold uppercase tracking-[0.14em] font-sans"
+              >
                 {section.name}
               </h3>
               <ul className="space-y-3">
@@ -105,14 +124,14 @@ function MenuContents({ category, onNavigate, mobile = false }) {
                       <Link
                         to={itemLink(category, item)}
                         onClick={onNavigate}
-                        className="group/item flex items-center gap-2.5 text-xs sm:text-[13px] text-stone-300 hover:text-white transition-colors"
+                        className="group/item flex items-center gap-2.5 text-xs sm:text-[13px] opacity-85 hover:opacity-100 transition-opacity"
                       >
                         <span className="w-5 h-5 flex items-center justify-center shrink-0">
                           {itemIconUrl ? (
                             <img
                               src={itemIconUrl}
                               alt=""
-                              className="w-4 h-4 object-contain opacity-85 group-hover/item:opacity-100 group-hover/item:scale-110 transition-all filter brightness-125"
+                              className="w-4 h-4 object-contain opacity-85 group-hover/item:opacity-100 group-hover/item:scale-110 transition-all"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                                 if (e.currentTarget.nextSibling) {
@@ -121,7 +140,12 @@ function MenuContents({ category, onNavigate, mobile = false }) {
                               }}
                             />
                           ) : null}
-                          <span className={`text-stone-500 group-hover/item:text-[#d2b18a] text-[10px] shrink-0 transition-colors ${itemIconUrl ? 'hidden' : ''}`}>✦</span>
+                          <span
+                            style={{ color: 'var(--storefront-megamenu-accent, #d2b18a)' }}
+                            className={`text-[10px] shrink-0 opacity-75 group-hover/item:opacity-100 transition-opacity ${itemIconUrl ? 'hidden' : ''}`}
+                          >
+                            ✦
+                          </span>
                         </span>
                         <span>{item.name}</span>
                       </Link>
@@ -132,7 +156,11 @@ function MenuContents({ category, onNavigate, mobile = false }) {
               <Link
                 to={categoryLink(category)}
                 onClick={onNavigate}
-                className="inline-block mt-4 text-[11px] font-bold uppercase tracking-widest text-[#d2b18a] hover:text-white border-b border-[#d2b18a]/60 hover:border-white pb-0.5 transition-all"
+                style={{
+                  color: 'var(--storefront-megamenu-accent, #d2b18a)',
+                  borderColor: 'color-mix(in srgb, var(--storefront-megamenu-accent, #d2b18a) 60%, transparent)',
+                }}
+                className="inline-block mt-4 text-[11px] font-bold uppercase tracking-widest hover:opacity-80 border-b pb-0.5 transition-all"
               >
                 EXPLORE ALL
               </Link>
@@ -140,16 +168,26 @@ function MenuContents({ category, onNavigate, mobile = false }) {
           ))
         ) : (
           <div className="col-span-2 py-4">
-            <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-stone-400 mb-3 font-sans">
+            <h3
+              style={{ color: 'color-mix(in srgb, currentColor 65%, transparent)' }}
+              className="text-xs font-bold uppercase tracking-[0.14em] mb-3 font-sans"
+            >
               {category.name}
             </h3>
-            <p className="text-xs text-stone-400 mb-4 max-w-md">
+            <p
+              style={{ color: 'color-mix(in srgb, currentColor 72%, transparent)' }}
+              className="text-xs mb-4 max-w-md"
+            >
               Discover our exclusive collection of handcrafted {category.name.toLowerCase()}.
             </p>
             <Link
               to={categoryLink(category)}
               onClick={onNavigate}
-              className="inline-block text-[11px] font-bold uppercase tracking-widest text-[#d2b18a] hover:text-white border-b border-[#d2b18a]/60 pb-0.5 transition-all"
+              style={{
+                color: 'var(--storefront-megamenu-accent, #d2b18a)',
+                borderColor: 'color-mix(in srgb, var(--storefront-megamenu-accent, #d2b18a) 60%, transparent)',
+              }}
+              className="inline-block text-[11px] font-bold uppercase tracking-widest hover:opacity-80 border-b pb-0.5 transition-all"
             >
               EXPLORE ALL
             </Link>
@@ -161,7 +199,8 @@ function MenuContents({ category, onNavigate, mobile = false }) {
       {showcaseCards.length > 0 && (
         <aside
           aria-label={`${category.name} highlights`}
-          className="flex items-center gap-5 shrink-0 pl-8 border-l border-stone-800/80"
+          style={{ borderColor: 'color-mix(in srgb, currentColor 12%, transparent)' }}
+          className="flex items-center gap-5 shrink-0 pl-8 border-l"
         >
           {showcaseCards.slice(0, 2).map((card, idx) => (
             <Link
@@ -250,8 +289,16 @@ export default function MegaMenuNav({
   return (
     <div
       ref={root}
-      style={mobile ? undefined : { backgroundColor: 'var(--storefront-header-bg, #201e1b)' }}
-      className={mobile ? '' : 'relative w-full border-b border-white/10'}
+      style={
+        mobile
+          ? undefined
+          : {
+              backgroundColor: 'var(--storefront-nav-bg, var(--storefront-header-bg, #201e1b))',
+              color: 'var(--storefront-nav-text, var(--storefront-header-text, #d6d3d1))',
+              borderColor: 'color-mix(in srgb, var(--storefront-nav-text, #d6d3d1) 14%, transparent)',
+            }
+      }
+      className={mobile ? '' : 'relative w-full border-b transition-colors'}
       onMouseLeave={mobile ? undefined : () => setActiveId(null)}
       onBlur={(event) => {
         if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setActiveId(null);
@@ -265,7 +312,7 @@ export default function MegaMenuNav({
       }}
     >
       {error && (
-        <div className="p-3 text-center text-xs text-stone-500">
+        <div className="p-3 text-center text-xs opacity-70">
           Navigation is temporarily unavailable.{' '}
           <button type="button" onClick={onRetry} className="underline">
             Retry
@@ -276,7 +323,11 @@ export default function MegaMenuNav({
       {mobile ? (
         <nav aria-label="Product categories" className="space-y-1">
           {sortedCategories.map((category) => (
-            <div key={category._id} className="border-b border-white/10">
+            <div
+              key={category._id}
+              style={{ borderColor: 'color-mix(in srgb, currentColor 12%, transparent)' }}
+              className="border-b"
+            >
               <button
                 type="button"
                 ref={(element) => {
@@ -285,14 +336,27 @@ export default function MegaMenuNav({
                 aria-expanded={activeId === category._id}
                 aria-controls={`mobile-menu-${category._id}`}
                 onClick={() => setActiveId(activeId === category._id ? null : category._id)}
-                className="flex w-full items-center justify-between py-3 text-left text-xs uppercase tracking-widest text-stone-200"
+                className="flex w-full items-center justify-between py-3 text-left text-xs uppercase tracking-widest opacity-90 hover:opacity-100 transition-opacity"
               >
                 <span>{category.name}</span>
                 <HiOutlineChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${activeId === category._id ? 'rotate-180' : ''}`} />
               </button>
               {activeId === category._id && (
-                <div id={`mobile-menu-${category._id}`} className="rounded-xl bg-[#181615] p-4 border border-white/10 mb-3 animate-fadeIn">
-                  <Link to={categoryLink(category)} onClick={close} className="mb-4 block text-xs font-semibold text-[#d2b18a] hover:underline">
+                <div
+                  id={`mobile-menu-${category._id}`}
+                  style={{
+                    backgroundColor: 'var(--storefront-megamenu-bg, #181615)',
+                    color: 'var(--storefront-megamenu-text, #e7e5e4)',
+                    borderColor: 'color-mix(in srgb, var(--storefront-megamenu-text, #e7e5e4) 15%, transparent)',
+                  }}
+                  className="rounded-xl p-4 border mb-3 animate-fadeIn transition-colors"
+                >
+                  <Link
+                    to={categoryLink(category)}
+                    onClick={close}
+                    style={{ color: 'var(--storefront-megamenu-accent, #d2b18a)' }}
+                    className="mb-4 block text-xs font-semibold hover:underline"
+                  >
                     Shop all {category.name} →
                   </Link>
                   <MenuContents category={category} onNavigate={close} mobile />
@@ -314,11 +378,17 @@ export default function MegaMenuNav({
                   to={categoryLink(category)}
                   onClick={close}
                   onFocus={() => activateDesktopCategory(category._id)}
-                  className={`border-b-2 py-2.5 sm:py-3 text-[11px] font-medium uppercase tracking-[0.14em] transition-colors cursor-pointer ${
-                    activeId === category._id
-                      ? 'border-[#d2b18a] text-[#d2b18a]'
-                      : 'border-transparent text-stone-300 hover:text-[#d2b18a]'
-                  }`}
+                  style={{
+                    color:
+                      activeId === category._id
+                        ? 'var(--storefront-nav-accent, #d2b18a)'
+                        : 'var(--storefront-nav-text, var(--storefront-header-text, #d6d3d1))',
+                    borderColor:
+                      activeId === category._id
+                        ? 'var(--storefront-nav-accent, #d2b18a)'
+                        : 'transparent',
+                  }}
+                  className="border-b-2 py-2.5 sm:py-3 text-[11px] font-medium uppercase tracking-[0.14em] opacity-90 hover:opacity-100 transition-all cursor-pointer"
                 >
                   {category.name}
                 </Link>
@@ -326,11 +396,16 @@ export default function MegaMenuNav({
             ))}
           </nav>
 
-          {/* ─── Desktop Luxury Dark Mega Menu Drawer (Full Screen Width) ─── */}
+          {/* ─── Desktop Luxury Mega Menu Drawer (Full Screen Width) ─── */}
           {active && (
             <div
               id={`desktop-menu-${active._id}`}
-              className="absolute left-0 right-0 w-full top-full z-50 border-b border-stone-800 bg-[#1c1a19] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] animate-fadeIn text-stone-200"
+              style={{
+                backgroundColor: 'var(--storefront-megamenu-bg, #1c1a19)',
+                color: 'var(--storefront-megamenu-text, #e7e5e4)',
+                borderColor: 'color-mix(in srgb, var(--storefront-megamenu-text, #e7e5e4) 15%, transparent)',
+              }}
+              className="absolute left-0 right-0 w-full top-full z-50 border-b shadow-[0_25px_50px_-12px_rgba(0,0,0,0.45)] animate-fadeIn transition-colors"
             >
               <MenuContents category={active} onNavigate={close} />
             </div>

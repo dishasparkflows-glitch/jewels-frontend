@@ -423,20 +423,21 @@ const Navbar = () => {
           </div>
         </div>
 
-      {/* ─── Main Header / Brand & Search Bar (#201e1b) ───────────── */}
+      {/* ─── Main Header / Brand & Search Bar ───────────── */}
       <div
         style={{
           backgroundColor: 'var(--storefront-header-bg, #201e1b)',
           color: 'var(--storefront-header-text, #ffffff)',
+          borderColor: 'color-mix(in srgb, var(--storefront-header-text, #ffffff) 10%, transparent)',
         }}
-        className="relative z-50 px-4 sm:px-6 lg:px-8 border-b border-white/5"
+        className="relative z-50 px-4 sm:px-6 lg:px-8 border-b transition-colors"
       >
         <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto flex items-center justify-between gap-3 sm:gap-6 h-14 sm:h-16 lg:h-[70px]">
           {/* Mobile hamburger */}
           <div className="order-last flex items-center lg:order-none lg:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-stone-300 hover:text-white transition-colors cursor-pointer"
+              className="p-2 opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
               aria-label="Toggle menu"
               aria-expanded={mobileMenuOpen}
             >
@@ -465,7 +466,7 @@ const Navbar = () => {
               </picture>
             ) : (
               storeSettings.companyName && (
-                <span className="font-cinzel text-base sm:text-xl lg:text-2xl font-semibold tracking-[0.18em] sm:tracking-[0.2em] text-[#f5f0eb] group-hover:text-amber-100 transition-colors uppercase">
+                <span className="font-cinzel text-base sm:text-xl lg:text-2xl font-semibold tracking-[0.18em] sm:tracking-[0.2em] opacity-95 group-hover:opacity-100 transition-opacity uppercase">
                   {storeSettings.companyName}
                 </span>
               )
@@ -602,7 +603,7 @@ const Navbar = () => {
             <button
               type="button"
               onClick={() => setMobileSearchOpen((prev) => !prev)}
-              className="p-1.5 text-stone-300 hover:text-white transition-colors md:hidden"
+              className="p-1.5 opacity-80 hover:opacity-100 transition-opacity md:hidden"
               title="Search"
               aria-label="Search"
             >
@@ -628,26 +629,34 @@ const Navbar = () => {
                   aria-label="Select currency"
                   aria-expanded={currencyDropdownOpen}
                   title="Select currency"
-                  className="inline-flex items-center gap-1.5 h-8 sm:h-9 px-2.5 sm:px-3 rounded-full border border-white/15 bg-white/5 hover:bg-white/10 text-stone-200 hover:text-white text-xs font-medium transition-colors cursor-pointer shrink-0"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 30%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 8%, transparent)',
+                  }}
+                  className="inline-flex items-center gap-1.5 h-8 sm:h-9 px-2.5 sm:px-3 rounded-full border opacity-95 hover:opacity-100 text-xs font-medium transition-all cursor-pointer shrink-0"
                 >
-                  <span className="font-semibold text-[#d2b18a]">
+                  <span
+                    style={{ color: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 75%, currentColor)' }}
+                    className="font-bold"
+                  >
                     {selectedCurrency?.symbol || '₹'}
                   </span>
                   <span className="tracking-wide">{selectedCurrency?.code || 'INR'}</span>
                   <HiOutlineChevronDown
-                    className={`w-3.5 h-3.5 text-stone-400 transition-transform duration-200 ${
-                      currencyDropdownOpen ? 'rotate-180 text-[#d2b18a]' : ''
+                    style={{ color: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 65%, currentColor)' }}
+                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                      currencyDropdownOpen ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
 
                 {currencyDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-3 w-60 bg-[#fdfbf7] border border-[#eadfc9] rounded-2xl shadow-2xl p-1.5 z-50 animate-fadeIn">
-                    <div className="absolute -top-[7px] right-4 w-3.5 h-3.5 bg-[#fdfbf7] border-t border-l border-[#eadfc9] rotate-45 rounded-tl-[2px]" />
+                  <div className="absolute right-0 top-full mt-3 w-60 bg-white border border-stone-200 rounded-2xl shadow-xl p-1.5 z-50 animate-fadeIn">
+                    <div className="absolute -top-[7px] right-4 w-3.5 h-3.5 bg-white border-t border-l border-stone-200 rotate-45 rounded-tl-[2px]" />
                     <div className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
                       Select Currency
                     </div>
-                    <div className="max-h-64 overflow-y-auto space-y-0.5">
+                    <div className="max-h-64 overflow-y-auto luxury-scrollbar space-y-0.5 pr-0.5">
                       {currencies.map((cur) => {
                         const isSelected = cur.code === selectedCurrency?.code;
                         return (
@@ -658,14 +667,25 @@ const Navbar = () => {
                               selectCurrency(cur);
                               setCurrencyDropdownOpen(false);
                             }}
+                            style={
+                              isSelected
+                                ? { backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 12%, white)' }
+                                : undefined
+                            }
                             className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer ${
                               isSelected
-                                ? 'bg-[#f3ede3] text-stone-950 font-semibold'
-                                : 'text-stone-700 hover:bg-[#f3ede3]/70 hover:text-stone-950'
+                                ? 'text-stone-950 font-semibold'
+                                : 'text-stone-700 hover:bg-stone-50 hover:text-stone-950'
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="min-w-[40px] h-7 px-2 rounded-full bg-[#eedac3]/70 text-[#785b3a] text-[11px] font-bold leading-none whitespace-nowrap flex items-center justify-center shrink-0">
+                              <span
+                                style={{
+                                  backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 12%, white)',
+                                  color: 'var(--btn-primary-bg, #8b6f4e)',
+                                }}
+                                className="min-w-[40px] h-7 px-2 rounded-full text-[11px] font-bold leading-none whitespace-nowrap flex items-center justify-center shrink-0"
+                              >
                                 {cur.symbol}
                               </span>
                               <div className="min-w-0">
@@ -678,7 +698,10 @@ const Navbar = () => {
                               </div>
                             </div>
                             {isSelected && (
-                              <HiOutlineCheck className="w-4 h-4 text-[#8b6f4e] shrink-0" />
+                              <HiOutlineCheck
+                                style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }}
+                                className="w-4 h-4 shrink-0"
+                              />
                             )}
                           </button>
                         );
@@ -698,12 +721,15 @@ const Navbar = () => {
                 onClick={() => {
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors relative"
+                className="p-1.5 sm:p-2 opacity-80 hover:opacity-100 transition-opacity relative"
                 title="My Wishlist"
               >
                 <HiOutlineHeart className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
                 {wishlistCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-[#e11d48] text-white text-[9px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center font-bold shadow-md ring-2 ring-[#201e1b] transition-transform animate-scaleIn">
+                  <span
+                    style={{ '--tw-ring-color': 'var(--storefront-header-bg, #201e1b)' }}
+                    className="absolute -top-1 -right-1 bg-[#e11d48] text-white text-[9px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center font-bold shadow-md ring-2 transition-transform animate-scaleIn"
+                  >
                     {wishlistCount}
                   </span>
                 )}
@@ -712,7 +738,7 @@ const Navbar = () => {
               <button
                 type="button"
                 onClick={() => openLoginModal(() => navigate('/wishlist'))}
-                className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors relative cursor-pointer"
+                className="p-1.5 sm:p-2 opacity-80 hover:opacity-100 transition-opacity relative cursor-pointer"
                 title="My Wishlist"
               >
                 <HiOutlineHeart className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
@@ -751,13 +777,20 @@ const Navbar = () => {
                   </button>
 
                   {userDropdownOpen && (
-                    <div className="absolute right-0 top-full mt-3 w-72 sm:w-80 max-w-[calc(100vw-2rem)] bg-[#fdfbf7] border border-[#eadfc9] rounded-2xl shadow-2xl p-3 z-50 animate-fadeIn">
+                    <div className="absolute right-0 top-full mt-3 w-72 sm:w-80 max-w-[calc(100vw-2rem)] bg-white border border-stone-200 rounded-2xl shadow-xl p-3 z-50 animate-fadeIn">
                       {/* Speech bubble pointer arrow */}
-                      <div className="absolute -top-[7px] right-3.5 w-3.5 h-3.5 bg-[#fdfbf7] border-t border-l border-[#eadfc9] rotate-45 rounded-tl-[2px]" />
+                      <div className="absolute -top-[7px] right-3.5 w-3.5 h-3.5 bg-white border-t border-l border-stone-200 rotate-45 rounded-tl-[2px]" />
 
                       {/* User Header */}
-                      <div className="flex items-center gap-3 p-1 pb-3 border-b border-[#f0eae1] select-none">
-                        <div className="w-11 h-11 rounded-full bg-[#eedac3] border border-[#d6be9f] flex items-center justify-center text-[#785b3a] font-serif text-lg font-bold shrink-0 shadow-2xs">
+                      <div className="flex items-center gap-3 p-1 pb-3 border-b border-stone-100 select-none">
+                        <div
+                          style={{
+                            backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 12%, white)',
+                            borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 28%, white)',
+                            color: 'var(--btn-primary-bg, #8b6f4e)',
+                          }}
+                          className="w-11 h-11 rounded-full border flex items-center justify-center font-serif text-lg font-bold shrink-0 shadow-2xs"
+                        >
                           {user.profile?.firstName?.[0]?.toUpperCase() || user.auth?.email?.[0]?.toUpperCase() || 'U'}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -778,10 +811,10 @@ const Navbar = () => {
                             setUserDropdownOpen(false);
                             setMobileMenuOpen(false);
                           }}
-                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[#f3ede3]/80 text-stone-700 hover:text-stone-950 transition-colors group cursor-pointer"
+                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-stone-50 text-stone-700 hover:text-stone-950 transition-colors group cursor-pointer"
                         >
                           <div className="flex items-center gap-3">
-                            <HiOutlineUser className="w-[18px] h-[18px] text-stone-600 group-hover:text-[#8b6f4e] transition-colors stroke-[1.8]" />
+                            <HiOutlineUser className="w-[18px] h-[18px] text-stone-600 group-hover:text-[var(--btn-primary-bg,#8b6f4e)] transition-colors stroke-[1.8]" />
                             <span className="text-[13px] font-medium">My Account & Orders</span>
                           </div>
                           <HiOutlineChevronRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-stone-700 group-hover:translate-x-0.5 transition-all" />
@@ -793,10 +826,10 @@ const Navbar = () => {
                             setUserDropdownOpen(false);
                             setMobileMenuOpen(false);
                           }}
-                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[#f3ede3]/80 text-stone-700 hover:text-stone-950 transition-colors group cursor-pointer"
+                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-stone-50 text-stone-700 hover:text-stone-950 transition-colors group cursor-pointer"
                         >
                           <div className="flex items-center gap-3">
-                            <HiOutlineCube className="w-[18px] h-[18px] text-stone-600 group-hover:text-[#8b6f4e] transition-colors stroke-[1.8]" />
+                            <HiOutlineCube className="w-[18px] h-[18px] text-stone-600 group-hover:text-[var(--btn-primary-bg,#8b6f4e)] transition-colors stroke-[1.8]" />
                             <span className="text-[13px] font-medium">Orders</span>
                           </div>
                           <HiOutlineChevronRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-stone-700 group-hover:translate-x-0.5 transition-all" />
@@ -808,10 +841,10 @@ const Navbar = () => {
                             setUserDropdownOpen(false);
                             setMobileMenuOpen(false);
                           }}
-                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-[#f3ede3]/80 text-stone-700 hover:text-stone-950 transition-colors group cursor-pointer"
+                          className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-stone-50 text-stone-700 hover:text-stone-950 transition-colors group cursor-pointer"
                         >
                           <div className="flex items-center gap-3">
-                            <HiOutlineLocationMarker className="w-[18px] h-[18px] text-stone-600 group-hover:text-[#8b6f4e] transition-colors stroke-[1.8]" />
+                            <HiOutlineLocationMarker className="w-[18px] h-[18px] text-stone-600 group-hover:text-[var(--btn-primary-bg,#8b6f4e)] transition-colors stroke-[1.8]" />
                             <span className="text-[13px] font-medium">Addresses</span>
                           </div>
                           <HiOutlineChevronRight className="w-3.5 h-3.5 text-stone-400 group-hover:text-stone-700 group-hover:translate-x-0.5 transition-all" />
@@ -819,7 +852,7 @@ const Navbar = () => {
                       </div>
 
                       {/* Sign Out Button */}
-                      <div className="pt-1 border-t border-[#f0eae1]">
+                      <div className="pt-1 border-t border-stone-100">
                         <button
                           type="button"
                           onClick={() => {
@@ -840,7 +873,7 @@ const Navbar = () => {
                 <button
                   type="button"
                   onClick={() => openLoginModal()}
-                  className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors block cursor-pointer"
+                  className="p-1.5 sm:p-2 opacity-80 hover:opacity-100 transition-opacity block cursor-pointer"
                   title="Sign In"
                 >
                   <HiOutlineUser className="w-5 h-5" />
@@ -852,7 +885,7 @@ const Navbar = () => {
             <button
               type="button"
               onClick={() => setCartDrawerOpen(true)}
-              className="p-1.5 sm:p-2 text-stone-300 hover:text-white transition-colors relative"
+              className="p-1.5 sm:p-2 opacity-80 hover:opacity-100 transition-opacity relative"
               title="Shopping Bag"
               aria-label={`Open shopping bag, ${totalItems || 0} items`}
               aria-expanded={cartDrawerOpen}
@@ -889,8 +922,12 @@ const Navbar = () => {
       {/* ─── Mobile Instant Search Bar ──────────────────────────────── */}
       {mobileSearchOpen && (
         <div
-          style={{ backgroundColor: 'var(--storefront-header-bg, #201e1b)' }}
-          className="md:hidden border-b border-stone-800 px-4 py-3 animate-fadeIn"
+          style={{
+            backgroundColor: 'var(--storefront-header-bg, #201e1b)',
+            color: 'var(--storefront-header-text, #ffffff)',
+            borderColor: 'color-mix(in srgb, var(--storefront-header-text, #ffffff) 14%, transparent)',
+          }}
+          className="md:hidden border-b px-4 py-3 animate-fadeIn transition-colors"
         >
           <form
             onSubmit={handleSearch}
@@ -973,8 +1010,12 @@ const Navbar = () => {
       {/* ─── Mobile Drawer ───────────────────────────────────────── */}
       {mobileMenuOpen && (
         <div
-          style={{ backgroundColor: 'var(--storefront-header-bg, #201e1b)' }}
-          className="lg:hidden border-b border-stone-800 px-4 sm:px-6 py-5 space-y-5 animate-slide-up"
+          style={{
+            backgroundColor: 'var(--storefront-nav-bg, var(--storefront-header-bg, #201e1b))',
+            color: 'var(--storefront-nav-text, var(--storefront-header-text, #ffffff))',
+            borderColor: 'color-mix(in srgb, var(--storefront-nav-text, #ffffff) 14%, transparent)',
+          }}
+          className="lg:hidden border-b px-4 sm:px-6 py-5 space-y-5 animate-slide-up transition-colors"
         >
           {/* Mobile Search */}
           <div className="relative w-full">
@@ -1058,7 +1099,11 @@ const Navbar = () => {
                   setMobileMenuOpen(false);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className="text-xs uppercase font-medium tracking-[0.16em] text-amber-200 hover:text-white py-1.5 border-b border-white/5 flex items-center justify-between"
+                style={{
+                  color: 'var(--storefront-nav-accent, #fde68a)',
+                  borderColor: 'color-mix(in srgb, currentColor 12%, transparent)',
+                }}
+                className="text-xs uppercase font-medium tracking-[0.16em] opacity-90 hover:opacity-100 py-1.5 border-b flex items-center justify-between transition-opacity"
               >
                 <span>My Wishlist</span>
                 {wishlistCount > 0 && (
@@ -1074,7 +1119,11 @@ const Navbar = () => {
                   setMobileMenuOpen(false);
                   openLoginModal(() => navigate('/wishlist'));
                 }}
-                className="text-xs uppercase font-medium tracking-[0.16em] text-amber-200 hover:text-white py-1.5 border-b border-white/5 flex items-center justify-between w-full cursor-pointer text-left"
+                style={{
+                  color: 'var(--storefront-nav-accent, #fde68a)',
+                  borderColor: 'color-mix(in srgb, currentColor 12%, transparent)',
+                }}
+                className="text-xs uppercase font-medium tracking-[0.16em] opacity-90 hover:opacity-100 py-1.5 border-b flex items-center justify-between w-full cursor-pointer text-left transition-opacity"
               >
                 <span>My Wishlist</span>
               </button>
@@ -1082,12 +1131,20 @@ const Navbar = () => {
             <Link
               to="/blog"
               onClick={() => setMobileMenuOpen(false)}
-              className="text-xs uppercase font-medium tracking-[0.16em] text-stone-200 hover:text-white py-1.5 border-b border-white/5 flex items-center justify-between"
+              style={{ borderColor: 'color-mix(in srgb, currentColor 12%, transparent)' }}
+              className="text-xs uppercase font-medium tracking-[0.16em] opacity-85 hover:opacity-100 py-1.5 border-b flex items-center justify-between transition-opacity"
             >
               <span>The Journal / Blog</span>
             </Link>
             <div className="grid grid-cols-2 gap-3 pt-1">
-              <Link to="/cart" onClick={() => setMobileMenuOpen(false)} className="rounded-lg border border-white/15 px-3 py-3 text-center text-xs uppercase tracking-wider text-stone-200 hover:bg-white/5">Shopping Bag ({totalItems || 0})</Link>
+              <Link
+                to="/cart"
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ borderColor: 'color-mix(in srgb, currentColor 18%, transparent)' }}
+                className="rounded-lg border px-3 py-3 text-center text-xs uppercase tracking-wider opacity-90 hover:opacity-100 transition-opacity"
+              >
+                Shopping Bag ({totalItems || 0})
+              </Link>
               {!user && (
                 <button
                   type="button"
@@ -1095,7 +1152,8 @@ const Navbar = () => {
                     setMobileMenuOpen(false);
                     openLoginModal();
                   }}
-                  className="rounded-lg border border-white/15 px-3 py-3 text-center text-xs uppercase tracking-wider text-stone-200 hover:bg-white/5 cursor-pointer"
+                  style={{ borderColor: 'color-mix(in srgb, currentColor 18%, transparent)' }}
+                  className="rounded-lg border px-3 py-3 text-center text-xs uppercase tracking-wider opacity-90 hover:opacity-100 cursor-pointer transition-opacity"
                 >
                   Sign In
                 </button>

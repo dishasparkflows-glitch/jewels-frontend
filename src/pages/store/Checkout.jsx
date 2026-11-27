@@ -135,33 +135,6 @@ export default function Checkout() {
   const [devOtp, setDevOtp] = useState('');
   const [isSendingOtp, setIsSendingOtp] = useState(false);
 
-  // Scroll detection for order summary items
-  const itemsListRef = useRef(null);
-  const [canScrollMore, setCanScrollMore] = useState(false);
-
-  const checkScroll = useCallback(() => {
-    const el = itemsListRef.current;
-    if (!el) return;
-    const hasMore = el.scrollHeight - el.scrollTop - el.clientHeight > 20;
-    setCanScrollMore(hasMore);
-  }, []);
-
-  useEffect(() => {
-    checkScroll();
-    const timer = setTimeout(checkScroll, 300);
-    window.addEventListener('resize', checkScroll);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', checkScroll);
-    };
-  }, [cart, checkScroll]);
-
-  const scrollToMore = () => {
-    if (itemsListRef.current) {
-      itemsListRef.current.scrollBy({ top: 180, behavior: 'smooth' });
-    }
-  };
-
   // Scroll detection for saved delivery addresses
   const addressesListRef = useRef(null);
   const [canScrollAddresses, setCanScrollAddresses] = useState(false);
@@ -533,7 +506,9 @@ export default function Checkout() {
             contact: `${form.countryCode || '+91'}${form.phone}`.replace(/[^0-9]/g, ''),
           },
           theme: {
-            color: '#8c6536',
+            color:
+              getComputedStyle(document.documentElement).getPropertyValue('--btn-primary-bg').trim() ||
+              '#8c6536',
           },
           handler: async (resp) => {
             const verifyToast = toast.loading('Confirming payment...');
@@ -670,6 +645,14 @@ export default function Checkout() {
     );
   }
 
+  const sectionIconStyle = {
+    backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 10%, #ffffff)',
+    color: 'var(--btn-primary-bg, #8c6536)',
+  };
+
+  const fieldInputClass =
+    'h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-base sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[var(--btn-primary-bg,#8c6536)] focus:ring-1 focus:ring-[var(--btn-primary-bg,#8c6536)]';
+
   return (
     <main className="min-h-screen bg-[#faf8f5] text-stone-900 font-sans">
       <SEO title="Secure Luxury Checkout | Neirah Fine Jewellery" noindex={true} />
@@ -680,7 +663,7 @@ export default function Checkout() {
             {/* 1. Contact Information */}
             <section className="space-y-4">
               <div className="flex items-center gap-3.5">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f8f3ed] text-[#8c6536]">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={sectionIconStyle}>
                   <HiOutlineUser className="h-[18px] w-[18px]" />
                 </span>
                 <div>
@@ -697,7 +680,7 @@ export default function Checkout() {
                   value={form.email}
                   onChange={updateField('email')}
                   required
-                  className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-base sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                  className={fieldInputClass}
                 />
               </div>
             </section>
@@ -706,12 +689,28 @@ export default function Checkout() {
             <section className="space-y-4 border-t-[1.5px] border-dashed border-stone-400 pt-7">
               <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
                 <div className="flex items-center gap-3.5">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f8f3ed] text-[#8c6536]">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={sectionIconStyle}>
                     <HiOutlineLocationMarker className="h-[18px] w-[18px]" />
                   </span>
                   <h2 className="text-base font-bold text-stone-900">Delivery</h2>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {(addresses.length === 0 || isAddingNewAddress) && (
+                    <button
+                      type="button"
+                      onClick={handleUseLocation}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold border px-3 py-1.5 rounded-full transition hover:opacity-85 cursor-pointer shadow-2xs shrink-0"
+                      style={{
+                        color: 'var(--btn-primary-bg, #8c6536)',
+                        backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 8%, #ffffff)',
+                        borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 28%, #ffffff)',
+                      }}
+                    >
+                      <HiOutlineLocationMarker className="h-3.5 w-3.5 shrink-0" />
+                      <span className="hidden sm:inline">Use Current Location</span>
+                      <span className="sm:hidden">Current Location</span>
+                    </button>
+                  )}
                   {addresses.length > 0 && (
                     <button
                       type="button"
@@ -827,7 +826,14 @@ export default function Checkout() {
                       className="absolute -bottom-1 left-0 right-0 h-9 bg-gradient-to-t from-white via-white/85 to-transparent flex items-end justify-center pb-0.5 cursor-pointer z-10 select-none group"
                       title="Scroll for more saved addresses"
                     >
-                      <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full bg-[#f8f4ee]/95 border border-[#e6dacb] text-[10px] font-semibold text-[#8c6536] shadow-xs group-hover:bg-[#f2e8dc] transition-all">
+                      <span
+                        className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full border text-[10px] font-semibold shadow-xs transition-all group-hover:opacity-90"
+                        style={{
+                          backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 8%, #ffffff)',
+                          borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 25%, #ffffff)',
+                          color: 'var(--btn-primary-bg, #8c6536)',
+                        }}
+                      >
                         <span>Scroll for more addresses ({addresses.length} saved)</span>
                         <HiChevronDown className="w-3 h-3 animate-bounce" />
                       </span>
@@ -836,26 +842,17 @@ export default function Checkout() {
                 </div>
               ) : (
                 <div className="space-y-3 pt-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+                  <div className="pb-1">
                     <span className="text-xs font-bold text-stone-700 uppercase tracking-wider whitespace-nowrap">
                       New Delivery Address
                     </span>
-                    <button
-                      type="button"
-                      onClick={handleUseLocation}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#8c6536] hover:text-[#75522b] bg-[#fbf5ee] hover:bg-[#f5ecdf] border border-[#ebd9c8] px-2.5 sm:px-3 py-1.5 rounded-lg transition cursor-pointer shadow-2xs shrink-0"
-                    >
-                      <HiOutlineLocationMarker className="h-3.5 w-3.5 text-[#8c6536] shrink-0" />
-                      <span className="hidden sm:inline">Use Current Location</span>
-                      <span className="sm:hidden">Current Location</span>
-                    </button>
                   </div>
                   {/* Row 1: First Name & Last Name */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="relative">
                       <HiOutlineUser className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                       <input
-                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-base sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                        className={fieldInputClass}
                         autoComplete="given-name"
                         placeholder="First Name *"
                         value={form.firstName}
@@ -866,7 +863,7 @@ export default function Checkout() {
                     <div className="relative">
                       <HiOutlineUser className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                       <input
-                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-base sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                        className={fieldInputClass}
                         autoComplete="family-name"
                         placeholder="Last Name *"
                         value={form.lastName}
@@ -880,7 +877,7 @@ export default function Checkout() {
                   <div className="relative">
                     <HiOutlineHome className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                     <input
-                      className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-base sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                      className={fieldInputClass}
                       autoComplete="address-line1"
                       placeholder="Address (House no, Street, Landmark) *"
                       value={form.addressLine}
@@ -907,7 +904,7 @@ export default function Checkout() {
                     <div className="relative">
                       <HiOutlineOfficeBuilding className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                       <input
-                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-base sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                        className={fieldInputClass}
                         autoComplete="address-level2"
                         placeholder="City *"
                         value={form.city}
@@ -919,7 +916,7 @@ export default function Checkout() {
                     <div className="relative">
                       <HiOutlineLocationMarker className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
                       <input
-                        className="h-11 w-full rounded-xl border border-stone-200 bg-white pl-10 pr-3.5 text-base sm:text-sm text-stone-900 outline-none transition placeholder:text-stone-400 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]"
+                        className={fieldInputClass}
                         autoComplete="postal-code"
                         inputMode="numeric"
                         placeholder="PIN Code *"
@@ -982,7 +979,7 @@ export default function Checkout() {
             {/* 3. Payment Method */}
             <section className="space-y-4 border-t-[1.5px] border-dashed border-stone-400 pt-7">
               <div className="flex items-center gap-3.5">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f8f3ed] text-[#8c6536]">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={sectionIconStyle}>
                   <HiOutlineCreditCard className="h-[18px] w-[18px]" />
                 </span>
                 <div>
@@ -1131,7 +1128,7 @@ export default function Checkout() {
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-stone-100">
               <div className="flex items-center gap-2.5">
-                <span className="text-[#8c6536]">
+                <span style={{ color: 'var(--btn-primary-bg, #8c6536)' }}>
                   <HiOutlineShoppingBag className="h-5 w-5" />
                 </span>
                 <h2 className="text-base font-bold text-stone-900">Order Summary</h2>
@@ -1142,10 +1139,8 @@ export default function Checkout() {
             </div>
 
             {/* Items List */}
-            <div className="relative">
+            <div>
               <div
-                ref={itemsListRef}
-                onScroll={checkScroll}
                 className="space-y-4 max-h-[420px] overflow-y-auto luxury-scrollbar pr-2 pb-1"
               >
                 {cart.map((item, index) => {
@@ -1178,7 +1173,7 @@ export default function Checkout() {
                         <div className="flex items-start justify-between gap-2">
                           <Link
                             to={productLink}
-                            className="line-clamp-2 text-xs font-semibold uppercase leading-snug text-stone-900 hover:text-[#8c6536] transition-colors block cursor-pointer"
+                            className="line-clamp-2 text-xs font-semibold uppercase leading-snug text-stone-900 hover:text-[var(--btn-primary-bg,#8c6536)] transition-colors block cursor-pointer"
                             title={`View ${displayName}`}
                           >
                             {displayName}
@@ -1218,20 +1213,6 @@ export default function Checkout() {
                 );
               })}
             </div>
-
-            {/* Scroll Indicator Cue: Lets user know there are more products/details below */}
-            {canScrollMore && (
-              <div
-                onClick={scrollToMore}
-                className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-white via-white/85 to-transparent flex items-end justify-center pb-0.5 cursor-pointer z-10 select-none group"
-                title="Scroll for more product details"
-              >
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#f8f4ee]/95 border border-[#e6dacb] text-[10px] font-semibold text-[#8c6536] shadow-xs group-hover:bg-[#f2e8dc] transition-all">
-                  <span>Scroll for more details</span>
-                  <HiChevronDown className="w-3 h-3 animate-bounce" />
-                </span>
-              </div>
-            )}
           </div>
 
             {/* Coupon Code */}
@@ -1283,7 +1264,7 @@ export default function Checkout() {
               ) : (
                 <div>
                   <label className="mb-2 flex items-center gap-1.5 text-xs font-bold text-stone-900">
-                    <HiOutlineTag className="h-4 w-4 text-[#8c6536]" />
+                    <HiOutlineTag style={{ color: 'var(--btn-primary-bg, #8c6536)' }} className="h-4 w-4" />
                     <span>Apply Coupon Code</span>
                   </label>
                   <div className="flex items-center gap-2">
@@ -1292,7 +1273,7 @@ export default function Checkout() {
                       className={`h-10 min-w-0 flex-1 rounded-xl border bg-white px-3 sm:px-3.5 text-base sm:text-xs text-stone-800 placeholder:text-stone-400 outline-none transition ${
                         couponError
                           ? 'border-red-400 focus:border-red-500 bg-red-50/20'
-                          : 'border-stone-200 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]'
+                          : 'border-stone-200 focus:border-[var(--btn-primary-bg,#8c6536)]'
                       }`}
                       value={couponCode}
                       onChange={(event) => {
@@ -1312,7 +1293,12 @@ export default function Checkout() {
                       type="button"
                       onClick={handleApplyCoupon}
                       disabled={couponLoading || !couponCode.trim()}
-                      className="h-10 px-4 sm:px-5 rounded-xl bg-[#f2e6db] hover:bg-[#e8dacb] active:scale-[0.98] text-xs font-bold text-stone-900 transition disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center shrink-0 shadow-2xs"
+                      style={{
+                        backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 14%, white)',
+                        color: 'var(--btn-primary-bg, #8c6536)',
+                        borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 28%, white)',
+                      }}
+                      className="h-10 px-4 sm:px-5 rounded-xl border hover:opacity-90 active:scale-[0.98] text-xs font-bold transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center shrink-0 shadow-2xs"
                     >
                       {couponLoading ? 'Verifying...' : 'Apply'}
                     </button>

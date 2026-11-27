@@ -342,9 +342,17 @@ export default function CountryCodeSelect({
         aria-selected={isSelected}
         onClick={() => handleSelect(country)}
         onMouseEnter={() => setHighlightedIndex(index)}
+        style={
+          isSelected
+            ? {
+                backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #92704e) 12%, white)',
+                color: 'var(--btn-primary-bg, #92704e)',
+              }
+            : undefined
+        }
         className={`flex w-full items-center justify-between gap-2.5 px-3.5 py-2 text-left transition cursor-pointer ${
           isSelected
-            ? 'bg-[#f7efe6] text-[#92704e] font-semibold'
+            ? 'font-semibold'
             : isHighlighted
             ? 'bg-stone-100/90 text-stone-900 font-medium'
             : 'text-stone-700 hover:bg-stone-50'
@@ -357,7 +365,10 @@ export default function CountryCodeSelect({
         <div className="flex shrink-0 items-center gap-2 font-mono text-xs text-stone-500">
           <span>{country.dialCode}</span>
           {isSelected && (
-            <HiCheck className="h-4 w-4 text-[#92704e]" />
+            <HiCheck
+              style={{ color: 'var(--btn-primary-bg, #92704e)' }}
+              className="h-4 w-4"
+            />
           )}
         </div>
       </button>
@@ -387,8 +398,9 @@ export default function CountryCodeSelect({
           {currentCountry.dialCode}
         </span>
         <HiChevronDown
+          style={isOpen ? { color: 'var(--btn-primary-bg, #92704e)' } : undefined}
           className={`h-3 w-3 text-stone-400 transition-transform duration-200 ${
-            isOpen ? 'rotate-180 text-[#92704e]' : ''
+            isOpen ? 'rotate-180' : ''
           }`}
         />
       </button>
@@ -414,7 +426,7 @@ export default function CountryCodeSelect({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search country or code..."
-                className="h-9 w-full rounded-lg border border-stone-200 bg-white pl-9 pr-8 text-xs sm:text-sm text-stone-800 outline-none placeholder:text-stone-400 transition focus:border-[#92704e] focus:ring-1 focus:ring-[#92704e]/20"
+                className="h-9 w-full rounded-lg border border-stone-200 bg-white pl-9 pr-8 text-xs sm:text-sm text-stone-800 outline-none placeholder:text-stone-400 transition focus:border-[var(--btn-primary-bg,#92704e)]"
               />
               {searchQuery && (
                 <button

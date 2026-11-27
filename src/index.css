@@ -64,7 +64,7 @@
   /* Custom Luxury Scrollbar for Dropdowns, Menus and Lists */
   .luxury-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: #bfae9b #f7f3ec;
+    scrollbar-color: color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 55%, white) color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 8%, white);
   }
 
   .luxury-scrollbar::-webkit-scrollbar {
@@ -72,17 +72,17 @@
   }
 
   .luxury-scrollbar::-webkit-scrollbar-track {
-    background: #f7f3ec;
+    background: color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 8%, white);
     border-radius: 9999px;
   }
 
   .luxury-scrollbar::-webkit-scrollbar-thumb {
-    background: #bfae9b;
+    background: color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 55%, white);
     border-radius: 9999px;
   }
 
   .luxury-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #8b6f4e;
+    background: var(--btn-primary-bg, #8b6f4e);
   }
 
   /* Hide scrollbar utility */

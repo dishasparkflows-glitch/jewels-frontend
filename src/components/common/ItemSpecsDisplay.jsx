@@ -27,7 +27,14 @@ export default function ItemSpecsDisplay({ specs, className = '' }) {
       {/* Diamond Type Pill Badge */}
       {diamondType && (
         <div className="mt-1.5">
-          <span className="inline-block px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold tracking-wider uppercase bg-[#faf5ee] text-[#8b6f4e] border border-[#e8d9c2]">
+          <span
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 10%, white)',
+              color: 'var(--btn-primary-bg, #8b6f4e)',
+              borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 25%, white)',
+            }}
+            className="inline-block px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold tracking-wider uppercase border"
+          >
             {diamondType}
           </span>
         </div>

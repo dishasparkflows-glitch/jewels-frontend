@@ -31,9 +31,9 @@ export default function CartDrawer({ open, onClose }) {
         {/* Subtle Luxury Floral Watermark at Bottom Right */}
         <div className="pointer-events-none absolute -bottom-10 -right-10 opacity-[0.03] select-none overflow-hidden z-0">
           <svg width="280" height="280" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M100 20C80 60 40 80 0 100C40 120 80 140 100 180C120 140 160 120 200 100C160 80 120 60 100 20Z" fill="#9c774e" />
-            <path d="M100 45C85 75 55 90 25 100C55 110 85 125 100 155C115 125 145 110 175 100C145 90 115 75 100 45Z" fill="#9c774e" />
-            <circle cx="100" cy="100" r="14" fill="#9c774e" />
+            <path d="M100 20C80 60 40 80 0 100C40 120 80 140 100 180C120 140 160 120 200 100C160 80 120 60 100 20Z" style={{ fill: 'var(--btn-primary-bg, #9c774e)' }} />
+            <path d="M100 45C85 75 55 90 25 100C55 110 85 125 100 155C115 125 145 110 175 100C145 90 115 75 100 45Z" style={{ fill: 'var(--btn-primary-bg, #9c774e)' }} />
+            <circle cx="100" cy="100" r="14" style={{ fill: 'var(--btn-primary-bg, #9c774e)' }} />
           </svg>
         </div>
 
