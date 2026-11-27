@@ -364,10 +364,12 @@ export default function FilterSidebar({
               // Range Filter (Price Range)
               if (filter.type === 'range' || filter.key === 'price') {
                 const hasPriceActive = !!(minPrice || maxPrice);
+                const rawTitle = String(filter.title || '').trim();
+                const rangeTitle = /price|budget|cost/i.test(rawTitle) ? rawTitle : 'Price Range';
                 return (
                   <FilterGroup
                     key={filter.id || filter.key}
-                    title={filter.title || 'Price Range'}
+                    title={rangeTitle}
                     defaultOpen={hasPriceActive}
                   >
                     <form onSubmit={handlePriceSubmit} className="space-y-3 pt-1">
@@ -424,8 +426,8 @@ export default function FilterSidebar({
 
               // Checkbox Filter Groups (Including Gemstones & Gemstone Shapes)
               const activeVal = params.get(filter.key) || '';
-              const isGroupActive =
-                filter.key === 'category' ? !!currentCategoryParam : !!activeVal;
+              const isCategoryGroup = filter.key === 'category' || filter.id === 'jewellery-types';
+              const isGroupActive = isCategoryGroup ? true : !!activeVal;
 
               return (
                 <FilterGroup

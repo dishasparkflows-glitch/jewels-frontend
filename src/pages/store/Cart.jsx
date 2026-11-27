@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import SEO from '../../components/common/SEO';
+import toast from 'react-hot-toast';
 import { useCart } from '../../contexts/CartContext';
+import { checkoutAPI } from '../../api/services';
 import {
   HiOutlineTrash,
   HiOutlineArrowNarrowLeft,
@@ -9,12 +11,20 @@ import {
   HiChevronDown,
   HiOutlineInformationCircle,
   HiOutlineCheckCircle,
+  HiOutlineTag,
+  HiOutlineCheck,
+  HiOutlineExclamationCircle,
+  HiX,
+  HiSparkles,
 } from 'react-icons/hi';
 import { getPrimaryProductImage, isOrnateImage } from '../../utils/productImages';
 import { getItemSpecs } from '../../utils/productSpecs';
 
 import EmptyCartView from '../../components/store/EmptyCartView';
 import { formatPrice } from '../../utils/currency';
+
+const unwrapResponse = (response) => response?.data?.data ?? response?.data;
+const COUPON_STORAGE_KEY = 'neirah_applied_coupon';
 
 const formatCategoryName = (cat) => {
   if (!cat) return '';
@@ -35,9 +45,22 @@ const formatCategoryName = (cat) => {
 const Cart = () => {
   const { cart, updateQuantity, removeFromCart, subtotal, shipping, tax, total } = useCart();
   const navigate = useNavigate();
-  const [promoCode, setPromoCode] = useState('');
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [promoMessage, setPromoMessage] = useState({ text: '', type: '' });
+  const [couponCode, setCouponCode] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(COUPON_STORAGE_KEY);
+      if (saved) return JSON.parse(saved)?.coupon?.code || '';
+    } catch {}
+    return '';
+  });
+  const [appliedCoupon, setAppliedCoupon] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(COUPON_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState('');
 
   const itemsListRef = useRef(null);
   const [canScroll, setCanScroll] = useState(false);
@@ -53,23 +76,72 @@ const Cart = () => {
     checkScroll();
   }, [cart]);
 
-  const applyPromo = (e) => {
-    e.preventDefault();
-    const cleanCode = promoCode.trim().toUpperCase();
-    if (!cleanCode) {
-      setPromoMessage({ text: 'Please enter a privilege code', type: 'error' });
+  const handleApplyCoupon = async (event) => {
+    if (event?.preventDefault) event.preventDefault();
+    const code = couponCode.trim();
+    if (!code) {
+      setCouponError('Please enter a coupon code.');
+      toast.error('Enter a coupon code first.');
       return;
     }
-    if (cleanCode === 'JEWELS10' || cleanCode === 'WELCOME10') {
-      setDiscountPercent(10);
-      setPromoMessage({ text: '10% VIP Privilege discount applied!', type: 'success' });
-    } else {
-      setDiscountPercent(0);
-      setPromoMessage({ text: 'Invalid privilege code', type: 'error' });
+
+    setCouponError('');
+    setCouponLoading(true);
+    try {
+      const data = unwrapResponse(await checkoutAPI.validateCoupon(code, subtotal));
+      setAppliedCoupon(data);
+      setCouponCode(data?.coupon?.code || code.toUpperCase());
+      setCouponError('');
+      try {
+        sessionStorage.setItem(COUPON_STORAGE_KEY, JSON.stringify(data));
+      } catch {}
+      toast.success('Coupon applied successfully.');
+    } catch (error) {
+      setAppliedCoupon(null);
+      try {
+        sessionStorage.removeItem(COUPON_STORAGE_KEY);
+      } catch {}
+      const errMsg = error.response?.data?.message || 'Invalid coupon code';
+      setCouponError(errMsg);
+      toast.error(errMsg);
+    } finally {
+      setCouponLoading(false);
     }
   };
 
-  const discountAmount = Math.round((subtotal * discountPercent) / 100);
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError('');
+    try {
+      sessionStorage.removeItem(COUPON_STORAGE_KEY);
+    } catch {}
+    toast.success('Coupon removed');
+  };
+
+  const discountAmount = useMemo(() => {
+    if (!appliedCoupon) return 0;
+    const type = appliedCoupon.discount?.type || 'Percentage';
+    const val = Number(appliedCoupon.discount?.value || 0);
+    if (type === 'Percentage') {
+      return Math.round((subtotal * val) / 100);
+    }
+    return Math.min(val, subtotal);
+  }, [appliedCoupon, subtotal]);
+
+  // If subtotal drops below minimum required order for the applied coupon, auto-remove
+  useEffect(() => {
+    if (appliedCoupon && appliedCoupon.discount?.minimumOrderAmount) {
+      if (subtotal < appliedCoupon.discount.minimumOrderAmount) {
+        setAppliedCoupon(null);
+        try {
+          sessionStorage.removeItem(COUPON_STORAGE_KEY);
+        } catch {}
+        toast.error(`Coupon removed: minimum order of ₹${appliedCoupon.discount.minimumOrderAmount} required`);
+      }
+    }
+  }, [subtotal, appliedCoupon]);
+
   const finalTotal = Math.max(0, total - discountAmount);
 
   if (cart.length === 0) {
@@ -314,13 +386,29 @@ const Cart = () => {
               <span className="text-[#2c2722] font-medium">{formatPrice(subtotal)}</span>
             </div>
             <div className="flex justify-between text-stone-500">
+              <span>Insured Courier Shipping</span>
+              <span className="text-emerald-700 font-medium">Complimentary</span>
+            </div>
+            <div className="flex justify-between text-stone-500">
               <span>Estimated Sales Tax</span>
               <span className="text-[#2c2722] font-medium">{formatPrice(tax)}</span>
             </div>
-            {discountPercent > 0 && (
-              <div className="flex justify-between text-emerald-700">
-                <span>VIP Privilege ({discountPercent}%)</span>
-                <span>-${discountAmount.toLocaleString()}</span>
+            {appliedCoupon && (
+              <div className="flex justify-between text-emerald-700 font-medium text-xs sm:text-sm">
+                <span className="flex items-center gap-1.5 flex-wrap">
+                  <HiOutlineTag className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Coupon Savings ({appliedCoupon.coupon?.code || couponCode})</span>
+                  {appliedCoupon.discount?.type === 'Percentage' && Number(appliedCoupon.discount?.value) > 0 ? (
+                    <span className="text-[10.5px] font-semibold text-emerald-800 bg-emerald-100/70 px-1.5 py-0.5 rounded border border-emerald-200">
+                      {appliedCoupon.discount.value}% OFF
+                    </span>
+                  ) : appliedCoupon.discount?.type === 'Fixed' && Number(appliedCoupon.discount?.value) > 0 ? (
+                    <span className="text-[10.5px] font-semibold text-emerald-800 bg-emerald-100/70 px-1.5 py-0.5 rounded border border-emerald-200">
+                      ₹{Number(appliedCoupon.discount.value).toLocaleString('en-IN')} OFF
+                    </span>
+                  ) : null}
+                </span>
+                <span className="font-bold text-emerald-700">−{formatPrice(discountAmount)}</span>
               </div>
             )}
             <div className="border-t border-stone-200 pt-3 flex justify-between items-baseline text-base font-bold text-[#2c2722]">
@@ -331,55 +419,90 @@ const Cart = () => {
             </div>
           </div>
 
-          {/* Promo Code Form */}
-          <form onSubmit={applyPromo} className="space-y-2 pt-2">
-            <label className="block text-xs uppercase tracking-wider font-semibold text-stone-500">
-              Privilege / Promotional Code
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={promoCode}
-                onChange={(e) => {
-                  setPromoCode(e.target.value);
-                  if (promoMessage.text) setPromoMessage({ text: '', type: '' });
-                }}
-                placeholder="Try 'WELCOME10'"
-                className={`min-w-0 bg-white border text-stone-800 text-xs rounded-xl px-3 py-2.5 flex-1 focus:outline-none uppercase tracking-wider transition-colors ${
-                  promoMessage.type === 'error'
-                    ? 'border-red-300 focus:border-red-500'
-                    : promoMessage.type === 'success'
-                    ? 'border-emerald-300 focus:border-emerald-500'
-                    : 'border-stone-200 focus:border-[#9b7951]'
-                }`}
-              />
-              <button
-                type="submit"
-                style={{
-                  backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 10%, #ffffff)',
-                  borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8c6536) 28%, #ffffff)',
-                  color: 'var(--btn-primary-bg, #8c6536)',
-                }}
-                className="px-4 py-2.5 border rounded-xl text-xs font-semibold uppercase tracking-wider hover:opacity-85 transition-all cursor-pointer"
-              >
-                Apply
-              </button>
-            </div>
-            {promoMessage.text && (
-              <p
-                className={`text-xs flex items-center gap-1.5 pt-0.5 ${
-                  promoMessage.type === 'error' ? 'text-red-600' : 'text-emerald-700'
-                }`}
-              >
-                {promoMessage.type === 'error' ? (
-                  <HiOutlineInformationCircle className="w-3.5 h-3.5 shrink-0" />
-                ) : (
-                  <HiOutlineCheckCircle className="w-3.5 h-3.5 shrink-0" />
+          {/* Coupon Code Section - Matching Checkout */}
+          <div className="border-t border-stone-150 pt-4">
+            {appliedCoupon ? (
+              <div className="rounded-xl border border-emerald-200/90 bg-gradient-to-br from-[#f2f9f4] via-[#f7fbf8] to-[#edf7f1] p-3.5 shadow-[0_2px_12px_rgba(16,185,129,0.06)] transition-all">
+                <div className="flex items-start justify-between gap-2.5 sm:gap-3">
+                  <div className="flex items-start gap-2.5 sm:gap-3 min-w-0 flex-1">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 shadow-2xs">
+                      <HiSparkles className="h-[18px] w-[18px] text-emerald-600 animate-pulse" />
+                    </div>
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-emerald-300 bg-white px-2.5 py-0.5 font-mono text-xs font-bold tracking-wider text-emerald-800 shadow-2xs">
+                          <HiOutlineTag className="h-3.5 w-3.5 text-emerald-600" />
+                          {appliedCoupon.coupon?.code || couponCode}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100/90 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                          <HiOutlineCheck className="h-3 w-3 stroke-[3]" /> Applied
+                        </span>
+                      </div>
+                      <p className="text-xs font-medium text-emerald-900 leading-snug">
+                        Yay! You save <span className="font-bold text-emerald-950 underline decoration-emerald-300 decoration-2 underline-offset-2">{formatPrice(discountAmount)}</span> on this order!
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-2.5 py-1 text-xs font-semibold text-stone-600 shadow-2xs transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 cursor-pointer shrink-0"
+                    title="Remove coupon"
+                    aria-label="Remove coupon"
+                  >
+                    <span>Remove</span>
+                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-stone-100 text-stone-500 transition-colors">
+                      <HiX className="h-2.5 w-2.5" />
+                    </span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="mb-2 flex items-center gap-1.5 text-xs font-bold text-stone-900">
+                  <HiOutlineTag className="h-4 w-4 text-[#8c6536]" />
+                  <span>Apply Coupon Code</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    className={`h-10 min-w-0 flex-1 rounded-xl border bg-white px-3 sm:px-3.5 text-base sm:text-xs text-stone-800 placeholder:text-stone-400 outline-none transition ${
+                      couponError
+                        ? 'border-red-400 focus:border-red-500 bg-red-50/20'
+                        : 'border-stone-200 focus:border-[#8c6536] focus:ring-1 focus:ring-[#8c6536]'
+                    }`}
+                    value={couponCode}
+                    onChange={(event) => {
+                      setCouponCode(event.target.value);
+                      if (couponError) setCouponError('');
+                    }}
+                    placeholder="Enter coupon code or gift card"
+                    aria-label="Coupon code or gift card"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleApplyCoupon(e);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    disabled={couponLoading || !couponCode.trim()}
+                    className="h-10 px-4 sm:px-5 rounded-xl bg-[#f2e6db] hover:bg-[#e8dacb] active:scale-[0.98] text-xs font-bold text-stone-900 transition disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center shrink-0 shadow-2xs"
+                  >
+                    {couponLoading ? 'Verifying...' : 'Apply'}
+                  </button>
+                </div>
+                {couponError && (
+                  <p className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-red-600">
+                    <HiOutlineExclamationCircle className="h-4 w-4 shrink-0 text-red-500" />
+                    <span>{couponError}</span>
+                  </p>
                 )}
-                <span>{promoMessage.text}</span>
-              </p>
+              </div>
             )}
-          </form>
+          </div>
 
           {/* Checkout CTA */}
           <button

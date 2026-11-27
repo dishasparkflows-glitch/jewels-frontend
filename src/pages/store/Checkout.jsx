@@ -111,8 +111,20 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState('online');
   const [paymentProvider, setPaymentProvider] = useState('razorpay');
   const [testPhoneNumbers, setTestPhoneNumbers] = useState([]);
-  const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponCode, setCouponCode] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('neirah_applied_coupon');
+      if (saved) return JSON.parse(saved)?.coupon?.code || '';
+    } catch {}
+    return '';
+  });
+  const [appliedCoupon, setAppliedCoupon] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('neirah_applied_coupon');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState('');
   const [codFee, setCodFee] = useState(null);
@@ -345,9 +357,15 @@ export default function Checkout() {
       setAppliedCoupon(data);
       setCouponCode(data?.coupon?.code || code.toUpperCase());
       setCouponError('');
+      try {
+        sessionStorage.setItem('neirah_applied_coupon', JSON.stringify(data));
+      } catch {}
       toast.success('Coupon applied successfully.');
     } catch (error) {
       setAppliedCoupon(null);
+      try {
+        sessionStorage.removeItem('neirah_applied_coupon');
+      } catch {}
       const errMsg = error.response?.data?.message || 'Invalid coupon code';
       setCouponError(errMsg);
       toast.error(errMsg);
@@ -1235,6 +1253,9 @@ export default function Checkout() {
                         setAppliedCoupon(null);
                         setCouponCode('');
                         setCouponError('');
+                        try {
+                          sessionStorage.removeItem('neirah_applied_coupon');
+                        } catch {}
                         toast.success('Coupon removed');
                       }}
                       className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-2.5 py-1 text-xs font-semibold text-stone-600 shadow-2xs transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 cursor-pointer shrink-0"
