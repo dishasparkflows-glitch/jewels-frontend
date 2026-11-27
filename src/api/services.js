@@ -137,10 +137,16 @@ export const otpAPI = {
 export const ordersAPI = {
   create: (orderData) => api.post('/orders', orderData),
   getMyOrders: (params) => api.get('/orders/my-orders', { params }),
-  getById: (id) => api.get(`/orders/${id}`),
-  getByNumber: (orderNumber) => api.get(`/orders/lookup/${encodeURIComponent(orderNumber)}`),
-  downloadInvoice: (id) => api.get(`/orders/${id}/invoice`, { responseType: 'blob' }),
-  cancel: (id, reason) => api.post(`/orders/${id}/cancel`, { reason }),
+  getById: (id, token = null) => api.get(`/orders/${id}`, token ? { params: { token } } : undefined),
+  getByNumber: (orderNumber, token = null) =>
+    api.get(`/orders/lookup/${encodeURIComponent(orderNumber)}`, token ? { params: { token } } : undefined),
+  downloadInvoice: (id, token = null) =>
+    api.get(`/orders/${id}/invoice`, {
+      responseType: 'blob',
+      ...(token ? { params: { token } } : {}),
+    }),
+  cancel: (id, reason, token = null) =>
+    api.post(`/orders/${id}/cancel`, { reason, ...(token ? { orderToken: token } : {}) }),
 };
 
 // ─── Payments ───────────────────────────────────────

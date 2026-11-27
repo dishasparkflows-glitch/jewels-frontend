@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { HiOutlineChevronLeft, HiOutlineChevronRight } from 'react-icons/hi';
 import { birthstoneAPI } from '../../api/services';
 import { useStoreSettings } from '../../contexts/StoreSettingsContext';
+import LuxuryDivider from '../common/LuxuryDivider';
 
 export default function BirthstonesSection({ style }) {
   const { settings: storeSettings } = useStoreSettings();
@@ -85,9 +86,10 @@ export default function BirthstonesSection({ style }) {
     <section style={style} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
       {/* Section Title */}
       <div className="text-center mb-8 sm:mb-10">
-        <h2 className="font-serif text-2xl sm:text-3xl lg:text-[32px] text-stone-900 font-normal tracking-wide">
+        <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
           Make Birthdays More Colourful
         </h2>
+        <LuxuryDivider className="mt-2.5 sm:mt-3" />
       </div>
 
       {/* Carousel Container */}

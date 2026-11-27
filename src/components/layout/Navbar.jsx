@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
@@ -164,6 +164,7 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [closeMegaMenuSignal, setCloseMegaMenuSignal] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchTotal, setSearchTotal] = useState(0);
@@ -321,6 +322,11 @@ const Navbar = () => {
     return () => window.clearInterval(interval);
   }, [topAnnouncement.items, topAnnouncement.autoplayInterval]);
 
+  const handleCategoryMenuOpen = useCallback(() => {
+    setUserDropdownOpen(false);
+    setShowSearchDropdown(false);
+  }, []);
+
   const handleSearch = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (searchQuery.trim()) {
@@ -409,7 +415,7 @@ const Navbar = () => {
           backgroundColor: 'var(--storefront-header-bg, #201e1b)',
           color: 'var(--storefront-header-text, #ffffff)',
         }}
-        className="px-4 sm:px-6 lg:px-8 border-b border-white/5"
+        className="relative z-50 px-4 sm:px-6 lg:px-8 border-b border-white/5"
       >
         <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto flex items-center justify-between gap-3 sm:gap-6 h-14 sm:h-16 lg:h-[70px]">
           {/* Mobile hamburger */}
@@ -465,12 +471,16 @@ const Navbar = () => {
                 placeholder="Search jewellery, diamonds, rings..."
                 value={searchQuery}
                 onFocus={() => {
+                  setUserDropdownOpen(false);
+                  setCloseMegaMenuSignal((n) => n + 1);
                   if (searchQuery.trim().length >= 2) setShowSearchDropdown(true);
                 }}
                 onChange={(e) => {
                   const val = e.target.value;
                   setSearchQuery(val);
                   if (val.trim().length >= 2) {
+                    setUserDropdownOpen(false);
+                    setCloseMegaMenuSignal((n) => n + 1);
                     setShowSearchDropdown(true);
                   } else {
                     setShowSearchDropdown(false);
@@ -618,7 +628,16 @@ const Navbar = () => {
               {user ? (
                 <div className="relative" ref={userDropdownRef}>
                   <button
-                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    onClick={() => {
+                      setUserDropdownOpen((prev) => {
+                        const next = !prev;
+                        if (next) {
+                          setShowSearchDropdown(false);
+                          setCloseMegaMenuSignal((n) => n + 1);
+                        }
+                        return next;
+                      });
+                    }}
                     className="flex items-center gap-2 p-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
                     title="Account"
                     aria-label="Account menu"
@@ -760,8 +779,14 @@ const Navbar = () => {
       </div>
 
       {/* ─── Category Navigation Bar & Full-Width Mega Menu ───────── */}
-      <div className="hidden lg:block w-full">
-        <MegaMenuNav categories={categories} error={navigationError} onRetry={() => setNavigationRevision((value) => value + 1)} />
+      <div className="hidden lg:block w-full relative z-40">
+        <MegaMenuNav
+          categories={categories}
+          onMenuOpen={handleCategoryMenuOpen}
+          closeSignal={closeMegaMenuSignal}
+          error={navigationError}
+          onRetry={() => setNavigationRevision((value) => value + 1)}
+        />
       </div>
 
       {/* ─── Mobile Instant Search Bar ──────────────────────────────── */}

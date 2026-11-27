@@ -481,7 +481,7 @@ export default function DiamondDetail() {
               {diamond.basicInfo?.sku && (
                 <div className="pt-0.5 pb-1">
                   <span className="text-[11px] sm:text-xs text-stone-500 font-medium tracking-wide">
-                    SKU: <span className="font-semibold text-stone-700 tracking-wider font-mono">{diamond.basicInfo.sku}</span>
+                    Product Code: <span className="font-semibold text-stone-700 tracking-wider font-mono">{diamond.basicInfo.sku}</span>
                   </span>
                 </div>
               )}

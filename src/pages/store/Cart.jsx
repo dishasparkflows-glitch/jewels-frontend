@@ -314,12 +314,6 @@ const Cart = () => {
               <span className="text-[#2c2722] font-medium">{formatPrice(subtotal)}</span>
             </div>
             <div className="flex justify-between text-stone-500">
-              <span>Insured Courier Shipping</span>
-              <span className="font-medium" style={{ color: 'var(--btn-primary-bg, #8c6536)' }}>
-                {shipping === 0 ? 'Complimentary' : formatPrice(shipping)}
-              </span>
-            </div>
-            <div className="flex justify-between text-stone-500">
               <span>Estimated Sales Tax</span>
               <span className="text-[#2c2722] font-medium">{formatPrice(tax)}</span>
             </div>
@@ -329,9 +323,9 @@ const Cart = () => {
                 <span>-${discountAmount.toLocaleString()}</span>
               </div>
             )}
-            <div className="border-t border-stone-200 pt-3 flex justify-between text-base font-bold text-[#2c2722]">
+            <div className="border-t border-stone-200 pt-3 flex justify-between items-baseline text-base font-bold text-[#2c2722]">
               <span>Total</span>
-              <span className="text-xl font-serif" style={{ color: 'var(--btn-primary-bg, #8c6536)' }}>
+              <span className="text-xl font-sans font-bold tabular-nums" style={{ color: 'var(--btn-primary-bg, #8c6536)' }}>
                 {formatPrice(finalTotal)}
               </span>
             </div>

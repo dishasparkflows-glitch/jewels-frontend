@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useId, useMemo } from 'react';
+import { useState, useRef, useEffect, useId, useMemo, useCallback } from 'react';
 import { HiOutlineChevronDown, HiCheck, HiOutlineSearch, HiOutlineX } from 'react-icons/hi';
 
 /**
@@ -116,19 +116,19 @@ export default function Dropdown({
     }
   }, [searchQuery, isOpen]);
 
-  // Autofocus search input when opened
+  // Autofocus search input when opened (without scrolling parent modals)
   useEffect(() => {
     if (isOpen && searchable) {
       const timer = setTimeout(() => {
-        searchInputRef.current?.focus();
+        searchInputRef.current?.focus({ preventScroll: true });
       }, 50);
       return () => clearTimeout(timer);
     }
   }, [isOpen, searchable]);
 
-  // Handle smart auto-flip (open upward if near screen bottom or container bottom)
-  useEffect(() => {
-    if (!isOpen || !buttonRef.current) return;
+  // Compute dropdown direction detecting viewport, modal, and overflowing ancestor bounds
+  const updateDropdownPosition = useCallback(() => {
+    if (!buttonRef.current) return;
     if (direction === 'down') {
       setDropUp(false);
       return;
@@ -139,65 +139,99 @@ export default function Dropdown({
     }
 
     const rect = buttonRef.current.getBoundingClientRect();
-    const spaceBelowWindow = window.innerHeight - rect.bottom;
-    const spaceAboveWindow = rect.top;
-    const estimatedMenuHeight = 240;
+    let availableBelow = window.innerHeight - rect.bottom;
+    let availableAbove = rect.top;
+    const estimatedMenuHeight = 250;
 
-    // Check if dropdown is inside a modal or dialog container
-    const modalParent = buttonRef.current.closest('[role="dialog"], [aria-modal="true"], .modal');
-    if (modalParent) {
-      const parentRect = modalParent.getBoundingClientRect();
-      const parentSpaceBelow = parentRect.bottom - rect.bottom;
-      const parentSpaceAbove = rect.top - parentRect.top;
+    let parent = buttonRef.current.parentElement;
+    while (parent && parent !== document.body) {
+      const style = window.getComputedStyle(parent);
+      const overflowY = style.overflowY || '';
+      const overflow = style.overflow || '';
+      const isModal =
+        parent.getAttribute('role') === 'dialog' ||
+        parent.getAttribute('aria-modal') === 'true' ||
+        parent.classList.contains('modal');
+      const isScrollableOrClipped =
+        overflowY === 'auto' ||
+        overflowY === 'scroll' ||
+        overflowY === 'hidden' ||
+        overflow === 'auto' ||
+        overflow === 'scroll' ||
+        overflow === 'hidden';
 
-      if (parentSpaceBelow < estimatedMenuHeight && parentSpaceAbove > parentSpaceBelow) {
-        setDropUp(true);
-        return;
+      if (isModal || isScrollableOrClipped) {
+        const parentRect = parent.getBoundingClientRect();
+        availableBelow = Math.min(availableBelow, parentRect.bottom - rect.bottom);
+        availableAbove = Math.min(availableAbove, rect.top - parentRect.top);
       }
+      if (isModal) break;
+      parent = parent.parentElement;
     }
 
-    if (spaceBelowWindow < estimatedMenuHeight && spaceAboveWindow > spaceBelowWindow) {
-      setDropUp(true);
-    } else {
-      setDropUp(false);
-    }
-  }, [isOpen, direction]);
+    setDropUp(availableBelow < estimatedMenuHeight && availableAbove > availableBelow);
+  }, [direction]);
 
-  // Auto-scroll selected/highlighted option into view
+  useEffect(() => {
+    if (!isOpen) return;
+    updateDropdownPosition();
+  }, [isOpen, updateDropdownPosition]);
+
+  // Auto-scroll highlighted/selected option ONLY inside listRef (never scrolling ancestors)
   useEffect(() => {
     if (isOpen && listRef.current) {
       const targetIndex = highlightedIndex >= 0 ? highlightedIndex : selectedIndex;
       if (targetIndex >= 0) {
-        const optionEls = listRef.current.querySelectorAll('[role="option"]');
-        if (optionEls[targetIndex]) {
-          optionEls[targetIndex].scrollIntoView({ block: 'nearest' });
+        const listEl = listRef.current;
+        const optionEls = listEl.querySelectorAll('[role="option"]');
+        const targetEl = optionEls[targetIndex];
+        if (targetEl) {
+          const elTop = targetEl.offsetTop;
+          const elBottom = elTop + targetEl.offsetHeight;
+          if (elTop < listEl.scrollTop) {
+            listEl.scrollTop = elTop;
+          } else if (elBottom > listEl.scrollTop + listEl.clientHeight) {
+            listEl.scrollTop = elBottom - listEl.clientHeight;
+          }
         }
       }
     }
   }, [isOpen, highlightedIndex, selectedIndex]);
 
-  // Close on outside click or ancestor scroll
+  // Close on outside click or touch; reposition cleanly on window resize/scroll
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleOutsideClick = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-    const handleScroll = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target) &&
+        (!menuRef.current || !menuRef.current.contains(event.target))
+      ) {
         setIsOpen(false);
       }
     };
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleOutsideClick);
-      window.addEventListener('scroll', handleScroll, true);
-    }
+    const handleScrollOrResize = (event) => {
+      if (menuRef.current && event?.target && menuRef.current.contains(event.target)) {
+        return;
+      }
+      updateDropdownPosition();
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
-      window.removeEventListener('scroll', handleScroll, true);
+      document.removeEventListener('touchstart', handleOutsideClick);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
     };
-  }, [isOpen]);
+  }, [isOpen, updateDropdownPosition]);
+
+  const openedOnFocusAtRef = useRef(0);
 
   const handleTriggerPointerDown = () => {
     isPointerDownRef.current = true;
@@ -206,18 +240,27 @@ export default function Dropdown({
   const handleClick = () => {
     if (disabled) return;
     isPointerDownRef.current = false;
+    // If focus just opened the menu during this same tap/click gesture, keep it open
+    if (Date.now() - openedOnFocusAtRef.current < 150) {
+      openedOnFocusAtRef.current = 0;
+      return;
+    }
     setIsOpen((prev) => !prev);
   };
 
   // Focus handler: Opens dropdown when focused via keyboard Tab
   const handleFocus = () => {
     if (disabled) return;
-    // If focus was triggered by a mouse click, do not auto-open here; handleClick handles toggle
-    if (isPointerDownRef.current) return;
+    if (isPointerDownRef.current) {
+      isPointerDownRef.current = false;
+      return;
+    }
 
-    // Focused via keyboard (Tab / Shift+Tab) -> automatically open dropdown list!
-    setIsOpen(true);
-    setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    if (!isOpen) {
+      openedOnFocusAtRef.current = Date.now();
+      setIsOpen(true);
+      setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    }
   };
 
   // Blur handler: When focus leaves the dropdown container, cleanly close it

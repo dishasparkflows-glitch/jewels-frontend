@@ -13,6 +13,9 @@ export function getSocket() {
       reconnection: true,
       reconnectionAttempts: 15,
       reconnectionDelay: 2000,
+      auth: (cb) => {
+        cb({ token: typeof localStorage !== 'undefined' ? localStorage.getItem('token') || '' : '' });
+      },
     });
 
     socketInstance.on('connect_error', () => {
@@ -28,6 +31,7 @@ export function getSocket() {
 export function joinUserSocketRooms({ userId, sessionId }) {
   const socket = getSocket();
   const sid = sessionId || localStorage.getItem('neirah_session_id');
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') || undefined : undefined;
   const uid = userId || (() => {
     try {
       return JSON.parse(localStorage.getItem('user') || '{}')?._id || null;
@@ -36,11 +40,12 @@ export function joinUserSocketRooms({ userId, sessionId }) {
     }
   })();
 
+  const payload = { userId: uid, sessionId: sid, ...(token ? { token } : {}) };
   if (socket.connected) {
-    socket.emit('join_user', { userId: uid, sessionId: sid });
+    socket.emit('join_user', payload);
   } else {
     socket.once('connect', () => {
-      socket.emit('join_user', { userId: uid, sessionId: sid });
+      socket.emit('join_user', payload);
     });
   }
 }

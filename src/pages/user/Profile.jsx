@@ -1657,7 +1657,7 @@ const Profile = () => {
                                                 <div className="flex items-center gap-2 flex-wrap text-xs pt-0.5">
                                                   {itemSku && (
                                                     <span className="px-2.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#EFE8DD] text-stone-700 font-medium text-[11px]">
-                                                      SKU: {itemSku}
+                                                      Product Code: {itemSku}
                                                     </span>
                                                   )}
                                                   <span className="px-2.5 py-0.5 rounded-md bg-[#FAF7F2] border border-[#EFE8DD] text-stone-700 font-medium text-[11px]">
@@ -2063,14 +2063,17 @@ const Profile = () => {
       {editProfileOpen && (
         <div
           onClick={() => setEditProfileOpen(false)}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto cursor-pointer"
         >
           <div
             ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit Profile Information"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in cursor-default"
+            className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-visible animate-scale-in my-auto cursor-default"
           >
-            <div className="bg-[#22201e] text-white px-6 py-4 flex items-center justify-between">
+            <div className="bg-[#22201e] text-white px-6 py-4 rounded-t-2xl flex items-center justify-between">
               <h3 className="font-cinzel text-base tracking-wider uppercase text-white">
                 Edit Profile Information
               </h3>
@@ -2183,11 +2186,14 @@ const Profile = () => {
         >
           <div
             ref={modalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={addressModalType === 'add-additional' ? 'Add New Address' : 'Address Form'}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[540px] bg-white rounded-2xl shadow-2xl overflow-hidden animate-scale-in my-6 relative cursor-default"
+            className="w-full max-w-[540px] bg-white rounded-2xl shadow-2xl overflow-visible animate-scale-in my-auto relative cursor-default"
           >
             {/* Dark Header */}
-            <div className="bg-[#262320] text-white px-7 py-5 flex items-center justify-between">
+            <div className="bg-[#262320] text-white px-5 sm:px-7 py-4 sm:py-5 rounded-t-2xl flex items-center justify-between">
               <h3 className="font-serif text-2xl font-normal text-white tracking-wide">
                 {addressModalType === 'add-additional' && 'Add New Address'}
                 {addressModalType === 'edit-additional' && 'Edit Address'}
@@ -2204,7 +2210,7 @@ const Profile = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveAddress} className="p-7 space-y-4">
+            <form onSubmit={handleSaveAddress} className="p-5 sm:p-7 space-y-4">
               {/* Use My Location button */}
               <div className="flex justify-end">
                 <button
@@ -2572,7 +2578,7 @@ const Profile = () => {
                                   )}
                                   {itemSku && (
                                     <span className="px-2.5 py-0.5 rounded-md bg-[#faf8f5] text-stone-700 font-medium border border-[#e5dcd0] text-[11px]">
-                                      SKU: {itemSku}
+                                      Product Code: {itemSku}
                                     </span>
                                   )}
                                   <span className="px-2.5 py-0.5 rounded-md bg-[#faf8f5] text-stone-600 font-medium border border-[#e5dcd0] text-[11px]">

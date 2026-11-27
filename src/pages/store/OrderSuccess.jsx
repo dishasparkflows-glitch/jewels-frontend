@@ -47,6 +47,7 @@ export default function OrderSuccess() {
   const [searchParams] = useSearchParams();
   const orderId = searchParams.get('orderId');
   const orderNumber = searchParams.get('orderNumber');
+  const orderToken = searchParams.get('token');
   const [order, setOrder] = useState(null);
 
   useEffect(() => {
@@ -55,9 +56,9 @@ export default function OrderSuccess() {
       try {
         let resp = null;
         if (orderId) {
-          resp = await ordersAPI.getById(orderId);
+          resp = await ordersAPI.getById(orderId, orderToken);
         } else if (orderNumber) {
-          resp = await ordersAPI.getByNumber(orderNumber);
+          resp = await ordersAPI.getByNumber(orderNumber, orderToken);
         }
         if (active && resp?.data) {
           setOrder(resp.data.data || resp.data);
@@ -73,7 +74,7 @@ export default function OrderSuccess() {
     return () => {
       active = false;
     };
-  }, [orderId, orderNumber]);
+  }, [orderId, orderNumber, orderToken]);
 
   return (
     <main className="min-h-[75vh] bg-[#faf8f5] px-4 py-12 sm:py-16 text-stone-900 sm:px-6 lg:px-8">

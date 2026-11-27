@@ -194,11 +194,30 @@ function MenuContents({ category, onNavigate, mobile = false }) {
   );
 }
 
-export default function MegaMenuNav({ categories, mobile = false, onNavigate, error, onRetry }) {
+export default function MegaMenuNav({
+  categories,
+  mobile = false,
+  onNavigate,
+  onMenuOpen,
+  closeSignal = 0,
+  error,
+  onRetry,
+}) {
   const [activeId, setActiveId] = useState(null);
   const root = useRef(null);
   const triggers = useRef({});
   const location = useLocation();
+
+  const activateDesktopCategory = (categoryId) => {
+    setActiveId(categoryId);
+    onMenuOpen?.(categoryId);
+  };
+
+  useEffect(() => {
+    if (closeSignal) {
+      setActiveId(null);
+    }
+  }, [closeSignal]);
 
   const sortedCategories = useMemo(() => {
     if (!Array.isArray(categories)) return [];
@@ -289,12 +308,12 @@ export default function MegaMenuNav({ categories, mobile = false, onNavigate, er
               <div
                 key={category._id}
                 className="flex items-center"
-                onMouseEnter={() => setActiveId(category._id)}
+                onMouseEnter={() => activateDesktopCategory(category._id)}
               >
                 <Link
                   to={categoryLink(category)}
                   onClick={close}
-                  onFocus={() => setActiveId(category._id)}
+                  onFocus={() => activateDesktopCategory(category._id)}
                   className={`border-b-2 py-2.5 sm:py-3 text-[11px] font-medium uppercase tracking-[0.14em] transition-colors cursor-pointer ${
                     activeId === category._id
                       ? 'border-[#d2b18a] text-[#d2b18a]'

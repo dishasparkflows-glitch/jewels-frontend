@@ -21,6 +21,30 @@ import InstagramEmbed from '../../components/common/InstagramEmbed';
 import LuxuryDivider from '../../components/common/LuxuryDivider';
 import { getMediaUrl } from '../../utils/imageUrl';
 
+function SectionHeading({
+  title,
+  subtitle,
+  as: HeadingTag = 'h2',
+  wrapperClass = 'mb-6 sm:mb-8',
+  titleClass = '',
+  children,
+}) {
+  return (
+    <div className={`text-center ${wrapperClass}`}>
+      <HeadingTag className={`font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide ${titleClass}`}>
+        {title}
+      </HeadingTag>
+      <LuxuryDivider className="mt-2.5 sm:mt-3" />
+      {subtitle && (
+        <p className="text-xs sm:text-sm text-stone-500 mt-2">
+          {subtitle}
+        </p>
+      )}
+      {children}
+    </div>
+  );
+}
+
 const Home = () => {
   const { settings: storeSettings, theme: themeConfig } = useStoreSettings();
 
@@ -644,13 +668,8 @@ const Home = () => {
           2. CELEBRATE WITH NEIRAH
       ─────────────────────────────────────────────────────────────────── */}
       {effectiveCategoryItems.length > 0 && (
-        <section style={sectionStyle('categories')} className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-          <div className="text-center mb-6 sm:mb-8">
-            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
-              Celebrate With Neirah
-            </h2>
-            <LuxuryDivider className="mt-2.5 sm:mt-3" />
-          </div>
+        <section style={sectionStyle('categories')} className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-4 sm:pb-5">
+          <SectionHeading title="Celebrate With Neirah" />
 
           <div
             className="relative group/celebrate px-1 w-full mx-auto"
@@ -718,15 +737,11 @@ const Home = () => {
       {/* ─────────────────────────────────────────────────────────────────
           3. PRODUCTS SECTION
       ─────────────────────────────────────────────────────────────────── */}
-      <section style={sectionStyle('products')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 space-y-16">
+      <section style={sectionStyle('products')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-5 pb-10 sm:pb-12 space-y-12">
         {/* Most Loved on Neirah - Gold Products Sub-Section */}
         {(goldProducts.length > 0 || platinumProducts.length > 0) && (
           <div>
-            <div className="text-center mb-6">
-              <h2 className="text-xl md:text-2xl text-gray-900 leading-tight">
-                Most Loved on Neirah
-              </h2>
-            </div>
+            <SectionHeading title="Most Loved on Neirah" />
 
             <div
               ref={mostLovedScrollRef}
@@ -759,11 +774,7 @@ const Home = () => {
         {/* Silver Jewellery Sub-Section */}
         {silverProducts.length > 0 && (
           <div>
-            <div className="text-center mb-6">
-              <h2 className="text-xl md:text-2xl text-gray-900 leading-tight">
-                Silver Jewellery
-              </h2>
-            </div>
+            <SectionHeading title="Silver Jewellery" />
 
             <div
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -793,16 +804,7 @@ const Home = () => {
         {/* Dynamic Curated Home Sections */}
         {homeSections.map((sec) => (
           <div key={sec._id || sec.sectionKey}>
-            <div className="text-center mb-6">
-              <h2 className="text-xl md:text-2xl text-gray-900 leading-tight capitalize">
-                {sec.title}
-              </h2>
-              {sec.subtitle && (
-                <p className="text-xs sm:text-sm text-stone-500 mt-1">
-                  {sec.subtitle}
-                </p>
-              )}
-            </div>
+            <SectionHeading title={sec.title} titleClass="capitalize" />
 
             <div
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -968,12 +970,7 @@ const Home = () => {
       ─────────────────────────────────────────────────────────────────── */}
       {giftItems.length > 0 && (
         <section style={sectionStyle('gifts')} className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-          <div className="text-center mb-6 sm:mb-8">
-            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
-              Gifts That Say It All
-            </h2>
-            <LuxuryDivider className="mt-2.5 sm:mt-3" />
-          </div>
+          <SectionHeading title="Gifts That Say It All" />
 
           <div
             className="relative group/gifts px-1 w-full mx-auto"
@@ -1125,9 +1122,11 @@ const Home = () => {
           9. TRENDING JEWELLERY SECTION
       ─────────────────────────────────────────────────────────────────── */}
       <section style={sectionStyle('products')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-        <h3 className="font-serif text-xl sm:text-2xl text-stone-900 font-normal mb-8">
-          Trending jewellery in lab grown diamond
-        </h3>
+        <SectionHeading
+          as="h3"
+          title="Trending jewellery in lab grown diamond"
+          wrapperClass="mb-8"
+        />
 
         {productsLoading && trendingProducts.length === 0 ? (
           <div className="flex gap-3 sm:gap-4 lg:gap-5 overflow-hidden pb-4">
@@ -1269,12 +1268,7 @@ const Home = () => {
       ─────────────────────────────────────────────────────────────────── */}
       {displayReviews.length > 0 && (
         <section style={sectionStyle('reviews')} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
-          <div className="text-center mb-10 sm:mb-12">
-            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-stone-900 font-normal tracking-wide">
-              What Customers are Saying
-            </h2>
-            <LuxuryDivider className="mt-2.5 sm:mt-3" />
-          </div>
+          <SectionHeading title="What Customers are Saying" wrapperClass="mb-10 sm:mb-12" />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {displayReviews.map((rev) => (
@@ -1330,19 +1324,16 @@ const Home = () => {
       ─────────────────────────────────────────────────────────────────── */}
       <section style={sectionStyle('instagram')} className="pt-16 pb-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h2 className="text-xl md:text-2xl text-gray-900 leading-tight mb-2 font-normal">
-              Follow Us on Instagram
-            </h2>
+          <SectionHeading title="Follow Us on Instagram" wrapperClass="mb-8">
             <a
               href={storeSettings?.socialMedia?.instagram || 'https://www.instagram.com/neirah.officials/'}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-gray-600 hover:text-[#8B6B42] hover:underline font-medium text-sm md:text-base transition-colors"
+              className="mt-2.5 inline-flex items-center gap-1.5 text-gray-600 hover:text-[#8B6B42] hover:underline font-medium text-sm md:text-base transition-colors"
             >
               {instagramHandle}
             </a>
-          </div>
+          </SectionHeading>
 
           {instagramPosts.length > 0 ? (
             <div className="flex flex-row overflow-x-auto lg:grid lg:grid-cols-4 gap-6 justify-start lg:justify-items-center w-full pb-4 scroll-smooth snap-x snap-mandatory scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden px-2">

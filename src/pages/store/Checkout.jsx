@@ -465,6 +465,8 @@ export default function Checkout() {
       const data = unwrapResponse(response);
       const order = data?.order;
       const payment = data?.payment;
+      const accessToken = data?.accessToken;
+      const tokenQuery = accessToken ? `&token=${encodeURIComponent(accessToken)}` : '';
 
       if (!order) {
         throw new Error('Could not create order.');
@@ -474,7 +476,7 @@ export default function Checkout() {
       if (!payment || (paymentMethod === 'cod' && (!codFee || codDueNow === 0))) {
         toast.success('Order placed successfully!', { id: toastId });
         if (clearCart) clearCart();
-        navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}`);
+        navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}${tokenQuery}`);
         return;
       }
 
@@ -525,7 +527,7 @@ export default function Checkout() {
               });
               toast.success('Payment verified successfully!', { id: verifyToast });
               if (clearCart) clearCart();
-              navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}`);
+              navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}${tokenQuery}`);
             } catch (err) {
               toast.error(err.response?.data?.message || 'Payment verification failed', { id: verifyToast });
             } finally {
@@ -546,7 +548,7 @@ export default function Checkout() {
 
       toast.success('Order placed successfully!', { id: toastId });
       if (clearCart) clearCart();
-      navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}`);
+      navigate(`/order-success?orderId=${order._id}&orderNumber=${order.orderNumber}${tokenQuery}`);
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || 'Failed to place order. Please try again.', { id: toastId });
       setSubmitting(false);
