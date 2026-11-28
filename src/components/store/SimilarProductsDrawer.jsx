@@ -114,9 +114,9 @@ export default function SimilarProductsDrawer({
     };
   }, [isRendered, onClose]);
 
-  // Sync products and background fetch when targetId is available
+  // Fetch similar products only when drawer is opened
   useEffect(() => {
-    if (!targetId) return;
+    if (!open || !targetId) return;
 
     if (similarCache.has(targetId)) {
       setProducts(similarCache.get(targetId));
@@ -125,9 +125,7 @@ export default function SimilarProductsDrawer({
     }
 
     let active = true;
-    if (open) {
-      setLoading(true);
-    }
+    setLoading(true);
 
     prefetchSimilarProducts(targetId).then((items) => {
       if (!active) return;

@@ -324,6 +324,14 @@ export const staticPagesAPI = {
   getBySlug: (slug) => getOnce(`/static-pages/slug/${slug}`),
 };
 
+// ─── Stores ───────────────────────────────────────
+export const storesAPI = {
+  getAll: (params) => getOnce('/stores', { params }),
+  getLookup: (params) => getOnce('/stores/lookup', { params }),
+  getStates: (params) => getOnce('/stores/states', { params }),
+  getBySlug: (slug) => getOnce(`/stores/slug/${slug}`),
+};
+
 // ─── Shiprocket Logistics ──────────────────────────
 export const shiprocketAPI = {
   checkServiceability: (params) => api.get('/shiprocket/serviceability', { params }),

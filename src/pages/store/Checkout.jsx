@@ -98,7 +98,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { cart, updateQuantity, clearCart, subtotal, shipping, tax, total } = useCart();
   const { user, isAuthenticated } = useAuth();
-  const { settings } = useStoreSettings();
+  const { settings, brandName } = useStoreSettings();
   const [form, setForm] = useState(() => ({
     ...emptyAddress,
     email: user?.auth?.email || '',
@@ -497,7 +497,7 @@ export default function Checkout() {
           key: payment.keyId,
           amount: Math.round(Number(payment.amount) * 100),
           currency: payment.currency || 'INR',
-          name: 'Neirah Jewels',
+          name: brandName,
           description: `Order #${order.orderNumber}`,
           order_id: payment.gatewayOrderId,
           prefill: {
@@ -617,7 +617,7 @@ export default function Checkout() {
   if (!cart.length) {
     return (
       <main className="mx-auto flex min-h-[55vh] max-w-2xl flex-col items-center justify-center px-4 py-20 text-center font-sans">
-        <SEO title="Secure Luxury Checkout | Neirah Fine Jewellery" noindex={true} />
+        <SEO title="Secure Luxury Checkout" noindex={true} />
         <div
           className="mb-5 flex h-16 w-16 items-center justify-center rounded-full"
           style={{
@@ -655,7 +655,7 @@ export default function Checkout() {
 
   return (
     <main className="min-h-screen bg-[#faf8f5] text-stone-900 font-sans">
-      <SEO title="Secure Luxury Checkout | Neirah Fine Jewellery" noindex={true} />
+      <SEO title="Secure Luxury Checkout" noindex={true} />
       <div className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6 lg:px-8">
         <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(360px,1fr)] xl:gap-8">
           {/* Left Column: Form Card */}

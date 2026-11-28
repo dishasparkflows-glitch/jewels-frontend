@@ -32,6 +32,7 @@ const DynamicSlugView = lazy(() => import('./pages/store/DynamicSlugView'));
 const OrderSuccess = lazy(() => import('./pages/store/OrderSuccess'));
 const OrderFailed = lazy(() => import('./pages/store/OrderFailed'));
 const CustomJewellery = lazy(() => import('./pages/store/CustomJewellery'));
+const Stores = lazy(() => import('./pages/store/Stores'));
 
 const PageLoader = () => (
   <div className="min-h-[50vh] flex items-center justify-center">
@@ -145,6 +146,8 @@ function App() {
                   <Route path="/custom-jewellery" element={<CustomJewellery />} />
                   <Route path="/custom-jewelry" element={<CustomJewellery />} />
                   <Route path="/custom" element={<Navigate to="/custom-jewellery" replace />} />
+                  <Route path="/stores" element={<Stores />} />
+                  <Route path="/store-locator" element={<Navigate to="/stores" replace />} />
                   <Route path="/:slug" element={<DynamicSlugView />} />
                 </Route>
 

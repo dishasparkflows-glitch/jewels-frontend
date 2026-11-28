@@ -10,8 +10,10 @@ import FilterSidebar from '../../components/product/FilterSidebar';
 import Dropdown from '../../components/common/Dropdown';
 import LuxuryDivider from '../../components/common/LuxuryDivider';
 import { categoriesAPI, productsAPI, diamondsAPI, bannersAPI, couponsAPI } from '../../api/services';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 
 export default function Shop({ defaultCategory = '' }) {
+  const { brandName } = useStoreSettings();
   const [params, setParams] = useSearchParams();
 
   const [categories, setCategories] = useState([]);
@@ -716,10 +718,10 @@ export default function Shop({ defaultCategory = '' }) {
 
   const seoTitle = pageTitle ? `${pageTitle} | Fine Jewellery Collection` : 'Shop Fine Jewellery & Certified Diamonds';
   const seoDescription = category?.name
-    ? `Explore our exclusive collection of handcrafted ${category.name}. Certified lab-grown diamonds, pure gold, and sterling silver pieces from Neirah Jewels.`
+    ? `Explore our exclusive collection of handcrafted ${category.name}. Certified lab-grown diamonds, pure gold, and sterling silver pieces from ${brandName}.`
     : isDiamondCategory
       ? 'Browse certified lab-grown diamonds in all shapes and sizes. Sustainable luxury with exceptional brilliance, certified by leading gemological institutes.'
-      : 'Discover handcrafted luxury fine jewellery, rings, earrings, bracelets, and necklaces made with certified gold and precious diamonds at Neirah Jewels.';
+      : `Discover handcrafted luxury fine jewellery, rings, earrings, bracelets, and necklaces made with certified gold and precious diamonds at ${brandName}.`;
 
   return (
     <div className="min-h-[75vh] bg-white">

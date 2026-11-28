@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 
 /**
  * Renders product description and care/specification content formatted with clean bullet lists
- * matching luxury typography (exact match to Neirah design).
+ * matching luxury typography (exact match to design).
  */
 export default function FormattedContent({ content }) {
   if (!content || typeof content !== 'string') return null;

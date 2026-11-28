@@ -46,7 +46,7 @@ function SectionHeading({
 }
 
 const Home = () => {
-  const { settings: storeSettings, theme: themeConfig } = useStoreSettings();
+  const { settings: storeSettings, brandName, theme: themeConfig } = useStoreSettings();
 
   const activeTrustBadges = useMemo(() => {
     if (!Array.isArray(storeSettings?.trustBadges)) return [];
@@ -324,7 +324,7 @@ const Home = () => {
     });
   }, []);
 
-  // Auto scroll for Celebrate With Neirah
+  // Auto scroll for Celebrate
   useEffect(() => {
     if (effectiveCategoryItems.length <= 1) return;
     let timer;
@@ -438,7 +438,7 @@ const Home = () => {
     };
   }, []);
 
-  // Auto scroll for Most Loved on Neirah
+  // Auto scroll for Most Loved on
   useEffect(() => {
     const list = goldProducts.length > 0 ? goldProducts : platinumProducts;
     if (list.length <= 1) return;
@@ -514,48 +514,51 @@ const Home = () => {
     window.dispatchEvent(new CustomEvent('open-virtual-appointment'));
   };
 
+  const defaultInstaSlug = brandName.toLowerCase().replace(/[^a-z0-9]+/g, '') || 'jewels';
   const instagramHandle = useMemo(() => {
-    const instaUrl = storeSettings?.socialMedia?.instagram || 'https://www.instagram.com/neirah.officials/';
+    const instaUrl = storeSettings?.socialMedia?.instagram || '';
+    if (!instaUrl) return `@${defaultInstaSlug}`;
     try {
       const handle = instaUrl.split('?')[0].replace(/\/+$/, '').split('/').filter(Boolean).pop();
-      return handle ? `@${handle}` : '@neirah.officials';
+      return handle ? `@${handle}` : `@${defaultInstaSlug}`;
     } catch {
-      return '@neirah.officials';
+      return `@${defaultInstaSlug}`;
     }
-  }, [storeSettings?.socialMedia?.instagram]);
+  }, [storeSettings?.socialMedia?.instagram, defaultInstaSlug]);
 
   const currentHero = heroBanners[activeHeroIdx] || heroBanners[0];
 
   const homeTitle =
     storeSettings?.seo?.metaTitle ||
     themeConfig?.seo?.metaTitle ||
-    'Neirah Jewels | Fine Handcrafted Jewellery & Certified Diamonds';
+    `${brandName} | Fine Handcrafted Jewellery & Certified Diamonds`;
   const homeDescription =
     storeSettings?.seo?.metaDescription ||
     themeConfig?.seo?.metaDescription ||
-    'Discover handcrafted luxury jewelry, certified lab-grown diamonds, and timeless gemstone collections at Neirah Jewels.';
+    `Discover handcrafted luxury jewelry, certified lab-grown diamonds, and timeless gemstone collections at ${brandName}.`;
   const homeKeywords =
     storeSettings?.seo?.keywords ||
     themeConfig?.seo?.keywords ||
     'fine jewellery, lab grown diamonds, engagement rings, gold jewellery, 925 silver jewellery, handcrafted';
 
+  const originUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const homeSchema = {
     '@context': 'https://schema.org',
     '@graph': [
       {
         '@type': 'Organization',
-        name: 'Neirah Jewels',
-        url: typeof window !== 'undefined' ? window.location.origin : 'https://neirahjewels.com',
-        logo: typeof window !== 'undefined' ? `${window.location.origin}/logo.svg` : 'https://neirahjewels.com/logo.svg',
+        name: brandName,
+        url: originUrl,
+        logo: originUrl ? `${originUrl}/logo.svg` : '',
         description: homeDescription,
       },
       {
         '@type': 'WebSite',
-        name: 'Neirah Jewels',
-        url: typeof window !== 'undefined' ? window.location.origin : 'https://neirahjewels.com',
+        name: brandName,
+        url: originUrl,
         potentialAction: {
           '@type': 'SearchAction',
-          target: `${typeof window !== 'undefined' ? window.location.origin : 'https://neirahjewels.com'}/shop?search={search_term_string}`,
+          target: `${originUrl}/shop?search={search_term_string}`,
           'query-input': 'required name=search_term_string',
         },
       },
@@ -665,11 +668,11 @@ const Home = () => {
       )}
 
       {/* ─────────────────────────────────────────────────────────────────
-          2. CELEBRATE WITH NEIRAH
+          2. CELEBRATE WITH BRAND
       ─────────────────────────────────────────────────────────────────── */}
       {effectiveCategoryItems.length > 0 && (
         <section style={sectionStyle('categories')} className="w-full max-w-7xl 2xl:max-w-[1536px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-4 sm:pb-5">
-          <SectionHeading title="Celebrate With Neirah" />
+          <SectionHeading title={`Celebrate With ${brandName}`} />
 
           <div
             className="relative group/celebrate px-1 w-full mx-auto"
@@ -738,10 +741,10 @@ const Home = () => {
           3. PRODUCTS SECTION
       ─────────────────────────────────────────────────────────────────── */}
       <section style={sectionStyle('products')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-5 pb-10 sm:pb-12 space-y-12">
-        {/* Most Loved on Neirah - Gold Products Sub-Section */}
+        {/* Most Loved on - Gold Products Sub-Section */}
         {(goldProducts.length > 0 || platinumProducts.length > 0) && (
           <div>
-            <SectionHeading title="Most Loved on Neirah" />
+            <SectionHeading title={`Most Loved on ${brandName}`} />
 
             <div
               ref={mostLovedScrollRef}
@@ -1052,14 +1055,14 @@ const Home = () => {
                 >
                   <img
                     src={getMediaUrl(mobileAppBanner.image)}
-                    alt="NEIRAH Mobile App"
+                    alt={`${brandName} Mobile App`}
                     className="w-full h-full object-cover object-left lg:object-center select-none"
                   />
                 </a>
               ) : (
                 <img
                   src={getMediaUrl(mobileAppBanner.image)}
-                  alt="NEIRAH Mobile App"
+                  alt={`${brandName} Mobile App`}
                   className="w-full h-full object-cover object-left lg:object-center select-none"
                 />
               )}
@@ -1102,14 +1105,14 @@ const Home = () => {
                 >
                   <img
                     src={getMediaUrl(mobileAppBanner.mobileImage || mobileAppBanner.image)}
-                    alt="NEIRAH Mobile App"
+                    alt={`${brandName} Mobile App`}
                     className="w-full h-auto object-cover"
                   />
                 </a>
               ) : (
                 <img
                   src={getMediaUrl(mobileAppBanner.mobileImage || mobileAppBanner.image)}
-                  alt="NEIRAH Mobile App"
+                  alt={`${brandName} Mobile App`}
                   className="w-full h-auto object-cover"
                 />
               )}
@@ -1326,7 +1329,7 @@ const Home = () => {
         <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
           <SectionHeading title="Follow Us on Instagram" wrapperClass="mb-8">
             <a
-              href={storeSettings?.socialMedia?.instagram || 'https://www.instagram.com/neirah.officials/'}
+              href={storeSettings?.socialMedia?.instagram || `https://www.instagram.com/${defaultInstaSlug}/`}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2.5 inline-flex items-center gap-1.5 text-gray-600 hover:text-[#8B6B42] hover:underline font-medium text-sm md:text-base transition-colors"

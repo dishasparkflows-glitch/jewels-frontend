@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
 import { HiOutlineStar } from 'react-icons/hi';
+import { useStoreSettings } from '../../../contexts/StoreSettingsContext';
 import FormattedContent from './FormattedContent';
 
 const formatBreakdownValue = (val) => {
@@ -37,6 +38,10 @@ export default function ProductAccordions({
   isGold = false,
   breakdown = null,
 }) {
+  const { settings } = useStoreSettings();
+  const manufacturer = (settings?.businessDetails?.manufacturer || '').trim();
+  const countryOfOrigin = (settings?.businessDetails?.countryOfOrigin || '').trim();
+
   const [openAccordions, setOpenAccordions] = useState({
     desc: false,
     specs: false,
@@ -329,6 +334,46 @@ export default function ProductAccordions({
               </div>
             );
           })}
+
+      {/* Accordion 4: Manufacturer & Origin */}
+      {Boolean(manufacturer || countryOfOrigin) && (
+        <div>
+          <button
+            type="button"
+            onClick={() => toggleAccordion('origin')}
+            className="w-full flex items-center justify-between px-5 py-3.5 sm:py-4 text-left cursor-pointer transition-colors bg-[#FAF7F2] hover:bg-[#F5EFE6]"
+          >
+            <span className="text-xs sm:text-[13px] font-medium text-stone-900 tracking-normal">
+              Manufacturer &amp; Origin
+            </span>
+            <span className="text-stone-600 text-lg sm:text-xl font-light select-none leading-none flex items-center justify-center w-6 h-6">
+              {openAccordions.origin ? '−' : '+'}
+            </span>
+          </button>
+          <div className={`accordion-collapse ${openAccordions.origin ? 'open' : ''}`}>
+            <div className="accordion-collapse-inner">
+              <div className="px-5 pb-5 pt-3 bg-white border-t border-[#EFE8DD] text-xs sm:text-[13px] space-y-1.5">
+                {manufacturer && (
+                  <div
+                    className={`flex justify-between items-center py-2 ${
+                      countryOfOrigin ? 'border-b border-[#EFE8DD]' : ''
+                    }`}
+                  >
+                    <span className="font-bold text-stone-900">Manufacturer:</span>
+                    <span className="font-normal text-stone-700">{manufacturer}</span>
+                  </div>
+                )}
+                {countryOfOrigin && (
+                  <div className="flex justify-between items-center py-2">
+                    <span className="font-bold text-stone-900">Country of Origin:</span>
+                    <span className="font-normal text-stone-700">{countryOfOrigin}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

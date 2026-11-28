@@ -79,8 +79,9 @@ export default function StaticPageView() {
   return (
     <div className="min-h-screen bg-[#fbfaf8] text-[#1c1917] pb-24">
       <SEO
-        title={page.seoTitle || page.title}
-        description={page.metaDescription}
+        title={page.seo?.metaTitle || page.seoTitle || page.title}
+        description={page.seo?.metaDescription || page.metaDescription}
+        keywords={page.seo?.keywords || page.keywords}
         type="article"
       />
       {/* ─── Breadcrumb ────────────────────────────────────── */}

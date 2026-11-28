@@ -10,7 +10,7 @@ import Modal from '../common/Modal';
 
 export default function LoginModal({ isOpen, onClose }) {
   const { login, loginWithGoogle, onLoginSuccess, closeLoginModal } = useAuth();
-  const { settings } = useStoreSettings();
+  const { settings, brandName } = useStoreSettings();
   const navigate = useNavigate();
 
   const [identifier, setIdentifier] = useState('');
@@ -135,7 +135,7 @@ export default function LoginModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <Modal open={isOpen} onClose={handleClose} label="Sign in to your Neirah account" className="p-0 border-0 bg-transparent shadow-none">
+    <Modal open={isOpen} onClose={handleClose} label={`Sign in to your ${brandName} account`} className="p-0 border-0 bg-transparent shadow-none">
       <div className="relative grid max-h-[calc(100dvh-2rem)] w-[min(860px,calc(100vw-2rem))] overflow-hidden rounded-3xl bg-white shadow-2xl border border-stone-100 md:grid-cols-[1.1fr_0.9fr]">
         {/* Close Button */}
         <button
@@ -281,7 +281,7 @@ export default function LoginModal({ isOpen, onClose }) {
         <section className="relative hidden md:block overflow-hidden bg-stone-900 select-none">
           <img
             src={authBannerUrl}
-            alt="Neirah Fine Jewellery"
+            alt={`${brandName} Fine Jewellery`}
             className="absolute inset-0 h-full w-full object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-black/10" />

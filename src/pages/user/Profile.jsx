@@ -4,6 +4,7 @@ import SEO from '../../components/common/SEO';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import { useWishlist } from '../../contexts/WishlistContext';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import WishlistProductCard from '../../components/product/WishlistProductCard';
 import { addressesAPI, ordersAPI, reviewsAPI } from '../../api/services';
 import { toast } from 'react-hot-toast';
@@ -228,6 +229,7 @@ const getStatusBannerInfo = (status = '') => {
 
 const Profile = () => {
   const { user, logout } = useAuth();
+  const { brandName } = useStoreSettings();
   const { addToCart, openCartDrawer, orderCount, returnOrderCount } = useCart();
   const {
     wishlistItems,
@@ -311,7 +313,8 @@ const Profile = () => {
       const link = document.createElement('a');
       link.href = url;
       const safeOrderNum = (order.orderNumber || 'ORD').replace(/[^a-zA-Z0-9_-]/g, '_');
-      link.setAttribute('download', `NEIRAH_INVOICE_${safeOrderNum}.pdf`);
+      const brandPrefix = (brandName || 'Jewels').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').toUpperCase() || 'JEWELS';
+      link.setAttribute('download', `${brandPrefix}_INVOICE_${safeOrderNum}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
@@ -876,7 +879,7 @@ const Profile = () => {
 
   return (
     <div className="bg-[#fcfbfa] min-h-screen text-[#22201e] font-sans antialiased py-6 sm:py-8 px-3 sm:px-5 lg:px-6">
-      <SEO title="My Account & Orders | Neirah Jewels" noindex={true} />
+      <SEO title="My Account & Orders" noindex={true} />
       <div className="max-w-6xl mx-auto space-y-5">
         {/* Top Header */}
         <div className="flex items-center justify-between">

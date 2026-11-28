@@ -63,7 +63,7 @@ const WEEKDAY_NAMES = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 /**
  * Common Luxury DatePicker Component
  *
- * Matches the Neirah luxury design system.
+ * Matches the luxury design system.
  * Supports single date selection, optional time picker, quick month/year jumps,
  * smart auto-flip (opens upward when near bottom of modal/screen), custom triggers,
  * and standard YYYY-MM-DD or YYYY-MM-DDTHH:mm formats.
@@ -498,14 +498,15 @@ export default function DatePicker({
           className={`w-full flex items-center justify-between text-left font-medium transition-all duration-150 outline-none cursor-pointer bg-white border border-stone-200 hover:border-stone-300 shadow-2xs text-stone-800 ${
             sizeStyles
           } ${
-            isOpen ? 'border-[#8c6b45] ring-2 ring-[#8c6b45]/15' : ''
+            isOpen ? 'border-[var(--btn-primary-bg,#8b6f4e)] ring-2 ring-[var(--btn-primary-bg,#8b6f4e)]/15' : ''
           } ${
             disabled ? 'opacity-50 cursor-not-allowed bg-stone-100/60' : ''
           } ${buttonClassName}`}
         >
           <div className="flex items-center gap-2 truncate min-w-0">
             <HiOutlineCalendar
-              className="w-3.5 h-3.5 shrink-0 text-[#8c6b45]"
+              className="w-3.5 h-3.5 shrink-0"
+              style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }}
             />
             <span
               className={`truncate ${
@@ -533,8 +534,9 @@ export default function DatePicker({
             )}
             <HiOutlineChevronDown
               className={`w-3.5 h-3.5 text-stone-400 transition-transform duration-200 ${
-                isOpen ? 'rotate-180 text-[#8c6b45]' : ''
+                isOpen ? 'rotate-180' : ''
               }`}
+              style={isOpen ? { color: 'var(--btn-primary-bg, #8b6f4e)' } : undefined}
             />
           </div>
         </button>
@@ -570,8 +572,9 @@ export default function DatePicker({
               <span>{MONTH_NAMES[currentMonth]} {currentYear}</span>
               <HiOutlineChevronDown
                 className={`w-3 h-3 text-stone-500 transition-transform duration-200 ${
-                  isMonthYearPickerOpen ? 'rotate-180 text-[#8c6b45]' : ''
+                  isMonthYearPickerOpen ? 'rotate-180' : ''
                 }`}
+                style={isMonthYearPickerOpen ? { color: 'var(--btn-primary-bg, #8b6f4e)' } : undefined}
               />
             </button>
 
@@ -702,7 +705,7 @@ export default function DatePicker({
           {includeTime && (
             <div className="mt-3 pt-2.5 border-t border-stone-100 flex items-center justify-between text-xs">
               <div className="flex items-center gap-1 text-stone-600 font-medium">
-                <HiOutlineClock className="w-3.5 h-3.5 text-[#8c6b45]" />
+                <HiOutlineClock className="w-3.5 h-3.5" style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }} />
                 <span>Time:</span>
               </div>
               <div className="flex items-center gap-1">
@@ -742,7 +745,8 @@ export default function DatePicker({
             <button
               type="button"
               onClick={handleClear}
-              className="text-xs font-medium text-[#8c6b45] transition-colors cursor-pointer hover:underline"
+              style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }}
+              className="text-xs font-medium transition-colors cursor-pointer hover:underline"
             >
               Clear
             </button>

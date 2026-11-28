@@ -388,13 +388,20 @@ export default function Dropdown({
         className={`w-full flex items-center justify-between gap-2.5 text-left transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
           buttonClassName
             ? buttonClassName
-            : `border border-[#e7ded3] bg-white text-stone-800 font-medium shadow-2xs hover:border-[#8b6f4e]/60 hover:bg-[#faf7f3]/40 focus:outline-none focus:ring-2 focus:ring-[#8b6f4e]/15 ${
+            : `border border-stone-200 bg-white text-stone-800 font-medium shadow-2xs hover:border-stone-300 hover:bg-stone-50/50 focus:outline-none input-theme-focus ${
                 sizeClasses.button
               }`
-        } ${isOpen ? 'border-[#8b6f4e] ring-2 ring-[#8b6f4e]/15' : ''}`}
+        } ${isOpen ? 'border-[var(--btn-primary-bg,#8b6f4e)] ring-2 ring-[var(--btn-primary-bg,#8b6f4e)]/15' : ''}`}
       >
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          {prefixIcon && <span className="shrink-0 text-[#8b6f4e] flex items-center justify-center">{prefixIcon}</span>}
+          {prefixIcon && (
+            <span
+              className="shrink-0 flex items-center justify-center"
+              style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }}
+            >
+              {prefixIcon}
+            </span>
+          )}
           {selectedOption ? (
             <span className="truncate text-stone-900 font-medium">
               {selectedOption.label}
@@ -415,8 +422,9 @@ export default function Dropdown({
           {showChevron && (
             <HiOutlineChevronDown
               className={`${sizeClasses.chevron} text-stone-600 transition-transform duration-200 ${
-                isOpen ? 'rotate-180 text-[#8b6f4e]' : ''
+                isOpen ? 'rotate-180' : ''
               }`}
+              style={isOpen ? { color: 'var(--btn-primary-bg, #8b6f4e)' } : undefined}
             />
           )}
         </div>
@@ -444,7 +452,7 @@ export default function Dropdown({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={searchPlaceholder}
-                  className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-[#e7ded3] rounded-lg text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-[#8b6f4e] focus:ring-1 focus:ring-[#8b6f4e]/30 transition-all"
+                  className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-stone-200 rounded-lg text-stone-900 placeholder:text-stone-400 focus:outline-none input-theme-focus transition-all"
                   onClick={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
                   onKeyDown={(e) => {

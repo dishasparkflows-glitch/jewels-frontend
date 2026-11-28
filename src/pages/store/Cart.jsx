@@ -150,7 +150,7 @@ const Cart = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-8 sm:pb-12 space-y-4 sm:space-y-5">
-      <SEO title="Shopping Bag | Neirah Fine Jewellery" noindex={true} />
+      <SEO title="Shopping Bag" noindex={true} />
       {/* Title & Return */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 sm:pb-3.5 border-b border-stone-200">
         <div>

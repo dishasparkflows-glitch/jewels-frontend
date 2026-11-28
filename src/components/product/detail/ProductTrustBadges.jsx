@@ -1,8 +1,9 @@
 import PropTypes from 'prop-types';
 import { HiOutlineEye } from 'react-icons/hi';
+import { useStoreSettings } from '../../../contexts/StoreSettingsContext';
 
 /**
- * Trust badges (Global Jeweller, BIS Hallmark, 4.7/5 Rating, Neirah Certified, Free Shipping)
+ * Trust badges (Global Jeweller, BIS Hallmark, 4.7/5 Rating, Brand Certified, Free Shipping)
  * and optional Gold/Diamond Authenticity Certificate thumbnail preview
  */
 export default function ProductTrustBadges({
@@ -10,6 +11,7 @@ export default function ProductTrustBadges({
   certificateUrl = '',
   onOpenCertificate,
 }) {
+  const { brandName } = useStoreSettings();
   return (
     <div className="pt-4 flex flex-col md:flex-row items-center md:items-stretch gap-4 md:gap-6 divide-y md:divide-y-0 md:divide-x divide-stone-200">
       {/* Left side: Trust Badges (Matches Reference Design) */}
@@ -69,7 +71,7 @@ export default function ProductTrustBadges({
           </span>
         </div>
 
-        {/* Badge 4: Neirah Certified */}
+        {/* Badge 4: Brand Certified */}
         <div className="flex flex-col items-center text-center">
           <div className="w-12 h-12 rounded-full border border-stone-200 bg-stone-50 flex items-center justify-center text-[#144b44] shrink-0 shadow-2xs">
             <svg
@@ -86,7 +88,7 @@ export default function ProductTrustBadges({
             </svg>
           </div>
           <span className="text-[11px] sm:text-xs text-stone-700 leading-tight mt-2 font-normal">
-            Neirah<br />Certified
+            {brandName}<br />Certified
           </span>
         </div>
 

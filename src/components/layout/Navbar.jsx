@@ -7,11 +7,11 @@ import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 import { useCurrency } from '../../contexts/CurrencyContext';
 import MegaMenuNav from './MegaMenuNav';
 import { getOnce } from '../../api/axios';
-import { productsAPI } from '../../api/services';
+import { productsAPI, storesAPI } from '../../api/services';
 import { formatProductPrice } from '../../utils/productCard';
 import { getImageUrl } from '../../utils/imageUrl';
 import {
-  HiOutlineShoppingBag,
+  HiOutlineShoppingCart,
   HiOutlineUser,
   HiOutlineSearch,
   HiOutlineMenu,
@@ -30,6 +30,24 @@ import { IoDiamondOutline } from 'react-icons/io5';
 
 import VirtualAppointmentModal from '../common/VirtualAppointmentModal';
 import CartDrawer from '../store/CartDrawer';
+
+// Store location pin icon matching reference design
+function StoreLocationPinIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 21.5c-4.4-5.2-7-9.2-7-13.2a7 7 0 1 1 14 0c0 4-2.6 8-7 13.2z" />
+      <path d="M9.5 11.5v-2a2.5 2.5 0 0 1 5 0v2" />
+    </svg>
+  );
+}
 
 const getSearchProductMeta = (item) => {
   const title = item.basicInfo?.title || item.title || item.name || '';
@@ -75,21 +93,21 @@ const SearchProductCard = ({ item, variant = 'desktop', onSelect }) => {
         onClick={onSelect}
         className="w-28 shrink-0 flex flex-col text-left group"
       >
-        <div className="w-28 h-28 rounded-xl bg-[#f8f6f0] border border-stone-100 flex items-center justify-center p-2 overflow-hidden shadow-2xs">
+        <div className="w-28 h-28 rounded-xl bg-white border border-stone-100 flex items-center justify-center p-2 overflow-hidden shadow-2xs">
           {imgUrl ? (
             <img
               src={imgUrl}
               alt={title}
-              className="w-full h-full object-contain mix-blend-multiply"
+              className="w-full h-full object-contain"
             />
           ) : (
-            <IoDiamondOutline className="w-6 h-6 text-[#8b6f4e]/40" />
+            <IoDiamondOutline className="w-6 h-6 text-stone-300" />
           )}
         </div>
         <p className="text-[11px] font-semibold text-stone-800 line-clamp-2 mt-1.5 leading-tight" title={title}>
           {title}
         </p>
-        <p className="text-[11px] font-bold text-[#8b6f4e] mt-0.5">
+        <p className="text-[11px] font-bold mt-0.5" style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }}>
           {priceText}
         </p>
       </Link>
@@ -103,19 +121,19 @@ const SearchProductCard = ({ item, variant = 'desktop', onSelect }) => {
         onClick={onSelect}
         className="w-24 shrink-0 flex flex-col text-left group"
       >
-        <div className="w-24 h-24 rounded-xl bg-[#f8f6f0] border border-stone-100 flex items-center justify-center p-1.5 overflow-hidden">
+        <div className="w-24 h-24 rounded-xl bg-white border border-stone-100 flex items-center justify-center p-1.5 overflow-hidden">
           {imgUrl ? (
             <img
               src={imgUrl}
               alt={title}
-              className="w-full h-full object-contain mix-blend-multiply"
+              className="w-full h-full object-contain"
             />
           ) : (
-            <IoDiamondOutline className="w-5 h-5 text-[#8b6f4e]/40" />
+            <IoDiamondOutline className="w-5 h-5 text-stone-300" />
           )}
         </div>
         <p className="text-[10px] font-semibold text-stone-800 truncate mt-1" title={title}>{title}</p>
-        <p className="text-[10px] font-bold text-[#8b6f4e]">{priceText}</p>
+        <p className="text-[10px] font-bold" style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }}>{priceText}</p>
       </Link>
     );
   }
@@ -126,24 +144,24 @@ const SearchProductCard = ({ item, variant = 'desktop', onSelect }) => {
       onClick={onSelect}
       className="group flex flex-col text-left"
     >
-      <div className="w-full aspect-square rounded-2xl bg-[#f8f6f0] border border-stone-100 flex items-center justify-center p-2.5 overflow-hidden group-hover:border-[#8b6f4e]/40 transition-all shadow-2xs">
+      <div className="w-full aspect-square rounded-2xl bg-white border border-stone-100 flex items-center justify-center p-2.5 overflow-hidden group-hover:border-[var(--btn-primary-bg,#8b6f4e)]/40 transition-all shadow-2xs">
         {imgUrl ? (
           <img
             src={imgUrl}
             alt={title}
-            className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-stone-300">
-            <IoDiamondOutline className="w-8 h-8 text-[#8b6f4e]/40" />
+            <IoDiamondOutline className="w-8 h-8 text-stone-300" />
           </div>
         )}
       </div>
-      <p className="text-xs font-semibold text-stone-800 line-clamp-2 mt-2 leading-tight group-hover:text-[#8b6f4e] transition-colors min-h-[2rem]" title={title}>
+      <p className="text-xs font-semibold text-stone-800 line-clamp-2 mt-2 leading-tight group-hover:text-[var(--btn-primary-bg,#8b6f4e)] transition-colors min-h-[2rem]" title={title}>
         {title}
       </p>
-      <p className="text-xs font-bold text-[#8b6f4e] mt-1">
+      <p className="text-xs font-bold mt-1" style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }}>
         {priceText}
       </p>
     </Link>
@@ -361,9 +379,9 @@ const Navbar = () => {
         }}
         className="text-[10px] sm:text-xs py-1.5 px-4 sm:px-6 lg:px-8 border-b border-black/10"
       >
-          <div className="relative max-w-7xl 2xl:max-w-[1536px] mx-auto flex items-center justify-between min-h-[24px]">
+          <div className="relative w-full mx-auto flex items-center justify-between min-h-[24px]">
             {/* Left: Virtual Appointment */}
-            <div className="flex-1 flex items-center justify-start min-w-0 relative z-10">
+            <div className="flex-1 flex items-center justify-start gap-4 min-w-0 relative z-10">
               <button
                 type="button"
                 onClick={() => setAppointmentModalOpen(true)}
@@ -402,7 +420,7 @@ const Navbar = () => {
                     </div>
                   );
                 })() : (
-                  <span className="truncate">{storeSettings?.businessDetails?.companyName || 'Neirah'}</span>
+                  <span className="truncate">{storeSettings?.businessDetails?.companyName || 'Jewels'}</span>
                 )}
               </div>
             </div>
@@ -432,7 +450,7 @@ const Navbar = () => {
         }}
         className="relative z-50 px-4 sm:px-6 lg:px-8 border-b transition-colors"
       >
-        <div className="max-w-7xl 2xl:max-w-[1536px] mx-auto flex items-center justify-between gap-3 sm:gap-6 h-14 sm:h-16 lg:h-[70px]">
+        <div className="w-full mx-auto flex items-center justify-between gap-3 sm:gap-6 h-14 sm:h-16 lg:h-[70px]">
           {/* Mobile hamburger */}
           <div className="order-last flex items-center lg:order-none lg:hidden">
             <button
@@ -446,32 +464,34 @@ const Navbar = () => {
           </div>
 
           {/* ─── Prominent Brand Logo ─── */}
-          <Link
-            to="/"
-            onClick={() => {
-              setMobileMenuOpen(false);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="order-first flex items-center leading-none group shrink-0 min-w-0 py-1 h-full"
-            aria-label={storeSettings.companyName || 'Home'}
-          >
-            {brandLogo.desktop ? (
-              <picture className="flex items-center h-full">
-                {brandLogo.mobile && <source media="(max-width: 639px)" srcSet={brandLogo.mobile} />}
-                <img
-                  src={brandLogo.desktop}
-                  alt={storeSettings.companyName || 'Neirah Jewels'}
-                  className="h-9 sm:h-10 md:h-11 lg:h-[46px] xl:h-[48px] w-auto max-w-[160px] sm:max-w-[190px] md:max-w-[220px] lg:max-w-[245px] object-contain object-left transition-transform duration-300 group-hover:scale-[1.02]"
-                />
-              </picture>
-            ) : (
-              storeSettings.companyName && (
-                <span className="font-cinzel text-base sm:text-xl lg:text-2xl font-semibold tracking-[0.18em] sm:tracking-[0.2em] opacity-95 group-hover:opacity-100 transition-opacity uppercase">
-                  {storeSettings.companyName}
-                </span>
-              )
-            )}
-          </Link>
+          <div className="order-first flex items-center justify-start shrink-0 lg:flex-1 min-w-0 h-full lg:pl-12 xl:pl-24 2xl:pl-40">
+            <Link
+              to="/"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="flex items-center leading-none group shrink-0 min-w-0 py-1 h-full"
+              aria-label={storeSettings.companyName || 'Home'}
+            >
+              {brandLogo.desktop ? (
+                <picture className="flex items-center h-full">
+                  {brandLogo.mobile && <source media="(max-width: 639px)" srcSet={brandLogo.mobile} />}
+                  <img
+                    src={brandLogo.desktop}
+                    alt={storeSettings.companyName || 'Jewels'}
+                    className="h-9 sm:h-10 md:h-11 lg:h-[46px] xl:h-[48px] w-auto max-w-[160px] sm:max-w-[190px] md:max-w-[220px] lg:max-w-[245px] object-contain object-left transition-transform duration-300 group-hover:scale-[1.02]"
+                  />
+                </picture>
+              ) : (
+                storeSettings.companyName && (
+                  <span className="font-cinzel text-base sm:text-xl lg:text-2xl font-semibold tracking-[0.18em] sm:tracking-[0.2em] opacity-95 group-hover:opacity-100 transition-opacity uppercase">
+                    {storeSettings.companyName}
+                  </span>
+                )
+              )}
+            </Link>
+          </div>
 
           {/* ─── Compact Luxury Search Bar ─── */}
           <div ref={searchContainerRef} className="flex-1 max-w-sm lg:max-w-md xl:max-w-lg mx-auto hidden md:block relative z-40">
@@ -559,7 +579,7 @@ const Navbar = () => {
                   <Link
                     to={`/shop?search=${encodeURIComponent(searchQuery.trim())}`}
                     onClick={() => setShowSearchDropdown(false)}
-                    className="text-xs sm:text-sm font-semibold text-stone-700 hover:text-[#8b6f4e] flex items-center gap-1 group transition-colors cursor-pointer shrink-0"
+                    className="text-xs sm:text-sm font-semibold text-stone-700 link-theme-hover flex items-center gap-1 group transition-colors cursor-pointer shrink-0"
                   >
                     <span>View all</span>
                     <span className="group-hover:translate-x-0.5 transition-transform">→</span>
@@ -569,7 +589,10 @@ const Navbar = () => {
                 {/* Content Section: Matched Products */}
                 {isSearching ? (
                   <div className="py-12 flex flex-col items-center justify-center gap-2.5 text-stone-400">
-                    <div className="w-6 h-6 border-2 border-[#8b6f4e] border-t-transparent rounded-full animate-spin" />
+                    <div
+                      className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin"
+                      style={{ borderColor: 'var(--btn-primary-bg, #8b6f4e)', borderTopColor: 'transparent' }}
+                    />
                     <span className="text-xs font-medium">Searching luxury collection...</span>
                   </div>
                 ) : displayedProducts.length > 0 ? (
@@ -597,8 +620,8 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Actions: Currency, Wishlist, Profile, Shopping Bag */}
-          <div className="order-2 flex items-center space-x-1 sm:space-x-3">
+          {/* Actions: Stores, Currency, Wishlist, Profile, Shopping Cart */}
+          <div className="order-2 flex items-center justify-end lg:flex-1 space-x-1 sm:space-x-3">
             {/* Mobile Search Icon */}
             <button
               type="button"
@@ -609,6 +632,22 @@ const Navbar = () => {
             >
               <HiOutlineSearch className="w-[18px] h-[18px]" />
             </button>
+
+            {/* STORES Button (Matching Reference) */}
+            <Link
+              to="/stores"
+              onMouseEnter={() => {
+                storesAPI.getStates?.();
+                storesAPI.getLookup?.();
+              }}
+              className="inline-flex items-center gap-1.5 h-8 sm:h-9 px-2 sm:px-2.5 rounded-full hover:bg-stone-100 text-stone-800 transition-all cursor-pointer shrink-0 group"
+              title="Find our Boutiques & Stores"
+            >
+              <StoreLocationPinIcon className="w-4 h-4 text-stone-700 group-hover:text-[var(--btn-primary-bg,#8b6f4e)] transition-colors shrink-0" />
+              <span className="text-[11px] sm:text-xs font-bold tracking-wider uppercase text-stone-800 group-hover:text-[var(--btn-primary-bg,#8b6f4e)] transition-colors">
+                STORES
+              </span>
+            </Link>
 
             {/* Currency Dropdown */}
             {showCurrencyOnStorefront && currencies.length > 0 && (
@@ -881,28 +920,28 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* Shopping Bag with live badge */}
+            {/* Shopping Cart with always-visible live badge */}
             <button
               type="button"
               onClick={() => setCartDrawerOpen(true)}
-              className="p-1.5 sm:p-2 opacity-80 hover:opacity-100 transition-opacity relative"
-              title="Shopping Bag"
-              aria-label={`Open shopping bag, ${totalItems || 0} items`}
+              className="p-1.5 sm:p-2 opacity-85 hover:opacity-100 transition-opacity relative cursor-pointer"
+              title="Shopping Cart"
+              aria-label={`Open shopping cart, ${totalItems || 0} items`}
               aria-expanded={cartDrawerOpen}
             >
-              <HiOutlineShoppingBag className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
-              {totalItems > 0 && (
+              <span className="relative inline-flex items-center justify-center">
+                <HiOutlineShoppingCart className="w-5 h-5 sm:w-[22px] sm:h-[22px]" />
                 <span
                   style={{
                     backgroundColor: 'var(--btn-primary-bg, #8b6f4e)',
                     color: 'var(--btn-primary-text, #ffffff)',
-                    '--tw-ring-color': 'var(--storefront-header-bg, #201e1b)',
+                    '--tw-ring-color': 'var(--storefront-header-bg, #ffffff)',
                   }}
-                  className="absolute -top-1 -right-1 text-[9px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center font-bold shadow-md ring-2 transition-transform animate-scaleIn"
+                  className="absolute -top-2 -right-2 text-[9.5px] min-w-[17px] h-[17px] px-1 rounded-full flex items-center justify-center font-bold leading-none shadow-xs ring-2"
                 >
-                  {totalItems}
+                  {totalItems || 0}
                 </span>
-              )}
+              </span>
             </button>
           </div>
         </div>
@@ -967,7 +1006,10 @@ const Navbar = () => {
           {searchQuery.trim().length >= 2 && (
             <div className="mt-3 bg-white rounded-2xl shadow-xl border border-stone-200/90 p-3.5 text-left animate-fadeIn">
               <div className="flex items-center justify-between border-b border-stone-100 pb-2 mb-3 text-xs">
-                <span className="font-bold text-[#8b6f4e] border-b-2 border-[#8b6f4e] pb-1">
+                <span
+                  className="font-bold border-b-2 pb-1"
+                  style={{ color: 'var(--btn-primary-bg, #8b6f4e)', borderColor: 'var(--btn-primary-bg, #8b6f4e)' }}
+                >
                   Products ({allCount})
                 </span>
                 <Link
@@ -976,7 +1018,7 @@ const Navbar = () => {
                     setMobileSearchOpen(false);
                     setShowSearchDropdown(false);
                   }}
-                  className="text-xs font-semibold text-stone-700 hover:text-[#8b6f4e] shrink-0 ml-2"
+                  className="text-xs font-semibold text-stone-700 link-theme-hover shrink-0 ml-2"
                 >
                   View all →
                 </Link>
@@ -1128,6 +1170,18 @@ const Navbar = () => {
                 <span>My Wishlist</span>
               </button>
             )}
+            <Link
+              to="/stores"
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ borderColor: 'color-mix(in srgb, currentColor 12%, transparent)' }}
+              className="text-xs uppercase font-medium tracking-[0.16em] opacity-90 hover:opacity-100 py-1.5 border-b flex items-center justify-between transition-opacity"
+            >
+              <div className="flex items-center gap-2">
+                <StoreLocationPinIcon className="w-4 h-4 text-[#8b6f4e]" />
+                <span>Stores &amp; Boutiques</span>
+              </div>
+              <HiOutlineChevronRight className="w-3.5 h-3.5 opacity-60" />
+            </Link>
             <Link
               to="/blog"
               onClick={() => setMobileMenuOpen(false)}

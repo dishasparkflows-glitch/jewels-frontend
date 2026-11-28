@@ -1,5 +1,5 @@
 /**
- * Neirah Jewelry Sizing Engine Utility
+ * Jewelry Sizing Engine Utility
  * 
  * Dynamic database-driven sizing engine:
  * Reads sizingConfig directly from the category record in the database:

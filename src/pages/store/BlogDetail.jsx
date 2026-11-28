@@ -18,9 +18,11 @@ import {
 import { FaXTwitter } from 'react-icons/fa6';
 import toast from 'react-hot-toast';
 import { blogsAPI } from '../../api/services';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 
 export default function BlogDetail() {
   const { slug } = useParams();
+  const { brandName } = useStoreSettings();
   const [blog, setBlog] = useState(null);
   const [recentBlogs, setRecentBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +84,7 @@ export default function BlogDetail() {
   };
 
   const handleShareWhatsApp = () => {
-    const text = encodeURIComponent(`Read "${shareTitle}" on Neirah: ${shareUrl}`);
+    const text = encodeURIComponent(`Read "${shareTitle}" on ${brandName}: ${shareUrl}`);
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank', 'noopener,noreferrer');
   };
 
@@ -163,11 +165,11 @@ export default function BlogDetail() {
     dateModified: blog.updatedAt || blog.meta?.updatedAt,
     author: {
       '@type': 'Person',
-      name: blog.author?.name || 'Neirah Editorial Team',
+      name: blog.author?.name || `${brandName} Editorial Team`,
     },
     publisher: {
       '@type': 'Organization',
-      name: 'Neirah Jewels',
+      name: brandName,
       logo: {
         '@type': 'ImageObject',
         url: typeof window !== 'undefined' ? `${window.location.origin}/logo.svg` : '',
@@ -195,7 +197,7 @@ export default function BlogDetail() {
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-2 text-xs text-stone-500 font-medium overflow-x-auto whitespace-nowrap">
           <Link to="/" className="hover:text-stone-900 transition-colors">Home</Link>
           <HiOutlineChevronRight className="w-3 h-3 text-stone-300 shrink-0" />
-          <Link to="/blog" className="hover:text-stone-900 transition-colors">Neirah Journal</Link>
+          <Link to="/blog" className="hover:text-stone-900 transition-colors">{brandName} Journal</Link>
           {categorySlug && (
             <>
               <HiOutlineChevronRight className="w-3 h-3 text-stone-300 shrink-0" />
@@ -230,7 +232,7 @@ export default function BlogDetail() {
             <div className="inline-flex items-center gap-1.5">
               <span className="text-stone-400 font-normal">By</span>
               <span className="font-semibold text-stone-800 tracking-tight">
-                {blog.basicInfo?.author || blog.author || 'Neirah Editorial'}
+                {blog.basicInfo?.author || blog.author || `${brandName} Editorial`}
               </span>
             </div>
 
@@ -385,7 +387,7 @@ export default function BlogDetail() {
       {recentBlogs.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 border-t border-stone-200/90 mt-16">
           <div className="text-center max-w-xl mx-auto mb-10 space-y-2">
-            <p className="text-xs uppercase tracking-widest text-[#d4af37] font-semibold">More from Neirah</p>
+            <p className="text-xs uppercase tracking-widest text-[#d4af37] font-semibold">More from {brandName}</p>
             <h2 className="text-2xl sm:text-3xl font-serif font-bold text-stone-900">
               Related Editorial Stories
             </h2>

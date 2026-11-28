@@ -186,8 +186,8 @@ export function StoreSettingsProvider({ children }) {
     const megaMenuAccent = theme?.colors?.accent || theme?.colors?.secondary || '#d2b18a';
     const couponBg = colors.couponBgColor || '#201e1b';
     const couponText = colors.couponTextColor || '#ffffff';
-    const footerBg = colors.footerBgColor || '#0f0d0b';
-    const footerText = colors.footerTextColor || '#c8b89e';
+    const footerBg = colors.footerBgColor || '#1F4E56';
+    const footerText = colors.footerTextColor || '#ffffff';
 
     root.style.setProperty('--btn-primary-bg', btnBg);
     root.style.setProperty('--btn-primary-hover', btnHover);
@@ -209,18 +209,23 @@ export function StoreSettingsProvider({ children }) {
     root.style.setProperty('--storefront-footer-text', footerText);
   }, [settings?.themeColors, theme?.colors?.primary, theme?.colors?.accent, theme?.colors?.secondary]);
 
+  const brandName = useMemo(() => {
+    return String(settings?.businessDetails?.companyName || settings?.storeName || '').trim() || 'Jewels';
+  }, [settings?.businessDetails?.companyName, settings?.storeName]);
+
   useEffect(() => {
     const title = theme?.seo?.metaTitle;
     const description = theme?.seo?.metaDescription;
-    if (!title && !description) return;
-    if (title && (!document.title || document.title === 'Neirah Jewels | Fine Jewellery & Diamonds')) {
+    if (title && (!document.title || document.title === 'Jewels | Fine Jewellery & Diamonds')) {
       document.title = title;
+    } else if (!title && (!document.title || document.title === 'Jewels | Fine Jewellery & Diamonds')) {
+      document.title = `${brandName} | Fine Jewellery & Diamonds`;
     }
     const meta = document.querySelector('meta[name="description"]');
     if (description && meta && (!meta.content || meta.content.includes('Discover handcrafted'))) {
       meta.content = description;
     }
-  }, [theme?.seo?.metaTitle, theme?.seo?.metaDescription]);
+  }, [theme?.seo?.metaTitle, theme?.seo?.metaDescription, brandName]);
 
   const themeStyle = useMemo(() => {
     const colors = theme?.colors || {};
@@ -249,6 +254,7 @@ export function StoreSettingsProvider({ children }) {
     <StoreSettingsContext.Provider
       value={{
         settings,
+        brandName,
         footerSettings,
         topAnnouncement,
         websiteConfig,

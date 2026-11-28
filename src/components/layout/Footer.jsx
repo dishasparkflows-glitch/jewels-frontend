@@ -30,12 +30,13 @@ const SOCIAL_PLATFORMS = [
 ];
 
 const Footer = () => {
+  const { settings, brandName, footerSettings, navigation: bootstrapNavigation } = useStoreSettings();
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [footerData, setFooterData] = useState({
     phone: '+919726237723',
-    email: 'info@neirah.in',
+    email: 'info@jewels.in',
     address: 'Sanskrut - 1 GH Road G-1. 1/2 Sector 3D plot no.1182 G-1, near Hi-Tech hospital, Gandhinagar, Gujarat 382006',
-    copyright: `© ${new Date().getFullYear()} Neirah · Shine your way`,
+    copyright: '',
     socialLinks: [],
   });
   const [categories, setCategories] = useState([]);
@@ -48,8 +49,6 @@ const Footer = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const { settings, footerSettings, navigation: bootstrapNavigation } = useStoreSettings();
-
   const playStoreUrl =
     String(settings?.businessDetails?.playStoreUrl || '').trim() ||
     'https://play.google.com/store';
@@ -59,11 +58,11 @@ const Footer = () => {
 
   const formattedCopyright = useMemo(() => {
     const currentYear = new Date().getFullYear();
-    const raw = footerData.copyright || `© ${currentYear} Neirah · Shine your way`;
+    const raw = footerData.copyright || `© ${currentYear} ${brandName} · Shine your way`;
     return raw
       .replace(/\{year\}/gi, currentYear)
       .replace(/(©|\(C\)|Copyright)\s*\d{4}/gi, `$1 ${currentYear}`);
-  }, [footerData.copyright]);
+  }, [footerData.copyright, brandName]);
 
   // Populate footer settings from common StoreSettingsContext (no separate API call)
   useEffect(() => {
@@ -72,10 +71,10 @@ const Footer = () => {
       phone: settings?.businessDetails?.mobileNumber || prev.phone,
       email: settings?.businessDetails?.emailAddress || prev.email,
       address: settings?.businessDetails?.storeAddress || prev.address,
-      copyright: footerSettings?.copyright || prev.copyright,
+      copyright: footerSettings?.copyright || `© ${new Date().getFullYear()} ${brandName} · Shine your way`,
       socialLinks: Array.isArray(footerSettings?.socialLinks) && footerSettings?.socialLinks.length > 0 ? footerSettings?.socialLinks : prev.socialLinks,
     }));
-  }, [footerSettings, settings]);
+  }, [footerSettings, settings, brandName]);
 
   // Compute active dynamic social media links from settings / footerSettings (only from API)
   const activeSocialLinks = useMemo(() => {
@@ -141,17 +140,77 @@ const Footer = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Dynamic Brand & Policies footer columns sourced from backend settings
+  const footerLinkColumns = useMemo(() => {
+    const rawFooterLinks =
+      footerSettings?.footerLinks ||
+      settings?.footerLinks ||
+      {};
+
+    const normalizeActiveLinks = (items = []) =>
+      (Array.isArray(items) ? items : []).filter(
+        (item) =>
+          item &&
+          item.status !== 'inactive' &&
+          String(item.name || '').trim() &&
+          String(item.path || '').trim()
+      );
+
+    return [
+      {
+        key: 'brand',
+        title: brandName,
+        links: normalizeActiveLinks(rawFooterLinks.brand),
+      },
+      {
+        key: 'policies',
+        title: 'OUR POLICIES',
+        links: normalizeActiveLinks(rawFooterLinks.policies),
+      },
+    ];
+  }, [footerSettings?.footerLinks, settings?.footerLinks, brandName]);
+
+  const renderFooterLink = (item) => {
+    const rawPath = String(item.path || '').trim();
+    const isExternal = /^(https?:\/\/|mailto:|tel:)/i.test(rawPath);
+
+    if (isExternal) {
+      const isHttp = /^https?:\/\//i.test(rawPath);
+      return (
+        <a
+          href={rawPath}
+          target={isHttp ? '_blank' : undefined}
+          rel={isHttp ? 'noopener noreferrer' : undefined}
+          className="text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 hover:underline transition-all"
+        >
+          {item.name}
+        </a>
+      );
+    }
+
+    const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+    return (
+      <Link
+        to={normalizedPath}
+        onClick={scrollToTop}
+        className="text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 hover:underline transition-all"
+      >
+        {item.name}
+      </Link>
+    );
+  };
+
   return (
     <footer className="w-full font-sans select-none">
-      {/* ─── 1. MAIN DARK LUXURY FOOTER SECTION (Matches neirah.in exactly) ───────────── */}
+      {/* ─── 1. MAIN LUXURY FOOTER SECTION ───────────── */}
       <div
         style={{
-          backgroundColor: 'var(--storefront-footer-bg, #0F0D0B)',
-          color: 'var(--storefront-footer-text, #C8B89E)',
+          backgroundColor: 'var(--storefront-footer-bg, #1F4E56)',
+          color: 'var(--storefront-footer-text, #ffffff)',
         }}
         className="pt-9 pb-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
       >
-        {/* Background Stylized Watermark (Matches neirah.in) */}
+        {/* Background Stylized Watermark */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none select-none">
           <img
             src="/images/logo.svg"
@@ -163,78 +222,25 @@ const Footer = () => {
         <div className="w-full max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           {/* Grid matching active content */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 lg:gap-8 mb-8">
-            {/* Column 1: NEIRAH */}
-            <div>
-              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase text-[#F3EAD8]">
-                NEIRAH
-              </h4>
-              <ul className="space-y-2 sm:space-y-2.5">
-                {[
-                  { name: 'Our Story', path: '/our-story' },
-                  { name: 'Jewellery Care', path: '/jewellery-care' },
-                  { name: 'Neirah Blog', path: '/blog' },
-                  { name: 'Reviews', path: '/reviews' },
-                  { name: "FAQ's", path: '/faqs' },
-                  { name: 'Track Your Order', path: '/track-your-order' },
-                  { name: 'Corporate', path: '/corporate' },
-                  { name: 'Contact Us', path: '/contact-us', isContact: true },
-                ].map((item) => (
-                  <li key={item.name}>
-                    {item.isContact ? (
-                      <button
-                        type="button"
-                        onClick={() => window.dispatchEvent(new CustomEvent('open-virtual-appointment'))}
-                        className="text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E] text-left cursor-pointer"
-                      >
-                        {item.name}
-                      </button>
-                    ) : (
-                      <Link
-                        to={item.path}
-                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                        className="text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E]"
-                      >
-                        {item.name}
-                      </Link>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Column 2: OUR POLICIES (Matches neirah.in) */}
-            <div>
-              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase text-[#F3EAD8]">
-                OUR POLICIES
-              </h4>
-              <ul className="space-y-2 sm:space-y-2.5">
-                {[
-                  { name: 'Shipping Policy', path: '/shipping-policy' },
-                  { name: 'Return & Refund Policy', path: '/return-refund-policy' },
-                  { name: 'Cancellation Policy', path: '/cancellation-policy' },
-                  { name: 'Terms & Conditions', path: '/terms-conditions' },
-                  { name: 'Privacy Policy', path: '/privacy-policy' },
-                  { name: 'Pricing Policy', path: '/pricing-policy' },
-                  { name: 'Payment Options', path: '/payment-options' },
-                  { name: 'Exchange Policy', path: '/exchange-policy' },
-                  { name: 'BIS Compliance & Certification', path: '/bis-compliance-certification' },
-                ].map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      to={item.path}
-                      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                      className="text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E]"
-                    >
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {/* Columns 1 & 2: Dynamic Brand & Policies Links */}
+            {footerLinkColumns.map((column) => (
+              <div key={column.key}>
+                <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase">
+                  {column.title}
+                </h4>
+                <ul className="space-y-2 sm:space-y-2.5">
+                  {column.links.map((item, idx) => (
+                    <li key={`${column.key}-${item.path}-${idx}`}>
+                      {renderFooterLink(item)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
 
             {/* Column 3: CATEGORY */}
             <div>
-              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase text-[#F3EAD8]">
+              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase">
                 CATEGORY
               </h4>
               <ul className="space-y-2 sm:space-y-2.5">
@@ -256,7 +262,7 @@ const Footer = () => {
                         <Link
                           to={path}
                           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                          className="text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E]"
+                          className="text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 hover:underline transition-all"
                         >
                           {cat.name || cat.title}
                         </Link>
@@ -276,7 +282,7 @@ const Footer = () => {
                       <Link
                         to={item.path}
                         onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                        className="text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 hover:underline transition-all text-[#C8B89E]"
+                        className="text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 hover:underline transition-all"
                       >
                         {item.name}
                       </Link>
@@ -288,25 +294,25 @@ const Footer = () => {
 
             {/* Column 4: GET IN TOUCH */}
             <div>
-              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase text-[#F3EAD8]">
+              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase">
                 GET IN TOUCH
               </h4>
               <div className="space-y-2 sm:space-y-2.5">
                 {/* Phone */}
                 <a
                   href={`tel:${footerData.phone}`}
-                  className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 group transition-all text-[#C8B89E]"
+                  className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 group transition-all"
                 >
-                  <HiOutlinePhone className="w-4 h-4 border border-white/20 p-0.5 rounded-xs group-hover:bg-white group-hover:text-[#8B6B42] shrink-0 transition-colors" />
+                  <HiOutlinePhone className="w-4 h-4 border border-current/25 p-0.5 rounded-xs group-hover:bg-white/20 shrink-0 transition-colors" />
                   <span>{footerData.phone}</span>
                 </a>
 
                 {/* Email */}
                 <a
                   href={`mailto:${footerData.email}`}
-                  className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 group transition-all underline text-[#C8B89E]"
+                  className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 group transition-all underline"
                 >
-                  <HiOutlineMail className="w-4 h-4 border border-white/20 p-0.5 rounded-xs group-hover:bg-white group-hover:text-[#8B6B42] shrink-0 transition-colors" />
+                  <HiOutlineMail className="w-4 h-4 border border-current/25 p-0.5 rounded-xs group-hover:bg-white/20 shrink-0 transition-colors" />
                   <span>{footerData.email}</span>
                 </a>
 
@@ -315,19 +321,19 @@ const Footer = () => {
                   href={
                     settings?.socialMedia?.whatsapp && settings.socialMedia.whatsapp.trim()
                       ? settings.socialMedia.whatsapp.trim()
-                      : `https://wa.me/${footerData.phone.replace(/[^0-9]/g, '')}?text=Hi%20Neirah%20Jewels`
+                      : `https://wa.me/${footerData.phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(brandName)}`
                   }
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-85 hover:opacity-100 group transition-all underline text-[#C8B89E]"
+                  className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 group transition-all underline"
                 >
-                  <HiOutlineChatAlt2 className="w-4 h-4 border border-white/20 p-0.5 rounded-xs group-hover:bg-white group-hover:text-[#8B6B42] shrink-0 transition-colors" />
+                  <HiOutlineChatAlt2 className="w-4 h-4 border border-current/25 p-0.5 rounded-xs group-hover:bg-white/20 shrink-0 transition-colors" />
                   <span>Chat on WhatsApp</span>
                 </a>
 
                 {/* Address */}
-                <div className="flex gap-2 text-[12px] sm:text-[13px] opacity-80 leading-relaxed group text-[#C8B89E]">
-                  <HiOutlineLocationMarker className="w-4 h-4 shrink-0 border border-white/20 p-0.5 rounded-xs mt-0.5" />
+                <div className="flex gap-2 text-[12px] sm:text-[13px] opacity-80 leading-relaxed group">
+                  <HiOutlineLocationMarker className="w-4 h-4 shrink-0 border border-current/25 p-0.5 rounded-xs mt-0.5" />
                   <div className="whitespace-pre-line leading-relaxed">{footerData.address}</div>
                 </div>
               </div>
@@ -335,7 +341,7 @@ const Footer = () => {
               {/* FOLLOW US */}
               {activeSocialLinks.length > 0 && (
                 <div className="mt-5">
-                  <h4 className="text-[13px] sm:text-[14px] font-bold tracking-[0.14em] mb-2.5 uppercase text-[#F3EAD8]">
+                  <h4 className="text-[13px] sm:text-[14px] font-bold tracking-[0.14em] mb-2.5 uppercase">
                     FOLLOW US
                   </h4>
                   <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
@@ -345,7 +351,7 @@ const Footer = () => {
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-2 border border-[#8B6B42]/40 rounded-full hover:bg-[#8B6B42] hover:text-[#F0E8DA] transition-all flex items-center justify-center text-[#C8B89E]"
+                        className="p-2 border border-current/30 rounded-full hover:bg-white/20 transition-all flex items-center justify-center opacity-85 hover:opacity-100"
                         aria-label={label}
                         title={label}
                       >
@@ -359,7 +365,7 @@ const Footer = () => {
 
             {/* Column 5: DOWNLOAD OUR MOBILE APP */}
             <div>
-              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase text-[#F3EAD8] leading-tight">
+              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase leading-tight">
                 DOWNLOAD OUR<br className="hidden sm:inline" /> MOBILE APP
               </h4>
               <div className="flex flex-col gap-2.5">
@@ -409,19 +415,19 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Bottom Dark Strip: Brand Logo, Copyright & Payment Badges (Matches neirah.in) */}
+          {/* Bottom Dark Strip: Brand Logo, Copyright & Payment Badges */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6 border-t border-white/10">
             {/* Logo */}
             <div className="flex items-center gap-2">
               <img
                 src="/images/logo.svg"
-                alt="Neirah"
+                alt={brandName}
                 className="h-10 sm:h-11 brightness-0 invert opacity-90"
               />
             </div>
 
             {/* Copyright */}
-            <div className="text-[12px] sm:text-[13px] text-[#C8B89E] opacity-80 text-center">
+            <div className="text-[12px] sm:text-[13px] opacity-80 text-center">
               {formattedCopyright}
             </div>
 

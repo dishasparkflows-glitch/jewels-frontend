@@ -181,6 +181,8 @@
 .store-shell .font-serif,
 .store-shell .font-serif-lux {
   font-family: var(--jewel-heading-font);
+  font-variant-numeric: lining-nums;
+  font-feature-settings: 'lnum' 1;
 }
 
 .store-shell .font-sans {

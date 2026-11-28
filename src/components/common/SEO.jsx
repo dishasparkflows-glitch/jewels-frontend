@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 
 /**
  * Helper to update or create a <meta> tag in <head>
@@ -66,10 +67,10 @@ function setJsonLd(schemaData, id = 'seo-jsonld-schema') {
   }
 }
 
-const DEFAULT_BRAND = 'Neirah Jewels';
-const DEFAULT_SITE_TITLE = 'Neirah Jewels | Fine Handcrafted Jewellery & Certified Diamonds';
-const DEFAULT_DESCRIPTION =
-  'Discover handcrafted luxury fine jewellery, certified lab-grown diamonds, and bespoke gemstone collections at Neirah Jewels.';
+const DEFAULT_BRAND = 'Jewels';
+const buildDefaultTitle = (brandName) => `${brandName} | Fine Handcrafted Jewellery & Certified Diamonds`;
+const buildDefaultDescription = (brandName) =>
+  `Discover handcrafted luxury fine jewellery, certified lab-grown diamonds, and bespoke gemstone collections at ${brandName}.`;
 
 /**
  * Comprehensive SEO Head Manager Component
@@ -98,22 +99,25 @@ export default function SEO({
   currency = 'INR',
   availability = 'in stock',
   sku,
-  brand = DEFAULT_BRAND,
+  brand,
   // Schema.org structured data object
   schema,
 }) {
+  const { brandName } = useStoreSettings();
+  const activeBrand = String(brand || brandName || DEFAULT_BRAND).trim() || DEFAULT_BRAND;
+
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
     // 1. Title formatting
-    let fullTitle = title ? title.trim() : DEFAULT_SITE_TITLE;
-    if (title && !title.toLowerCase().includes('neirah')) {
-      fullTitle = `${title.trim()} | ${DEFAULT_BRAND}`;
+    let fullTitle = title ? title.trim() : buildDefaultTitle(activeBrand);
+    if (title && !title.toLowerCase().includes(activeBrand.toLowerCase())) {
+      fullTitle = `${title.trim()} | ${activeBrand}`;
     }
     document.title = fullTitle;
 
     // 2. Meta description & keywords
-    const metaDesc = description ? description.trim().replace(/\s+/g, ' ') : DEFAULT_DESCRIPTION;
+    const metaDesc = description ? description.trim().replace(/\s+/g, ' ') : buildDefaultDescription(activeBrand);
     setMetaTag('name', 'description', metaDesc);
 
     if (keywords) {
@@ -135,7 +139,7 @@ export default function SEO({
     }
 
     // 5. Open Graph tags
-    setMetaTag('property', 'og:site_name', DEFAULT_BRAND, true);
+    setMetaTag('property', 'og:site_name', activeBrand, true);
     setMetaTag('property', 'og:type', type, true);
     setMetaTag('property', 'og:title', fullTitle, true);
     setMetaTag('property', 'og:description', metaDesc, true);
@@ -191,7 +195,7 @@ export default function SEO({
         sku: sku || undefined,
         brand: {
           '@type': 'Brand',
-          name: brand,
+          name: activeBrand,
         },
         offers: {
           '@type': 'Offer',
@@ -223,6 +227,7 @@ export default function SEO({
     availability,
     sku,
     brand,
+    activeBrand,
     schema,
   ]);
 

@@ -11,6 +11,7 @@ import {
   FaCheck,
 } from 'react-icons/fa6';
 import toast from 'react-hot-toast';
+import { useStoreSettings } from '../../../contexts/StoreSettingsContext';
 
 /**
  * Luxury Social & Direct Link Sharing Modal
@@ -23,12 +24,13 @@ export default function ProductShareModal({
   currentPrice = 0,
   formatPrice,
 }) {
+  const { brandName } = useStoreSettings();
   const [linkCopied, setLinkCopied] = useState(false);
 
   if (!isOpen) return null;
 
   const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
-  const productTitle = product?.basicInfo?.title || product?.name || 'Neirah Jewellery';
+  const productTitle = product?.basicInfo?.title || product?.name || `${brandName} Jewellery`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(currentUrl).then(() => {

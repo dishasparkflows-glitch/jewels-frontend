@@ -426,7 +426,7 @@ export default function FilterSidebar({
                   <FilterGroup
                     key={filter.id || filter.key}
                     title={rangeTitle}
-                    defaultOpen={hasPriceActive || presetOptions.length > 0}
+                    defaultOpen={Boolean(hasPriceActive)}
                   >
                     <div className="space-y-3 pt-1" data-currency={selectedCurrency?.code || 'INR'}>
                       {presetOptions.length > 0 && (

@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 import { useState } from 'react';
 import { HiSparkles } from 'react-icons/hi';
-import SimilarProductsDrawer, { prefetchSimilarProducts } from './SimilarProductsDrawer';
+import SimilarProductsDrawer from './SimilarProductsDrawer';
 
 /**
  * Common reusable trigger + bottom drawer for viewing similar products.
@@ -20,10 +20,6 @@ export default function SimilarProductsButton({
 
   if (!productId) return null;
 
-  const handlePrefetch = () => {
-    prefetchSimilarProducts(productId);
-  };
-
   const handleClick = (e) => {
     if (stopPropagation) {
       e.preventDefault();
@@ -39,13 +35,14 @@ export default function SimilarProductsButton({
           <button
             type="button"
             onClick={handleClick}
-            onMouseEnter={handlePrefetch}
-            onTouchStart={handlePrefetch}
-            className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-stone-200 hover:border-[#8b6f4e]/60 bg-stone-50/80 hover:bg-[#FAF7F2] text-stone-700 hover:text-[#8b6f4e] transition-all cursor-pointer text-xs font-medium active:scale-95 shadow-2xs"
+            className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border border-stone-200 hover:border-[color-mix(in_srgb,var(--btn-primary-bg,#8b6f4e)_60%,transparent)] bg-stone-50/80 hover:bg-[color-mix(in_srgb,var(--btn-primary-bg,#8b6f4e)_8%,#ffffff)] text-stone-700 hover:text-[var(--btn-primary-bg,#8b6f4e)] transition-all cursor-pointer text-xs font-medium active:scale-95 shadow-2xs"
             aria-label="View similar products"
             title="View Similar Products"
           >
-            <HiSparkles className="w-3.5 h-3.5 text-[#8b6f4e] shrink-0" />
+            <HiSparkles
+              className="w-3.5 h-3.5 shrink-0"
+              style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }}
+            />
             <span className="text-[11px] sm:text-[11.5px] font-semibold tracking-wide">Similar</span>
           </button>
           <div className="absolute bottom-full right-0 mb-2 hidden md:group-hover:flex flex-col items-end pointer-events-none z-30">
@@ -59,11 +56,10 @@ export default function SimilarProductsButton({
         <button
           type="button"
           onClick={handleClick}
-          onMouseEnter={handlePrefetch}
-          onTouchStart={handlePrefetch}
           aria-label="View similar products"
           title="View Similar Products"
-          className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-all z-20 bg-white/90 backdrop-blur-xs shadow-xs border border-gray-100 hover:bg-white hover:border-[#8b6f4e]/50 text-[#8b6f4e] cursor-pointer active:scale-95 ${className}`}
+          style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }}
+          className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-all z-20 bg-white/90 backdrop-blur-xs shadow-xs border border-gray-100 hover:bg-white hover:border-[color-mix(in_srgb,var(--btn-primary-bg,#8b6f4e)_50%,transparent)] cursor-pointer active:scale-95 ${className}`}
         >
           <HiSparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
         </button>

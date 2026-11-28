@@ -9,7 +9,7 @@ export default function OrderFailed() {
 
   return (
     <main className="min-h-[65vh] bg-[#faf8f5] px-4 py-16 text-stone-900 sm:px-6 lg:px-8">
-      <SEO title="Order Incomplete | Neirah Jewels" noindex={true} />
+      <SEO title="Order Incomplete" noindex={true} />
       <div className="mx-auto max-w-lg text-center">
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-rose-50 text-rose-600">
           <HiOutlineXCircle className="h-12 w-12" />

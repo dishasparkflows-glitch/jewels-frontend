@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import SEO from '../../components/common/SEO';
 import { HiOutlineClock, HiOutlineSearch, HiOutlineArrowRight } from 'react-icons/hi';
 import { blogsAPI, blogCategoriesAPI } from '../../api/services';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 
 // ─── Module-level Persistent Cache ─────────────────────────────────────
 // Keeps fetched blog data and categories warm in memory so switching
@@ -14,6 +15,7 @@ const blogCache = {
 };
 
 export default function BlogList() {
+  const { brandName } = useStoreSettings();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeCategory = searchParams.get('blogCategory') || searchParams.get('category') || 'all';
   const categorySectionRef = useRef(null);
@@ -195,8 +197,8 @@ export default function BlogList() {
     <div className="min-h-screen bg-[#faf8f5] text-stone-900 pb-20">
       <SEO
         title={activeCategory && activeCategory !== 'all' ? `${activeCategory} Articles | Jewellery Journal` : 'Jewellery Journal & Guides'}
-        description="Explore fine jewellery styling tips, gemstone care guides, lab-grown diamond education, and artisan craftsmanship stories from Neirah Jewels."
-        keywords="jewellery blog, diamond guide, gold jewellery care, jewellery styling, neirah journal"
+        description={`Explore fine jewellery styling tips, gemstone care guides, lab-grown diamond education, and artisan craftsmanship stories from ${brandName}.`}
+        keywords={`jewellery blog, diamond guide, gold jewellery care, jewellery styling, ${brandName.toLowerCase()} journal`}
         type="website"
       />
       {/* ─── Hero Header ─── */}
@@ -207,7 +209,7 @@ export default function BlogList() {
             Editorial & Insights
           </p>
           <h1 className="text-3xl sm:text-5xl font-serif font-normal tracking-tight text-[#f5f0eb]">
-            The Neirah Journal
+            The {brandName} Journal
           </h1>
           <p className="text-stone-300 text-sm sm:text-base max-w-xl mx-auto font-light leading-relaxed">
             Discover captivating stories behind our rare gems, diamond curation guides, and timeless jewellery styling.
@@ -406,7 +408,7 @@ export default function BlogList() {
 
                       <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
                         <span className="text-[11px] text-stone-400">
-                          By {blog.basicInfo?.author || blog.author || 'Neirah'}
+                          By {blog.basicInfo?.author || blog.author || brandName}
                         </span>
                         <Link
                           to={`/blog/${slug}`}

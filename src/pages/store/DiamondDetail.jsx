@@ -36,7 +36,7 @@ export default function DiamondDetail() {
   const { user } = useAuth();
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
-  const { settings: storeSettings } = useStoreSettings();
+  const { settings: storeSettings, brandName } = useStoreSettings();
 
   const [diamond, setDiamond] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -95,7 +95,7 @@ export default function DiamondDetail() {
         const d = res?.data?.data || res?.data || null;
         setDiamond(d);
         if (d?.basicInfo?.title) {
-          document.title = `${d.basicInfo.title} | Neirah Fine Jewellery`;
+          document.title = `${d.basicInfo.title} | ${brandName}`;
         }
       })
       .catch(() => {
@@ -345,8 +345,8 @@ export default function DiamondDetail() {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: diamond?.basicInfo?.title || 'Neirah Certified Diamond',
-          text: `Discover ${diamond?.basicInfo?.title || 'this certified diamond'} on Neirah Fine Jewellery`,
+          title: diamond?.basicInfo?.title || `${brandName} Certified Diamond`,
+          text: `Discover ${diamond?.basicInfo?.title || 'this certified diamond'} on ${brandName}`,
           url: window.location.href,
         });
         return;
@@ -420,7 +420,7 @@ export default function DiamondDetail() {
     sku: diamond.basicInfo?.sku || identifier,
     brand: {
       '@type': 'Brand',
-      name: 'Neirah Jewels',
+      name: brandName,
     },
     offers: {
       '@type': 'Offer',
@@ -646,10 +646,10 @@ export default function DiamondDetail() {
               Order Now for estimated delivery by <strong className="text-stone-800 font-semibold">{deliveryDateString}</strong>
             </div>
 
-            {/* THE NEIRAH DIFFERENCE */}
+            {/* THE BRAND DIFFERENCE */}
             <div className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 mb-6 shadow-2xs">
               <h3 className="text-xs font-bold uppercase tracking-wider text-stone-900 pb-3.5 border-b border-stone-200 font-sans">
-                THE NEIRAH DIFFERENCE
+                THE {brandName.toUpperCase()} DIFFERENCE
               </h3>
               <ProductTrustBadges
                 isGold={true}

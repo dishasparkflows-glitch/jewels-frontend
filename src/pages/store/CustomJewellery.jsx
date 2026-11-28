@@ -17,6 +17,7 @@ import api from '../../api/axios';
 import { customInquiryAPI } from '../../api/services';
 import PhoneInput from '../../components/common/PhoneInput';
 import Dropdown from '../../components/common/Dropdown';
+import { useStoreSettings } from '../../contexts/StoreSettingsContext';
 
 const DEFAULT_STONE_OPTIONS = [
   { value: 'Natural Diamond', label: 'Natural Diamond' },
@@ -49,6 +50,7 @@ const BUDGET_OPTIONS = [
 ];
 
 export default function CustomJewellery() {
+  const { brandName } = useStoreSettings();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -71,9 +73,9 @@ export default function CustomJewellery() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    document.title = 'Design Your Own Jewellery | Neirah Fine Jewellery';
+    document.title = `Design Your Own Jewellery | ${brandName}`;
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  }, [brandName]);
 
   // Fetch dynamic diamond types from lookup API
   useEffect(() => {
@@ -392,7 +394,7 @@ export default function CustomJewellery() {
     <div className="min-h-screen bg-white">
       <SEO
         title="Bespoke Custom Jewellery Design | Handcrafted Heirloom Pieces"
-        description="Design one-of-a-kind bespoke jewellery, custom engagement rings, and personalised fine jewellery with Neirah master artisans."
+        description={`Design one-of-a-kind bespoke jewellery, custom engagement rings, and personalised fine jewellery with ${brandName} master artisans.`}
         type="website"
       />
       {/* ─── Header ─── */}
@@ -404,7 +406,7 @@ export default function CustomJewellery() {
 
         {/* Subtitle matching Screenshot 1 */}
         <p className="mt-3 text-xs sm:text-sm text-stone-600 max-w-2xl mx-auto leading-relaxed font-normal">
-          Design your unique jewellery with Neirah. Tailor every detail to your taste for a truly personal touch. Create the one-of-a-kind piece you&apos;ve always dreamed of.
+          Design your unique jewellery with {brandName}. Tailor every detail to your taste for a truly personal touch. Create the one-of-a-kind piece you&apos;ve always dreamed of.
         </p>
       </div>
 

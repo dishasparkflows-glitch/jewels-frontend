@@ -20,7 +20,7 @@ import { authAPI, otpAPI } from '../../api/services';
 
 const Register = () => {
   const { register, loginWithGoogle } = useAuth();
-  const { settings } = useStoreSettings();
+  const { settings, brandName } = useStoreSettings();
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState({ fullName: '', email: '', phone: '', password: '' });
@@ -126,7 +126,7 @@ const Register = () => {
             password: form.password,
           },
         });
-        toast.success('Welcome to Neirah Jewellers!', { id: toastId, icon: '✨' });
+        toast.success(`Welcome to ${brandName}!`, { id: toastId, icon: '✨' });
         navigate(destination, { replace: true });
       } catch (error) {
         const msg = error.response?.data?.message || 'Registration failed';
@@ -195,7 +195,7 @@ const Register = () => {
         },
         verificationToken: verifyData?.verificationToken,
       });
-      toast.success('Welcome to Neirah Jewellers!', { icon: '✨' });
+      toast.success(`Welcome to ${brandName}!`, { icon: '✨' });
       navigate(destination, { replace: true });
     } catch (error) {
       const msg = error.response?.data?.message || 'Registration failed';
@@ -220,7 +220,7 @@ const Register = () => {
               setGoogleLoading(true);
               try {
                 await loginWithGoogle(credential);
-                toast.success('Welcome to Neirah Jewellers!', { icon: '✨' });
+                toast.success(`Welcome to ${brandName}!`, { icon: '✨' });
                 navigate(destination, { replace: true });
               } catch (error) {
                 toast.error(error.response?.data?.message || 'Google sign-up failed');
@@ -263,8 +263,8 @@ const Register = () => {
   }, [destination, loginWithGoogle, navigate]);
 
   return (
-    <Modal open onClose={closeModal} label="Create your Neirah account" className="p-0 border-0 bg-transparent shadow-none">
-      <SEO title="Create Account | Neirah Jewels" noindex={true} />
+    <Modal open onClose={closeModal} label={`Create your ${brandName} account`} className="p-0 border-0 bg-transparent shadow-none">
+      <SEO title={`Create Account | ${brandName}`} noindex={true} />
       <div className="relative grid max-h-[calc(100dvh-2rem)] w-[min(860px,calc(100vw-2rem))] overflow-hidden rounded-3xl bg-white shadow-2xl border border-stone-100 md:grid-cols-[1.1fr_0.9fr]">
         {/* Close Button - positioned in top right (over image on desktop, over form on mobile) */}
         <button
@@ -281,10 +281,10 @@ const Register = () => {
           {/* Brand Logo Header */}
           <div className="mb-3">
             {logoUrl ? (
-              <img src={logoUrl} alt="Neirah" className="h-7 max-w-32 object-contain object-left" />
+              <img src={logoUrl} alt={brandName} className="h-7 max-w-32 object-contain object-left" />
             ) : (
               <div>
-                <span className="font-serif text-lg tracking-[0.2em] font-semibold text-stone-900 block leading-tight">NEIRAH</span>
+                <span className="font-serif text-lg tracking-[0.2em] font-semibold text-stone-900 block leading-tight uppercase">{brandName}</span>
                 <span className="text-[8px] uppercase tracking-[0.28em] text-stone-400 block font-light">SHINE YOUR WAY</span>
               </div>
             )}
@@ -292,7 +292,7 @@ const Register = () => {
 
           <div>
             <h1 className="font-serif text-2xl font-bold tracking-tight text-stone-900">Create Account</h1>
-            <p className="mt-1 text-xs text-stone-500">Join thousands who trust Neirah for timeless jewellery.</p>
+            <p className="mt-1 text-xs text-stone-500">Join thousands who trust {brandName} for timeless jewellery.</p>
           </div>
 
           <div
@@ -418,7 +418,7 @@ const Register = () => {
         <section className="relative hidden md:block overflow-hidden bg-stone-900 select-none">
           <img
             src={authBannerUrl}
-            alt="Neirah Fine Jewellery"
+            alt={`${brandName} Fine Jewellery`}
             className="absolute inset-0 h-full w-full object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-black/10" />

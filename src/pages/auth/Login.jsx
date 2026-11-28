@@ -11,7 +11,7 @@ import Modal from '../../components/common/Modal';
 
 const Login = () => {
   const { login, loginWithGoogle, user } = useAuth();
-  const { settings } = useStoreSettings();
+  const { settings, brandName } = useStoreSettings();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -140,8 +140,8 @@ const Login = () => {
   };
 
   return (
-    <Modal open onClose={closeModal} label="Sign in to your Neirah account" className="p-0 border-0 bg-transparent shadow-none">
-      <SEO title="Sign In | Neirah Jewels" noindex={true} />
+    <Modal open onClose={closeModal} label={`Sign in to your ${brandName} account`} className="p-0 border-0 bg-transparent shadow-none">
+      <SEO title={`Sign In | ${brandName}`} noindex={true} />
       <div className="relative grid max-h-[calc(100dvh-2rem)] w-[min(860px,calc(100vw-2rem))] overflow-hidden rounded-3xl bg-white shadow-2xl border border-stone-100 md:grid-cols-[1.1fr_0.9fr]">
         {/* Close Button - positioned in top right (over image on desktop, over form on mobile) */}
         <button
@@ -277,7 +277,7 @@ const Login = () => {
         <section className="relative hidden md:block overflow-hidden bg-stone-900 select-none">
           <img
             src={authBannerUrl}
-            alt="Neirah Fine Jewellery"
+            alt={`${brandName} Fine Jewellery`}
             className="absolute inset-0 h-full w-full object-cover object-center"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-black/10" />

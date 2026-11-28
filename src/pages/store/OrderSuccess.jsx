@@ -78,7 +78,7 @@ export default function OrderSuccess() {
 
   return (
     <main className="min-h-[75vh] bg-[#faf8f5] px-4 py-12 sm:py-16 text-stone-900 sm:px-6 lg:px-8">
-      <SEO title="Order Confirmed | Neirah Jewels" noindex={true} />
+      <SEO title="Order Confirmed" noindex={true} />
       <div className="mx-auto max-w-2xl text-center">
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#f4ece1] text-[#92704e]">
           <HiOutlineCheckCircle className="h-12 w-12" />

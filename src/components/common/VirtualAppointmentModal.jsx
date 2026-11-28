@@ -162,8 +162,16 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
         </button>
 
         {/* Circular Calendar Badge */}
-        <div className="w-10 h-10 rounded-full bg-[#f8f2eb] flex items-center justify-center mx-auto mb-2 shadow-xs">
-          <HiOutlineCalendar className="w-5 h-5 text-[#8c6b45] stroke-[1.8]" />
+        <div
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 12%, #ffffff)',
+          }}
+          className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 shadow-xs"
+        >
+          <HiOutlineCalendar
+            className="w-5 h-5 stroke-[1.8]"
+            style={{ color: 'var(--btn-primary-bg, #8b6f4e)' }}
+          />
         </div>
 
         {/* Header Title & Subtitle */}
@@ -183,7 +191,7 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
             <label className="block text-xs sm:text-[13px] font-medium text-stone-700">
               Full Name <span className="text-red-500">*</span>
             </label>
-            <div className="relative flex items-center border border-stone-200 rounded-xl px-3.5 h-11 focus-within:border-[#8c6b45] focus-within:ring-2 focus-within:ring-[#8c6b45]/15 transition-all bg-white hover:border-stone-300">
+            <div className="relative flex items-center border border-stone-200 rounded-xl px-3.5 h-11 input-theme-focus-within transition-all bg-white hover:border-stone-300">
               <HiOutlineUser className="w-4 h-4 text-stone-400 mr-2.5 shrink-0" />
               <input
                 type="text"
@@ -201,7 +209,7 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
             <label className="block text-xs sm:text-[13px] font-medium text-stone-700">
               Email Address <span className="text-red-500">*</span>
             </label>
-            <div className="relative flex items-center border border-stone-200 rounded-xl px-3.5 h-11 focus-within:border-[#8c6b45] focus-within:ring-2 focus-within:ring-[#8c6b45]/15 transition-all bg-white hover:border-stone-300">
+            <div className="relative flex items-center border border-stone-200 rounded-xl px-3.5 h-11 input-theme-focus-within transition-all bg-white hover:border-stone-300">
               <HiOutlineMail className="w-4 h-4 text-stone-400 mr-2.5 shrink-0" />
               <input
                 type="email"
@@ -243,7 +251,7 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
                 minDate={new Date()}
                 placeholder="Select Date"
                 size="md"
-                buttonClassName="w-full h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-sm text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8c6b45] focus:ring-2 focus:ring-[#8c6b45]/15 transition-all cursor-pointer"
+                buttonClassName="w-full h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-sm text-stone-800 hover:border-stone-300 focus:outline-none input-theme-focus transition-all cursor-pointer"
                 popupClassName="z-[100]"
               />
             </div>
@@ -260,7 +268,7 @@ const VirtualAppointmentModal = ({ isOpen, onClose }) => {
                 placeholder="Select Time"
                 size="md"
                 prefixIcon={<HiOutlineClock className="w-4 h-4 text-stone-400" />}
-                buttonClassName="w-full h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-sm text-stone-800 hover:border-stone-300 focus:outline-none focus:border-[#8c6b45] focus:ring-2 focus:ring-[#8c6b45]/15 transition-all flex items-center justify-between cursor-pointer"
+                buttonClassName="w-full h-11 px-3.5 rounded-xl border border-stone-200 bg-white text-sm text-stone-800 hover:border-stone-300 focus:outline-none input-theme-focus transition-all flex items-center justify-between cursor-pointer"
                 menuClassName="z-[90] text-sm max-h-52 rounded-xl"
               />
             </div>

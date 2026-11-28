@@ -5,7 +5,6 @@ import {
   HiOutlineHeart,
   HiHeart,
   HiOutlineShare,
-  HiSparkles,
 } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { productsAPI, couponsAPI, reviewsAPI, getCachedProductBySku } from '../../api/services';
@@ -17,7 +16,6 @@ import { getValidProductImages, getPrimaryProductImage, isOrnateImage } from '..
 import { trackProductView } from '../../config/firebase';
 import { useLiveViewers } from '../../hooks/useLiveViewers';
 import Dropdown from '../../components/common/Dropdown';
-import { prefetchSimilarProducts } from '../../components/store/SimilarProductsDrawer';
 import SimilarProductsButton from '../../components/store/SimilarProductsButton';
 import { formatPriceWithDecimals as formatPrice } from '../../utils/currency';
 import {
@@ -247,7 +245,7 @@ export default function ProductDetail() {
   const openCertificateModal = () => setShowCertificateModal(true);
   const closeCertificateModal = () => setShowCertificateModal(false);
 
-  const { settings: storeSettings } = useStoreSettings();
+  const { settings: storeSettings, brandName } = useStoreSettings();
 
   const certificateUrl =
     product?.certificateImage?.url ||
@@ -450,7 +448,7 @@ export default function ProductDetail() {
     }
   }, [product, isGold, isCenterDriven, isColorStone, purities, colors, carats, qualities, selectedPurity, selectedColor, selectedCarat, selectedQuality]);
 
-  // Swatches for the combined Metal (Purity + Color) selector matching Neirah standard
+  // Swatches for the combined Metal (Purity + Color) selector matching standard
   const { metalSwatches, purityGroups } = useMemo(() => {
     if (!isGold || !purities.length) {
       return { metalSwatches: [], purityGroups: [] };
@@ -1167,12 +1165,6 @@ export default function ProductDetail() {
           }
           trackProductView(prodData);
 
-          // Silently prefetch similar products in background for instant, seamless viewing
-          const prodTargetId = prodData._id || prodData.id;
-          if (prodTargetId) {
-            prefetchSimilarProducts(prodTargetId);
-          }
-
           // Fetch most liked products from API
           productsAPI
             .getMostLiked({
@@ -1347,12 +1339,11 @@ export default function ProductDetail() {
 
   // Share state & handlers
   const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [similarDrawerOpen, setSimilarDrawerOpen] = useState(false);
 
   const handleShare = async () => {
     const shareUrl = window.location.href;
-    const shareTitle = product?.name || 'Neirah Luxury Jewellery';
-    const shareText = `Discover ${product?.name || 'this luxury piece'} on Neirah Fine Jewellery`;
+    const shareTitle = product?.name || `${brandName} Luxury Jewellery`;
+    const shareText = `Discover ${product?.name || 'this luxury piece'} on ${brandName}`;
 
     const shareData = {
       title: shareTitle,
@@ -1438,7 +1429,7 @@ export default function ProductDetail() {
   const seoDescription =
     product.seo?.metaDescription ||
     product.basicInfo?.description ||
-    `${product.basicInfo?.title || 'Fine Jewellery Piece'} - Handcrafted luxury fine jewellery piece from Neirah Jewels featuring certified materials and timeless craftsmanship.`;
+    `${product.basicInfo?.title || 'Fine Jewellery Piece'} - Handcrafted luxury fine jewellery piece from ${brandName} featuring certified materials and timeless craftsmanship.`;
   const seoKeywords = product.seo?.keywords || '';
   const seoPrimaryImage = getPrimaryProductImage(product) || galleryImages?.[0]?.url || '';
   const seoPrice =
@@ -1467,7 +1458,7 @@ export default function ProductDetail() {
     sku: productSku,
     brand: {
       '@type': 'Brand',
-      name: 'Neirah Jewels',
+      name: brandName,
     },
     offers: {
       '@type': 'Offer',
@@ -1963,11 +1954,11 @@ export default function ProductDetail() {
             </div>
 
             {/* ══════════════════════════════════════════════════════════
-                THE NEIRAH DIFFERENCE (Matches Reference Screenshot)
+                THE BRAND DIFFERENCE
             ═══════════════════════════════════════════════════════════ */}
             <div className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6 mb-6 shadow-2xs">
               <h3 className="text-xs font-bold uppercase tracking-wider text-stone-900 pb-3.5 border-b border-stone-200 font-sans">
-                THE NEIRAH DIFFERENCE
+                THE {brandName.toUpperCase()} DIFFERENCE
               </h3>
 
 
