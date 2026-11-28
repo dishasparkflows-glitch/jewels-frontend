@@ -66,9 +66,9 @@ export default function Wishlist() {
                 type="button"
                 onClick={handleClearAll}
                 disabled={isClearing}
-                className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-lg border border-[#d6c7b2] hover:border-[#8b6f4e] bg-white hover:bg-[#FAF7F2] text-[#8b6f4e] text-xs sm:text-[13px] font-medium transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 disabled:opacity-60 cursor-pointer"
+                className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-1.5 rounded-lg border btn-theme-outline text-xs sm:text-[13px] font-medium transition-all duration-200 shadow-2xs hover:shadow-xs active:scale-95 disabled:opacity-60 cursor-pointer"
               >
-                <HiOutlineTrash className="w-4 h-4 text-[#8b6f4e]" />
+                <HiOutlineTrash className="w-4 h-4" />
                 <span>Clear All</span>
               </button>
             )}
@@ -91,8 +91,15 @@ export default function Wishlist() {
           </div>
         ) : (
           <div className="mx-auto max-w-md py-20 text-center animate-fadeIn">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#faf5ee] border border-[#e7dccb]">
-              <HiHeart className="h-7 w-7 text-[#8b6f4e]/60" aria-hidden="true" />
+            <div
+              className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border"
+              style={{
+                backgroundColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 8%, #ffffff)',
+                borderColor: 'color-mix(in srgb, var(--btn-primary-bg, #8b6f4e) 25%, transparent)',
+                color: 'var(--btn-primary-bg, #8b6f4e)',
+              }}
+            >
+              <HiHeart className="h-7 w-7 opacity-75" aria-hidden="true" />
             </div>
             <h2 className="mt-5 font-serif text-2xl text-stone-800">Your wishlist is empty</h2>
             <p className="mt-2 text-sm leading-6 text-stone-500">Save the pieces you love and find them here whenever you return.</p>

@@ -30,15 +30,8 @@ const SOCIAL_PLATFORMS = [
 ];
 
 const Footer = () => {
-  const { settings, brandName, footerSettings, navigation: bootstrapNavigation } = useStoreSettings();
+  const { settings, brandName, navigation: bootstrapNavigation } = useStoreSettings();
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [footerData, setFooterData] = useState({
-    phone: '+919726237723',
-    email: 'info@jewels.in',
-    address: 'Sanskrut - 1 GH Road G-1. 1/2 Sector 3D plot no.1182 G-1, near Hi-Tech hospital, Gandhinagar, Gujarat 382006',
-    copyright: '',
-    socialLinks: [],
-  });
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
@@ -49,60 +42,35 @@ const Footer = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const playStoreUrl =
-    String(settings?.businessDetails?.playStoreUrl || '').trim() ||
-    'https://play.google.com/store';
-  const appStoreUrl =
-    String(settings?.businessDetails?.appStoreUrl || '').trim() ||
-    'https://apps.apple.com';
+  const business = settings?.businessDetails || {};
+  const phone = String(business.mobileNumber || '').trim();
+  const email = String(business.emailAddress || '').trim();
+  const address = String(business.storeAddress || '').trim();
+  const playStoreUrl = String(business.playStoreUrl || '').trim();
+  const appStoreUrl = String(business.appStoreUrl || '').trim();
+  const whatsappUrl = String(settings?.socialMedia?.whatsapp || '').trim();
 
-  const formattedCopyright = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const raw = footerData.copyright || `© ${currentYear} ${brandName} · Shine your way`;
-    return raw
-      .replace(/\{year\}/gi, currentYear)
-      .replace(/(©|\(C\)|Copyright)\s*\d{4}/gi, `$1 ${currentYear}`);
-  }, [footerData.copyright, brandName]);
+  const formattedCopyright = `© ${new Date().getFullYear()} ${brandName} · Shine your way`;
 
-  // Populate footer settings from common StoreSettingsContext (no separate API call)
-  useEffect(() => {
-    setFooterData((prev) => ({
-      ...prev,
-      phone: settings?.businessDetails?.mobileNumber || prev.phone,
-      email: settings?.businessDetails?.emailAddress || prev.email,
-      address: settings?.businessDetails?.storeAddress || prev.address,
-      copyright: footerSettings?.copyright || `© ${new Date().getFullYear()} ${brandName} · Shine your way`,
-      socialLinks: Array.isArray(footerSettings?.socialLinks) && footerSettings?.socialLinks.length > 0 ? footerSettings?.socialLinks : prev.socialLinks,
-    }));
-  }, [footerSettings, settings, brandName]);
-
-  // Compute active dynamic social media links from settings / footerSettings (only from API)
+  // Compute active dynamic social media links strictly from settings.socialMedia
   const activeSocialLinks = useMemo(() => {
     const sm = settings?.socialMedia;
-    const list = [];
-    SOCIAL_PLATFORMS.forEach((platform) => {
-      let url = sm?.[platform.key]?.trim?.() || (typeof sm?.[platform.key] === 'string' ? sm[platform.key].trim() : '');
+    if (!sm || typeof sm !== 'object') return [];
 
-      // Check footerSettings.socialLinks array
-      if (!url && Array.isArray(footerSettings?.socialLinks)) {
-        const match = footerSettings.socialLinks.find(
-          (s) => s.platform?.toLowerCase() === platform.key.toLowerCase()
-        );
-        if (match?.url) url = match.url.trim();
-      }
-
+    return SOCIAL_PLATFORMS.reduce((acc, platform) => {
+      const rawUrl = sm[platform.key];
+      const url = typeof rawUrl === 'string' ? rawUrl.trim() : '';
       if (url) {
-        list.push({
+        acc.push({
           key: platform.key,
           label: platform.label,
           url,
           Icon: platform.icon,
         });
       }
-    });
-
-    return list;
-  }, [settings?.socialMedia, footerSettings?.socialLinks]);
+      return acc;
+    }, []);
+  }, [settings?.socialMedia]);
 
   // Populate categories & navigation items from bootstrap context
   useEffect(() => {
@@ -140,12 +108,10 @@ const Footer = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Dynamic Brand & Policies footer columns sourced from backend settings
+  // Dynamic Brand & Policies footer columns loaded strictly from settings.footerLinks
   const footerLinkColumns = useMemo(() => {
-    const rawFooterLinks =
-      footerSettings?.footerLinks ||
-      settings?.footerLinks ||
-      {};
+    const rawFooterLinks = settings?.footerLinks;
+    if (!rawFooterLinks || typeof rawFooterLinks !== 'object') return [];
 
     const normalizeActiveLinks = (items = []) =>
       (Array.isArray(items) ? items : []).filter(
@@ -167,8 +133,8 @@ const Footer = () => {
         title: 'OUR POLICIES',
         links: normalizeActiveLinks(rawFooterLinks.policies),
       },
-    ];
-  }, [footerSettings?.footerLinks, settings?.footerLinks, brandName]);
+    ].filter((col) => col.links.length > 0);
+  }, [settings?.footerLinks, brandName]);
 
   const renderFooterLink = (item) => {
     const rawPath = String(item.path || '').trim();
@@ -239,13 +205,13 @@ const Footer = () => {
             ))}
 
             {/* Column 3: CATEGORY */}
-            <div>
-              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase">
-                CATEGORY
-              </h4>
-              <ul className="space-y-2 sm:space-y-2.5">
-                {categories.length > 0 ? (
-                  categories.map((cat) => {
+            {categories.length > 0 && (
+              <div>
+                <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase">
+                  CATEGORY
+                </h4>
+                <ul className="space-y-2 sm:space-y-2.5">
+                  {categories.map((cat) => {
                     const nameLower = (cat.name || cat.title || '').toLowerCase();
                     const isSilver = nameLower.includes('silver');
                     const isDiamond = nameLower.includes('diamond');
@@ -261,36 +227,17 @@ const Footer = () => {
                       <li key={cat._id || cat.name}>
                         <Link
                           to={path}
-                          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                          onClick={scrollToTop}
                           className="text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 hover:underline transition-all"
                         >
                           {cat.name || cat.title}
                         </Link>
                       </li>
                     );
-                  })
-                ) : (
-                  [
-                    { name: 'Rings', path: '/shop?category=rings' },
-                    { name: 'Earrings', path: '/shop?category=earrings' },
-                    { name: 'Pendant', path: '/shop?category=pendant' },
-                    { name: 'Bangles & Bracelets', path: '/shop?category=bangles-bracelets' },
-                    { name: 'Collection', path: '/shop' },
-                    { name: 'Silver Collection', path: '/shop?category=silver-collection' },
-                  ].map((item) => (
-                    <li key={item.name}>
-                      <Link
-                        to={item.path}
-                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                        className="text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 hover:underline transition-all"
-                      >
-                        {item.name}
-                      </Link>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </div>
+                  })}
+                </ul>
+              </div>
+            )}
 
             {/* Column 4: GET IN TOUCH */}
             <div>
@@ -298,44 +245,44 @@ const Footer = () => {
                 GET IN TOUCH
               </h4>
               <div className="space-y-2 sm:space-y-2.5">
-                {/* Phone */}
-                <a
-                  href={`tel:${footerData.phone}`}
-                  className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 group transition-all"
-                >
-                  <HiOutlinePhone className="w-4 h-4 border border-current/25 p-0.5 rounded-xs group-hover:bg-white/20 shrink-0 transition-colors" />
-                  <span>{footerData.phone}</span>
-                </a>
+                {phone && (
+                  <a
+                    href={`tel:${phone}`}
+                    className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 group transition-all"
+                  >
+                    <HiOutlinePhone className="w-4 h-4 border border-current/25 p-0.5 rounded-xs group-hover:bg-white/20 shrink-0 transition-colors" />
+                    <span>{phone}</span>
+                  </a>
+                )}
 
-                {/* Email */}
-                <a
-                  href={`mailto:${footerData.email}`}
-                  className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 group transition-all underline"
-                >
-                  <HiOutlineMail className="w-4 h-4 border border-current/25 p-0.5 rounded-xs group-hover:bg-white/20 shrink-0 transition-colors" />
-                  <span>{footerData.email}</span>
-                </a>
+                {email && (
+                  <a
+                    href={`mailto:${email}`}
+                    className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 group transition-all underline"
+                  >
+                    <HiOutlineMail className="w-4 h-4 border border-current/25 p-0.5 rounded-xs group-hover:bg-white/20 shrink-0 transition-colors" />
+                    <span>{email}</span>
+                  </a>
+                )}
 
-                {/* WhatsApp */}
-                <a
-                  href={
-                    settings?.socialMedia?.whatsapp && settings.socialMedia.whatsapp.trim()
-                      ? settings.socialMedia.whatsapp.trim()
-                      : `https://wa.me/${footerData.phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(brandName)}`
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 group transition-all underline"
-                >
-                  <HiOutlineChatAlt2 className="w-4 h-4 border border-current/25 p-0.5 rounded-xs group-hover:bg-white/20 shrink-0 transition-colors" />
-                  <span>Chat on WhatsApp</span>
-                </a>
+                {whatsappUrl && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-[13px] sm:text-[14px] opacity-80 hover:opacity-100 group transition-all underline"
+                  >
+                    <HiOutlineChatAlt2 className="w-4 h-4 border border-current/25 p-0.5 rounded-xs group-hover:bg-white/20 shrink-0 transition-colors" />
+                    <span>Chat on WhatsApp</span>
+                  </a>
+                )}
 
-                {/* Address */}
-                <div className="flex gap-2 text-[12px] sm:text-[13px] opacity-80 leading-relaxed group">
-                  <HiOutlineLocationMarker className="w-4 h-4 shrink-0 border border-current/25 p-0.5 rounded-xs mt-0.5" />
-                  <div className="whitespace-pre-line leading-relaxed">{footerData.address}</div>
-                </div>
+                {address && (
+                  <div className="flex gap-2 text-[12px] sm:text-[13px] opacity-80 leading-relaxed group">
+                    <HiOutlineLocationMarker className="w-4 h-4 shrink-0 border border-current/25 p-0.5 rounded-xs mt-0.5" />
+                    <div className="whitespace-pre-line leading-relaxed">{address}</div>
+                  </div>
+                )}
               </div>
 
               {/* FOLLOW US */}
@@ -364,55 +311,59 @@ const Footer = () => {
             </div>
 
             {/* Column 5: DOWNLOAD OUR MOBILE APP */}
-            <div>
-              <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase leading-tight">
-                DOWNLOAD OUR<br className="hidden sm:inline" /> MOBILE APP
-              </h4>
-              <div className="flex flex-col gap-2.5">
-                {/* Google Play */}
-                <a
-                  href={playStoreUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2.5 px-3.5 py-2 bg-black border border-white/20 hover:border-white/50 rounded-lg transition-all text-left cursor-pointer w-fit min-w-[145px] max-w-[165px]"
-                >
-                  <svg
-                    style={{ width: '19px', height: '19px', minWidth: '19px', minHeight: '19px' }}
-                    className="w-[19px] h-[19px] shrink-0"
-                    viewBox="0 0 512 512"
-                  >
-                    <path fill="#410593" d="M92.1 40.7L276.8 225.5 92.1 410.3c-4.4-4.8-7.1-11.2-7.1-18.4V60.1c0-7.2 2.7-13.6 7.1-19.4z" />
-                    <path fill="#00e5ff" d="M366.1 176.2L120.2 34.2c-7.9-4.5-17.3-4.3-24.9.4l181.5 181.5 89.3-40z" />
-                    <path fill="#ff1053" d="M95.3 477.4c7.6 4.7 17 .4 24.9-4.1l245.9-142-89.3-39.9L95.3 477.4z" />
-                    <path fill="#ffc200" d="M428.4 235.1l-62.3-36-79.3 56.9 79.3 56.9 62.3-36c11.6-6.7 18.6-18.8 18.6-32s-7-25.2-18.6-31.8z" />
-                  </svg>
-                  <div className="flex flex-col">
-                    <span className="text-[8px] text-gray-300 font-medium uppercase leading-tight tracking-wider">GET IT ON</span>
-                    <span className="text-[12px] text-white font-bold leading-tight">Google Play</span>
-                  </div>
-                </a>
+            {(playStoreUrl || appStoreUrl) && (
+              <div>
+                <h4 className="text-[14px] md:text-[15px] font-bold tracking-[0.14em] mb-4 uppercase leading-tight">
+                  DOWNLOAD OUR<br className="hidden sm:inline" /> MOBILE APP
+                </h4>
+                <div className="flex flex-col gap-2.5">
+                  {playStoreUrl && (
+                    <a
+                      href={playStoreUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2.5 px-3.5 py-2 bg-black border border-white/20 hover:border-white/50 rounded-lg transition-all text-left cursor-pointer w-fit min-w-[145px] max-w-[165px]"
+                    >
+                      <svg
+                        style={{ width: '19px', height: '19px', minWidth: '19px', minHeight: '19px' }}
+                        className="w-[19px] h-[19px] shrink-0"
+                        viewBox="0 0 512 512"
+                      >
+                        <path fill="#410593" d="M92.1 40.7L276.8 225.5 92.1 410.3c-4.4-4.8-7.1-11.2-7.1-18.4V60.1c0-7.2 2.7-13.6 7.1-19.4z" />
+                        <path fill="#00e5ff" d="M366.1 176.2L120.2 34.2c-7.9-4.5-17.3-4.3-24.9.4l181.5 181.5 89.3-40z" />
+                        <path fill="#ff1053" d="M95.3 477.4c7.6 4.7 17 .4 24.9-4.1l245.9-142-89.3-39.9L95.3 477.4z" />
+                        <path fill="#ffc200" d="M428.4 235.1l-62.3-36-79.3 56.9 79.3 56.9 62.3-36c11.6-6.7 18.6-18.8 18.6-32s-7-25.2-18.6-31.8z" />
+                      </svg>
+                      <div className="flex flex-col">
+                        <span className="text-[8px] text-gray-300 font-medium uppercase leading-tight tracking-wider">GET IT ON</span>
+                        <span className="text-[12px] text-white font-bold leading-tight">Google Play</span>
+                      </div>
+                    </a>
+                  )}
 
-                {/* App Store */}
-                <a
-                  href={appStoreUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2.5 px-3.5 py-2 bg-black border border-white/20 hover:border-white/50 rounded-lg transition-all text-left cursor-pointer w-fit min-w-[145px] max-w-[165px]"
-                >
-                  <svg
-                    style={{ width: '19px', height: '19px', minWidth: '19px', minHeight: '19px' }}
-                    className="w-[19px] h-[19px] fill-current text-white shrink-0"
-                    viewBox="0 0 384 512"
-                  >
-                    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 52.3-13.7 69.5-34.3z" />
-                  </svg>
-                  <div className="flex flex-col">
-                    <span className="text-[8px] text-gray-300 font-medium uppercase leading-tight tracking-wider">DOWNLOAD ON THE</span>
-                    <span className="text-[12px] text-white font-bold leading-tight">App Store</span>
-                  </div>
-                </a>
+                  {appStoreUrl && (
+                    <a
+                      href={appStoreUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2.5 px-3.5 py-2 bg-black border border-white/20 hover:border-white/50 rounded-lg transition-all text-left cursor-pointer w-fit min-w-[145px] max-w-[165px]"
+                    >
+                      <svg
+                        style={{ width: '19px', height: '19px', minWidth: '19px', minHeight: '19px' }}
+                        className="w-[19px] h-[19px] fill-current text-white shrink-0"
+                        viewBox="0 0 384 512"
+                      >
+                        <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 52.3-13.7 69.5-34.3z" />
+                      </svg>
+                      <div className="flex flex-col">
+                        <span className="text-[8px] text-gray-300 font-medium uppercase leading-tight tracking-wider">DOWNLOAD ON THE</span>
+                        <span className="text-[12px] text-white font-bold leading-tight">App Store</span>
+                      </div>
+                    </a>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Bottom Dark Strip: Brand Logo, Copyright & Payment Badges */}

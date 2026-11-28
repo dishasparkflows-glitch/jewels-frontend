@@ -28,11 +28,13 @@ const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
 const Profile = lazy(() => import('./pages/user/Profile'));
 const StaticPageView = lazy(() => import('./pages/store/StaticPageView'));
+const ContactUs = lazy(() => import('./pages/store/ContactUs'));
 const DynamicSlugView = lazy(() => import('./pages/store/DynamicSlugView'));
 const OrderSuccess = lazy(() => import('./pages/store/OrderSuccess'));
 const OrderFailed = lazy(() => import('./pages/store/OrderFailed'));
 const CustomJewellery = lazy(() => import('./pages/store/CustomJewellery'));
 const Stores = lazy(() => import('./pages/store/Stores'));
+const Reviews = lazy(() => import('./pages/store/Reviews'));
 
 const PageLoader = () => (
   <div className="min-h-[50vh] flex items-center justify-center">
@@ -104,9 +106,7 @@ function App() {
                   <Route path="/shop" element={<Shop />} />
                   <Route path="/diamonds" element={<Shop defaultCategory="diamond" />} />
                   <Route path="/diamond/:slug" element={<DiamondDetail />} />
-                  <Route path="/diamonds/:slug" element={<DiamondDetail />} />
                   <Route path="/product/:slug" element={<ProductDetail />} />
-                  <Route path="/:categorySlug/:slug" element={<ProductDetail />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/order-success" element={<OrderSuccess />} />
@@ -120,7 +120,6 @@ function App() {
                     }
                   />
                   <Route path="/blog" element={<BlogList />} />
-                  <Route path="/blogs" element={<BlogList />} />
                   <Route path="/blog/:slug" element={<BlogDetail />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
@@ -134,20 +133,11 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    }
-                  />
                   <Route path="/pages/:slug" element={<StaticPageView />} />
+                  <Route path="/contact-us" element={<ContactUs />} />
                   <Route path="/custom-jewellery" element={<CustomJewellery />} />
-                  <Route path="/custom-jewelry" element={<CustomJewellery />} />
-                  <Route path="/custom" element={<Navigate to="/custom-jewellery" replace />} />
                   <Route path="/stores" element={<Stores />} />
-                  <Route path="/store-locator" element={<Navigate to="/stores" replace />} />
+                  <Route path="/reviews" element={<Reviews />} />
                   <Route path="/:slug" element={<DynamicSlugView />} />
                 </Route>
 

@@ -144,24 +144,26 @@ const Home = () => {
           })
         );
 
-        // 2. Curated collection banners
+        // 2. Curated collection banners (exclude incomplete banners without all 4 images)
         const collectionList = allBanners.filter((b) => b.display?.type === 'collectionbanner');
         setCollectionBanners(
-          collectionList.map((banner) => ({
-            id: banner._id,
-            title: banner.content?.title || '',
-            images: (banner.collectionImages || []).map((img, idx) => {
-              const cat = img.categoryId || banner.display?.categoryId;
-              const catKey = cat?.slug || cat?._id || '';
-              return {
-                url: img.url || '',
-                categoryName: cat?.name || '',
-                link: catKey ? `/shop?category=${encodeURIComponent(catKey)}` : banner.link || '/shop',
-                order: img.order ?? idx + 1,
-              };
-            }).filter((img) => img.url),
-            link: banner.link || '/shop',
-          }))
+          collectionList
+            .map((banner) => ({
+              id: banner._id,
+              title: banner.content?.title || '',
+              images: (banner.collectionImages || []).map((img, idx) => {
+                const cat = img.categoryId || banner.display?.categoryId;
+                const catKey = cat?.slug || cat?._id || '';
+                return {
+                  url: img.url || '',
+                  categoryName: cat?.name || '',
+                  link: catKey ? `/shop?category=${encodeURIComponent(catKey)}` : banner.link || '/shop',
+                  order: img.order ?? idx + 1,
+                };
+              }).filter((img) => img.url),
+              link: banner.link || '/shop',
+            }))
+            .filter((collection) => collection.images.length >= 4)
         );
 
         // 3. Customize banner
@@ -740,7 +742,7 @@ const Home = () => {
       {/* ─────────────────────────────────────────────────────────────────
           3. PRODUCTS SECTION
       ─────────────────────────────────────────────────────────────────── */}
-      <section style={sectionStyle('products')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-5 pb-10 sm:pb-12 space-y-12">
+      <section style={sectionStyle('products')} className="w-full max-w-[95%] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-5 pb-4 sm:pb-6 space-y-12">
         {/* Most Loved on - Gold Products Sub-Section */}
         {(goldProducts.length > 0 || platinumProducts.length > 0) && (
           <div>
@@ -871,8 +873,8 @@ const Home = () => {
           5. TRUST BADGES ROW
       ─────────────────────────────────────────────────────────────────── */}
       {activeTrustBadges.length > 0 && (
-        <section style={sectionStyle('trustBadges')} className="w-full max-w-7xl 2xl:max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-          <div className="py-2 sm:py-4">
+        <section style={sectionStyle('trustBadges')} className="w-full max-w-7xl 2xl:max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5">
+          <div className="py-1 sm:py-2">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 items-center justify-items-center gap-y-6 gap-x-4 sm:gap-x-6 lg:gap-x-6 text-center">
               {activeTrustBadges.map((item, index) => {
                 const imageUrl = item.image?.url ? getMediaUrl(item.image.url) : null;

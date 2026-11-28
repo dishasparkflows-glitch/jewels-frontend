@@ -144,7 +144,7 @@ export default function WishlistProductCard({ item, onRemove }) {
       }`}
     >
       {/* ─── Image Box ─── */}
-      <div className="relative aspect-square bg-[#f6f2ec] rounded-2xl p-4 sm:p-5 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:shadow-sm">
+      <div className="relative aspect-square bg-white border border-stone-200/70 rounded-2xl p-2 sm:p-3 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:shadow-sm">
         <Link
           to={productPath}
           aria-label={`View ${name}`}
@@ -154,7 +154,7 @@ export default function WishlistProductCard({ item, onRemove }) {
             src={displayImage}
             alt={name}
             loading="lazy"
-            className="h-full w-full object-contain p-2 sm:p-4 transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full object-contain p-1 sm:p-2 transition-transform duration-500 group-hover:scale-105"
           />
         </Link>
 

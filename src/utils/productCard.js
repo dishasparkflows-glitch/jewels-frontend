@@ -129,7 +129,7 @@ export function getProductCardData(product) {
   // 2. Process colorImages (each color entry with its images)
   for (const row of product.colorImages || []) {
     if (!row || row.status === 'inactive') continue;
-    const color = row.metalColorId || row.color;
+    const color = row.metalColorId;
     const id = typeof color === 'object' ? String(color._id || color.id || '') : (typeof color === 'string' && /^[a-f0-9]{24}$/i.test(color) ? color : '');
     const name = typeof color === 'object' ? (color?.name || '') : (typeof color === 'string' && !/^[a-f0-9]{24}$/i.test(color) ? color : '');
     const hex = color?.colorCode || color?.hex || color?.code || row.hex || colorHex[name.toLowerCase()];

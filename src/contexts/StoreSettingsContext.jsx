@@ -5,7 +5,6 @@ import { commonAPI } from '../api/services';
 
 export const defaultStoreSettingsValue = {
   settings: {},
-  footerSettings: {},
   topAnnouncement: {
     isEnabled: false,
     displayDirection: 'horizontal',
@@ -48,7 +47,6 @@ export function StoreSettingsProvider({ children }) {
   const cached = useMemo(() => getInitialCachedBootstrap(), []);
 
   const [settings, setSettings] = useState(() => cached?.settings || {});
-  const [footerSettings, setFooterSettings] = useState(() => cached?.footerSettings || {});
   const [topAnnouncement, setTopAnnouncement] = useState(() => cached?.topAnnouncement || {
     isEnabled: false,
     displayDirection: 'horizontal',
@@ -81,7 +79,6 @@ export function StoreSettingsProvider({ children }) {
         },
       });
     }
-    if (data.footerSettings) setFooterSettings(data.footerSettings);
     if (data.topAnnouncement) setTopAnnouncement(data.topAnnouncement);
     if (data.websiteConfig) setWebsiteConfig(data.websiteConfig);
     if (Array.isArray(data.navigation)) setNavigation(data.navigation);
@@ -255,7 +252,6 @@ export function StoreSettingsProvider({ children }) {
       value={{
         settings,
         brandName,
-        footerSettings,
         topAnnouncement,
         websiteConfig,
         navigation,

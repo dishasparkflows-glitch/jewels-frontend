@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import SEO from '../../components/common/SEO';
 import { HiOutlineChevronRight } from 'react-icons/hi';
 import { staticPagesAPI } from '../../api/services';
+import ContactForm from '../../components/common/ContactForm';
 
 export default function StaticPageView() {
   const { slug } = useParams();
@@ -76,6 +77,8 @@ export default function StaticPageView() {
     );
   }
 
+  const isContactPage = slug === 'contact-us' || slug === 'contact';
+
   return (
     <div className="min-h-screen bg-[#fbfaf8] text-[#1c1917] pb-24">
       <SEO
@@ -116,6 +119,13 @@ export default function StaticPageView() {
             prose-img:rounded-2xl prose-img:shadow-md"
           dangerouslySetInnerHTML={{ __html: page.content || '' }}
         />
+
+        {/* If Contact Us page, render luxury contact form */}
+        {isContactPage && (
+          <div className="mt-8 bg-white p-6 sm:p-10 border border-stone-200/80 shadow-2xs">
+            <ContactForm />
+          </div>
+        )}
       </div>
     </div>
   );

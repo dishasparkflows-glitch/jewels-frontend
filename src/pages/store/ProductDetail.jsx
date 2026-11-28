@@ -26,7 +26,16 @@ import {
 import { getMetallicColorStyle } from '../../utils/productCard';
 import { cleanAttribute } from '../../utils/metalColors';
 
-const referenceName = (value) => (value && typeof value === 'object' ? value.name || '' : (typeof value === 'string' ? value : ''));
+const referenceName = (value) => {
+  if (!value) return '';
+  if (typeof value === 'object') return value.name || value.title || '';
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (/^[a-f0-9]{24}$/i.test(trimmed)) return '';
+    return trimmed;
+  }
+  return '';
+};
 
 /**
  * Checks if a given media item or URL is a video
@@ -316,13 +325,13 @@ export default function ProductDetail() {
         : Number(v.centerDiamondWeight || v.colorStoneWeight || 0);
       if (ct > 0) ctSet.add(ct);
 
-      const col = referenceName(v.diamondColor || v.diamondColorId) || v.diamondColor || '';
-      const cla = referenceName(v.diamondClarity || v.diamondClarityId) || v.diamondClarity || '';
+      const col = referenceName(v.diamondColor) || referenceName(v.diamondColorId) || '';
+      const cla = referenceName(v.diamondClarity) || referenceName(v.diamondClarityId) || '';
       if (col || cla) {
         qSet.add([col, cla].filter(Boolean).join(' · '));
       }
 
-      const dt = referenceName(v.diamondType || v.diamondTypeId);
+      const dt = referenceName(v.diamondType) || referenceName(v.diamondTypeId);
       if (dt) dType = dt;
     });
 
@@ -330,7 +339,7 @@ export default function ProductDetail() {
       product.colorStoneRows.forEach((r) => {
         const ct = Number(r.caratWeight || 0);
         if (ct > 0) ctSet.add(ct);
-        const dt = referenceName(r.diamondTypeId || r.diamondType);
+        const dt = referenceName(r.diamondType) || referenceName(r.diamondTypeId);
         if (dt) dType = dt;
       });
     }
@@ -342,9 +351,7 @@ export default function ProductDetail() {
       });
     }
 
-    const sourceColors = Array.isArray(product?.metalColors) && product.metalColors.length > 0
-      ? product.metalColors
-      : (Array.isArray(product?.metalColorIds) ? product.metalColorIds : []);
+    const sourceColors = Array.isArray(product?.metalColorIds) ? product.metalColorIds : [];
 
     sourceColors.forEach((c) => {
       if (!c) return;
@@ -1247,23 +1254,23 @@ export default function ProductDetail() {
 
       const resolvedDiamondTypeName = isSilver
         ? ''
-        : (selectedVariant?.diamondTypeId?.name ||
-          selectedVariant?.diamondType?.name ||
+        : (referenceName(selectedVariant?.diamondType) ||
+          referenceName(selectedVariant?.diamondTypeId) ||
           diamondType ||
           (isColorStone ? 'Lab Grown Gemstone' : 'Lab Grown Diamond'));
 
       const resolvedShapeName =
-        selectedVariant?.diamondShapeId?.name ||
-        selectedVariant?.diamondShape?.name ||
+        referenceName(selectedVariant?.diamondShape) ||
+        referenceName(selectedVariant?.diamondShapeId) ||
         '';
 
       const resolvedClarityName = isColorStone
         ? ''
-        : (selectedQuality || selectedVariant?.diamondClarityId?.name || '');
+        : (selectedQuality || referenceName(selectedVariant?.diamondClarity) || referenceName(selectedVariant?.diamondClarityId) || '');
 
       const resolvedColorName = isColorStone
         ? ''
-        : (selectedVariant?.diamondColorId?.name || '');
+        : (referenceName(selectedVariant?.diamondColor) || referenceName(selectedVariant?.diamondColorId) || '');
 
       let selectedAttributes = null;
       if (isGold) {
@@ -1281,7 +1288,7 @@ export default function ProductDetail() {
           sideColorStoneCost: Number(selectedVariant?.sideColorStoneCost || 0) || undefined,
           sideColorStoneWeight: Number(selectedVariant?.sideColorStoneWeight || 0) || undefined,
           metalPurityId: selectedVariant?.metalPurityId?._id || selectedVariant?.metalPurityId || product.metalPurityIds?.[0]?._id || product.metalPurityIds?.[0] || null,
-          metalColorId: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId?.id || selectedVariant?.metalColorId || product.metalColors?.[0]?.id || product.metalColors?.[0]?._id || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null,
+          metalColorId: selectedVariant?.metalColorId?._id || selectedVariant?.metalColorId?.id || selectedVariant?.metalColorId || product.metalColorIds?.[0]?._id || product.metalColorIds?.[0] || null,
           diamondTypeId: selectedVariant?.diamondTypeId?._id || selectedVariant?.diamondTypeId || null,
           diamondShapeId: selectedVariant?.diamondShapeId?._id || selectedVariant?.diamondShapeId || null,
           diamondClarityId: selectedVariant?.diamondClarityId?._id || selectedVariant?.diamondClarityId || null,

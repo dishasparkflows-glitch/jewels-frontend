@@ -28,7 +28,7 @@ export function useProductCard(product, options = {}) {
 
   const matchingColorRow = (product.colorImages || []).find((row) => {
     if (!row || row.status === 'inactive') return false;
-    const c = row.metalColorId || row.color;
+    const c = row.metalColorId;
     const rowName = typeof c === 'object' ? c?.name : typeof c === 'string' ? c : '';
     const rowId = typeof c === 'object' ? String(c?._id || c?.id || '') : typeof c === 'string' ? c : '';
     return (
